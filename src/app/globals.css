@@ -1,21 +1,32 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f4f4f4;
+  --foreground: #1d1d1d;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+@theme {
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+
+  /* Redefine neutral colors using the requested dark (#1d1d1d) and light (#f4f4f4) colors */
+  --color-neutral-50: #f4f4f4;      /* Pure requested white */
+  --color-neutral-100: #e6e6e6;
+  --color-neutral-200: #d6d6d6;
+  --color-neutral-300: #c5c5c5;
+  --color-neutral-400: #a3a3a3;
+  --color-neutral-500: #737373;
+  --color-neutral-600: #525252;
+  --color-neutral-700: #3a3a3a;
+  --color-neutral-800: #292929;      /* Border colors */
+  --color-neutral-900: #222222;      /* Sidebar and component background */
+  --color-neutral-950: #1d1d1d;      /* Pure requested dark black */
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #1d1d1d;
+    --foreground: #f4f4f4;
   }
 }
 

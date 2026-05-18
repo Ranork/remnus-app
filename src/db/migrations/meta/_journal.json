@@ -8,6 +8,13 @@
       "when": 1779091089863,
       "tag": "0000_next_sharon_ventura",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1779200000000,
+      "tag": "0001_workspace_items",
+      "breakpoints": true
     }
   ]
 }

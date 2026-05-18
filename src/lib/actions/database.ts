@@ -3,19 +3,12 @@ import { db } from '@/db';
 import { databases } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
+import { createWorkspaceDatabase } from './workspace';
 
 export async function createDatabase(name: string) {
-  const id = crypto.randomUUID();
-  await db.insert(databases).values({
-    id,
-    name,
-    schema: [
-      { id: 'title', name: 'Title', type: 'text' },
-      { id: 'status', name: 'Status', type: 'select', options: ['To Do', 'In Progress', 'Done'] }
-    ],
-  });
+  const { dbId } = await createWorkspaceDatabase(name);
   revalidatePath('/');
-  return id;
+  return dbId;
 }
 
 export async function getDatabases() {
