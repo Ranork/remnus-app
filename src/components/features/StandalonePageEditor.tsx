@@ -1,17 +1,24 @@
 'use client';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import Link from 'next/link';
 import { ChevronLeft } from 'lucide-react';
 import { updateStandalonePageContent, updateWorkspaceItemTitle } from '@/lib/actions/workspace';
+import BlockEditor from '@/components/features/editor/BlockEditor';
+
+function debounce<T extends (...args: any[]) => any>(fn: T, delay: number) {
+  let timer: ReturnType<typeof setTimeout>;
+  return (...args: Parameters<T>) => {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn(...args), delay);
+  };
+}
 
 type Item = { id: string; title: string };
 type Page = { id: string; content: string };
 
 export default function StandalonePageEditor({ item, page }: { item: Item; page: Page }) {
   const [title, setTitle] = useState(item.title);
-  const [content, setContent] = useState(page.content);
   const savedTitle = useRef(item.title);
-  const savedContent = useRef(page.content);
 
   useEffect(() => {
     if (title === savedTitle.current) return;
@@ -22,14 +29,10 @@ export default function StandalonePageEditor({ item, page }: { item: Item; page:
     return () => clearTimeout(t);
   }, [title, item.id]);
 
-  useEffect(() => {
-    if (content === savedContent.current) return;
-    const t = setTimeout(() => {
-      updateStandalonePageContent(item.id, content);
-      savedContent.current = content;
-    }, 1000);
-    return () => clearTimeout(t);
-  }, [content, item.id]);
+  const handleContentChange = useMemo(
+    () => debounce((md: string) => updateStandalonePageContent(item.id, md), 1000),
+    [item.id]
+  );
 
   return (
     <div className="max-w-4xl mx-auto px-8 lg:px-16 py-10">
@@ -46,11 +49,11 @@ export default function StandalonePageEditor({ item, page }: { item: Item; page:
         placeholder="Untitled"
         className="w-full bg-transparent text-white font-bold text-4xl focus:outline-none placeholder:text-neutral-700 mb-8 tracking-tight"
       />
-      <textarea
-        value={content}
-        onChange={(e) => setContent(e.target.value)}
+      <BlockEditor
+        key={page.id}
+        initialContent={page.content}
+        onChange={handleContentChange}
         placeholder="Start writing..."
-        className="w-full min-h-[500px] bg-transparent text-neutral-300 focus:outline-none resize-none text-base leading-loose placeholder:text-neutral-700"
       />
     </div>
   );

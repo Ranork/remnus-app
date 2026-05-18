@@ -69,8 +69,12 @@ To support fully dynamic, user-defined properties without structural database mi
   - `DatabasePropertiesSidebar`: Unified right-side sidebar managing database schema properties (adding/removing fields, editing options), columns visibility controls, active view filters, active view sorts, and page opening modes (peek options) in a tabbed panel layout.
   - `TableLayout`: Notion-like grid with vertical borders, tight padding, and fully draggable columns (swap-on-drop) that persist to the active view's configuration. Supports hidden columns and custom row click behaviors.
   - `KanbanBoard`: Kanban board grouped by a designated `select` column, with Uncategorized fallback. Column groups are draggable (reorderable), saved to the view config. Supports custom card click behaviors.
-  - `StandalonePageEditor`: Simple editor for workspace pages — large title input + markdown textarea, both auto-saved (debounced). No properties panel.
-  - `PageEditor`: Full editor for database row pages — properties panel (select dropdowns, text inputs) + markdown textarea with auto-save. Can be rendered inside a peek panel.
+  - `StandalonePageEditor`: Simple editor for workspace pages — large title input + block editor, both auto-saved (debounced). No properties panel.
+  - `PageEditor`: Full editor for database row pages — properties panel (select dropdowns, text inputs, multi-select, date) + block editor with auto-save. Can be rendered inside a peek panel.
+  - `editor/BlockEditor`: Tiptap-based block editor. Accepts `initialContent` (markdown string) and `onChange` callback. Extensions: StarterKit, `@tiptap/markdown` (markdown ↔ ProseMirror roundtrip), Placeholder, SlashCommand. Content is stored as plain markdown — no schema changes required. Use `key={page.id}` to remount on page switch.
+  - `editor/BubbleMenuBar`: Floating formatting toolbar that appears on text selection. Self-positions using `window.getSelection()` corrected by a hidden anchor probe (`position:fixed; top:0; left:0`) to handle transformed ancestors (peek modal animations). Clamps within the nearest scrollable container; flips below the selection when there is no room above. Includes Bold, Italic, Strike, Code, H1/H2/H3, and a "Turn into" block-type dropdown (Paragraph, Heading 1–3, Bullet List, Numbered List, Quote, Code Block).
+  - `editor/SlashCommandMenu`: Tiptap `Extension` using `@tiptap/suggestion`. Triggers on `/` at block start; renders `SlashCommandList` via tippy.js appended to `document.body`.
+  - `editor/SlashCommandList`: `forwardRef` component rendered inside the tippy popup. Keyboard-navigable list of 8 block-insert commands.
 - `src/db/`: Contains Drizzle `schema.ts`, connection `index.ts`, migration scripts, and `migrations/` folder.
 
 ### Common Commands

@@ -421,6 +421,9 @@ export default function DatabaseView({
               hiddenColumns={tableConfig.hiddenColumns}
               onColumnOrderChange={handleColumnOrderChange}
               onRowClick={handlePageClick}
+              onRowReorder={handleRowReorder}
+              onDeletePage={handleDeletePage}
+              hasSorts={(config.sorts?.length ?? 0) > 0}
             />
           ) : kanbanConfig ? (
             <KanbanBoard
@@ -430,6 +433,9 @@ export default function DatabaseView({
               groupOrder={kanbanConfig.groupOrder}
               onGroupOrderChange={handleGroupOrderChange}
               onCardClick={handlePageClick}
+              onCardMove={handleCardReorder}
+              onDeletePage={handleDeletePage}
+              hasSorts={(config.sorts?.length ?? 0) > 0}
             />
           ) : null}
         </div>

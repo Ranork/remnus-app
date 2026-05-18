@@ -1,8 +1,17 @@
 'use client';
-import { useState, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import { updatePageContent, updatePageProperties } from '@/lib/actions/page';
 import { ArrowLeft, X } from 'lucide-react';
 import Link from 'next/link';
+import BlockEditor from '@/components/features/editor/BlockEditor';
+
+function debounce<T extends (...args: any[]) => any>(fn: T, delay: number) {
+  let timer: ReturnType<typeof setTimeout>;
+  return (...args: Parameters<T>) => {
+    clearTimeout(timer);
+    timer = setTimeout(() => fn(...args), delay);
+  };
+}
 
 export default function PageEditor({
   database,
@@ -17,35 +26,28 @@ export default function PageEditor({
   onClose?: () => void;
   onPageUpdated?: (updatedPage: any) => void;
 }) {
-  const [content, setContent] = useState(initialPage.content || '');
   const [properties, setProperties] = useState<Record<string, any>>(initialPage.properties || {});
 
   const schema = database.schema as any[];
 
-  // Sync state if initialPage changes
-  useEffect(() => {
-    setContent(initialPage.content || '');
-    setProperties(initialPage.properties || {});
-  }, [initialPage]);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      if (content !== initialPage.content) {
-        updatePageContent(initialPage.id, content);
+  const handleContentChange = useMemo(
+    () =>
+      debounce((md: string) => {
+        updatePageContent(initialPage.id, md);
         if (onPageUpdated) {
-          onPageUpdated({ ...initialPage, properties, content });
+          onPageUpdated({ ...initialPage, properties, content: md });
         }
-      }
-    }, 1000);
-    return () => clearTimeout(timer);
-  }, [content, initialPage.id, initialPage.content, properties, onPageUpdated]);
+      }, 1000),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [initialPage.id]
+  );
 
   const handlePropertyChange = async (colId: string, value: any) => {
     const newProps = { ...properties, [colId]: value };
     setProperties(newProps);
     await updatePageProperties(initialPage.id, newProps);
     if (onPageUpdated) {
-      onPageUpdated({ ...initialPage, properties: newProps, content });
+      onPageUpdated({ ...initialPage, properties: newProps });
     }
   };
 
@@ -156,15 +158,13 @@ export default function PageEditor({
         })}
       </div>
 
-      {/* Markdown Content Section */}
-      <div className="relative group">
-        <textarea
-          value={content}
-          onChange={(e) => setContent(e.target.value)}
-          placeholder="Press '/' for commands or type markdown..."
-          className="w-full min-h-[500px] bg-transparent text-neutral-300 focus:outline-none resize-none prose prose-invert max-w-none text-base leading-loose placeholder:text-neutral-700"
-        />
-      </div>
+      {/* Content Editor */}
+      <BlockEditor
+        key={initialPage.id}
+        initialContent={initialPage.content || ''}
+        onChange={handleContentChange}
+        placeholder="Press '/' for commands or start writing..."
+      />
     </div>
   );
 }
