@@ -28,6 +28,8 @@ export interface TableViewConfig {
   filters: ViewFilter[];
   sorts: ViewSort[];
   openBehavior?: OpenBehavior;
+  defaultPageIcon?: string;
+  defaultPageIconColor?: string;
 }
 
 export interface KanbanViewConfig {
@@ -42,6 +44,8 @@ export interface KanbanViewConfig {
   propertyTextClamp?: 'truncate' | 'wrap'; // single-line truncate or multi-line wrap; default truncate
   cardColorCol?: string;                  // property ID whose select value drives the card's left-border color
   groupColBg?: boolean;                   // tint each column background with the group option's color
+  defaultPageIcon?: string;
+  defaultPageIconColor?: string;
 }
 
 export interface CalendarViewConfig {
@@ -56,6 +60,8 @@ export interface CalendarViewConfig {
   cardProperties?: string[];              // visible property IDs in display order; undefined = first 1
   showPropertyLabels?: boolean;           // show property name before value; default true
   propertyTextClamp?: 'truncate' | 'wrap'; // single-line truncate or multi-line wrap; default truncate
+  defaultPageIcon?: string;
+  defaultPageIconColor?: string;
 }
 
 export interface DatabaseView {

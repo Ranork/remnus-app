@@ -5,6 +5,10 @@ import { getOptionColorByValue, formatDateValue } from '@/lib/types/properties';
 import InlineCellEditor from './InlineCellEditor';
 import { GripHorizontal, GripVertical, Settings, Trash2, Type, List, Hash, AlignLeft, Calendar, Clock, Tags, Plus, Copy, EyeOff, ArrowUp, ArrowDown, Filter, X } from 'lucide-react';
 import type { ViewFilter, ViewSort, FilterOperator } from '@/lib/types/views';
+import PageIcon from './PageIcon';
+import IconPicker from './IconPicker';
+import { updatePageIcon } from '@/lib/actions/page';
+import { useRouter } from 'next/navigation';
 
 function getPropertyIcon(type: string) {
   switch (type) {
@@ -52,6 +56,8 @@ export default function TableLayout({
   onFiltersChange,
   onSortsChange,
   onToggleHideColumn,
+  defaultPageIcon,
+  defaultPageIconColor,
 }: {
   database: any;
   pages: any[];
@@ -70,11 +76,21 @@ export default function TableLayout({
   onFiltersChange: (filters: ViewFilter[]) => void;
   onSortsChange: (sorts: ViewSort[]) => void;
   onToggleHideColumn: (colId: string) => void;
+  defaultPageIcon?: string;
+  defaultPageIconColor?: string;
 }) {
   const schema: any[] = database.schema ?? [];
   const visibleCols = getVisibleColumns(schema, columnOrder, hiddenColumns);
+  const router = useRouter();
 
   const [editingCell, setEditingCell] = useState<{ pageId: string; colId: string } | null>(null);
+  const [activeIconPickerPageId, setActiveIconPickerPageId] = useState<string | null>(null);
+  const itemRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+
+  const handleTableIconSelect = async (pageId: string, newIcon: string | null, newColor: string | null) => {
+    await updatePageIcon(pageId, newIcon, newColor);
+    router.refresh();
+  };
 
   // Header menu state
   const [activeHeaderMenuColId, setActiveHeaderMenuColId] = useState<string | null>(null);
@@ -415,15 +431,46 @@ export default function TableLayout({
                             onClose={() => setEditingCell(null)}
                           />
                         ) : col.id === 'title' ? (
-                          <span
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setEditingCell({ pageId: page.id, colId: col.id });
-                            }}
-                            className="font-medium text-neutral-200 hover:text-white cursor-text hover:underline"
-                          >
-                            {val || 'Untitled'}
-                          </span>
+                          <div className="flex items-center gap-2 overflow-visible">
+                            <div className="relative shrink-0 select-none">
+                              <button
+                                ref={(el) => { itemRefs.current[page.id] = el; }}
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  setActiveIconPickerPageId(activeIconPickerPageId === page.id ? null : page.id);
+                                }}
+                                className="hover:bg-neutral-800 p-0.5 rounded transition-colors flex items-center justify-center cursor-pointer"
+                                title="Change icon"
+                              >
+                                <PageIcon 
+                                  icon={page.icon || defaultPageIcon} 
+                                  iconColor={page.iconColor || defaultPageIconColor} 
+                                  size={14} 
+                                  fallbackType="page" 
+                                  className="shrink-0" 
+                                />
+                              </button>
+                              {activeIconPickerPageId === page.id && (
+                                <IconPicker
+                                  currentIcon={page.icon}
+                                  currentIconColor={page.iconColor}
+                                  onSelect={(newIcon, newColor) => handleTableIconSelect(page.id, newIcon, newColor)}
+                                  onClose={() => setActiveIconPickerPageId(null)}
+                                  anchorRef={{ current: itemRefs.current[page.id] }}
+                                />
+                              )}
+                            </div>
+                            <span
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setEditingCell({ pageId: page.id, colId: col.id });
+                              }}
+                              className="font-medium text-neutral-200 hover:text-white cursor-text hover:underline truncate"
+                            >
+                              {val || 'Untitled'}
+                            </span>
+                          </div>
                         ) : col.type === 'select' ? (
                           val ? (() => {
                             const c = getOptionColorByValue(col.options || [], val);

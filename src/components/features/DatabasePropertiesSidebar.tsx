@@ -15,6 +15,8 @@ import {
   Database,
   LayoutTemplate,
 } from 'lucide-react';
+import PageIcon from './PageIcon';
+import IconPicker from './IconPicker';
 import { updateDatabaseSchema } from '@/lib/actions/database';
 import {
   type SelectOption,
@@ -65,6 +67,9 @@ interface DatabasePropertiesSidebarProps {
   onCardColorColChange?: (colId: string) => void;
   groupColBg?: boolean;
   onGroupColBgChange?: (enabled: boolean) => void;
+  defaultPageIcon?: string;
+  defaultPageIconColor?: string;
+  onDefaultPageIconChange?: (icon: string | null, color: string | null) => void;
 }
 
 const OPERATORS: { value: FilterOperator; label: string; needsValue: boolean }[] = [
@@ -133,11 +138,16 @@ export default function DatabasePropertiesSidebar({
   onCardColorColChange,
   groupColBg = false,
   onGroupColBgChange,
+  defaultPageIcon,
+  defaultPageIconColor,
+  onDefaultPageIconChange,
 }: DatabasePropertiesSidebarProps) {
   const [schema, setSchema] = useState<any[]>(() => database.schema || []);
   const [isSavingSchema, setIsSavingSchema] = useState(false);
   const [colorPickerOpen, setColorPickerOpen] = useState<string | null>(null);
   const colorPickerRef = useRef<HTMLDivElement>(null);
+  const [showDefaultIconPicker, setShowDefaultIconPicker] = useState(false);
+  const defaultIconBtnRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     if (!colorPickerOpen) return;
@@ -526,6 +536,47 @@ export default function DatabasePropertiesSidebar({
                 <option value="side">Side peek</option>
                 <option value="center">Center peek</option>
               </select>
+            </div>
+
+            {/* Default Page Icon */}
+            <div className="px-4 py-3 relative">
+              <span className="block text-[10px] text-neutral-500 uppercase tracking-wider mb-2">Default page icon</span>
+              <div className="flex items-center gap-2">
+                <button
+                  ref={defaultIconBtnRef}
+                  onClick={() => setShowDefaultIconPicker(!showDefaultIconPicker)}
+                  className="flex items-center gap-2 px-3 py-1.5 bg-neutral-900 border border-neutral-800 text-neutral-300 hover:border-neutral-700 hover:text-white transition-colors rounded text-xs cursor-pointer shrink-0 font-medium"
+                >
+                  <PageIcon 
+                    icon={defaultPageIcon || null} 
+                    iconColor={defaultPageIconColor || null} 
+                    size={14} 
+                    fallbackType="page" 
+                  />
+                  <span>{defaultPageIcon ? 'Change icon' : 'Choose icon'}</span>
+                </button>
+                {defaultPageIcon && (
+                  <button
+                    onClick={() => onDefaultPageIconChange?.(null, null)}
+                    className="text-[10px] text-neutral-500 hover:text-red-400 transition-colors cursor-pointer"
+                  >
+                    Remove
+                  </button>
+                )}
+              </div>
+              
+              {showDefaultIconPicker && (
+                <IconPicker
+                  currentIcon={defaultPageIcon || null}
+                  currentIconColor={defaultPageIconColor || null}
+                  onSelect={(icon, color) => {
+                    onDefaultPageIconChange?.(icon, color);
+                    setShowDefaultIconPicker(false);
+                  }}
+                  onClose={() => setShowDefaultIconPicker(false)}
+                  anchorRef={defaultIconBtnRef}
+                />
+              )}
             </div>
 
             {/* Kanban: Group by */}

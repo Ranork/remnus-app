@@ -4,6 +4,7 @@ import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { createPage, getPage, deletePage, duplicatePage, reorderPages, updatePageProperties } from '@/lib/actions/page';
 import { updateDatabaseViews } from '@/lib/actions/database';
+import { updateWorkspaceItemIcon } from '@/lib/actions/workspace';
 import { Plus, Settings, Columns3, Filter, ArrowUpDown, X, Maximize2, Database, ArrowLeftRight, MoreHorizontal, Trash2, Copy } from 'lucide-react';
 import TableLayout from './TableLayout';
 import KanbanBoard from './KanbanBoard';
@@ -11,6 +12,8 @@ import CalendarView from './CalendarView';
 import ViewsBar from './ViewsBar';
 import DatabasePropertiesSidebar from './DatabasePropertiesSidebar';
 import PageEditor from './PageEditor';
+import PageIcon from './PageIcon';
+import IconPicker from './IconPicker';
 import type {
   DatabaseView,
   TableViewConfig,
@@ -121,6 +124,15 @@ export default function DatabaseView({
   const [peekPage, setPeekPage] = useState<any | null>(null);
   const [isPageLoading, setIsPageLoading] = useState(false);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [showIconPicker, setShowIconPicker] = useState(false);
+  const dbButtonRef = useRef<HTMLButtonElement>(null);
+
+  const handleIconSelect = async (newIcon: string | null, newColor: string | null) => {
+    if (database.itemId) {
+      await updateWorkspaceItemIcon(database.itemId, newIcon, newColor);
+      router.refresh();
+    }
+  };
 
   const [views, setViews] = useState<DatabaseView[]>(() => {
     const saved = database.views as DatabaseView[] | null | undefined;
@@ -265,7 +277,9 @@ export default function DatabaseView({
 
   const handleAddRow = async (initialProperties?: Record<string, any>) => {
     setIsAdding(true);
-    await createPage(database.id, 'New Page', initialProperties);
+    const defaultIcon = config.defaultPageIcon || null;
+    const defaultIconColor = config.defaultPageIconColor || null;
+    await createPage(database.id, 'New Page', initialProperties, defaultIcon, defaultIconColor);
     setIsAdding(false);
   };
 
@@ -518,8 +532,43 @@ export default function DatabaseView({
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       <div className={`flex-1 flex flex-col min-h-0 pt-8 w-full ${widthMode === 'full' ? 'px-16' : 'px-8'} ${widthMode === 'full' ? '' : widthMode === 'wide' ? 'max-w-screen-2xl mx-auto' : 'max-w-6xl mx-auto'}`}>
-      {/* Title */}
-      <h1 className="text-3xl font-bold mb-8 text-white shrink-0">{database.name}</h1>
+      {/* Unified Page Header: Icon + Title */}
+      <div className="flex items-center gap-3 mb-8 group/icon-header relative select-none shrink-0">
+        <div className="relative shrink-0 flex items-center group/icon-wrapper">
+          <div className="relative flex items-center">
+            <button
+              ref={dbButtonRef}
+              onClick={() => setShowIconPicker(!showIconPicker)}
+              className="p-1 hover:bg-neutral-800 rounded transition-colors duration-150 cursor-pointer flex items-center justify-center shrink-0"
+              title={database.icon ? "Change icon" : "Add icon"}
+            >
+              <PageIcon icon={database.icon} iconColor={database.iconColor} size={40} fallbackType="database" />
+            </button>
+            {database.icon && (
+              <button
+                onClick={() => handleIconSelect(null, null)}
+                className="absolute -top-7 left-1/2 -translate-x-1/2 opacity-0 group-hover/icon-wrapper:opacity-100 px-1.5 py-0.5 text-[9px] bg-neutral-900 border border-neutral-800 text-neutral-400 hover:text-white rounded transition-all cursor-pointer font-medium whitespace-nowrap shadow-xl z-20"
+              >
+                Remove
+              </button>
+            )}
+          </div>
+
+          {showIconPicker && (
+            <IconPicker
+              currentIcon={database.icon}
+              currentIconColor={database.iconColor}
+              onSelect={handleIconSelect}
+              onClose={() => setShowIconPicker(false)}
+              anchorRef={dbButtonRef}
+            />
+          )}
+        </div>
+
+        <div className="flex-1 min-w-0">
+          <h1 className="text-3xl font-bold text-white tracking-tight leading-none">{database.name}</h1>
+        </div>
+      </div>
 
       {/* Top bar */}
       <div className="flex items-end justify-between border-b border-neutral-800">
@@ -588,6 +637,8 @@ export default function DatabaseView({
               onFiltersChange={handleFiltersChange}
               onSortsChange={handleSortsChange}
               onToggleHideColumn={toggleHideColumn}
+              defaultPageIcon={config.defaultPageIcon}
+              defaultPageIconColor={config.defaultPageIconColor}
             />
           ) : kanbanConfig ? (
             <KanbanBoard
@@ -608,6 +659,8 @@ export default function DatabaseView({
               groupColBg={kanbanConfig.groupColBg ?? false}
               onUpdatePageProperties={handleUpdatePageProperties}
               onCreatePage={handleAddRow}
+              defaultPageIcon={config.defaultPageIcon}
+              defaultPageIconColor={config.defaultPageIconColor}
             />
           ) : calendarConfig ? (
             <CalendarView
@@ -626,6 +679,8 @@ export default function DatabaseView({
               propertyTextClamp={calendarConfig.propertyTextClamp ?? 'truncate'}
               onUpdatePageProperties={handleUpdatePageProperties}
               onCreatePage={handleAddRow}
+              defaultPageIcon={config.defaultPageIcon}
+              defaultPageIconColor={config.defaultPageIconColor}
             />
           ) : null}
         </div>
@@ -677,6 +732,15 @@ export default function DatabaseView({
               onCardColorColChange={handleCardColorColChange}
               groupColBg={kanbanConfig?.groupColBg ?? false}
               onGroupColBgChange={handleGroupColBgChange}
+              defaultPageIcon={config.defaultPageIcon}
+              defaultPageIconColor={config.defaultPageIconColor}
+              onDefaultPageIconChange={(icon, color) =>
+                mutateConfig((cfg) => ({
+                  ...cfg,
+                  defaultPageIcon: icon || undefined,
+                  defaultPageIconColor: color || undefined,
+                }))
+              }
             />
           </div>
         )}

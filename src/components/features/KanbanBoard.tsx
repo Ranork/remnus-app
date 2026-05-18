@@ -1,11 +1,14 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { GripVertical, Settings, Trash2, Plus, Copy } from 'lucide-react';
 import { normalizeOption, getOptionColorByValue, getCardBorderDots, formatDateValue } from '@/lib/types/properties';
 import type { SelectOption } from '@/lib/types/properties';
 import InlineCellEditor from './InlineCellEditor';
+import PageIcon from './PageIcon';
+import IconPicker from './IconPicker';
+import { updatePageIcon } from '@/lib/actions/page';
 
 function getEffectiveGroupOrder(options: string[], groupOrder: string[]): string[] {
   if (!groupOrder || groupOrder.length === 0) return options;
@@ -33,6 +36,8 @@ export default function KanbanBoard({
   groupColBg = false,
   onUpdatePageProperties,
   onCreatePage,
+  defaultPageIcon,
+  defaultPageIconColor,
 }: {
   database: any;
   pages: any[];
@@ -51,11 +56,20 @@ export default function KanbanBoard({
   groupColBg?: boolean;
   onUpdatePageProperties: (pageId: string, properties: Record<string, any>) => void;
   onCreatePage?: (initialProperties?: Record<string, any>) => void;
+  defaultPageIcon?: string;
+  defaultPageIconColor?: string;
 }) {
   const router = useRouter();
   const schema = database.schema as any[];
 
   const [editingCell, setEditingCell] = useState<{ pageId: string; colId: string } | null>(null);
+  const [activeIconPickerPageId, setActiveIconPickerPageId] = useState<string | null>(null);
+  const itemRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+
+  const handleKanbanIconSelect = async (pageId: string, newIcon: string | null, newColor: string | null) => {
+    await updatePageIcon(pageId, newIcon, newColor);
+    router.refresh();
+  };
 
   const handleCellSave = (pageId: string, colId: string, newVal: any) => {
     const page = pages.find((p) => p.id === pageId);
@@ -356,8 +370,37 @@ export default function KanbanBoard({
                       </>
                     )}
 
-                    <h4 className="text-base font-medium text-neutral-200 group-hover:text-neutral-100 transition-colors wrap-break-word whitespace-normal pr-12">
-                      {page.properties['title'] || 'Untitled'}
+                    <h4 className="text-base font-medium text-neutral-200 group-hover:text-neutral-100 transition-colors wrap-break-word whitespace-normal pr-12 flex items-center gap-1.5 overflow-visible">
+                      <div className="relative shrink-0 select-none">
+                        <button
+                          ref={(el) => { itemRefs.current[page.id] = el; }}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setActiveIconPickerPageId(activeIconPickerPageId === page.id ? null : page.id);
+                          }}
+                          className="hover:bg-neutral-800 p-0.5 rounded transition-colors flex items-center justify-center cursor-pointer"
+                          title="Change icon"
+                        >
+                          <PageIcon 
+                            icon={page.icon || defaultPageIcon} 
+                            iconColor={page.iconColor || defaultPageIconColor} 
+                            size={16} 
+                            fallbackType="page" 
+                            className="shrink-0" 
+                          />
+                        </button>
+                        {activeIconPickerPageId === page.id && (
+                          <IconPicker
+                            currentIcon={page.icon}
+                            currentIconColor={page.iconColor}
+                            onSelect={(newIcon, newColor) => handleKanbanIconSelect(page.id, newIcon, newColor)}
+                            onClose={() => setActiveIconPickerPageId(null)}
+                            anchorRef={{ current: itemRefs.current[page.id] }}
+                          />
+                        )}
+                      </div>
+                      <span>{page.properties['title'] || 'Untitled'}</span>
                     </h4>
 
                     <div className="mt-1.5 flex flex-col gap-1.5">

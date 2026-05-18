@@ -1,6 +1,6 @@
 'use server';
 import { db } from '@/db';
-import { databases } from '@/db/schema';
+import { databases, workspaceItems } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { createWorkspaceDatabase, getActiveWorkspaceId } from './workspace';
@@ -17,7 +17,21 @@ export async function getDatabases() {
 }
 
 export async function getDatabase(id: string) {
-  const result = await db.select().from(databases).where(eq(databases.id, id));
+  const result = await db
+    .select({
+      id: databases.id,
+      name: databases.name,
+      itemId: databases.itemId,
+      schema: databases.schema,
+      views: databases.views,
+      createdAt: databases.createdAt,
+      updatedAt: databases.updatedAt,
+      icon: workspaceItems.icon,
+      iconColor: workspaceItems.iconColor,
+    })
+    .from(databases)
+    .leftJoin(workspaceItems, eq(databases.itemId, workspaceItems.id))
+    .where(eq(databases.id, id));
   return result[0];
 }
 

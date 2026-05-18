@@ -1,8 +1,12 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef } from 'react';
 import { getOptionColorByValue, getCardBorderDots, formatDateValue } from '@/lib/types/properties';
 import { ChevronLeft, ChevronRight, GripVertical, Settings, Trash2, Calendar as CalendarIcon, Clock, Plus, Copy } from 'lucide-react';
+import PageIcon from './PageIcon';
+import IconPicker from './IconPicker';
+import { updatePageIcon } from '@/lib/actions/page';
+import { useRouter } from 'next/navigation';
 
 interface CalendarViewProps {
   database: any;
@@ -20,6 +24,8 @@ interface CalendarViewProps {
   propertyTextClamp?: 'truncate' | 'wrap';
   onUpdatePageProperties: (pageId: string, properties: Record<string, any>) => void;
   onCreatePage?: (initialProperties?: Record<string, any>) => void;
+  defaultPageIcon?: string;
+  defaultPageIconColor?: string;
 }
 
 const formatYYYYMMDD = (d: Date) => {
@@ -107,8 +113,18 @@ export default function CalendarView({
   propertyTextClamp = 'truncate',
   onUpdatePageProperties,
   onCreatePage,
+  defaultPageIcon,
+  defaultPageIconColor,
 }: CalendarViewProps) {
   const [currentDate, setCurrentDate] = useState(() => new Date());
+  const router = useRouter();
+  const [activeIconPickerPageId, setActiveIconPickerPageId] = useState<string | null>(null);
+  const itemRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+
+  const handleCalendarIconSelect = async (pageId: string, newIcon: string | null, newColor: string | null) => {
+    await updatePageIcon(pageId, newIcon, newColor);
+    router.refresh();
+  };
 
   // Card dragging states
   const [draggedCardId, setDraggedCardId] = useState<string | null>(null);
@@ -176,9 +192,9 @@ export default function CalendarView({
       if (start.getFullYear() !== end.getFullYear()) {
         return `${startMonth} ${start.getDate()}, ${start.getFullYear()} – ${endMonth} ${end.getDate()}, ${end.getFullYear()}`;
       } else if (start.getMonth() !== end.getMonth()) {
-        return `${startMonth} ${start.getDate()} – ${endMonth} ${end.getDate()}, ${start.getFullYear()}`;
+        return `${startMonth} ${start.getDate()} – ${endMonth} ${end.getDate()}, ${end.getFullYear()}`;
       } else {
-        return `${startMonth} ${start.getDate()} – ${end.getDate()}, ${start.getFullYear()}`;
+        return `${startMonth} ${start.getDate()} – ${end.getDate()}, ${end.getFullYear()}`;
       }
     }
   };
@@ -435,8 +451,37 @@ export default function CalendarView({
                       )}
 
                       {/* Page Title */}
-                      <h4 className="text-sm text-neutral-200 group-hover:text-neutral-100 font-medium leading-snug wrap-break-word whitespace-normal pr-8 mb-1">
-                        {page.properties['title'] || 'Untitled'}
+                      <h4 className="text-sm text-neutral-200 group-hover:text-neutral-100 font-medium leading-snug wrap-break-word whitespace-normal pr-8 mb-1 flex items-center gap-1 overflow-visible">
+                        <div className="relative shrink-0 select-none">
+                          <button
+                            ref={(el) => { itemRefs.current[page.id] = el; }}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setActiveIconPickerPageId(activeIconPickerPageId === page.id ? null : page.id);
+                            }}
+                            className="hover:bg-neutral-800 p-0.5 rounded transition-colors flex items-center justify-center cursor-pointer"
+                            title="Change icon"
+                          >
+                            <PageIcon 
+                              icon={page.icon || defaultPageIcon} 
+                              iconColor={page.iconColor || defaultPageIconColor} 
+                              size={14} 
+                              fallbackType="page" 
+                              className="shrink-0" 
+                            />
+                          </button>
+                          {activeIconPickerPageId === page.id && (
+                            <IconPicker
+                              currentIcon={page.icon}
+                              currentIconColor={page.iconColor}
+                              onSelect={(newIcon, newColor) => handleCalendarIconSelect(page.id, newIcon, newColor)}
+                              onClose={() => setActiveIconPickerPageId(null)}
+                              anchorRef={{ current: itemRefs.current[page.id] }}
+                            />
+                          )}
+                        </div>
+                        <span>{page.properties['title'] || 'Untitled'}</span>
                       </h4>
 
                       {/* Card properties */}

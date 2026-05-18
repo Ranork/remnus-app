@@ -12,6 +12,8 @@ export type WorkspaceItemRow = {
   title: string;
   parentId: string | null;
   sortOrder: number;
+  icon: string | null;
+  iconColor: string | null;
   createdAt: Date;
   updatedAt: Date;
   databaseId: string | null;
@@ -197,4 +199,12 @@ export async function updateWorkspaceItemTitle(itemId: string, title: string) {
 export async function getDatabaseByItemId(itemId: string) {
   const result = await db.select().from(databases).where(eq(databases.itemId, itemId));
   return result[0] ?? null;
+}
+
+export async function updateWorkspaceItemIcon(itemId: string, icon: string | null, iconColor: string | null) {
+  await db.update(workspaceItems)
+    .set({ icon, iconColor, updatedAt: new Date() })
+    .where(eq(workspaceItems.id, itemId));
+
+  revalidatePath('/');
 }

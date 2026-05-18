@@ -4,7 +4,13 @@ import { pages } from '@/db/schema';
 import { eq, asc } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 
-export async function createPage(databaseId: string, title: string, initialProperties?: Record<string, any>) {
+export async function createPage(
+  databaseId: string, 
+  title: string, 
+  initialProperties?: Record<string, any>,
+  icon?: string | null,
+  iconColor?: string | null
+) {
   const id = crypto.randomUUID();
   // Find the highest sort order to put the new page at the bottom
   const existing = await db.select({ sortOrder: pages.sortOrder }).from(pages).where(eq(pages.databaseId, databaseId));
@@ -19,6 +25,8 @@ export async function createPage(databaseId: string, title: string, initialPrope
     content: '',
     properties: defaultProps,
     sortOrder: maxSort + 1,
+    icon: icon || null,
+    iconColor: iconColor || null,
   });
   revalidatePath(`/db/${databaseId}`);
   return id;
@@ -84,6 +92,8 @@ export async function duplicatePage(id: string, databaseId: string) {
     content: sourcePage.content || '',
     properties: copiedProps,
     sortOrder: maxSort + 1,
+    icon: sourcePage.icon,
+    iconColor: sourcePage.iconColor,
   });
 
   revalidatePath(`/db/${databaseId}`);
@@ -100,4 +110,15 @@ export async function reorderPages(databaseId: string, orderedIds: string[]) {
     }
   });
   revalidatePath(`/db/${databaseId}`);
+}
+
+export async function updatePageIcon(id: string, icon: string | null, iconColor: string | null) {
+  const page = await db.select().from(pages).where(eq(pages.id, id));
+  if (!page[0]) return;
+  await db.update(pages)
+    .set({ icon, iconColor, updatedAt: new Date() })
+    .where(eq(pages.id, id));
+
+  revalidatePath(`/db/${page[0].databaseId}`);
+  revalidatePath(`/db/${page[0].databaseId}/${id}`);
 }

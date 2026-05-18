@@ -14,15 +14,18 @@ import {
   Edit3, 
   Briefcase
 } from 'lucide-react';
+import PageIcon from './PageIcon';
 import { 
   createStandalonePage, 
   createWorkspaceDatabase, 
   createWorkspace, 
   deleteWorkspace, 
   renameWorkspace, 
-  switchWorkspace 
+  switchWorkspace,
+  updateWorkspaceItemIcon
 } from '@/lib/actions/workspace';
 import type { WorkspaceItemRow } from '@/lib/actions/workspace';
+import IconPicker from './IconPicker';
 
 type WorkspaceType = {
   id: string;
@@ -44,9 +47,16 @@ export default function WorkspaceSidebar({
   
   // Tree creation and editing states
   const [creatingType, setCreatingType] = useState<'page' | 'database' | 'choose' | null>(null);
+  const [activeIconPickerId, setActiveIconPickerId] = useState<string | null>(null);
   const [creatingInWorkspaceId, setCreatingInWorkspaceId] = useState<string | null>(null);
   const [newTitle, setNewTitle] = useState('');
   const inputRef = useRef<HTMLInputElement>(null);
+  const itemRefs = useRef<Record<string, HTMLButtonElement | null>>({});
+
+  const handleSidebarIconSelect = async (itemId: string, newIcon: string | null, newColor: string | null) => {
+    await updateWorkspaceItemIcon(itemId, newIcon, newColor);
+    router.refresh();
+  };
 
   const [isCreatingWorkspace, setIsCreatingWorkspace] = useState(false);
   const [newWorkspaceName, setNewWorkspaceName] = useState('');
@@ -298,22 +308,51 @@ export default function WorkspaceSidebar({
               {isExpanded && (
                 <div className="pl-6 space-y-0.5 border-l border-neutral-800 ml-3.5 my-1">
                   {workspaceChildren.map((item) => (
-                    <Link
+                    <div
                       key={item.id}
-                      href={hrefFor(item)}
-                      onClick={() => handleItemClick(item)}
                       className={`flex items-center gap-2 px-2.5 py-1.5 rounded-md text-sm transition-colors group/item ${
                         isActive(item)
                           ? 'bg-neutral-850 text-white font-medium'
                           : 'text-neutral-400 hover:bg-neutral-850/50 hover:text-neutral-200'
                       }`}
                     >
-                      {item.type === 'database'
-                        ? <Database size={13} className="shrink-0 text-neutral-500 group-hover/item:text-neutral-400" />
-                        : <FileText size={13} className="shrink-0 text-neutral-500 group-hover/item:text-neutral-400" />
-                      }
-                      <span className="truncate flex-1">{item.title}</span>
-                    </Link>
+                      <div className="relative shrink-0 select-none">
+                        <button
+                          ref={(el) => { itemRefs.current[item.id] = el; }}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setActiveIconPickerId(activeIconPickerId === item.id ? null : item.id);
+                          }}
+                          className="hover:bg-neutral-800 p-0.5 rounded transition-colors flex items-center justify-center cursor-pointer"
+                          title="Change icon"
+                        >
+                          <PageIcon 
+                            icon={item.icon} 
+                            iconColor={item.iconColor} 
+                            size={16} 
+                            fallbackType={item.type} 
+                            className="shrink-0" 
+                          />
+                        </button>
+                        {activeIconPickerId === item.id && (
+                          <IconPicker
+                            currentIcon={item.icon}
+                            currentIconColor={item.iconColor}
+                            onSelect={(newIcon, newColor) => handleSidebarIconSelect(item.id, newIcon, newColor)}
+                            onClose={() => setActiveIconPickerId(null)}
+                            anchorRef={{ current: itemRefs.current[item.id] }}
+                          />
+                        )}
+                      </div>
+                      <Link
+                        href={hrefFor(item)}
+                        onClick={() => handleItemClick(item)}
+                        className="truncate flex-1 block py-0.5"
+                      >
+                        {item.title}
+                      </Link>
+                    </div>
                   ))}
 
                   {/* Inline creation input under specific workspace subtree */}

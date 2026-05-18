@@ -15,6 +15,8 @@ export const workspaceItems = sqliteTable('workspace_items', {
   title:       text('title').notNull(),
   parentId:    text('parent_id'),
   sortOrder:   integer('sort_order').notNull().default(0),
+  icon:        text('icon'),
+  iconColor:   text('icon_color'),
   createdAt:   integer('created_at', { mode: 'timestamp' }).notNull().default(sql`CURRENT_TIMESTAMP`),
   updatedAt:   integer('updated_at', { mode: 'timestamp' }).notNull().default(sql`CURRENT_TIMESTAMP`),
 });
@@ -44,6 +46,8 @@ export const pages = sqliteTable('pages', {
   content: text('content').notNull().default(''),
   properties: text('properties', { mode: 'json' }).notNull().$type<Record<string, any>>().default({}),
   sortOrder: integer('sort_order').notNull().default(0),
+  icon: text('icon'),
+  iconColor: text('icon_color'),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`CURRENT_TIMESTAMP`),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().default(sql`CURRENT_TIMESTAMP`),
 });
