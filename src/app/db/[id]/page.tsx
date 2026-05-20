@@ -5,11 +5,12 @@ import DatabaseView from '@/components/features/DatabaseView';
 
 export default async function DatabasePage(props: { params: Promise<{ id: string }> }) {
   const params = await props.params;
-  const db = await getDatabase(params.id);
+  const [db, pages] = await Promise.all([
+    getDatabase(params.id),
+    getPages(params.id),
+  ]);
   
   if (!db) return notFound();
-
-  const pages = await getPages(params.id);
 
   return (
     <div className="flex-1 overflow-hidden bg-neutral-850 flex flex-col">

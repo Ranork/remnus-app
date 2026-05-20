@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer, primaryKey } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, primaryKey, index, uniqueIndex } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 
 export const workspaces = sqliteTable('workspaces', {
@@ -20,7 +20,9 @@ export const workspaceItems = sqliteTable('workspace_items', {
   iconColor:   text('icon_color'),
   createdAt:   integer('created_at', { mode: 'timestamp' }).notNull().default(sql`CURRENT_TIMESTAMP`),
   updatedAt:   integer('updated_at', { mode: 'timestamp' }).notNull().default(sql`CURRENT_TIMESTAMP`),
-});
+}, (table) => [
+  index('workspace_items_workspace_id_idx').on(table.workspaceId),
+]);
 
 export const standalonePages = sqliteTable('standalone_pages', {
   id:        text('id').primaryKey(),
@@ -28,7 +30,9 @@ export const standalonePages = sqliteTable('standalone_pages', {
   content:   text('content').notNull().default(''),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`CURRENT_TIMESTAMP`),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().default(sql`CURRENT_TIMESTAMP`),
-});
+}, (table) => [
+  index('standalone_pages_item_id_idx').on(table.itemId),
+]);
 
 export const databases = sqliteTable('databases', {
   id:     text('id').primaryKey(),
@@ -38,7 +42,9 @@ export const databases = sqliteTable('databases', {
   views: text('views', { mode: 'json' }).$type<any[]>(),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`CURRENT_TIMESTAMP`),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().default(sql`CURRENT_TIMESTAMP`),
-});
+}, (table) => [
+  index('databases_item_id_idx').on(table.itemId),
+]);
 
 export const pages = sqliteTable('pages', {
   id: text('id').primaryKey(),
@@ -51,7 +57,9 @@ export const pages = sqliteTable('pages', {
   iconColor: text('icon_color'),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`CURRENT_TIMESTAMP`),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().default(sql`CURRENT_TIMESTAMP`),
-});
+}, (table) => [
+  index('pages_database_id_idx').on(table.databaseId),
+]);
 
 // ── Auth tables (matching @auth/drizzle-adapter expected schema) ──────────────
 
@@ -80,13 +88,16 @@ export const accounts = sqliteTable('account', {
   session_state:     text('session_state'),
 }, (table) => [
   primaryKey({ columns: [table.provider, table.providerAccountId] }),
+  index('account_user_id_idx').on(table.userId),
 ]);
 
 export const sessions = sqliteTable('session', {
   sessionToken: text('sessionToken').primaryKey(),
   userId:       text('userId').notNull().references(() => users.id, { onDelete: 'cascade' }),
   expires:      integer('expires', { mode: 'timestamp_ms' }).notNull(),
-});
+}, (table) => [
+  index('session_user_id_idx').on(table.userId),
+]);
 
 export const verificationTokens = sqliteTable('verificationToken', {
   identifier: text('identifier').notNull(),
@@ -104,4 +115,7 @@ export const workspaceMembers = sqliteTable('workspace_members', {
   userId:      text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
   role:        text('role').notNull().default('member'), // 'owner' | 'member' | 'viewer'
   createdAt:   integer('created_at', { mode: 'timestamp' }).notNull().default(sql`CURRENT_TIMESTAMP`),
-});
+}, (table) => [
+  uniqueIndex('workspace_members_workspace_user_unique').on(table.workspaceId, table.userId),
+  index('workspace_members_user_id_idx').on(table.userId),
+]);

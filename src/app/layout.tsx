@@ -2,7 +2,8 @@ import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import { auth, signOut } from '@/auth';
-import { getActiveWorkspaceId, getAllWorkspaceItems, getWorkspaces } from '@/lib/actions/workspace';
+import { cookies } from 'next/headers';
+import { getAllWorkspaceItems, getWorkspaces } from '@/lib/actions/workspace';
 import WorkspaceSidebar from '@/components/features/WorkspaceSidebar';
 
 const inter = Inter({ subsets: ['latin'] });
@@ -36,9 +37,13 @@ export default async function RootLayout({
     );
   }
 
-  const activeWorkspaceId = await getActiveWorkspaceId();
-  const workspacesList = await getWorkspaces();
-  const items = await getAllWorkspaceItems();
+  const [workspacesList, items] = await Promise.all([
+    getWorkspaces(),
+    getAllWorkspaceItems(),
+  ]);
+
+  const cookieStore = await cookies();
+  const activeWorkspaceId = cookieStore.get('remna_workspace_id')?.value;
   const activeWorkspace = workspacesList.find((w) => w.id === activeWorkspaceId) || workspacesList[0];
 
   const currentUser = {

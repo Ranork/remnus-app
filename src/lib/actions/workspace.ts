@@ -1,4 +1,5 @@
 'use server';
+import { cache } from 'react';
 import { db } from '@/db';
 import { workspaces, workspaceItems, standalonePages, databases, pages, workspaceMembers, users } from '@/db/schema';
 import { eq, isNull, asc, and, inArray, sql } from 'drizzle-orm';
@@ -32,11 +33,11 @@ export type WorkspaceItemRow = {
 
 // ── Auth helpers ──────────────────────────────────────────────────────────────
 
-async function getCurrentUser() {
+const getCurrentUser = cache(async () => {
   const session = await auth();
   if (!session?.user?.id) redirect('/login');
   return session.user as { id: string; role: string; name?: string | null; email?: string | null; image?: string | null };
-}
+});
 
 async function assertWorkspaceAccess(workspaceId: string): Promise<string> {
   const user = await getCurrentUser();

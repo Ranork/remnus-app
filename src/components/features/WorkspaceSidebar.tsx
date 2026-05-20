@@ -131,6 +131,34 @@ export default function WorkspaceSidebar({
   const [localWorkspaces, setLocalWorkspaces] = useState<WorkspaceType[]>(workspaces);
   const [localItems, setLocalItems] = useState<WorkspaceItemRow[]>(items);
 
+  // Find which workspace contains the active item based on the pathname
+  const activeWorkspaceIdFromPath = (() => {
+    // If the path is a database view: /db/[databaseId] or database subpage /db/[databaseId]/[pageId]
+    const dbMatch = pathname.match(/^\/db\/([^\/]+)/);
+    if (dbMatch) {
+      const dbId = dbMatch[1];
+      const matchingItem = localItems.find(i => i.type === 'database' && i.databaseId === dbId);
+      if (matchingItem) return matchingItem.workspaceId;
+    }
+
+    // If the path is a standalone page: /page/[itemId]
+    const pageMatch = pathname.match(/^\/page\/([^\/]+)/);
+    if (pageMatch) {
+      const itemId = pageMatch[1];
+      const matchingItem = localItems.find(i => i.id === itemId);
+      if (matchingItem) return matchingItem.workspaceId;
+    }
+
+    return activeWorkspace.id;
+  })();
+
+  // Auto-sync cookie in the background when active workspace changes from navigation
+  useEffect(() => {
+    if (activeWorkspaceIdFromPath && activeWorkspaceIdFromPath !== activeWorkspace.id) {
+      switchWorkspace(activeWorkspaceIdFromPath);
+    }
+  }, [activeWorkspaceIdFromPath, activeWorkspace.id]);
+
   // Sync props to local state only when structural changes happen (like additions, deletions) or when not in transition
   useEffect(() => {
     if (isPending) return;
@@ -462,11 +490,20 @@ export default function WorkspaceSidebar({
 
   // Switch Workspace Handler
   const handleSwitchWorkspace = (id: string) => {
-    if (id === activeWorkspace.id) return;
-    startTransition(async () => {
-      await switchWorkspace(id);
-      router.push('/');
-    });
+    if (id === activeWorkspaceIdFromPath) return;
+
+    // Find first item in this workspace to navigate directly, ensuring an instant client-side transition
+    const workspaceChildren = itemsByWorkspace[id] || [];
+    if (workspaceChildren.length > 0) {
+      const firstItem = workspaceChildren[0];
+      const targetHref = hrefFor(firstItem);
+      router.push(targetHref);
+    } else {
+      // No items, go to home page but switch workspace first in the background
+      switchWorkspace(id).then(() => {
+        router.push('/');
+      });
+    }
   };
 
   const handleCreateWorkspace = () => {
@@ -482,13 +519,7 @@ export default function WorkspaceSidebar({
     });
   };
 
-  const handleItemClick = (item: WorkspaceItemRow) => {
-    if (item.workspaceId !== activeWorkspace.id) {
-      startTransition(async () => {
-        await switchWorkspace(item.workspaceId);
-      });
-    }
-  };
+
 
   const handleRenameItem = (item: WorkspaceItemRow) => {
     const title = renamingTitle.trim();
@@ -569,7 +600,7 @@ export default function WorkspaceSidebar({
         {localWorkspaces.map((w) => {
           const isExpanded = expandedWorkspaces[w.id] !== false;
           const workspaceChildren = itemsByWorkspace[w.id] || [];
-          const isCurrentActive = w.id === activeWorkspace.id;
+          const isCurrentActive = w.id === activeWorkspaceIdFromPath;
 
           const isWorkspaceDragged = draggedWorkspaceId === w.id;
           const isWorkspaceDragOver = dragOverWorkspaceId === w.id;
@@ -739,7 +770,6 @@ export default function WorkspaceSidebar({
                       ) : (
                         <Link
                           href={hrefFor(item)}
-                          onClick={() => handleItemClick(item)}
                           className="truncate flex-1 block py-0.5"
                         >
                           {item.title}
