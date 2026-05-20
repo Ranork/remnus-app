@@ -176,7 +176,7 @@ export async function getWorkspaceItems(workspaceId: string): Promise<WorkspaceI
   await assertWorkspaceAccess(workspaceId);
 
   const items = await db.select().from(workspaceItems)
-    .where(and(eq(workspaceItems.workspaceId, workspaceId), isNull(workspaceItems.parentId)))
+    .where(eq(workspaceItems.workspaceId, workspaceId))
     .orderBy(asc(workspaceItems.sortOrder), asc(workspaceItems.createdAt));
 
   const dbRows = await db.select({ itemId: databases.itemId, dbId: databases.id }).from(databases);
@@ -207,10 +207,7 @@ export async function getAllWorkspaceItems(): Promise<WorkspaceItemRow[]> {
   if (accessibleWorkspaceIds.length === 0) return [];
 
   const items = await db.select().from(workspaceItems)
-    .where(and(
-      inArray(workspaceItems.workspaceId, accessibleWorkspaceIds),
-      isNull(workspaceItems.parentId),
-    ))
+    .where(inArray(workspaceItems.workspaceId, accessibleWorkspaceIds))
     .orderBy(asc(workspaceItems.sortOrder), asc(workspaceItems.createdAt));
 
   const dbRows = await db.select({ itemId: databases.itemId, dbId: databases.id }).from(databases);
@@ -257,7 +254,7 @@ export async function createStandalonePage(
 export async function createWorkspaceDatabase(
   workspaceId: string,
   name: string,
-  options?: CreateDatabaseOptions,
+  options?: CreateDatabaseOptions & { parentId?: string | null },
 ) {
   await assertWorkspaceAccess(workspaceId);
 
@@ -269,6 +266,7 @@ export async function createWorkspaceDatabase(
     workspaceId,
     type: 'database',
     title: name,
+    parentId: options?.parentId ?? null,
     sortOrder: 0,
     icon: options?.icon ?? null,
     iconColor: options?.iconColor ?? null,
@@ -343,17 +341,72 @@ export async function updateWorkspaceItemIcon(itemId: string, icon: string | nul
 }
 
 export async function deleteWorkspaceItem(itemId: string) {
-  const item = await db.select().from(workspaceItems).where(eq(workspaceItems.id, itemId));
+  const item = await db.select().from(workspaceItems).where(eq(workspaceItems.id, itemId)).limit(1);
   if (!item[0]) return;
 
   await assertWorkspaceAccess(item[0].workspaceId);
 
-  if (item[0].type === 'database') {
+  await deleteWorkspaceItemRecursive(itemId, item[0].type);
+  revalidatePath('/');
+}
+
+async function deleteWorkspaceItemRecursive(itemId: string, type: 'page' | 'database') {
+  // Find all children
+  const children = await db.select({ id: workspaceItems.id, type: workspaceItems.type })
+    .from(workspaceItems)
+    .where(eq(workspaceItems.parentId, itemId));
+
+  for (const child of children) {
+    await deleteWorkspaceItemRecursive(child.id, child.type);
+  }
+
+  if (type === 'database') {
     await db.delete(databases).where(eq(databases.itemId, itemId));
+  } else {
+    await db.delete(standalonePages).where(eq(standalonePages.itemId, itemId));
   }
 
   await db.delete(workspaceItems).where(eq(workspaceItems.id, itemId));
-  revalidatePath('/');
+}
+
+async function getWorkspaceIdForParent(parentId: string): Promise<string | null> {
+  // Check if parent is a workspace item
+  const [item] = await db
+    .select({ workspaceId: workspaceItems.workspaceId })
+    .from(workspaceItems)
+    .where(eq(workspaceItems.id, parentId))
+    .limit(1);
+  if (item) return item.workspaceId;
+
+  // Check if parent is a database row (page)
+  const [row] = await db
+    .select({ workspaceId: workspaceItems.workspaceId })
+    .from(pages)
+    .innerJoin(databases, eq(pages.databaseId, databases.id))
+    .innerJoin(workspaceItems, eq(databases.itemId, workspaceItems.id))
+    .where(eq(pages.id, parentId))
+    .limit(1);
+  if (row) return row.workspaceId;
+
+  return null;
+}
+
+export async function getSubItems(parentId: string): Promise<WorkspaceItemRow[]> {
+  const workspaceId = await getWorkspaceIdForParent(parentId);
+  if (!workspaceId) return [];
+  await assertWorkspaceAccess(workspaceId);
+
+  const items = await db.select().from(workspaceItems)
+    .where(eq(workspaceItems.parentId, parentId))
+    .orderBy(asc(workspaceItems.sortOrder), asc(workspaceItems.createdAt));
+
+  const dbRows = await db.select({ itemId: databases.itemId, dbId: databases.id }).from(databases);
+  const dbMap = new Map(dbRows.filter((r) => r.itemId).map((r) => [r.itemId!, r.dbId]));
+
+  return items.map((item) => ({
+    ...item,
+    databaseId: item.type === 'database' ? (dbMap.get(item.id) ?? null) : null,
+  }));
 }
 
 export async function duplicateWorkspaceItem(itemId: string) {

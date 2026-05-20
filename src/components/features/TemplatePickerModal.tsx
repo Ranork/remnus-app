@@ -10,6 +10,7 @@ interface TemplatePickerModalProps {
   activeWorkspaceId: string;
   onClose: () => void;
   onCreated: (type: 'page' | 'database', id: string) => void;
+  parentId?: string;
 }
 
 const BLANK_TEMPLATES = TEMPLATES.filter(t => t.id === 'page-blank' || t.id === 'db-blank');
@@ -20,6 +21,7 @@ export default function TemplatePickerModal({
   activeWorkspaceId,
   onClose,
   onCreated,
+  parentId,
 }: TemplatePickerModalProps) {
   const [step, setStep] = useState<'pick' | 'confirm'>('pick');
   const [selectedTemplate, setSelectedTemplate] = useState<TemplateDefinition | null>(null);
@@ -58,7 +60,7 @@ export default function TemplatePickerModal({
         await switchWorkspace(workspaceId);
       }
       if (selectedTemplate.category === 'page') {
-        const { itemId } = await createStandalonePage(workspaceId, title.trim(), undefined, {
+        const { itemId } = await createStandalonePage(workspaceId, title.trim(), parentId, {
           initialContent: selectedTemplate.initialContent,
           icon: selectedTemplate.icon,
           iconColor: selectedTemplate.iconColor ?? null,
@@ -75,6 +77,7 @@ export default function TemplatePickerModal({
           views: freshViews,
           icon: db.icon,
           iconColor: db.iconColor ?? null,
+          parentId,
         });
         if (db.seedRows?.length) {
           for (const row of db.seedRows) {

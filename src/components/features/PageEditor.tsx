@@ -7,6 +7,7 @@ import Link from 'next/link';
 import BlockEditor from '@/components/features/editor/BlockEditor';
 import PageIcon from './PageIcon';
 import IconPicker from './IconPicker';
+import SubItemsPanel from './SubItemsPanel';
 import {
   type SelectOption,
   normalizeOption,
@@ -391,6 +392,9 @@ export default function PageEditor({
           );
         })}
       </div>
+
+      {/* Sub-items Panel */}
+      <SubItemsPanel parentId={initialPage.id} workspaceId={database.workspaceId} />
 
       {/* Content Editor */}
       <BlockEditor

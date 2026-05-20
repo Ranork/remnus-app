@@ -6,6 +6,7 @@ import { updateStandalonePageContent, updateWorkspaceItemTitle, updateWorkspaceI
 import BlockEditor from '@/components/features/editor/BlockEditor';
 import PageIcon from './PageIcon';
 import IconPicker from './IconPicker';
+import SubItemsPanel from './SubItemsPanel';
 
 function debounce<T extends (...args: any[]) => any>(fn: T, delay: number) {
   let timer: ReturnType<typeof setTimeout>;
@@ -15,7 +16,7 @@ function debounce<T extends (...args: any[]) => any>(fn: T, delay: number) {
   };
 }
 
-type Item = { id: string; title: string; icon?: string | null; iconColor?: string | null };
+type Item = { id: string; workspaceId: string; title: string; icon?: string | null; iconColor?: string | null };
 type Page = { id: string; content: string };
 
 export default function StandalonePageEditor({ item, page }: { item: Item; page: Page }) {
@@ -130,6 +131,9 @@ export default function StandalonePageEditor({ item, page }: { item: Item; page:
           />
         </div>
       </div>
+
+      <SubItemsPanel parentId={item.id} workspaceId={item.workspaceId} />
+
       <BlockEditor
         key={page.id}
         initialContent={page.content}

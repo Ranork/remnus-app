@@ -5,6 +5,7 @@ import { eq, asc, and } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
+import { deleteWorkspaceItem } from './workspace';
 
 // Verify user has access to the workspace that owns this database
 async function assertDatabaseAccess(databaseId: string) {
@@ -106,6 +107,13 @@ export async function updatePageContent(id: string, content: string) {
 
 export async function deletePage(id: string, databaseId: string) {
   await assertDatabaseAccess(databaseId);
+
+  // Clean up any nested workspace items under this page
+  const subItems = await db.select({ id: workspaceItems.id }).from(workspaceItems).where(eq(workspaceItems.parentId, id));
+  for (const item of subItems) {
+    await deleteWorkspaceItem(item.id);
+  }
+
   await db.delete(pages).where(eq(pages.id, id));
   revalidatePath(`/db/${databaseId}`);
 }

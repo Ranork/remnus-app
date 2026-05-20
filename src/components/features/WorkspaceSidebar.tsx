@@ -68,6 +68,8 @@ export default function WorkspaceSidebar({
 
   // Tree creation and editing states
   const [templatePickerWorkspaceId, setTemplatePickerWorkspaceId] = useState<string | null>(null);
+  const [templatePickerParentId, setTemplatePickerParentId] = useState<string | null>(null);
+  const [expandedItems, setExpandedItems] = useState<Record<string, boolean>>({});
   const [activeIconPickerId, setActiveIconPickerId] = useState<string | null>(null);
   const itemRefs = useRef<Record<string, HTMLButtonElement | null>>({});
 
@@ -690,119 +692,178 @@ export default function WorkspaceSidebar({
 
               {/* Workspace Children Subtree */}
               {isExpanded && (
-                <div className="pl-6 space-y-0.5 border-l border-neutral-800 ml-3.5 my-1">
-                  {workspaceChildren.map((item) => {
-                    const isLoading = loadingItem?.id === item.id;
-                    const isDeleting = isLoading && loadingItem?.action === 'delete';
-                    
-                    const isItemDragged = draggedItemId === item.id;
-                    const isItemDragOver = dragOverItemId === item.id;
+                <div className="pl-3 space-y-0.5 border-l border-neutral-800 ml-2.5 my-1">
+                  {(() => {
+                    const topLevelChildren = workspaceChildren.filter(item => !item.parentId);
 
-                    return (
-                    <div
-                      key={item.id}
-                      className={`flex items-center gap-2 px-2.5 py-1.5 rounded-md text-sm transition-all duration-200 group/item cursor-grab active:cursor-grabbing relative ${
-                        isActive(item)
-                          ? 'bg-neutral-850 text-white font-medium'
-                          : 'text-neutral-400 hover:bg-neutral-850/50 hover:text-neutral-200'
-                      } ${isLoading ? 'opacity-40 pointer-events-none' : ''} ${
-                        isItemDragged ? 'opacity-30 animate-pulse' : ''
-                      }`}
-                      draggable
-                      onDragStart={(e) => handleItemDragStart(e, item.id)}
-                      onDragOver={(e) => handleItemDragOver(e, item.id, w.id)}
-                      onDragEnd={handleItemDragEnd}
-                      onDrop={(e) => handleItemDrop(e, item.id, w.id)}
-                    >
-                      {isItemDragOver && (
-                        <div className={`absolute left-6 right-0 h-0.5 bg-blue-500 rounded-full z-10 shadow-[0_1px_3px_rgba(0,0,0,0.4)] ${
-                          itemDropPosition === 'after' ? '-bottom-0.5' : '-top-0.5'
-                        }`}>
-                          <div className="absolute -left-1 -top-0.5 w-1.5 h-1.5 bg-blue-500 rounded-full shadow-[0_0_6px_#445c95]" />
-                        </div>
-                      )}
-                      {/* Icon picker trigger */}
-                      <div className="relative shrink-0 select-none">
-                        <button
-                          ref={(el) => { itemRefs.current[item.id] = el; }}
-                          onClick={(e) => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            setActiveIconPickerId(activeIconPickerId === item.id ? null : item.id);
-                          }}
-                          className="hover:bg-neutral-800 p-0.5 rounded transition-colors flex items-center justify-center cursor-pointer"
-                          title="Change icon"
-                        >
-                          <PageIcon
-                            icon={item.icon}
-                            iconColor={item.iconColor}
-                            size={16}
-                            fallbackType={item.type}
-                            className="shrink-0"
-                          />
-                        </button>
-                        {activeIconPickerId === item.id && (
-                          <IconPicker
-                            currentIcon={item.icon}
-                            currentIconColor={item.iconColor}
-                            onSelect={(newIcon, newColor) => handleSidebarIconSelect(item.id, newIcon, newColor)}
-                            onClose={() => setActiveIconPickerId(null)}
-                            anchorRef={{ current: itemRefs.current[item.id] }}
-                          />
-                        )}
-                      </div>
+                    const renderItem = (item: WorkspaceItemRow, depth: number = 0) => {
+                      const isLoading = loadingItem?.id === item.id;
+                      const isDeleting = isLoading && loadingItem?.action === 'delete';
+                      const isItemDragged = draggedItemId === item.id;
+                      const isItemDragOver = dragOverItemId === item.id;
 
-                      {/* Title / rename input */}
-                      {renamingItemId === item.id ? (
-                        <input
-                          ref={renamingInputRef}
-                          type="text"
-                          value={renamingTitle}
-                          onChange={e => setRenamingTitle(e.target.value)}
-                          onKeyDown={e => {
-                            if (e.key === 'Enter') handleRenameItem(item);
-                            if (e.key === 'Escape') setRenamingItemId(null);
-                          }}
-                          onBlur={() => handleRenameItem(item)}
-                          onClick={e => e.stopPropagation()}
-                          className="flex-1 min-w-0 bg-neutral-800 border border-neutral-600 rounded px-1.5 py-0.5 text-xs text-white focus:outline-none focus:border-blue-500/60"
-                        />
-                      ) : (
-                        <Link
-                          href={hrefFor(item)}
-                          className="truncate flex-1 block py-0.5"
-                        >
-                          {item.title}
-                        </Link>
-                      )}
+                      const itemChildren = workspaceChildren.filter(child => child.parentId === item.id);
+                      const hasChildren = itemChildren.length > 0;
 
-                      {/* Three-dot menu trigger / loading spinner */}
-                      {renamingItemId !== item.id && (
-                        isLoading ? (
-                          <div className={`shrink-0 p-1 ${isDeleting ? 'text-red-400' : 'text-neutral-400'}`}>
-                            <div className={`w-3 h-3 rounded-full border-2 animate-spin shrink-0 ${
-                              isDeleting
-                                ? 'border-red-900/50 border-t-red-400'
-                                : 'border-neutral-800 border-t-neutral-500'
-                            }`} />
-                          </div>
-                        ) : (
-                          <button
-                            onClick={(e) => openMenuFor(e, item.id)}
-                            className={`shrink-0 p-1 rounded transition-colors text-neutral-500 hover:text-neutral-200 hover:bg-neutral-700 ${
-                              openMenuItemId === item.id
-                                ? 'opacity-100'
-                                : 'opacity-0 group-hover/item:opacity-100'
+                      // Smart expanded logic:
+                      // Explicit expand/collapse takes priority.
+                      // If undefined, expand if active or if any descendant is active.
+                      const hasActiveDescendant = (node: WorkspaceItemRow): boolean => {
+                        const children = workspaceChildren.filter(c => c.parentId === node.id);
+                        return children.some(c => isActive(c) || hasActiveDescendant(c));
+                      };
+                      const isItemExpanded =
+                        expandedItems[item.id] === true ||
+                        (expandedItems[item.id] !== false && (isActive(item) || hasActiveDescendant(item)));
+
+                      return (
+                        <div key={item.id} className="space-y-0.5">
+                          <div
+                            className={`flex items-center gap-1.5 min-w-0 px-2 py-1.5 rounded-md text-sm transition-all duration-200 group/item cursor-grab active:cursor-grabbing relative ${
+                              isActive(item)
+                                ? 'bg-neutral-850 text-white font-medium'
+                                : 'text-neutral-400 hover:bg-neutral-850/50 hover:text-neutral-200'
+                            } ${isLoading ? 'opacity-40 pointer-events-none' : ''} ${
+                              isItemDragged ? 'opacity-30 animate-pulse' : ''
                             }`}
-                            title="More options"
+                            draggable
+                            onDragStart={(e) => handleItemDragStart(e, item.id)}
+                            onDragOver={(e) => handleItemDragOver(e, item.id, w.id)}
+                            onDragEnd={handleItemDragEnd}
+                            onDrop={(e) => handleItemDrop(e, item.id, w.id)}
                           >
-                            <MoreHorizontal size={13} />
-                          </button>
-                        )
-                      )}
-                    </div>
-                    );
-                  })}
+                            {isItemDragOver && (
+                              <div className={`absolute left-6 right-0 h-0.5 bg-blue-500 rounded-full z-10 shadow-[0_1px_3px_rgba(0,0,0,0.4)] ${
+                                itemDropPosition === 'after' ? '-bottom-0.5' : '-top-0.5'
+                              }`}>
+                                <div className="absolute -left-1 -top-0.5 w-1.5 h-1.5 bg-blue-500 rounded-full shadow-[0_0_6px_#445c95]" />
+                              </div>
+                            )}
+                            
+                            {/* Toggle Chevron for nested structure */}
+                            {hasChildren ? (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  e.preventDefault();
+                                  setExpandedItems(prev => ({ ...prev, [item.id]: !prev[item.id] }));
+                                }}
+                                className="p-0.5 rounded hover:bg-neutral-700 text-neutral-500 hover:text-white transition-colors shrink-0"
+                              >
+                                {isItemExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+                              </button>
+                            ) : (
+                              <div className="w-4.5 h-4.5 shrink-0" />
+                            )}
+
+                            {/* Icon picker trigger */}
+                            <div className="relative shrink-0 select-none">
+                              <button
+                                ref={(el) => { itemRefs.current[item.id] = el; }}
+                                onClick={(e) => {
+                                  e.preventDefault();
+                                  e.stopPropagation();
+                                  setActiveIconPickerId(activeIconPickerId === item.id ? null : item.id);
+                                }}
+                                className="hover:bg-neutral-800 p-0.5 rounded transition-colors flex items-center justify-center cursor-pointer"
+                                title="Change icon"
+                              >
+                                <PageIcon
+                                  icon={item.icon}
+                                  iconColor={item.iconColor}
+                                  size={16}
+                                  fallbackType={item.type}
+                                  className="shrink-0"
+                                />
+                              </button>
+                              {activeIconPickerId === item.id && (
+                                <IconPicker
+                                  currentIcon={item.icon}
+                                  currentIconColor={item.iconColor}
+                                  onSelect={(newIcon, newColor) => handleSidebarIconSelect(item.id, newIcon, newColor)}
+                                  onClose={() => setActiveIconPickerId(null)}
+                                  anchorRef={{ current: itemRefs.current[item.id] }}
+                                />
+                              )}
+                            </div>
+
+                            {/* Title / rename input */}
+                            {renamingItemId === item.id ? (
+                              <input
+                                ref={renamingInputRef}
+                                type="text"
+                                value={renamingTitle}
+                                onChange={e => setRenamingTitle(e.target.value)}
+                                onKeyDown={e => {
+                                  if (e.key === 'Enter') handleRenameItem(item);
+                                  if (e.key === 'Escape') setRenamingItemId(null);
+                                }}
+                                onBlur={() => handleRenameItem(item)}
+                                onClick={e => e.stopPropagation()}
+                                className="flex-1 min-w-0 bg-neutral-800 border border-neutral-600 rounded px-1.5 py-0.5 text-xs text-white focus:outline-none focus:border-blue-500/60"
+                              />
+                            ) : (
+                              <Link
+                                href={hrefFor(item)}
+                                className="truncate flex-1 min-w-0 block py-0.5"
+                              >
+                                {item.title}
+                              </Link>
+                            )}
+
+                            {/* Hover actions & spinner */}
+                            {renamingItemId !== item.id && (
+                              isLoading ? (
+                                <div className={`shrink-0 p-1 ${isDeleting ? 'text-red-400' : 'text-neutral-400'}`}>
+                                  <div className={`w-3 h-3 rounded-full border-2 animate-spin shrink-0 ${
+                                    isDeleting
+                                      ? 'border-red-900/50 border-t-red-400'
+                                      : 'border-neutral-800 border-t-neutral-500'
+                                  }`} />
+                                </div>
+                              ) : (
+                                <div className="flex items-center gap-0.5 opacity-0 group-hover/item:opacity-100 transition-opacity shrink-0 ml-1" onClick={(e) => e.stopPropagation()}>
+                                  {item.type === 'page' && (
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        e.preventDefault();
+                                        setTemplatePickerParentId(item.id);
+                                        setTemplatePickerWorkspaceId(w.id);
+                                        setExpandedItems(prev => ({ ...prev, [item.id]: true }));
+                                      }}
+                                      className="p-1 rounded hover:bg-neutral-700 text-neutral-400 hover:text-white"
+                                      title="Add sub-page"
+                                    >
+                                      <Plus size={12} />
+                                    </button>
+                                  )}
+                                  <button
+                                    onClick={(e) => openMenuFor(e, item.id)}
+                                    className={`p-1 rounded transition-colors text-neutral-500 hover:text-neutral-200 hover:bg-neutral-700 ${
+                                      openMenuItemId === item.id ? 'bg-neutral-700 text-neutral-200' : ''
+                                    }`}
+                                    title="More options"
+                                  >
+                                    <MoreHorizontal size={13} />
+                                  </button>
+                                </div>
+                              )
+                            )}
+                          </div>
+
+                          {/* Children Subtree with Dusk Blue line theme */}
+                          {isItemExpanded && hasChildren && (
+                            <div className="pl-2.5 space-y-0.5 border-l border-neutral-850 hover:border-blue-500/20 transition-colors ml-2 my-0.5">
+                              {itemChildren.map(child => renderItem(child, depth + 1))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    };
+
+                    return topLevelChildren.map(item => renderItem(item));
+                  })()}
 
                   {/* Empty state */}
                   {workspaceChildren.length === 0 && (
@@ -899,9 +960,14 @@ export default function WorkspaceSidebar({
         <TemplatePickerModal
           workspaceId={templatePickerWorkspaceId}
           activeWorkspaceId={activeWorkspace.id}
-          onClose={() => setTemplatePickerWorkspaceId(null)}
+          parentId={templatePickerParentId || undefined}
+          onClose={() => {
+            setTemplatePickerWorkspaceId(null);
+            setTemplatePickerParentId(null);
+          }}
           onCreated={(type, id) => {
             setTemplatePickerWorkspaceId(null);
+            setTemplatePickerParentId(null);
             router.push(type === 'page' ? `/page/${id}` : `/db/${id}`);
           }}
         />

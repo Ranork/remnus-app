@@ -16,12 +16,28 @@ Remna is a workspace for notes, databases, and project management — all in one
 
 ### What's in this workspace?
 
-This workspace includes four databases and this page to help you explore all of Remna's features:
+This workspace is organized into **nested pages and databases** to help you explore every feature:
 
-- **Sprint Board** — Kanban + Table views. Tasks with status, priority, assignee, and story points. Notice the color-coded columns and row tints.
-- **Bug Tracker** — Three views of the same bug data: All Bugs (table), Open (filtered), and Board (kanban). Row colors reflect severity.
-- **Team Calendar** — Calendar view for scheduling events, plus a Schedule table view sorted by date.
-- **Reading List** — Simple table database with two views: all books and a filtered/sorted "Finished" view.
+- **📁 Projects** — A top-level folder page. Expand it in the sidebar to reveal two nested projects, each with their own sub-pages and databases.
+  - **🚀 Remna v2 Launch** — A project page with a brief, meeting notes, and a kanban task board — all nested inside.
+  - **🎨 Design System** — A design project with component specs and a component library database.
+- **Sprint Board** — Kanban + Table views. Tasks with status, priority, assignee, and story points.
+- **Bug Tracker** — Three views: All Bugs (table), Open (filtered), and Board (kanban). Row colors reflect severity.
+- **Team Calendar** — Calendar view for scheduling, plus a Schedule table view sorted by date.
+- **Reading List** — Table database with row color tinting and a filtered "Finished" view.
+
+---
+
+### Nested Pages
+
+Click the **▶** chevron next to any page in the sidebar to expand it and reveal its children. Pages can contain:
+- Other pages (notes, docs, briefs)
+- Databases (tables, kanban boards, calendars)
+- Any mix of both — infinitely nested
+
+Try expanding **Projects → Remna v2 Launch** to see a full project workspace nested inside a single sidebar item.
+
+**To create a nested item:** hover any page in the sidebar and click the **+** icon that appears. The new item will be created as a child of that page.
 
 ---
 
@@ -67,7 +83,266 @@ Click the **Properties** button (top-right of any database) to open the sidebar.
 - **Workspaces** — You can have multiple workspaces. Click the **+** button or hover a workspace to access its settings.
 - **Drag to reorder** — Drag any item or workspace to rearrange the sidebar.
 - **Settings** — Hover a workspace and click the gear icon to rename it, manage members, or delete it.
-- **New items** — Click the **+** next to a workspace to open the template picker and choose from pages and database templates.
+- **New items** — Click the **+** next to any page or workspace to open the template picker and choose from pages and database templates.
+`;
+
+// ── Nested page content strings ───────────────────────────────────────────
+
+const PROJECTS_PAGE_CONTENT = `## Projects
+
+This is your projects folder. Expand it in the sidebar to navigate between active projects.
+
+Each project contains its own pages and databases — all nested inside this single sidebar item.
+
+---
+
+### Active Projects
+
+| Project | Status | Owner | Due |
+|---------|--------|-------|-----|
+| Remna v2 Launch | 🟡 In Progress | Alice | June 30, 2026 |
+| Design System | 🟢 Active | Bob | Ongoing |
+
+---
+
+> **Tip:** Click the **▶** chevron next to "Projects" in the sidebar to expand it and see all nested projects.
+`;
+
+const REMNA_LAUNCH_CONTENT = `## Remna v2 Launch
+
+This project covers the full product launch of Remna v2 — from planning to go-live.
+
+---
+
+### Objectives
+
+- Ship the nested page system and new sidebar navigation
+- Complete the design system overhaul
+- Deliver a polished onboarding experience for new users
+- Achieve public launch by end of Q2 2026
+
+### Key Milestones
+
+| Milestone | Date | Status |
+|-----------|------|--------|
+| Feature freeze | June 10, 2026 | 🔵 Upcoming |
+| Internal beta | June 17, 2026 | 🔵 Upcoming |
+| Public launch | June 30, 2026 | 🔵 Upcoming |
+
+---
+
+### Pages in this project
+
+Expand this page in the sidebar to find:
+- **📋 Project Brief** — Full goals, scope, and team assignments
+- **🗓️ Kickoff Meeting Notes** — Notes and action items from the kickoff call
+- **✅ Launch Tasks** — Kanban board tracking all launch tasks
+`;
+
+const PROJECT_BRIEF_CONTENT = `## Project Brief — Remna v2
+
+### Overview
+
+Remna v2 is a major product update introducing nested pages, a redesigned sidebar, and an improved database experience. The goal is to make Remna the go-to tool for solo creators and small teams who need a lightweight but powerful Notion alternative.
+
+### Problem Statement
+
+Current users report friction when organizing large workspaces. Everything lives at the top level — there's no way to group related pages and databases under a shared parent. This creates cluttered sidebars and makes it hard to find things.
+
+### Solution
+
+Introduce a fully recursive nested page system:
+- Any page can contain sub-pages and sub-databases
+- The sidebar shows a collapsible tree view
+- Sub-items are created via the **+** button next to any page
+
+### Goals
+
+- Reduce sidebar clutter by enabling project-based grouping
+- Keep navigation fast — no full-page reloads when expanding/collapsing
+- Preserve all existing functionality (drag-to-reorder, icons, etc.)
+
+### Scope
+
+**In scope:**
+- Nested pages and databases with unlimited depth
+- Collapsible sidebar tree with smart auto-expansion
+- Template picker available on sub-pages
+- Drag-and-drop reorder within parent scope
+
+**Out of scope (v2):**
+- Cross-parent drag-and-drop
+- Breadcrumb navigation in header
+- Page backlinks
+
+### Team
+
+| Role | Person |
+|------|--------|
+| Product | Alice Chen |
+| Engineering Lead | Marcus Johnson |
+| Design | Aisha Patel |
+| QA | Kai Rivera |
+
+### Success Metrics
+
+- 70% of active users organize items into nested structures within 30 days
+- Sidebar load time remains under 100ms with 200+ items
+- Zero regressions in existing database/page functionality
+`;
+
+const KICKOFF_NOTES_CONTENT = `## Kickoff Meeting Notes
+
+**Date:** May 19, 2026
+**Attendees:** Alice Chen, Marcus Johnson, Aisha Patel, Kai Rivera
+
+---
+
+## Agenda
+
+1. Review project brief and scope
+2. Technical approach for nested items
+3. Design handoff timeline
+4. Q&A and open issues
+
+---
+
+## Notes
+
+**Alice** opened the meeting by walking through the project brief. The team aligned on scope — nested pages are the core deliverable; breadcrumbs and backlinks are deferred to a future sprint.
+
+**Marcus** presented the technical approach:
+- \`parent_id\` column added to \`workspace_items\` table (nullable, self-referential FK)
+- Sidebar renders a recursive tree using a flat item list built on the client
+- Server actions already support \`parentId\` option on both \`createStandalonePage\` and \`createWorkspaceDatabase\`
+- Auto-expansion of ancestor nodes when navigating to a deeply nested page
+
+**Aisha** shared initial wireframes for the sidebar tree view. Key design decisions:
+- Chevron (▶ / ▼) replaces the old expand behavior
+- Vertical connector lines use Dusk Blue for visual hierarchy
+- Hover \`+\` button creates a child item inline
+
+**Kai** will handle regression testing. Will write an end-to-end test covering:
+- Creating a nested page
+- Navigating to it
+- Deleting the parent (cascade)
+
+---
+
+## Action Items
+
+- [ ] Marcus: merge \`parent_id\` migration to main by May 21
+- [ ] Aisha: finalize sidebar component designs by May 23
+- [ ] Kai: set up regression test suite by May 26
+- [ ] Alice: update project brief with final milestone dates
+`;
+
+const DESIGN_SYSTEM_CONTENT = `## Design System
+
+A single source of truth for all UI components, tokens, and patterns used across Remna.
+
+---
+
+### Design Principles
+
+1. **Flat & Borderless** — No shadows, no nested cards. Borders only for separation.
+2. **Three-tier backgrounds** — \`neutral-950\` (frame) → \`neutral-900\` (sidebars/panels) → \`neutral-850\` (canvas/content)
+3. **Motion with purpose** — Micro-animations only where they communicate state changes.
+4. **Dark-first** — All components are designed in dark mode. Light mode is not planned.
+
+---
+
+### Color Tokens
+
+| Role | Token | Hex |
+|------|-------|-----|
+| Canvas background | \`neutral-850\` | \`#282c34\` |
+| Sidebar background | \`neutral-900\` | \`#21252b\` |
+| Frame background | \`neutral-950\` | \`#1d1f23\` |
+| Border / divider | \`neutral-800\` | \`#383b41\` |
+| Primary text | \`neutral-100\` | \`#cccccc\` |
+| Muted text | \`neutral-50\` | \`#d7dae0\` |
+| Accent / primary | \`blue-500\` | \`#445c95\` |
+| Destructive | \`red-400\` | \`#cd4d55\` |
+| Success | \`green-400\` | \`#7fc36d\` |
+| Warning | \`amber-500\` | \`#cc7d45\` |
+
+---
+
+### Pages in this project
+
+- **📐 Component Specs** — Detailed spec for each component category
+- **🧩 Component Library** — Database tracking all components with status and owner
+`;
+
+const COMPONENT_SPECS_CONTENT = `## Component Specs
+
+This page documents the specification and usage guidelines for each component category in Remna's design system.
+
+---
+
+## Layout Components
+
+### Sidebar
+- **Background:** \`bg-neutral-900\`
+- **Width:** 260px fixed
+- **Border:** \`border-r border-neutral-800\`
+- **Items:** Full-width, flat, \`hover:bg-neutral-800/20\`
+- **Active item:** \`bg-neutral-800/40\` + \`text-neutral-100\`
+
+### Canvas
+- **Background:** \`bg-neutral-850\`
+- **Max content width:** 720px (narrow), 1024px (wide), 100% (full)
+- **Padding:** \`px-16 py-12\` (narrow), \`px-8 py-12\` (wide/full)
+
+---
+
+## Form Components
+
+### Input
+\`\`\`
+bg-neutral-800 border border-neutral-700
+rounded-none h-9 px-3
+focus:outline-none focus:ring-1 focus:ring-blue-500
+text-neutral-100 placeholder:text-neutral-500
+\`\`\`
+
+### Button (Primary)
+\`\`\`
+bg-blue-500 hover:bg-blue-600
+text-white font-medium
+rounded-none h-9 px-4
+transition-colors duration-150
+\`\`\`
+
+### Button (Destructive)
+\`\`\`
+bg-red-400 hover:bg-red-500
+text-white font-medium
+rounded-none h-9 px-4
+\`\`\`
+
+---
+
+## Feedback Components
+
+### Empty State
+- Centered in the available canvas
+- Muted icon (Lucide, \`text-neutral-600\`, size 40)
+- Title: \`text-neutral-400 text-sm font-medium\`
+- Subtitle: \`text-neutral-600 text-xs\`
+
+### Toast / Notification
+- Bottom-right anchored
+- \`bg-neutral-900 border border-neutral-800\`
+- Auto-dismiss after 4 seconds
+- Stack up to 3 toasts
+
+---
+
+## Auth Pages Exception
+
+The \`/login\` and \`/register\` pages use a softly rounded style (\`rounded-xl\` card, \`rounded-lg\` inputs/buttons) to visually separate the auth flow from the workspace canvas. Do **not** apply this rounded style inside the workspace.
 `;
 
 async function createRichWorkspaceData(userId: string, workspaceName: string) {
@@ -83,10 +358,288 @@ async function createRichWorkspaceData(userId: string, workspaceName: string) {
   await db.insert(workspaces).values({ id: ws1, name: workspaceName, sortOrder: 0, createdAt: new Date() });
   await db.insert(workspaceMembers).values({ id: crypto.randomUUID(), workspaceId: ws1, userId, role: 'owner', createdAt: new Date() });
 
-  // Getting Started page
+  // ── Getting Started page ────────────────────────────────────────────────────
+
   const gettingStartedItem = crypto.randomUUID();
   await db.insert(workspaceItems).values({ id: gettingStartedItem, workspaceId: ws1, type: 'page', title: 'Getting Started', sortOrder: 0, icon: '👋', iconColor: 'default' });
   await db.insert(standalonePages).values({ id: crypto.randomUUID(), itemId: gettingStartedItem, content: GETTING_STARTED });
+
+  // ── Projects parent page ────────────────────────────────────────────────────
+  // This top-level page acts as a "folder" — its children are the actual projects.
+
+  const projectsItem = crypto.randomUUID();
+  await db.insert(workspaceItems).values({
+    id: projectsItem,
+    workspaceId: ws1,
+    type: 'page',
+    title: 'Projects',
+    sortOrder: 1,
+    icon: '📁',
+    iconColor: 'default',
+  });
+  await db.insert(standalonePages).values({ id: crypto.randomUUID(), itemId: projectsItem, content: PROJECTS_PAGE_CONTENT });
+
+  // ── Remna v2 Launch — child of Projects ────────────────────────────────────
+
+  const remnaLaunchItem = crypto.randomUUID();
+  await db.insert(workspaceItems).values({
+    id: remnaLaunchItem,
+    workspaceId: ws1,
+    type: 'page',
+    title: 'Remna v2 Launch',
+    parentId: projectsItem,       // ← nested inside "Projects"
+    sortOrder: 0,
+    icon: '🚀',
+    iconColor: 'blue',
+  });
+  await db.insert(standalonePages).values({ id: crypto.randomUUID(), itemId: remnaLaunchItem, content: REMNA_LAUNCH_CONTENT });
+
+  // Project Brief — child of Remna v2 Launch
+  const projectBriefItem = crypto.randomUUID();
+  await db.insert(workspaceItems).values({
+    id: projectBriefItem,
+    workspaceId: ws1,
+    type: 'page',
+    title: 'Project Brief',
+    parentId: remnaLaunchItem,    // ← nested inside "Remna v2 Launch"
+    sortOrder: 0,
+    icon: '📋',
+    iconColor: 'default',
+  });
+  await db.insert(standalonePages).values({ id: crypto.randomUUID(), itemId: projectBriefItem, content: PROJECT_BRIEF_CONTENT });
+
+  // Kickoff Meeting Notes — child of Remna v2 Launch
+  const kickoffItem = crypto.randomUUID();
+  await db.insert(workspaceItems).values({
+    id: kickoffItem,
+    workspaceId: ws1,
+    type: 'page',
+    title: 'Kickoff Meeting Notes',
+    parentId: remnaLaunchItem,    // ← nested inside "Remna v2 Launch"
+    sortOrder: 1,
+    icon: '🗓️',
+    iconColor: 'default',
+  });
+  await db.insert(standalonePages).values({ id: crypto.randomUUID(), itemId: kickoffItem, content: KICKOFF_NOTES_CONTENT });
+
+  // Launch Tasks database — child of Remna v2 Launch
+  const launchTasksItemId = crypto.randomUUID();
+  const launchTasksDbId = crypto.randomUUID();
+  const launchTasksSchema = [
+    { id: 'title', name: 'Title', type: 'text' as const },
+    {
+      id: 'status', name: 'Status', type: 'select' as const, options: [
+        { value: 'Backlog', color: 'default' as const },
+        { value: 'In Progress', color: 'blue' as const },
+        { value: 'Review', color: 'yellow' as const },
+        { value: 'Done', color: 'green' as const },
+      ],
+    },
+    {
+      id: 'area', name: 'Area', type: 'select' as const, options: [
+        { value: 'Engineering', color: 'teal' as const },
+        { value: 'Design', color: 'pink' as const },
+        { value: 'QA', color: 'purple' as const },
+        { value: 'Product', color: 'blue' as const },
+      ],
+    },
+    { id: 'assignee', name: 'Assignee', type: 'text' as const },
+    { id: 'dueDate', name: 'Due Date', type: 'date' as const, dateFormat: 'default' as const },
+  ];
+  const launchTasksViews = [
+    {
+      id: 'v-lt-1',
+      name: 'Board',
+      config: {
+        type: 'kanban' as const,
+        groupByCol: 'status',
+        groupOrder: ['Backlog', 'In Progress', 'Review', 'Done'],
+        filters: [],
+        sorts: [],
+        openBehavior: 'center' as const,
+        cardProperties: ['area', 'assignee', 'dueDate'],
+        showPropertyLabels: true,
+        propertyTextClamp: 'truncate' as const,
+        cardColorCol: 'area',
+        groupColBg: true,
+      },
+    },
+    {
+      id: 'v-lt-2',
+      name: 'Table',
+      config: {
+        type: 'table' as const,
+        columnOrder: ['title', 'status', 'area', 'assignee', 'dueDate'],
+        hiddenColumns: [],
+        filters: [],
+        sorts: [],
+        openBehavior: 'center' as const,
+        rowColorCol: 'status',
+      },
+    },
+  ];
+  await db.insert(workspaceItems).values({
+    id: launchTasksItemId,
+    workspaceId: ws1,
+    type: 'database',
+    title: 'Launch Tasks',
+    parentId: remnaLaunchItem,    // ← nested inside "Remna v2 Launch"
+    sortOrder: 2,
+    icon: '✅',
+    iconColor: 'green',
+  });
+  await db.insert(databases).values({ id: launchTasksDbId, name: 'Launch Tasks', itemId: launchTasksItemId, schema: launchTasksSchema, views: launchTasksViews });
+
+  const launchTasks = [
+    { title: 'Add parent_id column to workspace_items', status: 'Done', area: 'Engineering', assignee: 'Marcus', dueDate: d(-4) },
+    { title: 'Build recursive sidebar tree renderer', status: 'Done', area: 'Engineering', assignee: 'Marcus', dueDate: d(-2) },
+    { title: 'Implement auto-expand for active nested page', status: 'Done', area: 'Engineering', assignee: 'Marcus', dueDate: d(-1) },
+    { title: 'Design sidebar chevron & connector lines', status: 'Done', area: 'Design', assignee: 'Aisha', dueDate: d(-3) },
+    { title: 'Add nested item creation via + button', status: 'In Progress', area: 'Engineering', assignee: 'Marcus', dueDate: d(1) },
+    { title: 'Write end-to-end regression tests', status: 'In Progress', area: 'QA', assignee: 'Kai', dueDate: d(3) },
+    { title: 'Update Getting Started demo content', status: 'Review', area: 'Product', assignee: 'Alice', dueDate: d(2) },
+    { title: 'Support drag-and-drop within parent scope', status: 'Backlog', area: 'Engineering', assignee: 'Marcus', dueDate: d(7) },
+    { title: 'Breadcrumb navigation in page header', status: 'Backlog', area: 'Design', assignee: 'Aisha', dueDate: d(14) },
+    { title: 'Public launch announcement', status: 'Backlog', area: 'Product', assignee: 'Alice', dueDate: d(21) },
+  ];
+  for (let i = 0; i < launchTasks.length; i++) {
+    const t = launchTasks[i];
+    await db.insert(pages).values({
+      id: crypto.randomUUID(),
+      databaseId: launchTasksDbId,
+      title: t.title,
+      content: '',
+      properties: { title: t.title, status: t.status, area: t.area, assignee: t.assignee, dueDate: t.dueDate },
+      sortOrder: i,
+    });
+  }
+
+  // ── Design System — child of Projects ──────────────────────────────────────
+
+  const designSystemItem = crypto.randomUUID();
+  await db.insert(workspaceItems).values({
+    id: designSystemItem,
+    workspaceId: ws1,
+    type: 'page',
+    title: 'Design System',
+    parentId: projectsItem,       // ← nested inside "Projects"
+    sortOrder: 1,
+    icon: '🎨',
+    iconColor: 'pink',
+  });
+  await db.insert(standalonePages).values({ id: crypto.randomUUID(), itemId: designSystemItem, content: DESIGN_SYSTEM_CONTENT });
+
+  // Component Specs — child of Design System
+  const componentSpecsItem = crypto.randomUUID();
+  await db.insert(workspaceItems).values({
+    id: componentSpecsItem,
+    workspaceId: ws1,
+    type: 'page',
+    title: 'Component Specs',
+    parentId: designSystemItem,   // ← nested inside "Design System"
+    sortOrder: 0,
+    icon: '📐',
+    iconColor: 'default',
+  });
+  await db.insert(standalonePages).values({ id: crypto.randomUUID(), itemId: componentSpecsItem, content: COMPONENT_SPECS_CONTENT });
+
+  // Component Library database — child of Design System
+  const compLibItemId = crypto.randomUUID();
+  const compLibDbId = crypto.randomUUID();
+  const compLibSchema = [
+    { id: 'title', name: 'Component', type: 'text' as const },
+    {
+      id: 'category', name: 'Category', type: 'select' as const, options: [
+        { value: 'Layout', color: 'blue' as const },
+        { value: 'Form', color: 'teal' as const },
+        { value: 'Navigation', color: 'purple' as const },
+        { value: 'Feedback', color: 'green' as const },
+        { value: 'Data', color: 'orange' as const },
+      ],
+    },
+    {
+      id: 'status', name: 'Status', type: 'select' as const, options: [
+        { value: 'Planned', color: 'default' as const },
+        { value: 'In Progress', color: 'yellow' as const },
+        { value: 'Done', color: 'green' as const },
+        { value: 'Deprecated', color: 'red' as const },
+      ],
+    },
+    { id: 'owner', name: 'Owner', type: 'text' as const },
+    { id: 'notes', name: 'Notes', type: 'text' as const },
+  ];
+  const compLibViews = [
+    {
+      id: 'v-cl-1',
+      name: 'All Components',
+      config: {
+        type: 'table' as const,
+        columnOrder: ['title', 'category', 'status', 'owner', 'notes'],
+        hiddenColumns: [],
+        filters: [],
+        sorts: [],
+        openBehavior: 'side' as const,
+        rowColorCol: 'status',
+      },
+    },
+    {
+      id: 'v-cl-2',
+      name: 'Board',
+      config: {
+        type: 'kanban' as const,
+        groupByCol: 'status',
+        groupOrder: ['Planned', 'In Progress', 'Done', 'Deprecated'],
+        filters: [],
+        sorts: [],
+        openBehavior: 'side' as const,
+        cardProperties: ['category', 'owner'],
+        showPropertyLabels: true,
+        propertyTextClamp: 'truncate' as const,
+        cardColorCol: 'category',
+        groupColBg: false,
+      },
+    },
+  ];
+  await db.insert(workspaceItems).values({
+    id: compLibItemId,
+    workspaceId: ws1,
+    type: 'database',
+    title: 'Component Library',
+    parentId: designSystemItem,   // ← nested inside "Design System"
+    sortOrder: 1,
+    icon: '🧩',
+    iconColor: 'purple',
+  });
+  await db.insert(databases).values({ id: compLibDbId, name: 'Component Library', itemId: compLibItemId, schema: compLibSchema, views: compLibViews });
+
+  const components = [
+    { title: 'Sidebar', category: 'Navigation', status: 'Done', owner: 'Aisha', notes: 'Collapsible tree, drag-and-drop, nested items' },
+    { title: 'WorkspaceItem', category: 'Navigation', status: 'Done', owner: 'Aisha', notes: 'Icon, title, chevron, action buttons' },
+    { title: 'DatabaseView', category: 'Data', status: 'Done', owner: 'Marcus', notes: 'Orchestrates Table, Kanban, Calendar views' },
+    { title: 'TableLayout', category: 'Data', status: 'Done', owner: 'Marcus', notes: 'Inline editing, resizable columns, row tint' },
+    { title: 'KanbanBoard', category: 'Data', status: 'Done', owner: 'Marcus', notes: 'Grouped columns, card colors, group bg tint' },
+    { title: 'CalendarView', category: 'Data', status: 'Done', owner: 'Marcus', notes: 'Month/week modes, card color, date placement' },
+    { title: 'ViewsBar', category: 'Navigation', status: 'Done', owner: 'Aisha', notes: 'View tabs, inline rename, add/delete view' },
+    { title: 'PropertiesSidebar', category: 'Form', status: 'Done', owner: 'Aisha', notes: 'Schema editing, filters, sorts, group-by' },
+    { title: 'PageEditor', category: 'Layout', status: 'Done', owner: 'Marcus', notes: 'Markdown editor with bubble toolbar and slash commands' },
+    { title: 'IconPicker', category: 'Feedback', status: 'Done', owner: 'Aisha', notes: 'Emoji + Lucide icons with color selection' },
+    { title: 'TemplatePickerModal', category: 'Feedback', status: 'Done', owner: 'Aisha', notes: '2-step modal: pick template → name item' },
+    { title: 'WorkspaceSettingsModal', category: 'Feedback', status: 'Done', owner: 'Aisha', notes: 'General + Members tabs, role management' },
+    { title: 'Breadcrumb', category: 'Navigation', status: 'Planned', owner: '', notes: 'Show ancestor path for deeply nested pages' },
+    { title: 'CommandPalette', category: 'Navigation', status: 'Planned', owner: '', notes: 'Quick-open any page or database via ⌘K' },
+    { title: 'Toast', category: 'Feedback', status: 'In Progress', owner: 'Aisha', notes: 'Auto-dismiss, stack up to 3' },
+  ];
+  for (let i = 0; i < components.length; i++) {
+    const c = components[i];
+    await db.insert(pages).values({
+      id: crypto.randomUUID(),
+      databaseId: compLibDbId,
+      title: c.title,
+      content: '',
+      properties: { title: c.title, category: c.category, status: c.status, owner: c.owner, notes: c.notes },
+      sortOrder: i,
+    });
+  }
 
   // ── Sprint Board database ───────────────────────────────────────────────────
 
@@ -145,7 +698,7 @@ async function createRichWorkspaceData(userId: string, workspaceName: string) {
   ];
   const sprintDbItem = crypto.randomUUID();
   const sprintDb = crypto.randomUUID();
-  await db.insert(workspaceItems).values({ id: sprintDbItem, workspaceId: ws1, type: 'database', title: 'Sprint Board', sortOrder: 1, icon: '✅', iconColor: 'green' });
+  await db.insert(workspaceItems).values({ id: sprintDbItem, workspaceId: ws1, type: 'database', title: 'Sprint Board', sortOrder: 2, icon: '✅', iconColor: 'green' });
   await db.insert(databases).values({ id: sprintDb, name: 'Sprint Board', itemId: sprintDbItem, schema: sprintSchema, views: sprintViews });
 
   const sprintTasks = [
@@ -246,7 +799,7 @@ async function createRichWorkspaceData(userId: string, workspaceName: string) {
   ];
   const bugDbItem = crypto.randomUUID();
   const bugDb = crypto.randomUUID();
-  await db.insert(workspaceItems).values({ id: bugDbItem, workspaceId: ws1, type: 'database', title: 'Bug Tracker', sortOrder: 2, icon: '🐛', iconColor: 'red' });
+  await db.insert(workspaceItems).values({ id: bugDbItem, workspaceId: ws1, type: 'database', title: 'Bug Tracker', sortOrder: 3, icon: '🐛', iconColor: 'red' });
   await db.insert(databases).values({ id: bugDb, name: 'Bug Tracker', itemId: bugDbItem, schema: bugSchema, views: bugViews });
 
   const bugs = [
@@ -318,7 +871,7 @@ async function createRichWorkspaceData(userId: string, workspaceName: string) {
   ];
   const calDbItem = crypto.randomUUID();
   const calDb = crypto.randomUUID();
-  await db.insert(workspaceItems).values({ id: calDbItem, workspaceId: ws1, type: 'database', title: 'Team Calendar', sortOrder: 3, icon: '📅', iconColor: 'teal' });
+  await db.insert(workspaceItems).values({ id: calDbItem, workspaceId: ws1, type: 'database', title: 'Team Calendar', sortOrder: 4, icon: '📅', iconColor: 'teal' });
   await db.insert(databases).values({ id: calDb, name: 'Team Calendar', itemId: calDbItem, schema: calSchema, views: calViews });
 
   const events = [
@@ -350,7 +903,7 @@ async function createRichWorkspaceData(userId: string, workspaceName: string) {
     });
   }
 
-  // ── Reading List database (same workspace) ─────────────────────────────────
+  // ── Reading List database ───────────────────────────────────────────────────
 
   const readingSchema = [
     { id: 'title', name: 'Title', type: 'text' as const },
@@ -398,7 +951,7 @@ async function createRichWorkspaceData(userId: string, workspaceName: string) {
   ];
   const readingDbItem = crypto.randomUUID();
   const readingDb = crypto.randomUUID();
-  await db.insert(workspaceItems).values({ id: readingDbItem, workspaceId: ws1, type: 'database', title: 'Reading List', sortOrder: 4, icon: '📚', iconColor: 'purple' });
+  await db.insert(workspaceItems).values({ id: readingDbItem, workspaceId: ws1, type: 'database', title: 'Reading List', sortOrder: 5, icon: '📚', iconColor: 'purple' });
   await db.insert(databases).values({ id: readingDb, name: 'Reading List', itemId: readingDbItem, schema: readingSchema, views: readingViews });
 
   const books = [
@@ -429,4 +982,3 @@ export async function createDemoSeedData(userId: string, userName?: string | nul
   const workspaceName = userName ? `${userName} Workspace` : 'Demo Workspace';
   await createRichWorkspaceData(userId, workspaceName);
 }
-
