@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import '../globals.css';
+import { Analytics } from '@vercel/analytics/next';
 import { auth, signOut } from '@/auth';
 import { cookies } from 'next/headers';
 import { getAllWorkspaceItems, getWorkspaces } from '@/lib/actions/workspace';
@@ -48,6 +49,7 @@ export default async function LocaleLayout({
           <NextIntlClientProvider messages={messages}>
             {children}
           </NextIntlClientProvider>
+          <Analytics />
         </body>
       </html>
     );
@@ -112,6 +114,7 @@ export default async function LocaleLayout({
             </main>
           </QueryProvider>
         </NextIntlClientProvider>
+        <Analytics />
       </body>
     </html>
   );
