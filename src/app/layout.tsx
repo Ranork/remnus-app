@@ -10,7 +10,7 @@ import QueryProvider from '@/components/providers/QueryProvider';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Remna',
+  title: 'Remnus',
   description: 'Customizable database and pages',
   icons: {
     icon: '/logo-square-dark.ico',
@@ -44,7 +44,7 @@ export default async function RootLayout({
   ]);
 
   const cookieStore = await cookies();
-  const activeWorkspaceId = cookieStore.get('remna_workspace_id')?.value;
+  const activeWorkspaceId = cookieStore.get('remnus_workspace_id')?.value;
   const activeWorkspace = workspacesList.find((w) => w.id === activeWorkspaceId) || workspacesList[0];
 
   const currentUser = {

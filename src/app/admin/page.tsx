@@ -6,7 +6,7 @@ import { Shield, Users, Layers, FileText, TrendingUp } from 'lucide-react';
 import AdminUsersTable from '@/components/features/AdminUsersTable';
 import AdminWorkspacesTable from '@/components/features/AdminWorkspacesTable';
 
-export const metadata = { title: 'Admin — Remna' };
+export const metadata = { title: 'Admin — Remnus' };
 
 function safeDate(val: Date | string | number | null | undefined): Date | null {
   if (!val) return null;

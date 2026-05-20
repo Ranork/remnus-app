@@ -14,10 +14,10 @@ export default function RegisterPage() {
         <div className="flex flex-col items-center mb-10">
           <img
             src="/logo-square-dark.png"
-            alt="Remna"
+            alt="Remnus"
             className="w-14 h-14 object-contain rounded-xl mb-4 shadow-lg"
           />
-          <h1 className="text-2xl font-bold text-white tracking-tight">Remna</h1>
+          <h1 className="text-2xl font-bold text-white tracking-tight">Remnus</h1>
           <p className="text-neutral-400 text-sm mt-1">Create your account</p>
         </div>
 

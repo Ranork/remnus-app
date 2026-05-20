@@ -8,9 +8,9 @@ export async function createSeedWorkspace(userId: string, userName?: string | nu
 
 // ── Demo seed data ─────────────────────────────────────────────────────────
 
-const GETTING_STARTED = `## Getting Started with Remna
+const GETTING_STARTED = `## Getting Started with Remnus
 
-Remna is a workspace for notes, databases, and project management — all in one sidebar. This guide walks you through everything in this demo workspace.
+Remnus is a workspace for notes, databases, and project management — all in one sidebar. This guide walks you through everything in this demo workspace.
 
 ---
 
@@ -19,7 +19,7 @@ Remna is a workspace for notes, databases, and project management — all in one
 This workspace is organized into **nested pages and databases** to help you explore every feature:
 
 - **📁 Projects** — A top-level folder page. Expand it in the sidebar to reveal two nested projects, each with their own sub-pages and databases.
-  - **🚀 Remna v2 Launch** — A project page with a brief, meeting notes, and a kanban task board — all nested inside.
+  - **🚀 Remnus v2 Launch** — A project page with a brief, meeting notes, and a kanban task board — all nested inside.
   - **🎨 Design System** — A design project with component specs and a component library database.
 - **Sprint Board** — Kanban + Table views. Tasks with status, priority, assignee, and story points.
 - **Bug Tracker** — Three views: All Bugs (table), Open (filtered), and Board (kanban). Row colors reflect severity.
@@ -35,7 +35,7 @@ Click the **▶** chevron next to any page in the sidebar to expand it and revea
 - Databases (tables, kanban boards, calendars)
 - Any mix of both — infinitely nested
 
-Try expanding **Projects → Remna v2 Launch** to see a full project workspace nested inside a single sidebar item.
+Try expanding **Projects → Remnus v2 Launch** to see a full project workspace nested inside a single sidebar item.
 
 **To create a nested item:** hover any page in the sidebar and click the **+** icon that appears. The new item will be created as a child of that page.
 
@@ -100,7 +100,7 @@ Each project contains its own pages and databases — all nested inside this sin
 
 | Project | Status | Owner | Due |
 |---------|--------|-------|-----|
-| Remna v2 Launch | 🟡 In Progress | Alice | June 30, 2026 |
+| Remnus v2 Launch | 🟡 In Progress | Alice | June 30, 2026 |
 | Design System | 🟢 Active | Bob | Ongoing |
 
 ---
@@ -108,9 +108,9 @@ Each project contains its own pages and databases — all nested inside this sin
 > **Tip:** Click the **▶** chevron next to "Projects" in the sidebar to expand it and see all nested projects.
 `;
 
-const REMNA_LAUNCH_CONTENT = `## Remna v2 Launch
+const REMNUS_LAUNCH_CONTENT = `## Remnus v2 Launch
 
-This project covers the full product launch of Remna v2 — from planning to go-live.
+This project covers the full product launch of Remnus v2 — from planning to go-live.
 
 ---
 
@@ -139,11 +139,11 @@ Expand this page in the sidebar to find:
 - **✅ Launch Tasks** — Kanban board tracking all launch tasks
 `;
 
-const PROJECT_BRIEF_CONTENT = `## Project Brief — Remna v2
+const PROJECT_BRIEF_CONTENT = `## Project Brief — Remnus v2
 
 ### Overview
 
-Remna v2 is a major product update introducing nested pages, a redesigned sidebar, and an improved database experience. The goal is to make Remna the go-to tool for solo creators and small teams who need a lightweight but powerful Notion alternative.
+Remnus v2 is a major product update introducing nested pages, a redesigned sidebar, and an improved database experience. The goal is to make Remnus the go-to tool for solo creators and small teams who need a lightweight but powerful Notion alternative.
 
 ### Problem Statement
 
@@ -239,7 +239,7 @@ const KICKOFF_NOTES_CONTENT = `## Kickoff Meeting Notes
 
 const DESIGN_SYSTEM_CONTENT = `## Design System
 
-A single source of truth for all UI components, tokens, and patterns used across Remna.
+A single source of truth for all UI components, tokens, and patterns used across Remnus.
 
 ---
 
@@ -277,7 +277,7 @@ A single source of truth for all UI components, tokens, and patterns used across
 
 const COMPONENT_SPECS_CONTENT = `## Component Specs
 
-This page documents the specification and usage guidelines for each component category in Remna's design system.
+This page documents the specification and usage guidelines for each component category in Remnus's design system.
 
 ---
 
@@ -379,50 +379,50 @@ async function createRichWorkspaceData(userId: string, workspaceName: string) {
   });
   await db.insert(standalonePages).values({ id: crypto.randomUUID(), itemId: projectsItem, content: PROJECTS_PAGE_CONTENT });
 
-  // ── Remna v2 Launch — child of Projects ────────────────────────────────────
+  // ── Remnus v2 Launch — child of Projects ────────────────────────────────────
 
-  const remnaLaunchItem = crypto.randomUUID();
+  const remnusLaunchItem = crypto.randomUUID();
   await db.insert(workspaceItems).values({
-    id: remnaLaunchItem,
+    id: remnusLaunchItem,
     workspaceId: ws1,
     type: 'page',
-    title: 'Remna v2 Launch',
+    title: 'Remnus v2 Launch',
     parentId: projectsItem,       // ← nested inside "Projects"
     sortOrder: 0,
     icon: '🚀',
     iconColor: 'blue',
   });
-  await db.insert(standalonePages).values({ id: crypto.randomUUID(), itemId: remnaLaunchItem, content: REMNA_LAUNCH_CONTENT });
+  await db.insert(standalonePages).values({ id: crypto.randomUUID(), itemId: remnusLaunchItem, content: REMNUS_LAUNCH_CONTENT });
 
-  // Project Brief — child of Remna v2 Launch
+  // Project Brief — child of Remnus v2 Launch
   const projectBriefItem = crypto.randomUUID();
   await db.insert(workspaceItems).values({
     id: projectBriefItem,
     workspaceId: ws1,
     type: 'page',
     title: 'Project Brief',
-    parentId: remnaLaunchItem,    // ← nested inside "Remna v2 Launch"
+    parentId: remnusLaunchItem,    // ← nested inside "Remnus v2 Launch"
     sortOrder: 0,
     icon: '📋',
     iconColor: 'default',
   });
   await db.insert(standalonePages).values({ id: crypto.randomUUID(), itemId: projectBriefItem, content: PROJECT_BRIEF_CONTENT });
 
-  // Kickoff Meeting Notes — child of Remna v2 Launch
+  // Kickoff Meeting Notes — child of Remnus v2 Launch
   const kickoffItem = crypto.randomUUID();
   await db.insert(workspaceItems).values({
     id: kickoffItem,
     workspaceId: ws1,
     type: 'page',
     title: 'Kickoff Meeting Notes',
-    parentId: remnaLaunchItem,    // ← nested inside "Remna v2 Launch"
+    parentId: remnusLaunchItem,    // ← nested inside "Remnus v2 Launch"
     sortOrder: 1,
     icon: '🗓️',
     iconColor: 'default',
   });
   await db.insert(standalonePages).values({ id: crypto.randomUUID(), itemId: kickoffItem, content: KICKOFF_NOTES_CONTENT });
 
-  // Launch Tasks database — child of Remna v2 Launch
+  // Launch Tasks database — child of Remnus v2 Launch
   const launchTasksItemId = crypto.randomUUID();
   const launchTasksDbId = crypto.randomUUID();
   const launchTasksSchema = [
@@ -483,7 +483,7 @@ async function createRichWorkspaceData(userId: string, workspaceName: string) {
     workspaceId: ws1,
     type: 'database',
     title: 'Launch Tasks',
-    parentId: remnaLaunchItem,    // ← nested inside "Remna v2 Launch"
+    parentId: remnusLaunchItem,    // ← nested inside "Remnus v2 Launch"
     sortOrder: 2,
     icon: '✅',
     iconColor: 'green',

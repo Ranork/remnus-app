@@ -70,7 +70,7 @@ export default function StandalonePageEditor({
   }, [title, item.id]);
 
   useEffect(() => {
-    document.title = `${title || 'Untitled'} | Remna`;
+    document.title = `${title || 'Untitled'} | Remnus`;
   }, [title]);
 
   const saveContent = useCallback(async (md: string) => {

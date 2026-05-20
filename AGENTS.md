@@ -12,9 +12,9 @@ If you skip this step, future agents will work from a stale map and make mistake
 
 ---
 
-# Project Details: Remna
+# Project Details: Remnus
 
-**Remna** is a Notion-like application built around a **workspace** model. Users can create standalone pages (title + markdown) and customizable databases (dynamic columns, table/kanban views) — both living side by side in a unified sidebar. Each database row is also a page with markdown content.
+**Remnus** is a Notion-like application built around a **workspace** model. Users can create standalone pages (title + markdown) and customizable databases (dynamic columns, table/kanban views) — both living side by side in a unified sidebar. Each database row is also a page with markdown content.
 
 ## UI Language
 All user-facing text — labels, placeholders, empty states, buttons, error messages — must be written in **English**. Date and time values must be formatted using the `en-US` locale. Do not introduce Turkish or any other language into the UI.
@@ -151,7 +151,7 @@ To support fully dynamic, user-defined properties without structural database mi
 - `src/lib/auth/session.ts`: Shared `getCurrentUser()` — a `React.cache`-wrapped call to `auth()`. Import from here in all server actions instead of calling `auth()` directly. Ensures auth is resolved at most once per request.
 - `src/components/providers/QueryProvider.tsx`: TanStack Query `QueryClientProvider` wrapper (staleTime 60s, gcTime 5min, no window-focus refetch). Wraps the authenticated layout in `src/app/layout.tsx`.
 - `src/components/features/SaveStatus.tsx`: Auto-fading save indicator (`idle` → `saving` → `saved` → `error`). Used in `StandalonePageEditor` and `PageEditor` to give users feedback on auto-save debounce completion.
-- `src/lib/seed.ts`: `createSeedWorkspace(userId, userName?)` and `createDemoSeedData(userId, userName?)` both call the shared `createRichWorkspaceData` helper. Seeds: Getting Started page, a **📁 Projects** folder page (with nested sub-projects **🚀 Remna v2 Launch** and **🎨 Design System**, each containing child pages and databases), Sprint Board, Bug Tracker, Team Calendar, and Reading List. All inserts use `createdAt: new Date()`; all database row `properties` include a `title` key.
+- `src/lib/seed.ts`: `createSeedWorkspace(userId, userName?)` and `createDemoSeedData(userId, userName?)` both call the shared `createRichWorkspaceData` helper. Seeds: Getting Started page, a **📁 Projects** folder page (with nested sub-projects **🚀 Remnus v2 Launch** and **🎨 Design System**, each containing child pages and databases), Sprint Board, Bug Tracker, Team Calendar, and Reading List. All inserts use `createdAt: new Date()`; all database row `properties` include a `title` key.
 
 - `src/db/`: Contains Drizzle `schema.ts`, connection `index.ts`, migration scripts, and `migrations/` folder.
 

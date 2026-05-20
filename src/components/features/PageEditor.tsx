@@ -102,7 +102,7 @@ export default function PageEditor({
 
   useEffect(() => {
     if (!isPeek) {
-      document.title = `${pageTitle} | Remna`;
+      document.title = `${pageTitle} | Remnus`;
     }
   }, [pageTitle, isPeek]);
 

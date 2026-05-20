@@ -592,8 +592,8 @@ export default function WorkspaceSidebar({
       {/* Brand Header */}
       <div className="p-4 border-b border-neutral-800 flex items-center justify-between shrink-0">
         <Link href="/" className="font-semibold flex items-center gap-2.5 text-white hover:text-neutral-300 transition-colors">
-          <img src="/logo-square-dark.png" alt="Remna Logo" className={`w-5 h-5 object-contain rounded-md shrink-0 shadow-sm ${isSaving ? 'animate-pulse' : ''}`} />
-          <span className="font-bold tracking-tight text-white">Remna</span>
+          <img src="/logo-square-dark.png" alt="Remnus Logo" className={`w-5 h-5 object-contain rounded-md shrink-0 shadow-sm ${isSaving ? 'animate-pulse' : ''}`} />
+          <span className="font-bold tracking-tight text-white">Remnus</span>
         </Link>
         {isSaving && (
           <div className="flex items-center gap-1.5 text-[11px] text-blue-400 font-medium bg-blue-500/10 px-2 py-0.5 rounded-full border border-blue-500/20 animate-pulse">

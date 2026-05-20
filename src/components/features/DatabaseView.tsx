@@ -256,7 +256,7 @@ export default function DatabaseView({
   // Synchronize document title
   useEffect(() => {
     if (database && activeView) {
-      document.title = `${database.name} - ${activeView.name} | Remna`;
+      document.title = `${database.name} - ${activeView.name} | Remnus`;
     }
   }, [database?.name, activeView?.name]);
 

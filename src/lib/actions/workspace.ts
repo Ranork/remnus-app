@@ -56,7 +56,7 @@ export async function getActiveWorkspaceId(): Promise<string | null> {
   const user = await getCurrentUser();
 
   const cookieStore = await cookies();
-  let workspaceId = cookieStore.get('remna_workspace_id')?.value;
+  let workspaceId = cookieStore.get('remnus_workspace_id')?.value;
 
   if (workspaceId) {
     // Verify user is a member of the stored workspace
@@ -115,7 +115,7 @@ export async function createWorkspace(name: string) {
   });
 
   const cookieStore = await cookies();
-  cookieStore.set('remna_workspace_id', id, { path: '/' });
+  cookieStore.set('remnus_workspace_id', id, { path: '/' });
   revalidatePath('/', 'layout');
   return { id };
 }
@@ -131,12 +131,12 @@ export async function deleteWorkspace(id: string) {
   await db.delete(workspaces).where(eq(workspaces.id, id));
 
   const cookieStore = await cookies();
-  if (cookieStore.get('remna_workspace_id')?.value === id) {
+  if (cookieStore.get('remnus_workspace_id')?.value === id) {
     const remaining = accessible.find((w) => w.id !== id);
     if (remaining) {
-      cookieStore.set('remna_workspace_id', remaining.id, { path: '/' });
+      cookieStore.set('remnus_workspace_id', remaining.id, { path: '/' });
     } else {
-      cookieStore.delete('remna_workspace_id');
+      cookieStore.delete('remnus_workspace_id');
     }
   }
 
@@ -157,7 +157,7 @@ export async function renameWorkspace(id: string, name: string) {
 export async function switchWorkspace(workspaceId: string) {
   await assertWorkspaceAccess(workspaceId);
   const cookieStore = await cookies();
-  cookieStore.set('remna_workspace_id', workspaceId, { path: '/' });
+  cookieStore.set('remnus_workspace_id', workspaceId, { path: '/' });
   revalidatePath('/', 'layout');
   return { success: true };
 }
