@@ -38,7 +38,7 @@ const DAYS = (() => {
 
 export default function CalendarMini() {
   return (
-    <div className="w-full bg-neutral-850">
+    <div className="w-full min-w-140 bg-neutral-850">
       {/* weekday headers */}
       <div className="grid grid-cols-7 border-b border-neutral-800 bg-neutral-900/60">
         {HEADERS.map((h) => (

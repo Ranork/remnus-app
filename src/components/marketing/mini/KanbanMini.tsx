@@ -32,7 +32,7 @@ const COLS = [
 
 export default function KanbanMini() {
   return (
-    <div className="w-full grid grid-cols-4 gap-3 bg-neutral-850 p-5">
+    <div className="grid grid-cols-4 gap-3 bg-neutral-850 p-5 min-w-120">
       {COLS.map((col) => (
         <div key={col.name} className="flex flex-col gap-2">
           {/* column header */}

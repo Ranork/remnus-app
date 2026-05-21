@@ -16,34 +16,33 @@ export default async function LandingSetup() {
   ] as const;
 
   return (
-    <section className="px-14 py-[110px]">
+    <section className="px-4 sm:px-8 lg:px-14 py-16 lg:py-[110px]">
       <div className="max-w-[1280px] mx-auto">
         {/* section header */}
-        <div className="flex items-center gap-3 mb-14">
+        <div className="flex items-center gap-3 mb-10 lg:mb-14">
           <span className="font-mono text-[11px] text-dim uppercase tracking-[0.18em]">
             {t('bridgeSetupSnum')}
           </span>
           <span className="flex-1 h-px bg-neutral-800" />
-          <span className="font-mono text-[11px] text-dim">{t('bridgeSetupCaption')}</span>
+          <span className="font-mono text-[11px] text-dim hidden sm:block">{t('bridgeSetupCaption')}</span>
         </div>
 
         <h2
-          className="m-0 mb-14 font-sans font-semibold text-neutral-100 leading-[0.98]"
-          style={{ fontSize: 48, letterSpacing: '-0.035em' }}
+          className="m-0 mb-10 lg:mb-14 font-sans font-semibold text-neutral-100 leading-[0.98] text-[30px] sm:text-[38px] lg:text-[48px]"
+          style={{ letterSpacing: '-0.035em' }}
         >
           {t('bridgeSetupH2Part1')}{' '}
-          <span className="font-serif italic text-accent-strong" style={{ fontSize: 52 }}>
+          <span className="font-serif italic text-accent-strong text-[34px] sm:text-[42px] lg:text-[52px]">
             {t('bridgeSetupH2Accent')}
           </span>{' '}
           {t('bridgeSetupH2Part2')}
         </h2>
 
-        <div className="grid grid-cols-3 gap-0 border border-neutral-800 rounded-lg overflow-hidden">
-          {steps.map((s, i) => (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-px bg-neutral-800 rounded-lg overflow-hidden">
+          {steps.map((s) => (
             <div
               key={s.num}
-              className="flex flex-col p-8 bg-neutral-950"
-              style={{ borderLeft: i ? '1px solid var(--color-neutral-800)' : 'none' }}
+              className="flex flex-col p-6 lg:p-8 bg-neutral-950"
             >
               <div className="flex items-center gap-3.5 mb-[18px]">
                 <span

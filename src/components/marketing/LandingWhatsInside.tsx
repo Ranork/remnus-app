@@ -6,31 +6,31 @@ export default async function LandingWhatsInside() {
   const t = await getTranslations('Landing');
 
   return (
-    <section className="px-14 py-[110px]">
+    <section className="px-4 sm:px-8 lg:px-14 py-16 lg:py-[110px]">
       <div className="max-w-[1280px] mx-auto">
         {/* section header */}
-        <div className="flex items-center gap-3 mb-10">
+        <div className="flex items-center gap-3 mb-8 lg:mb-10">
           <span className="font-mono text-[11px] text-dim uppercase tracking-[0.18em]">
             {t('bridgeInsideSnum')}
           </span>
           <span className="flex-1 h-px bg-neutral-800" />
-          <span className="font-mono text-[11px] text-dim">{t('bridgeInsideCaption')}</span>
+          <span className="font-mono text-[11px] text-dim hidden sm:block">{t('bridgeInsideCaption')}</span>
         </div>
 
-        {/* intro */}
-        <div className="grid gap-20 mb-12" style={{ gridTemplateColumns: '1fr 1fr' }}>
+        {/* intro — single column on mobile */}
+        <div className="grid gap-8 lg:gap-20 mb-10 lg:mb-12 grid-cols-1 lg:grid-cols-2">
           <h2
-            className="m-0 font-sans font-semibold text-neutral-100 leading-[0.98]"
-            style={{ fontSize: 50, letterSpacing: '-0.035em' }}
+            className="m-0 font-sans font-semibold text-neutral-100 leading-[0.98] text-[32px] sm:text-[40px] lg:text-[50px]"
+            style={{ letterSpacing: '-0.035em' }}
           >
             {t('bridgeInsideH2Part1')}
             <br />
-            <span className="font-serif italic text-accent-strong" style={{ fontSize: 54 }}>
+            <span className="font-serif italic text-accent-strong text-[36px] sm:text-[44px] lg:text-[54px]">
               {t('bridgeInsideH2Accent')}
             </span>
             {' '}{t('bridgeInsideH2Part2')}
           </h2>
-          <p className="m-auto mt-auto text-base leading-[1.6] text-neutral-50">
+          <p className="m-0 lg:m-auto lg:mt-auto text-base leading-[1.6] text-neutral-50">
             {t('bridgeInsideBody')}
           </p>
         </div>
@@ -46,15 +46,15 @@ export default async function LandingWhatsInside() {
           footer2={t('bridgeInsideFrameFooter2')}
         />
 
-        {/* Pages adjunct */}
-        <div className="mt-7 grid gap-8 items-stretch" style={{ gridTemplateColumns: '1.1fr 0.9fr' }}>
+        {/* Pages adjunct — single column on mobile */}
+        <div className="mt-7 grid gap-6 lg:gap-8 items-stretch grid-cols-1 lg:grid-cols-[1.1fr_0.9fr]">
           {/* page mini */}
           <div className="bg-neutral-900 border border-neutral-800 rounded-[10px] overflow-hidden flex items-center justify-center p-[18px]">
             <MarkdownPageMini width={520} />
           </div>
 
           {/* pages copy */}
-          <div className="bg-neutral-900 border border-neutral-800 rounded-[10px] flex flex-col px-7 py-7">
+          <div className="bg-neutral-900 border border-neutral-800 rounded-[10px] flex flex-col px-6 py-6 lg:px-7 lg:py-7">
             <span className="font-mono text-[11px] text-accent-strong uppercase tracking-[0.12em]">
               {t('bridgeInsidePagesKicker')}
             </span>
@@ -82,7 +82,7 @@ export default async function LandingWhatsInside() {
 
         {/* dual-control callout */}
         <div
-          className="mt-7 flex items-center gap-4 flex-wrap px-[22px] py-4 bg-neutral-900 border border-neutral-800 rounded-md text-sm text-neutral-50"
+          className="mt-7 flex items-start sm:items-center gap-3 sm:gap-4 flex-wrap px-5 lg:px-[22px] py-4 bg-neutral-900 border border-neutral-800 rounded-md text-sm text-neutral-50"
           style={{ borderLeft: '3px solid var(--color-blue-500)' }}
         >
           <span className="text-base text-neutral-100 font-medium">{t('bridgeInsideCallout1')}</span>

@@ -10,14 +10,14 @@ const ALL_ROWS = [
 ];
 
 const COLS = ['Title', 'Status', 'Priority', 'Due', 'Assignee'];
-const GRID = '2fr 1fr 0.9fr 0.7fr 0.6fr';
+const GRID = 'minmax(0,2fr) minmax(0,1fr) minmax(0,0.9fr) minmax(0,0.7fr) minmax(0,0.6fr)';
 
 interface TableMiniProps { rows?: number }
 
 export default function TableMini({ rows = 6 }: TableMiniProps) {
   const shown = ALL_ROWS.slice(0, rows);
   return (
-    <div className="w-full bg-neutral-850">
+    <div className="w-full min-w-140 bg-neutral-850">
       {/* header */}
       <div
         className="grid px-4 py-2 border-b border-neutral-800 bg-neutral-900"

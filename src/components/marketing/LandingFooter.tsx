@@ -46,10 +46,10 @@ export default async function LandingFooter() {
   ];
 
   return (
-    <footer className="px-14 py-16 border-t border-neutral-800">
-      <div className="max-w-7xl mx-auto grid gap-16" style={{ gridTemplateColumns: '1.4fr 1fr 1fr 1fr 1fr' }}>
+    <footer className="px-4 sm:px-8 lg:px-14 py-12 lg:py-16 border-t border-neutral-800">
+      <div className="max-w-7xl mx-auto grid gap-10 lg:gap-16 grid-cols-2 sm:grid-cols-4 lg:grid-cols-[1.4fr_1fr_1fr_1fr_1fr]">
         {/* Left: logo + tagline + copyright */}
-        <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-4 col-span-2 sm:col-span-4 lg:col-span-1">
           <Link href="/" className="inline-flex items-center gap-2.5">
             <Image src="/logo-square-transparent.png" alt="Remnus" width={22} height={22} />
             <span className="font-semibold text-neutral-100 text-[15px] tracking-[-0.01em]">Remnus</span>

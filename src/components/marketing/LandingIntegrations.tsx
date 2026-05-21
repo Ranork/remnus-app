@@ -17,45 +17,41 @@ export default async function LandingIntegrations() {
   const t = await getTranslations('Landing');
 
   return (
-    <section id="integrations" className="px-14 py-[110px]">
+    <section id="integrations" className="px-4 sm:px-8 lg:px-14 py-16 lg:py-[110px]">
       <div className="max-w-[1280px] mx-auto">
         {/* section header */}
-        <div className="flex items-center gap-3 mb-12">
+        <div className="flex items-center gap-3 mb-8 lg:mb-12">
           <span className="font-mono text-[11px] text-dim uppercase tracking-[0.18em]">
             {t('bridgeIntSnum')}
           </span>
           <span className="flex-1 h-px bg-neutral-800" />
         </div>
 
-        {/* intro */}
-        <div className="grid gap-20 mb-16" style={{ gridTemplateColumns: '1fr 1fr' }}>
+        {/* intro — single column on mobile */}
+        <div className="grid gap-8 lg:gap-20 mb-10 lg:mb-16 grid-cols-1 lg:grid-cols-2">
           <h2
-            className="m-0 font-sans font-semibold text-neutral-100 leading-[0.98]"
-            style={{ fontSize: 54, letterSpacing: '-0.035em' }}
+            className="m-0 font-sans font-semibold text-neutral-100 leading-[0.98] text-[32px] sm:text-[42px] lg:text-[54px]"
+            style={{ letterSpacing: '-0.035em' }}
           >
             {t('bridgeIntH2Part1')}
             <br />
             {t('bridgeIntH2Part2')}{' '}
-            <span className="font-serif italic text-accent-strong" style={{ fontSize: 58 }}>
+            <span className="font-serif italic text-accent-strong text-[36px] sm:text-[46px] lg:text-[58px]">
               {t('bridgeIntH2Accent')}
             </span>{' '}
             {t('bridgeIntH2Part3')}
           </h2>
-          <p className="m-auto mt-auto text-[16.5px] leading-[1.6] text-neutral-50">
+          <p className="m-0 lg:m-auto lg:mt-auto text-[16.5px] leading-[1.6] text-neutral-50">
             {t('bridgeIntBody')}
           </p>
         </div>
 
-        {/* 3-column grid of AI client cards */}
-        <div className="border border-neutral-800 rounded-lg overflow-hidden grid grid-cols-3">
-          {CLIENTS.map((c, i) => (
+        {/* AI client cards — 1-col mobile, 2-col sm, 3-col lg */}
+        <div className="rounded-lg overflow-hidden grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-px bg-neutral-800">
+          {CLIENTS.map((c) => (
             <div
               key={c.id}
-              className="flex flex-col min-h-[240px] p-8 bg-neutral-950"
-              style={{
-                borderRight: (i + 1) % 3 !== 0 ? '1px solid var(--color-neutral-800)' : 'none',
-                borderBottom: i < 3 ? '1px solid var(--color-neutral-800)' : 'none',
-              }}
+              className="flex flex-col min-h-[200px] lg:min-h-[240px] p-6 lg:p-8 bg-neutral-950"
             >
               <div className="flex items-center gap-3 mb-4">
                 <AIMark name={c.id} size={28} />

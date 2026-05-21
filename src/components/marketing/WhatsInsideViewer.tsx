@@ -41,11 +41,12 @@ export default function WhatsInsideViewer({
       style={{ boxShadow: '0 30px 60px -20px rgba(0,0,0,0.4)' }}
     >
       {/* breadcrumb / view bar */}
-      <div className="flex items-center gap-3 px-5 py-3 border-b border-neutral-800 bg-neutral-850 text-[13px]">
-        <span className="text-dim">{breadcrumb1}</span>
-        <span className="text-neutral-100">{breadcrumb2}</span>
-        <span className="flex-1" />
-        <span className="text-dim text-[12px]">{viewLabel}</span>
+      <div className="flex items-center gap-3 sm:gap-3 px-4 sm:px-5 py-3 border-b border-neutral-800 bg-neutral-850">
+        {/* breadcrumb — hidden on mobile, too cramped */}
+        <span className="text-dim text-[13px] hidden sm:block">{breadcrumb1}</span>
+        <span className="text-neutral-100 text-[13px] hidden sm:block">{breadcrumb2}</span>
+        <span className="hidden sm:block flex-1" />
+        <span className="text-dim text-[12px] hidden sm:block">{viewLabel}</span>
         {labels.map((lbl, i) => (
           <button
             key={i}
@@ -93,8 +94,8 @@ export default function WhatsInsideViewer({
                 </span>
               </div>
 
-              {/* mini view */}
-              <div className="px-6 pb-7">
+              {/* mini view — horizontally scrollable on mobile */}
+              <div className="px-4 sm:px-6 pb-7 overflow-x-auto">
                 {panel.content}
               </div>
             </div>

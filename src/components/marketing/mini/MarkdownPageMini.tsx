@@ -11,7 +11,7 @@ interface MarkdownPageMiniProps {
 
 export default function MarkdownPageMini({ width = 520 }: MarkdownPageMiniProps) {
   return (
-    <div className="bg-neutral-850 px-5 py-4 text-[12px] leading-[1.5]" style={{ width }}>
+    <div className="bg-neutral-850 px-5 py-4 text-[12px] leading-[1.5] w-full" style={{ maxWidth: width }}>
       <div className="text-[19px] font-bold text-neutral-100 tracking-[-0.015em] mb-1.5">
         Sprint 14 kickoff
       </div>

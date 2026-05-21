@@ -11,19 +11,27 @@ export default async function LandingPricing() {
     t('bridgePricingSelfF4'),
     t('bridgePricingSelfF5'),
   ];
-  const teamFeatures = [
-    t('bridgePricingTeamF1'),
-    t('bridgePricingTeamF2'),
-    t('bridgePricingTeamF3'),
-    t('bridgePricingTeamF4'),
-    t('bridgePricingTeamF5'),
+  const startupFeatures = [
+    t('bridgePricingStartupF1'),
+    t('bridgePricingStartupF2'),
+    t('bridgePricingStartupF3'),
+    t('bridgePricingStartupF4'),
+    t('bridgePricingStartupF5'),
+  ];
+  const proFeatures = [
+    t('bridgePricingProF1'),
+    t('bridgePricingProF2'),
+    t('bridgePricingProF3'),
+    t('bridgePricingProF4'),
+    t('bridgePricingProF5'),
   ];
 
   return (
-    <section id="pricing" className="px-14 py-[110px]">
-      <div className="max-w-[1100px] mx-auto">
-        {/* section header */}
-        <div className="flex items-center gap-3 mb-12">
+    <section id="pricing" className="px-4 sm:px-8 lg:px-14 py-16 lg:py-27.5">
+
+      {/* Header — same max-width as sibling sections */}
+      <div className="max-w-7xl mx-auto">
+        <div className="flex items-center gap-3 mb-10 lg:mb-12">
           <span className="font-mono text-[11px] text-dim uppercase tracking-[0.18em]">
             {t('bridgePricingSnum')}
           </span>
@@ -31,102 +39,178 @@ export default async function LandingPricing() {
         </div>
 
         <h2
-          className="m-0 mb-9 font-sans font-semibold text-neutral-100 leading-[0.98]"
-          style={{ fontSize: 44, letterSpacing: '-0.035em' }}
+          className="m-0 font-sans font-semibold text-neutral-100 leading-[0.98] text-[30px] sm:text-[36px] lg:text-[44px]"
+          style={{ letterSpacing: '-0.035em' }}
         >
           {t('bridgePricingH2Part1')}{' '}
-          <span className="font-serif italic text-accent-strong" style={{ fontSize: 48 }}>
+          <span className="font-serif italic text-accent-strong text-[34px] sm:text-[40px] lg:text-[48px]">
             {t('bridgePricingH2Accent')}
           </span>
         </h2>
+      </div>
 
-        <div className="grid grid-cols-2 gap-0 border border-neutral-800 rounded-lg overflow-hidden">
-          {/* Self-hosted */}
-          <div className="flex flex-col p-9 border-r border-neutral-800">
-            <div className="flex items-baseline gap-3 mb-2">
-              <span
-                className="font-semibold text-neutral-100"
-                style={{ fontSize: 26, letterSpacing: '-0.02em' }}
-              >
+      {/* Cards — slightly narrower, centered */}
+      <div className="max-w-275 mx-auto mt-10 lg:mt-12">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 lg:gap-5 items-start">
+
+          {/* ── Open Source / Self-hosted ── */}
+          <div className="flex flex-col p-6 lg:p-8 rounded-xl bg-neutral-900 border border-neutral-800">
+            <div className="mb-1">
+              <span className="font-semibold text-neutral-100 text-[20px] lg:text-[22px]" style={{ letterSpacing: '-0.018em' }}>
                 {t('bridgePricingSelfTitle')}
               </span>
+            </div>
+            <div className="mb-4">
               <LandingChip color="var(--color-green-400)" mono dot>
                 {t('bridgePricingSelfTag')}
               </LandingChip>
             </div>
-            <p className="m-0 mb-6 text-dim text-[14.5px]">{t('bridgePricingSelfSub')}</p>
+            <p className="m-0 mb-6 text-dim text-[13px] leading-[1.6]">{t('bridgePricingSelfSub')}</p>
 
-            <div
-              className="font-sans font-semibold text-neutral-100 leading-[0.98] mb-3"
-              style={{ fontSize: 60, letterSpacing: '-0.035em' }}
-            >
-              {t('bridgePricingSelfPrice')}
+            <div className="mb-6">
+              <span
+                className="font-sans font-bold text-neutral-100 text-[48px] lg:text-[56px]"
+                style={{ letterSpacing: '-0.04em', lineHeight: 1 }}
+              >
+                {t('bridgePricingSelfPrice')}
+              </span>
             </div>
 
-            <hr className="border-none border-t border-neutral-800 my-[18px]" />
+            <div className="h-px bg-neutral-800 mb-5" />
 
-            <div className="flex flex-col">
+            <ul className="flex flex-col gap-2.5 flex-1 mb-6">
               {selfFeatures.map((feat) => (
-                <div key={feat} className="flex gap-2.5 items-center text-sm text-neutral-50 py-1.5">
+                <li key={feat} className="flex gap-2.5 items-start text-[13.5px] text-neutral-50">
                   <CheckIcon color="var(--color-green-400)" />
                   {feat}
-                </div>
+                </li>
               ))}
-            </div>
+            </ul>
 
             <a
               href="#"
-              className="mt-6 inline-flex items-center gap-2 px-4 py-2.5 rounded-md border border-neutral-800 text-[13.5px] text-neutral-50 hover:border-neutral-100 transition-colors duration-150 self-start"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-neutral-700 text-[13px] text-neutral-50 hover:border-neutral-500 hover:text-neutral-100 transition-colors duration-150 self-start"
             >
               <GithubIcon />
               {t('bridgePricingSelfCta')}
             </a>
           </div>
 
-          {/* Team */}
+          {/* ── Startup — featured ── */}
           <div
-            className="flex flex-col p-9"
-            style={{ background: 'linear-gradient(180deg, rgba(68,92,149,0.07), transparent)' }}
+            className="flex flex-col p-6 lg:p-8 rounded-xl border sm:-mt-3 sm:pb-10"
+            style={{
+              background: 'linear-gradient(160deg, rgba(68,92,149,0.14) 0%, rgba(28,30,38,1) 55%)',
+              borderColor: 'rgba(68,92,149,0.5)',
+              boxShadow: '0 0 0 1px rgba(68,92,149,0.15) inset, 0 24px 56px -16px rgba(68,92,149,0.3)',
+            }}
           >
-            <div className="flex items-baseline gap-3 mb-2">
+            {/* "most popular" pill */}
+            <div className="flex items-center justify-between mb-4">
+              <span className="font-semibold text-neutral-100 text-[20px] lg:text-[22px]" style={{ letterSpacing: '-0.018em' }}>
+                {t('bridgePricingStartupTitle')}
+              </span>
               <span
-                className="font-semibold text-neutral-100"
-                style={{ fontSize: 26, letterSpacing: '-0.02em' }}
+                className="font-mono text-[10px] uppercase tracking-widest px-2.5 py-1 rounded-full text-white"
+                style={{ background: 'var(--color-blue-500)' }}
               >
-                {t('bridgePricingTeamTitle')}
-              </span>
-              <LandingChip color="var(--color-accent-strong)" mono dot>
-                {t('bridgePricingTeamTag')}
-              </LandingChip>
-            </div>
-            <p className="m-0 mb-6 text-dim text-[14.5px]">{t('bridgePricingTeamSub')}</p>
-
-            <div
-              className="font-sans font-semibold text-neutral-100 leading-[0.98] mb-3"
-              style={{ fontSize: 60, letterSpacing: '-0.035em' }}
-            >
-              {t('bridgePricingTeamPrice')}
-              <span className="font-serif italic font-normal" style={{ fontSize: 24 }}>
-                {' '}{t('bridgePricingTeamPriceSub')}
+                {t('bridgePricingStartupTag')}
               </span>
             </div>
 
-            <hr className="border-none border-t border-neutral-800 my-[18px]" />
+            <p className="m-0 mb-6 text-dim text-[13px] leading-[1.6]">{t('bridgePricingStartupSub')}</p>
 
-            <div className="flex flex-col">
-              {teamFeatures.map((feat) => (
-                <div key={feat} className="flex gap-2.5 items-center text-sm text-neutral-50 py-1.5">
-                  <CheckIcon color="var(--color-accent-strong)" />
+            <div className="mb-2 flex items-center gap-2.5">
+              <span className="font-mono text-[12px] text-dim line-through">{t('bridgePricingStartupOriginalPrice')}</span>
+              <span
+                className="font-mono text-[10px] uppercase tracking-[0.08em] px-2 py-0.5 rounded"
+                style={{ color: 'var(--color-amber-500)', background: 'rgba(204,125,69,0.13)' }}
+              >
+                {t('bridgePricingStartupDiscountLabel')}
+              </span>
+            </div>
+            <div className="mb-6 flex items-end gap-2">
+              <span
+                className="font-sans font-bold text-neutral-100 text-[48px] lg:text-[56px]"
+                style={{ letterSpacing: '-0.04em', lineHeight: 1 }}
+              >
+                {t('bridgePricingStartupPrice')}
+              </span>
+              <span className="font-mono text-[12px] text-dim mb-1.5">{t('bridgePricingStartupPriceSub')}</span>
+            </div>
+
+            <div className="h-px mb-5" style={{ background: 'rgba(68,92,149,0.35)' }} />
+
+            <ul className="flex flex-col gap-2.5 flex-1 mb-6">
+              {startupFeatures.map((feat) => (
+                <li key={feat} className="flex gap-2.5 items-start text-[13.5px] text-neutral-100">
+                  <CheckIcon color="var(--color-blue-500)" />
                   {feat}
-                </div>
+                </li>
               ))}
-            </div>
+            </ul>
 
-            <button className="mt-6 inline-flex items-center gap-2 px-5 py-2.5 rounded-md bg-blue-500 hover:bg-accent-strong text-white text-[13.5px] font-medium transition-colors duration-150 self-start">
-              {t('bridgePricingTeamCta')}
+            <button
+              className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-lg text-[13.5px] font-semibold text-white transition-colors duration-150"
+              style={{ background: 'var(--color-blue-500)' }}
+            >
+              {t('bridgePricingStartupCta')}
               <span aria-hidden>→</span>
             </button>
           </div>
+
+          {/* ── Professional ── */}
+          <div
+            className="flex flex-col p-6 lg:p-8 rounded-xl border border-neutral-800"
+            style={{ background: 'linear-gradient(160deg, rgba(68,92,149,0.06) 0%, transparent 50%)' }}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <span className="font-semibold text-neutral-100 text-[20px] lg:text-[22px]" style={{ letterSpacing: '-0.018em' }}>
+                {t('bridgePricingProTitle')}
+              </span>
+              <span
+                className="font-mono text-[10px] uppercase tracking-widest px-2.5 py-1 rounded-full"
+                style={{
+                  color: 'var(--color-accent-strong)',
+                  border: '1px solid rgba(68,92,149,0.45)',
+                  background: 'rgba(68,92,149,0.1)',
+                }}
+              >
+                {t('bridgePricingProTag')}
+              </span>
+            </div>
+
+            <p className="m-0 mb-6 text-dim text-[13px] leading-[1.6]">{t('bridgePricingProSub')}</p>
+
+            <div className="mb-6 flex items-end gap-2">
+              <span
+                className="font-sans font-bold text-neutral-100 text-[48px] lg:text-[56px]"
+                style={{ letterSpacing: '-0.04em', lineHeight: 1 }}
+              >
+                {t('bridgePricingProPrice')}
+              </span>
+              <span className="font-mono text-[12px] text-dim mb-1.5">{t('bridgePricingProPriceSub')}</span>
+            </div>
+
+            <div className="h-px bg-neutral-800 mb-5" />
+
+            <ul className="flex flex-col gap-2.5 flex-1 mb-6">
+              {proFeatures.map((feat) => (
+                <li key={feat} className="flex gap-2.5 items-start text-[13.5px] text-neutral-50">
+                  <CheckIcon color="var(--color-accent-strong)" />
+                  {feat}
+                </li>
+              ))}
+            </ul>
+
+            <button
+              className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-lg border border-neutral-700 text-[13.5px] font-medium text-neutral-100 hover:border-neutral-500 transition-colors duration-150"
+            >
+              {t('bridgePricingProCta')}
+              <span aria-hidden>→</span>
+            </button>
+          </div>
+
         </div>
       </div>
     </section>
@@ -135,7 +219,7 @@ export default async function LandingPricing() {
 
 function CheckIcon({ color }: { color: string }) {
   return (
-    <svg width={15} height={15} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={1.8} strokeLinecap="round" strokeLinejoin="round" className="shrink-0">
+    <svg width={14} height={14} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="shrink-0 mt-0.5">
       <path d="M5 12l5 5 9-12" />
     </svg>
   );

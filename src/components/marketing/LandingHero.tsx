@@ -39,7 +39,7 @@ export default async function LandingHero() {
   const t = await getTranslations('Landing');
 
   return (
-    <section className="relative overflow-hidden px-14 pt-[110px] pb-[90px]">
+    <section className="relative overflow-hidden px-4 sm:px-8 lg:px-14 pt-16 pb-12 lg:pt-[110px] lg:pb-[90px]">
       {/* radial bg glow */}
       <div
         className="absolute top-20 -right-60 w-[700px] h-[700px] pointer-events-none"
@@ -48,37 +48,37 @@ export default async function LandingHero() {
 
       <div className="relative max-w-[1280px] mx-auto">
         {/* section header */}
-        <div className="flex items-center gap-3 mb-10">
+        <div className="flex items-center gap-3 mb-8 lg:mb-10">
           <span className="font-mono text-[11px] text-dim uppercase tracking-[0.18em]">
             {t('bridgeHeroSnum')}
           </span>
           <span className="flex-1 h-px bg-neutral-800" />
-          <span className="font-mono text-[11px] text-dim">{t('bridgeHeroCaption')}</span>
+          <span className="font-mono text-[11px] text-dim hidden sm:block">{t('bridgeHeroCaption')}</span>
         </div>
 
-        {/* two-column grid */}
-        <div className="grid gap-12 items-center" style={{ gridTemplateColumns: '0.82fr 1.18fr' }}>
+        {/* two-column grid — single column on mobile */}
+        <div className="grid gap-12 items-center grid-cols-1 lg:grid-cols-[0.82fr_1.18fr]">
           {/* left — copy */}
           <div>
             <h1
-              className="font-sans font-semibold text-neutral-100 leading-[0.98] m-0"
-              style={{ fontSize: 82, letterSpacing: '-0.035em' }}
+              className="font-sans font-semibold text-neutral-100 leading-[0.98] m-0 text-[44px] sm:text-[62px] lg:text-[82px]"
+              style={{ letterSpacing: '-0.035em' }}
             >
               {t('bridgeHeroH1Part1')}
               <br />
               {t('bridgeHeroH1Pre')}
-              <span className="font-serif italic text-accent-strong" style={{ fontSize: 88 }}>
+              <span className="font-serif italic text-accent-strong text-[48px] sm:text-[68px] lg:text-[88px]">
                 {t('bridgeHeroH1Accent')}
               </span>
               <br />
               {t('bridgeHeroH1Part2')}
             </h1>
 
-            <p className="mt-[26px] text-[17px] leading-[1.5] text-neutral-50 max-w-[420px]">
+            <p className="mt-6 lg:mt-[26px] text-base lg:text-[17px] leading-[1.5] text-neutral-50 max-w-[420px]">
               {t('bridgeHeroSubhead')}
             </p>
 
-            <div className="mt-[32px] flex items-center gap-[18px]">
+            <div className="mt-7 lg:mt-[32px] flex flex-wrap items-center gap-4 lg:gap-[18px]">
               <Link
                 href="/register"
                 className="inline-flex items-center gap-2 bg-blue-500 hover:bg-accent-strong text-white px-5 py-3.5 rounded-md text-[15px] font-medium transition-colors duration-150"
@@ -95,8 +95,8 @@ export default async function LandingHero() {
               </Link>
             </div>
 
-            {/* stats row — flat horizontal */}
-            <div className="mt-10 flex items-center border border-neutral-800 rounded-md overflow-hidden w-fit">
+            {/* stats row — scales down on mobile, never wraps */}
+            <div className="mt-8 lg:mt-10 flex border border-neutral-800 rounded-md overflow-hidden w-fit max-w-full">
               {[
                 { num: t('bridgeHeroStat1Num'), label: t('bridgeHeroStat1Label') },
                 { num: t('bridgeHeroStat2Num'), label: t('bridgeHeroStat2Label') },
@@ -104,13 +104,13 @@ export default async function LandingHero() {
               ].map((s, i) => (
                 <div
                   key={i}
-                  className="flex items-center gap-2 px-4 py-2.5"
+                  className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2.5"
                   style={{ borderLeft: i ? '1px solid var(--color-neutral-800)' : 'none' }}
                 >
-                  <span className="font-sans font-bold text-neutral-100 text-[22px] tracking-[-0.02em] leading-none">
+                  <span className="font-sans font-bold text-neutral-100 text-[17px] sm:text-[20px] lg:text-[22px] tracking-[-0.02em] leading-none">
                     {s.num}
                   </span>
-                  <span className="font-mono text-[11px] text-dim leading-tight max-w-[90px]">
+                  <span className="font-mono text-[10px] sm:text-[11px] text-dim leading-tight max-w-[65px] sm:max-w-[90px]">
                     {s.label}
                   </span>
                 </div>
@@ -118,8 +118,8 @@ export default async function LandingHero() {
             </div>
           </div>
 
-          {/* right — AI dock + workspace */}
-          <div className="relative" style={{ height: 580 }}>
+          {/* right — AI dock + workspace, hidden on mobile */}
+          <div className="relative hidden lg:block" style={{ height: 580 }}>
             {/* AI tiles */}
             <div className="absolute top-0 left-0 right-0 grid grid-cols-3 gap-2 z-10">
               {AI_TILES.map((tile) => (

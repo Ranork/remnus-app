@@ -18,6 +18,7 @@ import {
   Shield,
   Settings,
   Layers,
+  ArrowLeft,
 } from 'lucide-react';
 import PageIcon from './PageIcon';
 import {
@@ -627,10 +628,21 @@ export default function WorkspaceSidebar({
     <div className="flex flex-col flex-1 overflow-hidden h-full">
       {/* Brand Header — hidden in mobile sheet */}
       <div className={`p-4 border-b border-neutral-800 flex items-center justify-between shrink-0 ${hideBrandHeader ? 'hidden' : ''}`}>
-        <Link href={logoHref ?? '#'} className="font-semibold flex items-center gap-2.5 text-white hover:text-neutral-300 transition-colors">
-          <img src="/logo-square-dark.png" alt="Remnus Logo" className={`w-5 h-5 object-contain rounded-md shrink-0 shadow-sm ${isSaving ? 'animate-pulse' : ''}`} />
-          <span className="font-bold tracking-tight text-white">Remnus</span>
-        </Link>
+        <div className="flex items-center group/brand">
+          <div className="w-0 overflow-hidden group-hover/brand:w-6 transition-[width] duration-200 shrink-0">
+            <Link
+              href="/"
+              className="flex items-center justify-center w-6 h-6 rounded text-neutral-500 hover:text-neutral-200 hover:bg-neutral-800"
+              title={t('backToHome')}
+            >
+              <ArrowLeft size={13} />
+            </Link>
+          </div>
+          <Link href={logoHref ?? '#'} className="font-semibold flex items-center gap-2.5 text-white hover:text-neutral-300 transition-colors">
+            <img src="/logo-square-dark.png" alt="Remnus Logo" className={`w-5 h-5 object-contain rounded-md shrink-0 shadow-sm ${isSaving ? 'animate-pulse' : ''}`} />
+            <span className="font-bold tracking-tight text-white">Remnus</span>
+          </Link>
+        </div>
         <div className="flex items-center gap-1.5">
           {isSaving && (
             <div className="flex items-center gap-1.5 text-[11px] text-blue-400 font-medium bg-blue-500/10 px-2 py-0.5 rounded-full border border-blue-500/20 animate-pulse">
