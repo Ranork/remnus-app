@@ -120,3 +120,35 @@ export const workspaceMembers = sqliteTable('workspace_members', {
   uniqueIndex('workspace_members_workspace_user_unique').on(table.workspaceId, table.userId),
   index('workspace_members_user_id_idx').on(table.userId),
 ]);
+
+// ── MCP Agent Tokens ──────────────────────────────────────────────────────────
+
+export const agentTokens = sqliteTable('agent_tokens', {
+  id:          text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  workspaceId: text('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  name:        text('name').notNull(),
+  tokenPrefix: text('token_prefix').notNull(),
+  tokenHash:   text('token_hash').notNull(),
+  scope:       text('scope', { enum: ['read', 'write'] }).notNull(),
+  createdBy:   text('created_by').references(() => users.id),
+  createdAt:   integer('created_at', { mode: 'timestamp' }).notNull(),
+  lastUsedAt:  integer('last_used_at', { mode: 'timestamp' }),
+  revokedAt:   integer('revoked_at', { mode: 'timestamp' }),
+}, (table) => [
+  index('agent_tokens_workspace_id_idx').on(table.workspaceId),
+  index('agent_tokens_token_prefix_idx').on(table.tokenPrefix),
+]);
+
+export const agentActivity = sqliteTable('agent_activity', {
+  id:          text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  tokenId:     text('token_id').notNull().references(() => agentTokens.id, { onDelete: 'cascade' }),
+  workspaceId: text('workspace_id').notNull(),
+  tool:        text('tool').notNull(),
+  targetType:  text('target_type'),
+  targetId:    text('target_id'),
+  status:      text('status', { enum: ['success', 'error'] }).notNull(),
+  createdAt:   integer('created_at', { mode: 'timestamp' }).notNull(),
+}, (table) => [
+  index('agent_activity_workspace_id_idx').on(table.workspaceId),
+  index('agent_activity_token_id_idx').on(table.tokenId),
+]);

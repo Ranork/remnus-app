@@ -41,6 +41,15 @@
 - `ChildBlock` markdown serialization: `<div data-cb-id="...">` (NOT custom elements — `marked` only parses standard HTML block elements)
 - TanStack Query: installed via `QueryProvider` — use for client mutation hooks
 
+## MCP / Agent Token Conventions
+- Token format: `<MCP_TOKEN_PREFIX>_<prefix8>_<secret>` (env var `MCP_TOKEN_PREFIX=rmns`)
+- Verification: look up by `tokenPrefix`, then `bcrypt.compare(secret, tokenHash)` — never iterate all tokens
+- `/api/mcp` is whitelisted in `auth.config.ts` (`isMcpRoute`) so middleware never redirects MCP requests
+- `export const runtime = 'nodejs'` required on MCP route (bcryptjs not Edge-compatible)
+- Write tools must check `ctx.scope !== 'write'` and return an error — never execute the mutation
+- Audit logs in `agent_activity` are best-effort (`.catch(() => {})` — tool response must not depend on audit success)
+- New migrations after 0011 must use `when > 1780200000000`
+
 ## Performance
 - `Promise.all` for independent fetches (no waterfalls in layouts)
 - Loading skeletons in `loading.tsx` files for each route

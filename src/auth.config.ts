@@ -23,7 +23,8 @@ export const authConfig: NextAuthConfig = {
         cleanPath === '/' ||
         cleanPath.startsWith('/pricing') ||
         cleanPath.startsWith('/contact');
-      if (isApiAuth || isPublicAsset) return true;
+      const isMcpRoute = cleanPath.startsWith('/api/mcp');
+      if (isApiAuth || isMcpRoute || isPublicAsset) return true;
 
       if (isMarketingRoute) return true;
 
