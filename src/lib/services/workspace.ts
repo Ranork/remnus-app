@@ -200,17 +200,31 @@ export async function listWorkspaceItems(workspaceId: string, parentId?: string)
   }));
 }
 
-export async function queryDatabaseRows(
-  workspaceId: string,
-  databaseId: string,
-  limit = 50,
-) {
-  await assertDatabaseInWorkspace(databaseId, workspaceId);
+export async function getDatabaseSchema(workspaceId: string, databaseId: string) {
+  const resolvedId = await assertDatabaseInWorkspace(databaseId, workspaceId);
 
   const [dbRecord] = await db
     .select({ schema: databases.schema, name: databases.name })
     .from(databases)
-    .where(eq(databases.id, databaseId))
+    .where(eq(databases.id, resolvedId))
+    .limit(1);
+
+  if (!dbRecord) throw new Error('Database not found');
+  return { name: dbRecord.name, schema: dbRecord.schema };
+}
+
+export async function queryDatabaseRows(
+  workspaceId: string,
+  databaseId: string,
+  limit = 50,
+  filters?: Record<string, unknown>,
+) {
+  const resolvedId = await assertDatabaseInWorkspace(databaseId, workspaceId);
+
+  const [dbRecord] = await db
+    .select({ schema: databases.schema, name: databases.name })
+    .from(databases)
+    .where(eq(databases.id, resolvedId))
     .limit(1);
 
   if (!dbRecord) throw new Error('Database not found');
@@ -223,11 +237,50 @@ export async function queryDatabaseRows(
       content: pages.content,
     })
     .from(pages)
-    .where(eq(pages.databaseId, databaseId))
+    .where(eq(pages.databaseId, resolvedId))
     .orderBy(asc(pages.sortOrder))
     .limit(limit);
 
-  return { schema: dbRecord.schema, rows };
+  if (!filters || Object.keys(filters).length === 0) {
+    return { schema: dbRecord.schema, rows };
+  }
+
+  const filtered = rows.filter((row) =>
+    Object.entries(filters).every(([key, value]) => {
+      const prop = (row.properties as Record<string, unknown>)?.[key];
+      if (Array.isArray(prop)) return prop.includes(value);
+      return prop === value;
+    }),
+  );
+
+  return { schema: dbRecord.schema, rows: filtered };
+}
+
+export async function getAnyPageById(workspaceId: string, pageId: string) {
+  // Try as workspace item first
+  const [item] = await db
+    .select({ workspaceId: workspaceItems.workspaceId, type: workspaceItems.type })
+    .from(workspaceItems)
+    .where(eq(workspaceItems.id, pageId))
+    .limit(1);
+
+  if (item) {
+    if (item.workspaceId !== workspaceId) throw new Error('Access denied');
+    return getPageById(workspaceId, pageId);
+  }
+
+  // Fall back to DB row (pages table)
+  return getDatabasePageById(workspaceId, pageId);
+}
+
+export async function bulkUpdatePages(
+  workspaceId: string,
+  updates: { pageId: string; title?: string; content?: string; properties?: Record<string, unknown> }[],
+) {
+  const results = await Promise.all(
+    updates.map(({ pageId, ...patch }) => updatePageById(workspaceId, pageId, patch)),
+  );
+  return results.map((r, i) => ({ id: updates[i].pageId, updated: r.updated }));
 }
 
 export async function createPageInWorkspace(
@@ -331,7 +384,14 @@ export async function updatePageById(
   const updateData: Record<string, any> = { updatedAt: new Date() };
   if (patch.title !== undefined) updateData.title = patch.title;
   if (patch.content !== undefined) updateData.content = patch.content;
-  if (patch.properties !== undefined) updateData.properties = patch.properties;
+  if (patch.properties !== undefined) {
+    const [existing] = await db
+      .select({ properties: pages.properties })
+      .from(pages)
+      .where(eq(pages.id, itemId))
+      .limit(1);
+    updateData.properties = { ...(existing?.properties ?? {}), ...patch.properties };
+  }
 
   await db.update(pages).set(updateData).where(eq(pages.id, itemId));
   return { updated: true };

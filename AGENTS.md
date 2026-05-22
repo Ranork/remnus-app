@@ -176,7 +176,9 @@ We use the **JSON Column Pattern** (not EAV) for dynamic user-defined properties
 - `api/auth/client-bridge/route.ts` — GET. Called after browser-side login (as callbackUrl). Requires `device_id` query param. Creates a 5-min JWT signed with AUTH_SECRET, stores it in the in-memory `client-auth-store` keyed by `device_id`, and returns a "Close this tab" HTML page.
 - `api/auth/client-poll/route.ts` — GET. Polled by the Tauri WebView every 2 s. Accepts `device_id`; returns `{ ready: false }` while waiting, `{ ready: true, token }` once the browser completes login (one-time consume).
 - `api/auth/client-activate/route.ts` — GET. Tauri WebView navigates here with the token from the poll response. Signs in via `client-token` provider, redirects to `/app`.
-- `api/mcp/route.ts` — MCP Streamable HTTP: bearer auth, rate limit (60 req/min), 6 tools, audit log.
+- `api/mcp/route.ts` — MCP Streamable HTTP: bearer auth, rate limit (60 req/min), 8 tools, audit log.
+  - **Read tools:** `search`, `list_workspace`, `get_page` (auto-detects type, no `isDbRow` flag needed), `get_database_schema` (schema only, no rows), `query_database` (supports `filters: Record<string,any>` for property matching)
+  - **Write tools:** `create_page`, `update_page` (merges `properties` — never overwrites), `bulk_update` (multiple pages/rows in one call)
 
 **Server Actions (`src/lib/actions/`)**
 - `workspace.ts` — Workspace + sidebar item CRUD (all auth-gated via `assertWorkspaceAccess`).
@@ -235,7 +237,7 @@ We use the **JSON Column Pattern** (not EAV) for dynamic user-defined properties
 - `src/lib/client-auth-store.ts` — In-memory store for pending desktop OAuth tokens. `setPendingClientToken(deviceId, token)` writes; `consumeClientToken(deviceId)` reads + deletes (one-time use, 5-min TTL). Single-process only — swap for a DB table in multi-instance deployments.
 - `src/lib/templates.ts` — 7 item templates for `TemplatePickerModal`.
 - `src/lib/seed.ts` — `createSeedWorkspace()` and `createDemoSeedData()` via shared `createRichWorkspaceData`.
-- `src/lib/services/workspace.ts` — Cookie-free service layer for MCP tool handlers.
+- `src/lib/services/workspace.ts` — Cookie-free service layer for MCP tool handlers. Exports: `searchWorkspace`, `listWorkspaceItems`, `getPageById`, `getAnyPageById` (auto-detects workspace item vs DB row), `getDatabasePageById`, `getDatabaseSchema` (schema only, no rows), `queryDatabaseRows` (accepts optional `filters`), `createPageInWorkspace`, `updatePageById` (merges properties, never overwrites), `bulkUpdatePages`.
 - `src/components/providers/QueryProvider.tsx` — TanStack Query provider (staleTime 60s, gcTime 5min).
 - `src/db/` — Drizzle `schema.ts`, `index.ts` (WAL + PRAGMAs on startup), migrations.
 - `messages/` — Translation files (`en.json` source of truth, 17 namespaces, 6 locales).

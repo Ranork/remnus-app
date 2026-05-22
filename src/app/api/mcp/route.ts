@@ -10,11 +10,12 @@ import { eq, and, isNull } from 'drizzle-orm';
 import {
   searchWorkspace,
   listWorkspaceItems,
-  getPageById,
-  getDatabasePageById,
+  getAnyPageById,
+  getDatabaseSchema,
   queryDatabaseRows,
   createPageInWorkspace,
   updatePageById,
+  bulkUpdatePages,
 } from '@/lib/services/workspace';
 
 const TOKEN_PREFIX = process.env.MCP_TOKEN_PREFIX ?? 'rmns';
@@ -188,18 +189,15 @@ async function handleMcpRequest(req: Request): Promise<Response> {
   server.registerTool(
     'get_page',
     {
-      description: 'Get full content of a workspace page or database item by its ID.',
+      description: 'Get full content of a workspace page or database row by its ID. Auto-detects the type — no flags needed.',
       inputSchema: {
-        pageId: z.string().describe('The workspace item ID or database row page ID'),
-        isDbRow: z.boolean().optional().default(false).describe('Set true if this ID is a database row (pages table)'),
+        pageId: z.string().describe('The workspace item ID or database row ID'),
       },
       annotations: { readOnlyHint: true },
     },
-    async ({ pageId, isDbRow }) => {
+    async ({ pageId }) => {
       try {
-        const page = isDbRow
-          ? await getDatabasePageById(ctx.workspaceId, pageId)
-          : await getPageById(ctx.workspaceId, pageId);
+        const page = await getAnyPageById(ctx.workspaceId, pageId);
         await logActivity(ctx, 'get_page', 'success', 'page', pageId);
         return {
           content: [{ type: 'text' as const, text: JSON.stringify(page, null, 2) }],
@@ -215,18 +213,45 @@ async function handleMcpRequest(req: Request): Promise<Response> {
   );
 
   server.registerTool(
-    'query_database',
+    'get_database_schema',
     {
-      description: 'Get schema and rows of a database.',
+      description: 'Get only the column schema of a database, without fetching any rows. Use this to inspect column names, types, and select options before querying.',
       inputSchema: {
         databaseId: z.string().describe('Database ID (from list_workspace or search)'),
-        limit: z.number().optional().default(50).describe('Maximum rows (default 50)'),
       },
       annotations: { readOnlyHint: true },
     },
-    async ({ databaseId, limit }) => {
+    async ({ databaseId }) => {
       try {
-        const result = await queryDatabaseRows(ctx.workspaceId, databaseId, limit ?? 50);
+        const result = await getDatabaseSchema(ctx.workspaceId, databaseId);
+        await logActivity(ctx, 'get_database_schema', 'success', 'database', databaseId);
+        return {
+          content: [{ type: 'text' as const, text: JSON.stringify(result, null, 2) }],
+        };
+      } catch (err) {
+        await logActivity(ctx, 'get_database_schema', 'error', 'database', databaseId);
+        return {
+          content: [{ type: 'text' as const, text: `Error: ${String(err)}` }],
+          isError: true,
+        };
+      }
+    },
+  );
+
+  server.registerTool(
+    'query_database',
+    {
+      description: 'Get schema and rows of a database. Optionally filter rows by property values.',
+      inputSchema: {
+        databaseId: z.string().describe('Database ID (from list_workspace or search)'),
+        limit: z.number().optional().default(50).describe('Maximum rows (default 50)'),
+        filters: z.record(z.string(), z.any()).optional().describe('Filter rows by property value, e.g. {"status": "Done"} or {"col_xxx": ["Tag1"]}'),
+      },
+      annotations: { readOnlyHint: true },
+    },
+    async ({ databaseId, limit, filters }) => {
+      try {
+        const result = await queryDatabaseRows(ctx.workspaceId, databaseId, limit ?? 50, filters);
         await logActivity(ctx, 'query_database', 'success', 'database', databaseId);
         return {
           content: [{ type: 'text' as const, text: JSON.stringify(result, null, 2) }],
@@ -312,6 +337,45 @@ async function handleMcpRequest(req: Request): Promise<Response> {
         };
       } catch (err) {
         await logActivity(ctx, 'update_page', 'error', 'page', pageId);
+        return {
+          content: [{ type: 'text' as const, text: `Error: ${String(err)}` }],
+          isError: true,
+        };
+      }
+    },
+  );
+
+  server.registerTool(
+    'bulk_update',
+    {
+      description: 'Update multiple pages or database rows in a single call.',
+      inputSchema: {
+        updates: z.array(
+          z.object({
+            pageId: z.string().describe('The workspace item ID or database row ID to update'),
+            title: z.string().optional().describe('New title'),
+            content: z.string().optional().describe('New markdown content'),
+            properties: z.record(z.string(), z.any()).optional().describe('Properties to merge'),
+          }),
+        ).describe('List of updates to apply'),
+      },
+    },
+    async ({ updates }) => {
+      if (ctx.scope !== 'write') {
+        await logActivity(ctx, 'bulk_update', 'error');
+        return {
+          content: [{ type: 'text' as const, text: 'Error: This token only has read scope. A write-scoped token is required.' }],
+          isError: true,
+        };
+      }
+      try {
+        const results = await bulkUpdatePages(ctx.workspaceId, updates);
+        await logActivity(ctx, 'bulk_update', 'success');
+        return {
+          content: [{ type: 'text' as const, text: JSON.stringify(results) }],
+        };
+      } catch (err) {
+        await logActivity(ctx, 'bulk_update', 'error');
         return {
           content: [{ type: 'text' as const, text: `Error: ${String(err)}` }],
           isError: true,

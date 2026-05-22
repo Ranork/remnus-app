@@ -1,12 +1,14 @@
 import { getTranslations } from 'next-intl/server';
 
 const TOOLS = [
-  { scope: 'read',  tool: 'search',          desc: 'Search pages and databases in the workspace by title keyword.',       ret: 'Result[]' },
-  { scope: 'read',  tool: 'list_workspace',  desc: 'List all workspace items (pages & databases). Filter by parentId.',  ret: 'Item[]'   },
-  { scope: 'read',  tool: 'get_page',        desc: 'Fetch full content of a page or database row by ID.',                ret: 'Page'     },
-  { scope: 'read',  tool: 'query_database',  desc: 'Return schema and rows of a database. Limit up to 50 rows.',         ret: 'DbResult' },
-  { scope: 'write', tool: 'create_page',     desc: 'Create a standalone page or database row with title and content.',   ret: '{ id }'   },
-  { scope: 'write', tool: 'update_page',     desc: 'Update title, markdown content, or properties of an existing page.', ret: '{ updated }' },
+  { scope: 'read',  tool: 'search',               desc: 'Search pages and databases in the workspace by title keyword.',              ret: 'Result[]'    },
+  { scope: 'read',  tool: 'list_workspace',        desc: 'List all workspace items (pages & databases). Filter by parentId.',         ret: 'Item[]'      },
+  { scope: 'read',  tool: 'get_page',              desc: 'Fetch full content of a page or database row by ID. Auto-detects type.',    ret: 'Page'        },
+  { scope: 'read',  tool: 'get_database_schema',   desc: 'Get column definitions and select options without fetching rows.',          ret: 'Schema'      },
+  { scope: 'read',  tool: 'query_database',        desc: 'Return schema and rows of a database. Supports property filters.',         ret: 'DbResult'    },
+  { scope: 'write', tool: 'create_page',           desc: 'Create a standalone page or database row with title and content.',         ret: '{ id }'      },
+  { scope: 'write', tool: 'update_page',           desc: 'Update title, content, or properties of a page. Merges properties safely.', ret: '{ updated }' },
+  { scope: 'write', tool: 'bulk_update',           desc: 'Update multiple pages or database rows in a single call.',                 ret: 'Result[]'    },
 ] as const;
 
 const SCOPE_COLORS: Record<string, string> = {
