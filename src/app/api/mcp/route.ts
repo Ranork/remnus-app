@@ -324,6 +324,7 @@ async function handleMcpRequest(req: Request): Promise<Response> {
 
   const transport = new WebStandardStreamableHTTPServerTransport({
     sessionIdGenerator: undefined, // stateless mode
+    enableJsonResponse: true,      // Claude Code expects JSON, not SSE stream
   });
 
   await server.connect(transport);

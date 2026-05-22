@@ -251,9 +251,11 @@ export default function WorkspaceSettingsModal({
     });
   };
 
-  const handleCopyToken = () => {
-    if (!newTokenValue) return;
-    navigator.clipboard.writeText(newTokenValue).then(() => {
+  // Extract prefix8 from full token string to match the row
+  const newTokenPrefix = newTokenValue ? newTokenValue.split('_')[1] : null;
+
+  const handleCopyToken = (value: string, key: string) => {
+    navigator.clipboard.writeText(value).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     });
@@ -288,7 +290,7 @@ export default function WorkspaceSettingsModal({
     return new Date(d).toLocaleDateString();
   };
 
-  const claudeCliCmd = `claude mcp add --transport http remnus ${mcpUrl} --header "Authorization: Bearer <your-token>"`;
+  const claudeCliCmd = `claude mcp add --transport http --scope user remnus ${mcpUrl} --header "Authorization: Bearer <your-token>"`;
   const makeJsonConfig = (url: string) =>
     JSON.stringify(
       { mcpServers: { remnus: { url, headers: { Authorization: 'Bearer <your-token>' } } } },
@@ -578,27 +580,6 @@ export default function WorkspaceSettingsModal({
 
               {hasPrivilegedAccess ? (
                 <div className="space-y-4">
-                  {/* Newly created token — shown once */}
-                  {newTokenValue && (
-                    <div className="border border-amber-500/30 bg-amber-500/5 rounded-lg p-4 space-y-3">
-                      <p className="text-xs text-amber-400 font-semibold flex items-center gap-1.5">
-                        <AlertCircle size={13} /> {t('tokenCreatedHint')}
-                      </p>
-                      <div className="flex gap-2">
-                        <code className="flex-1 bg-neutral-950 border border-neutral-800 rounded px-3 py-2 text-xs text-sky-400 font-mono break-all select-all">
-                          {newTokenValue}
-                        </code>
-                        <button
-                          onClick={handleCopyToken}
-                          className="shrink-0 flex items-center gap-1.5 text-xs bg-neutral-800 hover:bg-neutral-700 text-neutral-200 px-3 py-2 rounded border border-neutral-700 transition-colors"
-                        >
-                          {copied ? <Check size={13} className="text-sky-400" /> : <Copy size={13} />}
-                          {copied ? t('copied') : t('copyToken')}
-                        </button>
-                      </div>
-                    </div>
-                  )}
-
                   {/* Token list */}
                   {isLoadingTokens ? (
                     <div className="py-6 flex justify-center">
@@ -627,35 +608,57 @@ export default function WorkspaceSettingsModal({
                           {tokens.map((token) => {
                             const isRevoked = !!token.revokedAt;
                             const isRevoking = revokingId === token.id;
+                            const isNew = newTokenPrefix === token.tokenPrefix;
                             return (
-                              <div key={token.id} className="flex items-center justify-between p-3 gap-3">
-                                <div className="min-w-0 flex-1">
-                                  <div className="flex items-center gap-2">
-                                    <span className={`text-xs font-semibold truncate ${isRevoked ? 'text-neutral-500 line-through' : 'text-neutral-200'}`}>
-                                      {token.name}
-                                    </span>
-                                    <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full border shrink-0 ${
-                                      isRevoked
-                                        ? 'text-neutral-500 bg-neutral-800 border-neutral-700'
-                                        : token.scope === 'write'
-                                          ? 'text-amber-400 bg-amber-500/10 border-amber-500/20'
-                                          : 'text-blue-400 bg-blue-500/10 border-blue-500/20'
-                                    }`}>
-                                      {isRevoked ? t('revoked') : token.scope === 'write' ? t('tokenScopeWrite') : t('tokenScopeRead')}
-                                    </span>
+                              <div key={token.id} className="flex flex-col">
+                                <div className="flex items-center justify-between p-3 gap-3">
+                                  <div className="min-w-0 flex-1">
+                                    <div className="flex items-center gap-2">
+                                      <span className={`text-xs font-semibold truncate ${isRevoked ? 'text-neutral-500 line-through' : 'text-neutral-200'}`}>
+                                        {token.name}
+                                      </span>
+                                      <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full border shrink-0 ${
+                                        isRevoked
+                                          ? 'text-neutral-500 bg-neutral-800 border-neutral-700'
+                                          : token.scope === 'write'
+                                            ? 'text-amber-400 bg-amber-500/10 border-amber-500/20'
+                                            : 'text-blue-400 bg-blue-500/10 border-blue-500/20'
+                                      }`}>
+                                        {isRevoked ? t('revoked') : token.scope === 'write' ? t('tokenScopeWrite') : t('tokenScopeRead')}
+                                      </span>
+                                    </div>
+                                    <p className="text-[10px] text-neutral-500 mt-0.5 font-mono">
+                                      {token.tokenPrefix}… · {t('lastUsed')}: {formatDate(token.lastUsedAt)}
+                                    </p>
                                   </div>
-                                  <p className="text-[10px] text-neutral-500 mt-0.5 font-mono">
-                                    {token.tokenPrefix}… · {t('lastUsed')}: {formatDate(token.lastUsedAt)}
-                                  </p>
+                                  {!isRevoked && (
+                                    <button
+                                      onClick={() => handleRevokeToken(token.id)}
+                                      disabled={isRevoking}
+                                      className="shrink-0 text-[10px] font-semibold text-red-400 hover:text-red-300 bg-red-500/10 hover:bg-red-500/20 px-2 py-1 rounded border border-red-500/20 transition-colors disabled:opacity-50"
+                                    >
+                                      {isRevoking ? t('revoking') : t('revokeToken')}
+                                    </button>
+                                  )}
                                 </div>
-                                {!isRevoked && (
-                                  <button
-                                    onClick={() => handleRevokeToken(token.id)}
-                                    disabled={isRevoking}
-                                    className="shrink-0 text-[10px] font-semibold text-red-400 hover:text-red-300 bg-red-500/10 hover:bg-red-500/20 px-2 py-1 rounded border border-red-500/20 transition-colors disabled:opacity-50"
-                                  >
-                                    {isRevoking ? t('revoking') : t('revokeToken')}
-                                  </button>
+                                {isNew && newTokenValue && (
+                                  <div className="mx-3 mb-3 border border-amber-500/30 bg-amber-500/5 rounded-md p-3 space-y-2">
+                                    <p className="text-[10px] text-amber-400 font-semibold flex items-center gap-1">
+                                      <AlertCircle size={11} /> {t('tokenCreatedHint')}
+                                    </p>
+                                    <div className="flex gap-2">
+                                      <code className="flex-1 bg-neutral-950 border border-neutral-800 rounded px-2.5 py-1.5 text-[11px] text-sky-400 font-mono break-all select-all">
+                                        {newTokenValue}
+                                      </code>
+                                      <button
+                                        onClick={() => handleCopyToken(newTokenValue, token.id)}
+                                        className="shrink-0 flex items-center gap-1 text-xs bg-neutral-800 hover:bg-neutral-700 text-neutral-200 px-2.5 py-1.5 rounded border border-neutral-700 transition-colors"
+                                      >
+                                        {copied ? <Check size={12} className="text-sky-400" /> : <Copy size={12} />}
+                                        {copied ? t('copied') : t('copyToken')}
+                                      </button>
+                                    </div>
+                                  </div>
                                 )}
                               </div>
                             );
