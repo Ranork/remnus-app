@@ -10,7 +10,7 @@ import {
   databases,
   pages,
 } from '@/db/schema';
-import { eq, and, like, asc } from 'drizzle-orm';
+import { eq, and, like, asc, sql } from 'drizzle-orm';
 
 // ── Internal boundary check ───────────────────────────────────────────────────
 
@@ -62,13 +62,15 @@ export async function searchWorkspace(
 ) {
   const pattern = `%${query}%`;
 
-  const items = await db
+  const rows = await db
     .select({
       id: workspaceItems.id,
       type: workspaceItems.type,
       title: workspaceItems.title,
+      content: standalonePages.content,
     })
     .from(workspaceItems)
+    .leftJoin(standalonePages, eq(standalonePages.itemId, workspaceItems.id))
     .where(
       and(
         eq(workspaceItems.workspaceId, workspaceId),
@@ -78,30 +80,16 @@ export async function searchWorkspace(
     .orderBy(asc(workspaceItems.sortOrder))
     .limit(limit);
 
-  // Also search standalone page content for snippet
-  const results: { id: string; type: string; title: string; snippet: string }[] = [];
-
-  for (const item of items) {
+  return rows.map(({ content, ...item }) => {
     let snippet = '';
-    if (item.type === 'page') {
-      const [sp] = await db
-        .select({ content: standalonePages.content })
-        .from(standalonePages)
-        .where(eq(standalonePages.itemId, item.id))
-        .limit(1);
-      if (sp?.content) {
-        const idx = sp.content.toLowerCase().indexOf(query.toLowerCase());
-        if (idx >= 0) {
-          snippet = sp.content.slice(Math.max(0, idx - 40), idx + 80).replace(/\n/g, ' ');
-        } else {
-          snippet = sp.content.slice(0, 100).replace(/\n/g, ' ');
-        }
-      }
+    if (item.type === 'page' && content) {
+      const idx = content.toLowerCase().indexOf(query.toLowerCase());
+      snippet = idx >= 0
+        ? content.slice(Math.max(0, idx - 40), idx + 80).replace(/\n/g, ' ')
+        : content.slice(0, 100).replace(/\n/g, ' ');
     }
-    results.push({ id: item.id, type: item.type, title: item.title, snippet });
-  }
-
-  return results;
+    return { id: item.id, type: item.type, title: item.title, snippet };
+  });
 }
 
 export async function getPageById(workspaceId: string, itemId: string) {
@@ -229,6 +217,25 @@ export async function queryDatabaseRows(
 
   if (!dbRecord) throw new Error('Database not found');
 
+  // Push property filters into SQL using json_extract so limit is applied after filtering.
+  // Handles both scalar fields (select, text, number) and array fields (multi_select)
+  // by checking both direct equality and json_each membership in one condition.
+  const filterConditions = filters
+    ? Object.entries(filters).map(([key, value]) =>
+        sql`(
+          json_extract(${pages.properties}, ${'$.' + key}) = ${value}
+          OR EXISTS (
+            SELECT 1 FROM json_each(json_extract(${pages.properties}, ${'$.' + key}))
+            WHERE value = ${value}
+          )
+        )`,
+      )
+    : [];
+
+  const whereCondition = filterConditions.length > 0
+    ? and(eq(pages.databaseId, resolvedId), ...filterConditions)
+    : eq(pages.databaseId, resolvedId);
+
   const rows = await db
     .select({
       id: pages.id,
@@ -237,23 +244,11 @@ export async function queryDatabaseRows(
       content: pages.content,
     })
     .from(pages)
-    .where(eq(pages.databaseId, resolvedId))
+    .where(whereCondition)
     .orderBy(asc(pages.sortOrder))
     .limit(limit);
 
-  if (!filters || Object.keys(filters).length === 0) {
-    return { schema: dbRecord.schema, rows };
-  }
-
-  const filtered = rows.filter((row) =>
-    Object.entries(filters).every(([key, value]) => {
-      const prop = (row.properties as Record<string, unknown>)?.[key];
-      if (Array.isArray(prop)) return prop.includes(value);
-      return prop === value;
-    }),
-  );
-
-  return { schema: dbRecord.schema, rows: filtered };
+  return { schema: dbRecord.schema, rows };
 }
 
 export async function getAnyPageById(workspaceId: string, pageId: string) {

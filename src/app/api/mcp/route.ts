@@ -82,12 +82,22 @@ async function logActivity(
 }
 
 // ── Rate limiting (simple in-memory token bucket) ────────────────────────────
-// 60 requests per minute per token prefix
+// 60 requests per minute per token. Expired entries are swept every 100 calls
+// to prevent unbounded Map growth on long-running servers.
 
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+let rateLimitCallCount = 0;
 
 function checkRateLimit(tokenId: string): boolean {
   const now = Date.now();
+
+  if (++rateLimitCallCount >= 100) {
+    rateLimitCallCount = 0;
+    for (const [key, entry] of rateLimitMap) {
+      if (entry.resetAt < now) rateLimitMap.delete(key);
+    }
+  }
+
   const entry = rateLimitMap.get(tokenId);
   if (!entry || entry.resetAt < now) {
     rateLimitMap.set(tokenId, { count: 1, resetAt: now + 60_000 });
