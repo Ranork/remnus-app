@@ -6,9 +6,13 @@ const TOOLS = [
   { scope: 'read',  tool: 'get_page',              desc: 'Fetch full content of a page or database row by ID. Auto-detects type.',    ret: 'Page'        },
   { scope: 'read',  tool: 'get_database_schema',   desc: 'Get column definitions and select options without fetching rows.',          ret: 'Schema'      },
   { scope: 'read',  tool: 'query_database',        desc: 'Return schema and rows of a database. Supports property filters.',         ret: 'DbResult'    },
-  { scope: 'write', tool: 'create_page',           desc: 'Create a standalone page or database row with title and content.',         ret: '{ id }'      },
-  { scope: 'write', tool: 'update_page',           desc: 'Update title, content, or properties of a page. Merges properties safely.', ret: '{ updated }' },
-  { scope: 'write', tool: 'bulk_update',           desc: 'Update multiple pages or database rows in a single call.',                 ret: 'Result[]'    },
+  { scope: 'write', tool: 'create_page',             desc: 'Create a standalone page or database row with title and content.',          ret: '{ id }'      },
+  { scope: 'write', tool: 'update_page',             desc: 'Update title, content, or properties of a page. Merges properties safely.',  ret: '{ updated }' },
+  { scope: 'write', tool: 'bulk_update',             desc: 'Update multiple pages or database rows in a single call.',                  ret: 'Result[]'    },
+  { scope: 'write', tool: 'delete_page',             desc: 'Delete a page, database, or row. Requires confirm: true — dry-run by default.', ret: '{ deleted }' },
+  { scope: 'write', tool: 'move_item',               desc: 'Reparent a sidebar item. Pass null to move to workspace root.',             ret: '{ moved }'   },
+  { scope: 'write', tool: 'create_database',         desc: 'Create a database with a custom column schema. Title column auto-added.',   ret: '{ id, dbId }'},
+  { scope: 'write', tool: 'update_database_schema',  desc: 'Add or remove columns. Removing requires confirm: true. Title protected.',  ret: '{ schema }'  },
 ] as const;
 
 const SCOPE_COLORS: Record<string, string> = {

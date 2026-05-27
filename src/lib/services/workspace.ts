@@ -336,6 +336,182 @@ export async function createPageInWorkspace(
   return { id: itemId, type: 'page' as const };
 }
 
+// ── Internal recursive delete ─────────────────────────────────────────────────
+
+async function deleteWorkspaceItemAndDescendants(itemId: string, type: 'page' | 'database') {
+  const children = await db
+    .select({ id: workspaceItems.id, type: workspaceItems.type })
+    .from(workspaceItems)
+    .where(eq(workspaceItems.parentId, itemId));
+
+  for (const child of children) {
+    await deleteWorkspaceItemAndDescendants(child.id, child.type);
+  }
+
+  if (type === 'database') {
+    await db.delete(databases).where(eq(databases.itemId, itemId));
+  } else {
+    await db.delete(standalonePages).where(eq(standalonePages.itemId, itemId));
+  }
+
+  await db.delete(workspaceItems).where(eq(workspaceItems.id, itemId));
+}
+
+export async function deleteItemFromWorkspace(workspaceId: string, itemId: string) {
+  const [item] = await db
+    .select({ workspaceId: workspaceItems.workspaceId, type: workspaceItems.type })
+    .from(workspaceItems)
+    .where(eq(workspaceItems.id, itemId))
+    .limit(1);
+
+  if (item) {
+    if (item.workspaceId !== workspaceId) throw new Error('Access denied');
+    await deleteWorkspaceItemAndDescendants(itemId, item.type);
+    return { deleted: true, type: item.type as 'page' | 'database' };
+  }
+
+  const [page] = await db
+    .select({ databaseId: pages.databaseId })
+    .from(pages)
+    .where(eq(pages.id, itemId))
+    .limit(1);
+
+  if (!page) throw new Error('Item not found');
+  await assertDatabaseInWorkspace(page.databaseId, workspaceId);
+  await db.delete(pages).where(eq(pages.id, itemId));
+  return { deleted: true, type: 'db-row' as const };
+}
+
+export async function moveItemInWorkspace(
+  workspaceId: string,
+  itemId: string,
+  newParentId: string | null,
+) {
+  await assertItemInWorkspace(itemId, workspaceId);
+
+  if (newParentId !== null) {
+    await assertItemInWorkspace(newParentId, workspaceId);
+    let cursor: string | null = newParentId;
+    while (cursor !== null) {
+      if (cursor === itemId) throw new Error('Cannot move an item into its own subtree');
+      const [row] = await db
+        .select({ parentId: workspaceItems.parentId })
+        .from(workspaceItems)
+        .where(eq(workspaceItems.id, cursor))
+        .limit(1);
+      cursor = row?.parentId ?? null;
+    }
+  }
+
+  await db
+    .update(workspaceItems)
+    .set({ parentId: newParentId, updatedAt: new Date() })
+    .where(eq(workspaceItems.id, itemId));
+
+  return { moved: true };
+}
+
+export async function createDatabaseInWorkspace(
+  workspaceId: string,
+  input: {
+    name: string;
+    schema?: Array<{ name: string; type: string; options?: any[] }>;
+    parentId?: string;
+  },
+) {
+  if (input.parentId) {
+    await assertItemInWorkspace(input.parentId, workspaceId);
+  }
+
+  const itemId = crypto.randomUUID();
+  const dbId = crypto.randomUUID();
+
+  const resolvedSchema: any[] = input.schema?.length
+    ? input.schema.map(col => ({
+        id: `col_${crypto.randomUUID().slice(0, 8)}`,
+        name: col.name,
+        type: col.type,
+        ...(col.options ? { options: col.options } : {}),
+      }))
+    : [
+        { id: 'title', name: 'Title', type: 'text' },
+        { id: 'status', name: 'Status', type: 'select', options: ['To Do', 'In Progress', 'Done'] },
+      ];
+
+  if (!resolvedSchema.some((c: any) => c.id === 'title')) {
+    resolvedSchema.unshift({ id: 'title', name: 'Title', type: 'text' });
+  }
+
+  await db.insert(workspaceItems).values({
+    id: itemId,
+    workspaceId,
+    type: 'database',
+    title: input.name,
+    parentId: input.parentId ?? null,
+    sortOrder: 0,
+  });
+
+  await db.insert(databases).values({
+    id: dbId,
+    name: input.name,
+    itemId,
+    schema: resolvedSchema,
+    views: null,
+  });
+
+  return { id: itemId, databaseId: dbId };
+}
+
+export async function updateDatabaseSchemaById(
+  workspaceId: string,
+  databaseId: string,
+  changes: {
+    addColumns?: Array<{ name: string; type: string; options?: any[] }>;
+    removeColumnIds?: string[];
+  },
+  confirm: boolean,
+) {
+  const resolvedId = await assertDatabaseInWorkspace(databaseId, workspaceId);
+
+  const [dbRecord] = await db
+    .select({ schema: databases.schema })
+    .from(databases)
+    .where(eq(databases.id, resolvedId))
+    .limit(1);
+
+  if (!dbRecord) throw new Error('Database not found');
+
+  const currentSchema: any[] = dbRecord.schema ?? [];
+  const safeRemoveIds = (changes.removeColumnIds ?? []).filter((id: string) => id !== 'title');
+
+  if (safeRemoveIds.length > 0 && !confirm) {
+    const toRemove = currentSchema.filter((c: any) => safeRemoveIds.includes(c.id));
+    throw new Error(
+      `Removing columns is destructive and permanently deletes all data in those columns. ` +
+      `Columns to remove: ${toRemove.map((c: any) => c.name).join(', ')}. ` +
+      `Set confirm: true to proceed.`,
+    );
+  }
+
+  let newSchema = currentSchema.filter((c: any) => !safeRemoveIds.includes(c.id));
+
+  if (changes.addColumns?.length) {
+    const added = changes.addColumns.map(col => ({
+      id: `col_${crypto.randomUUID().slice(0, 8)}`,
+      name: col.name,
+      type: col.type,
+      ...(col.options ? { options: col.options } : {}),
+    }));
+    newSchema = [...newSchema, ...added];
+  }
+
+  await db.update(databases)
+    .set({ schema: newSchema, updatedAt: new Date() })
+    .where(eq(databases.id, resolvedId));
+
+  return { updated: true, schema: newSchema };
+}
+
 export async function updatePageById(
   workspaceId: string,
   itemId: string,

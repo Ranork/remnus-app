@@ -64,9 +64,12 @@ messages/                   # i18n JSON (en, tr, hi, es, fr, de)
 - `agent_tokens` — MCP bearer tokens scoped to workspace; columns: id, workspace_id (CASCADE), name, agent_name, token_prefix (8-char, indexed), token_hash (bcrypt cost 12), scope ('read'|'write'), created_by, created_at, expires_at (nullable, null = no expiry), last_used_at, revoked_at
 - `agent_activity` — audit log per MCP tool call; columns: id, token_id (CASCADE), workspace_id, tool, target_type, target_id, status ('success'|'error'), created_at
 
-## New files (MCP feature)
-- `src/app/api/mcp/route.ts` — MCP route handler (Node runtime, stateless Streamable HTTP). Bearer token auth, rate limit 60/min, 6 tools: search, list_workspace, get_page, query_database (read), create_page, update_page (write-scope only). Audit logs every call.
-- `src/lib/services/workspace.ts` — Cookie-free service layer for MCP. All fns take explicit workspaceId, no session cookies.
+## MCP feature files
+- `src/app/api/mcp/route.ts` — MCP route handler (Node runtime, stateless Streamable HTTP). Bearer token auth, rate limit 60/min, **12 tools**, audit log every call.
+  - Read: `search`, `list_workspace`, `get_page`, `get_database_schema`, `query_database`
+  - Write (scope='write' required): `create_page`, `update_page`, `bulk_update`, `delete_page` (confirm flag; dry-run by default), `move_item` (reparent sidebar item; null → root), `create_database` (custom schema; title auto-prepended), `update_database_schema` (add/remove columns; remove requires confirm; title protected)
+- `src/lib/services/workspace.ts` — Cookie-free service layer for MCP. All fns take explicit workspaceId, no session cookies. Exports: searchWorkspace, listWorkspaceItems, getPageById, getAnyPageById, getDatabasePageById, getDatabaseSchema, queryDatabaseRows, createPageInWorkspace, updatePageById, bulkUpdatePages, deleteItemFromWorkspace (recursive cascade), moveItemInWorkspace (subtree cycle-check), createDatabaseInWorkspace, updateDatabaseSchemaById.
 - `src/lib/actions/agentToken.ts` — mintAgentToken (accepts expiresInDays: number|null) / getAgentTokens / revokeAgentToken (owner/admin only).
+- `src/components/marketing/LandingTools.tsx` — Tool reference table on the landing page. TOOLS array lists all 12 tools with scope/desc/return.
 
 See `mem:tech_stack` for stack. See `mem:conventions` for code patterns.
