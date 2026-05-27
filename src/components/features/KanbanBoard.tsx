@@ -226,7 +226,7 @@ export default function KanbanBoard({
   }
 
   return (
-    <div className={`flex overflow-x-auto pb-4 h-full items-start ${groupColBg ? 'gap-2' : 'gap-6'}`}>
+    <div className={`flex overflow-x-auto pb-4 items-start ${groupColBg ? 'gap-2' : 'gap-6'}`}>
       {allColumns.map((columnName) => {
         const isUncategorized = columnName === 'Uncategorized';
         const isDraggingThis = draggedGroup === columnName;
@@ -249,7 +249,7 @@ export default function KanbanBoard({
               setIsGroupDragReady(null);
             }}
             onMouseLeave={() => setIsGroupDragReady(null)}
-            className={`shrink-0 w-68 flex flex-col max-h-full transition-opacity group/col ${
+            className={`shrink-0 w-68 flex flex-col transition-opacity group/col ${
               hasBg ? 'p-3 rounded' : ''
             } ${isDraggingThis ? 'opacity-30' : ''} ${isOver ? 'ring-1 ring-blue-500/40' : ''}`}
             style={groupBgStyle}
@@ -276,7 +276,7 @@ export default function KanbanBoard({
             <div
               onDragOver={(e) => handleColumnCardAreaDragOver(e, columnName)}
               onDrop={(e) => handleColumnCardAreaDrop(e, columnName)}
-              className={`flex-1 overflow-y-auto flex flex-col min-h-16 transition-colors ${
+              className={`flex flex-col min-h-16 transition-colors ${
                 dragOverColumnName === columnName && !dragOverCardId ? 'bg-neutral-800/10' : ''
               }`}
             >

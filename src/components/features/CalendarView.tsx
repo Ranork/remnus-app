@@ -227,7 +227,7 @@ export default function CalendarView({
 
   if (!dateCol) {
     return (
-      <div className="flex flex-col items-center justify-center h-full text-neutral-500 py-20 text-center gap-3">
+      <div className="flex flex-col items-center justify-center text-neutral-500 py-20 text-center gap-3">
         <CalendarIcon size={28} className="text-neutral-600 animate-pulse" />
         <span className="text-sm">Please select a date property in the Layout Settings to enable the Calendar View.</span>
         <span className="text-xs text-neutral-600 max-w-xs">
@@ -240,7 +240,7 @@ export default function CalendarView({
   const todayStr = formatYYYYMMDD(new Date());
 
   return (
-    <div className="flex flex-col h-full bg-neutral-850 text-neutral-200">
+    <div className="flex flex-col bg-neutral-850 text-neutral-200">
       {/* Calendar Header Nav */}
       <div className="flex items-center justify-between pb-3.5 mb-2.5 border-b border-neutral-850/60 shrink-0 select-none">
         <div className="flex items-center gap-1.5">
@@ -287,9 +287,9 @@ export default function CalendarView({
       </div>
 
       {/* Grid Container */}
-      <div className="flex-1 min-h-0 overflow-y-auto">
+      <div>
         <div
-          className="grid grid-cols-7 border-l border-t border-neutral-800/80 bg-neutral-850 min-h-full h-auto"
+          className="grid grid-cols-7 border-l border-t border-neutral-800/80 bg-neutral-850 h-auto"
           style={{
             gridTemplateRows: viewMode === 'month' ? 'repeat(6, minmax(6rem, 1fr))' : 'minmax(22rem, 1fr)'
           }}

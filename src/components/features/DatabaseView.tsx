@@ -636,8 +636,8 @@ export default function DatabaseView({
   };
 
   return (
-    <div className="flex-1 flex flex-col overflow-hidden">
-      <div className={`flex-1 flex flex-col min-h-0 pt-6 sm:pt-8 w-full ${widthMode === 'full' ? 'px-4 sm:px-8 lg:px-16' : 'px-4 sm:px-8'} ${widthMode === 'full' ? '' : widthMode === 'wide' ? 'max-w-screen-2xl mx-auto' : 'max-w-6xl mx-auto'}`}>
+    <div className="flex-1 flex flex-col overflow-y-auto">
+      <div className={`flex flex-col w-full pt-6 sm:pt-8 ${widthMode === 'full' ? 'px-4 sm:px-8 lg:px-16' : 'px-4 sm:px-8'} ${widthMode === 'full' ? '' : widthMode === 'wide' ? 'max-w-screen-2xl mx-auto' : 'max-w-6xl mx-auto'}`}>
       {/* Back button for nested databases */}
       {database.parentId && (
         <div className="mb-4 shrink-0">
@@ -735,8 +735,8 @@ export default function DatabaseView({
       </div>
 
       {/* Content + Sidebar Area */}
-      <div className="flex-1 flex gap-4 min-h-0 relative pt-4">
-        <div className="flex-1 min-h-0 overflow-hidden">
+      <div className="flex gap-4 relative pt-4">
+        <div className="flex-1">
           {isTableView && tableConfig ? (
             <TableLayout
               database={database}
