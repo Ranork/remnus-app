@@ -14,6 +14,9 @@ import { getMessages } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { routing } from '@/i18n/routing';
 import { getTranslations } from 'next-intl/server';
+import { PostHogProvider } from '@/components/providers/PostHogProvider';
+import PostHogPageView from '@/components/providers/PostHogPageView';
+import PostHogIdentify from '@/components/providers/PostHogIdentify';
 
 const geist = Geist({
   subsets: ['latin'],
@@ -86,9 +89,12 @@ export default async function LocaleLayout({
     return (
       <html lang={locale} className={`${geist.variable} ${geistMono.variable} ${instrumentSerif.variable}`}>
         <body className="font-sans bg-neutral-950 text-neutral-50">
-          <NextIntlClientProvider messages={messages}>
-            {children}
-          </NextIntlClientProvider>
+          <PostHogProvider>
+            <PostHogPageView />
+            <NextIntlClientProvider messages={messages}>
+              {children}
+            </NextIntlClientProvider>
+          </PostHogProvider>
           <Analytics />
         </body>
       </html>
@@ -140,31 +146,35 @@ export default async function LocaleLayout({
   return (
     <html lang={locale} className={`${geist.variable} ${geistMono.variable} ${instrumentSerif.variable}`}>
       <body className="font-sans bg-neutral-950 text-neutral-50">
-        <NextIntlClientProvider messages={messages}>
-          <QueryProvider>
-            <AppShell
-              sidebar={
-                <WorkspaceSidebar
-                  items={items}
-                  workspaces={workspacesList}
-                  activeWorkspace={activeWorkspace ?? { id: '', name: 'Workspace' }}
-                  currentUser={currentUser}
-                />
-              }
-              mobileNav={
-                <MobileNavWrapper
-                  items={items}
-                  workspaces={workspacesList}
-                  activeWorkspace={activeWorkspace ?? { id: '', name: 'Workspace' }}
-                  currentUser={currentUser}
-                />
-              }
-              demoBanner={demoBanner}
-            >
-              {children}
-            </AppShell>
-          </QueryProvider>
-        </NextIntlClientProvider>
+        <PostHogProvider>
+          <PostHogPageView />
+          <PostHogIdentify user={currentUser} />
+          <NextIntlClientProvider messages={messages}>
+            <QueryProvider>
+              <AppShell
+                sidebar={
+                  <WorkspaceSidebar
+                    items={items}
+                    workspaces={workspacesList}
+                    activeWorkspace={activeWorkspace ?? { id: '', name: 'Workspace' }}
+                    currentUser={currentUser}
+                  />
+                }
+                mobileNav={
+                  <MobileNavWrapper
+                    items={items}
+                    workspaces={workspacesList}
+                    activeWorkspace={activeWorkspace ?? { id: '', name: 'Workspace' }}
+                    currentUser={currentUser}
+                  />
+                }
+                demoBanner={demoBanner}
+              >
+                {children}
+              </AppShell>
+            </QueryProvider>
+          </NextIntlClientProvider>
+        </PostHogProvider>
         <Analytics />
       </body>
     </html>

@@ -239,6 +239,9 @@ We use the **JSON Column Pattern** (not EAV) for dynamic user-defined properties
 - `src/lib/seed.ts` — `createSeedWorkspace()` and `createDemoSeedData()` via shared `createRichWorkspaceData`.
 - `src/lib/services/workspace.ts` — Cookie-free service layer for MCP tool handlers. Exports: `searchWorkspace`, `listWorkspaceItems`, `getPageById`, `getAnyPageById` (auto-detects workspace item vs DB row), `getDatabasePageById`, `getDatabaseSchema` (schema only, no rows), `queryDatabaseRows` (accepts optional `filters`), `createPageInWorkspace`, `updatePageById` (merges properties, never overwrites), `bulkUpdatePages`, `deleteItemFromWorkspace` (recursive cascade for workspace items), `moveItemInWorkspace` (reparent; subtree cycle-check), `createDatabaseInWorkspace` (custom schema; title auto-prepended), `updateDatabaseSchemaById` (add/remove columns; title protected).
 - `src/components/providers/QueryProvider.tsx` — TanStack Query provider (staleTime 60s, gcTime 5min).
+- `src/components/providers/PostHogProvider.tsx` — Client-side PostHog initializing wrapper.
+- `src/components/providers/PostHogPageView.tsx` — Client-side pageview capturer for App Router path transitions.
+- `src/components/providers/PostHogIdentify.tsx` — Identity binding provider connecting auth user info & role metadata.
 - `src/db/` — Drizzle `schema.ts`, `index.ts` (WAL + PRAGMAs on startup), migrations.
 - `messages/` — Translation files (`en.json` source of truth, 17 namespaces, 6 locales).
 
