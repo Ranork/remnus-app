@@ -66,6 +66,7 @@
   },
   "devDependencies": {
     "@ducanh2912/next-pwa": "^10.2.9",
+    "@swc/helpers": "^0.5.23",
     "@tailwindcss/postcss": "^4",
     "@tauri-apps/cli": "^2.11.2",
     "@types/bcryptjs": "^2.4.6",
