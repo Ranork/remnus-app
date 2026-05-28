@@ -105,7 +105,7 @@ export default function WorkspaceSettingsModal({
   const [revokingId, setRevokingId] = useState<string | null>(null);
   const [cmdCopied, setCmdCopied] = useState<string | null>(null);
   const [showGuide, setShowGuide] = useState(false);
-  const [activeGuide, setActiveGuide] = useState<'claude' | 'cursor' | 'windsurf' | 'continue'>('claude');
+  const [activeGuide, setActiveGuide] = useState<'claude' | 'cursor' | 'windsurf' | 'continue' | 'antigravity'>('claude');
   const [claudeMode, setClaudeMode] = useState<'cli' | 'json'>('cli');
   const [os, setOs] = useState<'mac' | 'linux' | 'windows'>('mac');
 
@@ -332,6 +332,13 @@ export default function WorkspaceSettingsModal({
       2,
     );
   const standardJsonConfig = makeJsonConfig(mcpUrl);
+  const makeAntigravityConfig = (url: string) =>
+    JSON.stringify(
+      { mcpServers: { remnus: { serverUrl: url, headers: { Authorization: 'Bearer <your-token>' } } } },
+      null,
+      2,
+    );
+  const antigravityJsonConfig = makeAntigravityConfig(mcpUrl);
   const claudeJsonConfig = JSON.stringify(
     { mcpServers: { remnus: { type: 'http', url: mcpUrl, headers: { Authorization: 'Bearer <your-token>' } } } },
     null,
@@ -339,10 +346,11 @@ export default function WorkspaceSettingsModal({
   );
 
   const guides = [
-    { id: 'claude'   as const, label: 'Claude Code' },
-    { id: 'cursor'   as const, label: 'Cursor'       },
-    { id: 'windsurf' as const, label: 'Windsurf'     },
-    { id: 'continue' as const, label: 'Continue'     },
+    { id: 'claude'      as const, label: 'Claude Code' },
+    { id: 'cursor'      as const, label: 'Cursor'       },
+    { id: 'windsurf'    as const, label: 'Windsurf'     },
+    { id: 'continue'    as const, label: 'Continue'     },
+    { id: 'antigravity' as const, label: 'Antigravity'  },
   ];
 
   const filePaths: Record<Exclude<typeof guides[number]['id'], 'claude'>, Record<'mac' | 'linux' | 'windows', string>> = {
@@ -360,6 +368,11 @@ export default function WorkspaceSettingsModal({
       mac: '~/.continue/config.json',
       linux: '~/.continue/config.json',
       windows: '%USERPROFILE%\\.continue\\config.json',
+    },
+    antigravity: {
+      mac: '~/.gemini/config/mcp_config.json',
+      linux: '~/.gemini/config/mcp_config.json',
+      windows: '%USERPROFILE%\\.gemini\\config\\mcp_config.json',
     },
   };
 
@@ -938,6 +951,11 @@ export default function WorkspaceSettingsModal({
                           hint = t('integrateJsonStep');
                           filePath = '.mcp.json';
                         }
+                      } else if (activeGuide === 'antigravity') {
+                        codeKey = activeGuide;
+                        code = antigravityJsonConfig;
+                        hint = t('integrateJsonStep');
+                        filePath = filePaths[activeGuide][os];
                       } else {
                         codeKey = activeGuide;
                         code = standardJsonConfig;
