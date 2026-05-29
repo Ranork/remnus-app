@@ -6,6 +6,7 @@ import { revalidatePath } from 'next/cache';
 import { getCurrentUser } from '@/lib/auth/session';
 import { deleteWorkspaceItem } from './workspace';
 import { publish } from '@/lib/realtime/publish';
+import { isCloudinaryUrl, deleteCloudinaryImage } from '@/lib/cloudinary';
 
 // Verify user has access to the workspace that owns this database.
 // Returns { userId, workspaceId } so callers can emit realtime events.
@@ -168,6 +169,10 @@ export async function updatePageIcon(id: string, icon: string | null, iconColor:
   if (!page[0]) return;
 
   const { userId, workspaceId } = await assertDatabaseAccess(page[0].databaseId);
+
+  if (isCloudinaryUrl(page[0].icon) && page[0].icon !== icon) {
+    deleteCloudinaryImage(page[0].icon!);
+  }
 
   await db.update(pages)
     .set({ icon, iconColor, updatedAt: new Date() })

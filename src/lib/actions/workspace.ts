@@ -9,6 +9,7 @@ import type { SchemaColumn } from '@/lib/templates';
 import type { DatabaseView } from '@/lib/types/views';
 import { getTranslations } from 'next-intl/server';
 import { publish } from '@/lib/realtime/publish';
+import { isCloudinaryUrl, deleteCloudinaryImage } from '@/lib/cloudinary';
 
 export interface CreateDatabaseOptions {
   schema?: SchemaColumn[];
@@ -164,6 +165,12 @@ export async function renameWorkspace(id: string, name: string) {
 
 export async function updateWorkspaceIcon(id: string, icon: string | null, iconColor: string | null) {
   const userId = await assertWorkspaceAccess(id);
+
+  const [old] = await db.select({ icon: workspaces.icon }).from(workspaces).where(eq(workspaces.id, id)).limit(1);
+  if (isCloudinaryUrl(old?.icon) && old.icon !== icon) {
+    deleteCloudinaryImage(old.icon!);
+  }
+
   await db.update(workspaces)
     .set({ icon, iconColor, updatedAt: new Date() })
     .where(eq(workspaces.id, id));
@@ -362,9 +369,13 @@ export async function getDatabaseByItemId(itemId: string) {
 }
 
 export async function updateWorkspaceItemIcon(itemId: string, icon: string | null, iconColor: string | null) {
-  const item = await db.select({ workspaceId: workspaceItems.workspaceId }).from(workspaceItems).where(eq(workspaceItems.id, itemId)).limit(1);
+  const item = await db.select({ workspaceId: workspaceItems.workspaceId, icon: workspaceItems.icon }).from(workspaceItems).where(eq(workspaceItems.id, itemId)).limit(1);
   let userId: string | undefined;
   if (item[0]) userId = await assertWorkspaceAccess(item[0].workspaceId);
+
+  if (isCloudinaryUrl(item[0]?.icon) && item[0].icon !== icon) {
+    deleteCloudinaryImage(item[0].icon!);
+  }
 
   await db.update(workspaceItems)
     .set({ icon, iconColor, updatedAt: new Date() })
