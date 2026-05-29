@@ -599,7 +599,8 @@
     "bridgePricingFreeF3": "50 MB स्टोरेज",
     "bridgePricingFreeF4": "असीमित MCP एक्सेस",
     "bridgePricingFreeF5": "सभी दृश्य और डेटाबेस",
-    "bridgePricingFreeCta": "मुफ्त साइन अप करें"
+    "bridgePricingFreeCta": "मुफ्त साइन अप करें",
+    "bridgeNavDownload": "डाउनलोड"
   },
   "Pricing": {
     "title": "मूल्य निर्धारण",
@@ -638,5 +639,29 @@
     "communityDesc": "जल्द और विकल्प आ रहे हैं",
     "communityLabel": "जल्द आ रहा है",
     "responseNote": "GitHub पर हम आमतौर पर एक-दो दिन में जवाब देते हैं।"
+  },
+  "Download": {
+    "eyebrow": "डेस्कटॉप ऐप",
+    "title": "Remnus डाउनलोड करें",
+    "subtitle": "Windows, macOS और Linux के लिए नेटिव डेस्कटॉप ऐप. आपका पूरा क्लाउड वर्कस्पेस अपनी अलग विंडो में।",
+    "detecting": "आपका सिस्टम पहचाना जा रहा है…",
+    "downloadFor": "{os} के लिए डाउनलोड करें",
+    "yourSystemBadge": "हमने यह आपके सिस्टम के लिए चुना",
+    "chooseBelow": "नीचे अपना प्लेटफ़ॉर्म चुनें",
+    "allPlatforms": "सभी प्लेटफ़ॉर्म",
+    "osWindows": "Windows",
+    "osMac": "macOS",
+    "osLinux": "Linux",
+    "osMacApple": "macOS (Apple Silicon)",
+    "osMacIntel": "macOS (Intel)",
+    "osLinuxApp": "Linux (AppImage)",
+    "osLinuxDeb": "Linux (Debian/Ubuntu)",
+    "fileExe": "64-बिट इंस्टॉलर (.exe)",
+    "fileDmgApple": "Apple Silicon Mac के लिए (.dmg)",
+    "fileDmgIntel": "Intel Mac के लिए (.dmg)",
+    "fileAppImage": "पोर्टेबल AppImage",
+    "fileDeb": "Debian पैकेज (.deb)",
+    "viewAllReleases": "GitHub पर सभी रिलीज़ देखें",
+    "latestNote": "ये लिंक हमेशा नवीनतम रिलीज़ पर ले जाते हैं।"
   }
 }

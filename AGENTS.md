@@ -58,7 +58,7 @@ Remnus is fully internationalized using **next-intl v4** (App Router native). Al
 
 **Clean URLs:** `localePrefix: 'never'` — URLs stay as `/db/123`, never `/en/db/123`. All pages live under `src/app/[locale]/`.
 
-**Translation files:** `messages/{locale}.json` — `en.json` is the source of truth. **17 namespaces:** `Layout`, `Home`, `Auth`, `Workspace`, `WorkspaceSettings`, `Templates`, `Database`, `Editor`, `Page`, `IconPicker`, `Admin`, `Errors`, `LanguageSwitcher`, `MobileNav`, `Landing`, `Pricing`, `Contact`.
+**Translation files:** `messages/{locale}.json` — `en.json` is the source of truth. **18 namespaces:** `Layout`, `Home`, `Auth`, `Workspace`, `WorkspaceSettings`, `Templates`, `Database`, `Editor`, `Page`, `IconPicker`, `Admin`, `Errors`, `LanguageSwitcher`, `MobileNav`, `Landing`, `Pricing`, `Contact`, `Download`.
 
 ### Rules for All Future Development
 
@@ -158,7 +158,7 @@ We use the **JSON Column Pattern** (not EAV) for dynamic user-defined properties
 **Auth & middleware**
 - `src/auth.config.ts` — Edge-compatible config (middleware only, no DB import). `/client-login` is handled specially: logged-in users with a `device_id` param are redirected straight to `/api/auth/client-bridge?device_id=…`; without a `device_id` they go to `/app`.
 - `src/auth.ts` — Full config: DrizzleAdapter, `client-token` credentials provider (desktop OAuth), JWT callbacks, first-user bootstrap event.
-- `src/proxy.ts` — Protects all routes (Next.js 16 proxy, replaces `middleware.ts`); whitelists `/login`, `/client-login`, `/tauri-app`, `/api/auth/*`, `/api/auth/client-activate`, `/api/mcp`, static assets, `/`, `/pricing`, `/contact`.
+- `src/proxy.ts` — Protects all routes (Next.js 16 proxy, replaces `middleware.ts`); whitelists `/login`, `/client-login`, `/tauri-app`, `/api/auth/*`, `/api/auth/client-activate`, `/api/mcp`, static assets, `/`, `/pricing`, `/contact`, `/download`.
 - `src/lib/auth/session.ts` — `getCurrentUser()` — `React.cache`-wrapped `auth()`. Use this everywhere in server actions.
 
 **Routes (`src/app/[locale]/`)**
@@ -173,6 +173,7 @@ We use the **JSON Column Pattern** (not EAV) for dynamic user-defined properties
 - `page/[itemId]/page.tsx` — Standalone page editor.
 - `pricing/page.tsx` — Public pricing (MarketingShell-wrapped).
 - `contact/page.tsx` — Public contact (MarketingShell-wrapped).
+- `download/page.tsx` — Public desktop download page (LandingNav + LandingFooter shell). Renders `DownloadView` with static `releases/latest/download/<stable-name>` links.
 - `admin/page.tsx` — Admin dashboard (users + workspaces tables, stat cards).
 - `api/auth/[...nextauth]/route.ts` — Auth.js handler.
 - `api/auth/client-bridge/route.ts` — GET. Called after browser-side login (as callbackUrl). Requires `device_id` query param. Creates a 5-min JWT signed with AUTH_SECRET, stores it in the in-memory `client-auth-store` keyed by `device_id`, and returns a "Close this tab" HTML page.
@@ -231,6 +232,7 @@ We use the **JSON Column Pattern** (not EAV) for dynamic user-defined properties
 - `LandingHero` / `LandingWhy` / `LandingWhatsInside` / `LandingIntegrations` / `LandingSetup` / `LandingTools` / `LandingPricing` / `LandingClosing` / `LandingFooter` — Landing sections 01–08 + footer.
 - `WhatsInsideViewer` — Client component. Auto-cycling Kanban/Table/Calendar viewer (4 s). All strings passed as props.
 - `SetupGuideModal` — Client component. MCP connection steps modal with endpoint + auth header snippets. All strings passed as props.
+- `DownloadView` — Client component for `/download`. Detects OS (`navigator`), shows a smart primary "Download for {os}" button + full platform grid (Windows .exe, macOS Apple Silicon/Intel .dmg, Linux .AppImage/.deb). Links target `github.com/Ranork/remnus-app/releases/latest/download/<stable-name>` — never needs per-release updates, but only resolves once the draft release is published. Stable-named assets are produced by the "Upload stable-named installers" step in `tauri-release.yml`.
 - `MarketingShell` — Auth-aware wrapper for `/pricing` and `/contact` (adds header/footer only when unauthenticated).
 - `MarketingHeader` / `MarketingFooter` / `HeroSection` / `FeaturesSection` / `PricingSection` / `ContactSection` — Legacy marketing shell components.
 - `LandingChip` / `AIMark` — Utility: status pill, AI client SVG marks.

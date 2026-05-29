@@ -599,7 +599,8 @@
     "bridgePricingFreeF3": "50 MB depolama",
     "bridgePricingFreeF4": "Sınırsız MCP erişimi",
     "bridgePricingFreeF5": "Tüm görünümler ve veritabanları",
-    "bridgePricingFreeCta": "Ücretsiz kaydol"
+    "bridgePricingFreeCta": "Ücretsiz kaydol",
+    "bridgeNavDownload": "İndir"
   },
   "Pricing": {
     "title": "Fiyatlandırma",
@@ -638,5 +639,29 @@
     "communityDesc": "Daha fazla seçenek yakında",
     "communityLabel": "Yakında",
     "responseNote": "GitHub'da genellikle bir iki gün içinde geri dönüyoruz."
+  },
+  "Download": {
+    "eyebrow": "MASAÜSTÜ UYGULAMASI",
+    "title": "Remnus'u İndir",
+    "subtitle": "Windows, macOS ve Linux için yerel masaüstü uygulaması. Bulut çalışma alanının tamamı kendi penceresinde.",
+    "detecting": "Sistemin algılanıyor…",
+    "downloadFor": "{os} için indir",
+    "yourSystemBadge": "Sistemine göre bunu seçtik",
+    "chooseBelow": "Aşağıdan platformunu seç",
+    "allPlatforms": "Tüm platformlar",
+    "osWindows": "Windows",
+    "osMac": "macOS",
+    "osLinux": "Linux",
+    "osMacApple": "macOS (Apple Silicon)",
+    "osMacIntel": "macOS (Intel)",
+    "osLinuxApp": "Linux (AppImage)",
+    "osLinuxDeb": "Linux (Debian/Ubuntu)",
+    "fileExe": "64-bit yükleyici (.exe)",
+    "fileDmgApple": "Apple Silicon Mac'ler için (.dmg)",
+    "fileDmgIntel": "Intel Mac'ler için (.dmg)",
+    "fileAppImage": "Taşınabilir AppImage",
+    "fileDeb": "Debian paketi (.deb)",
+    "viewAllReleases": "Tüm sürümleri GitHub'da gör",
+    "latestNote": "Bu bağlantılar her zaman en son sürüme gider."
   }
 }

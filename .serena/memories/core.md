@@ -13,6 +13,7 @@ src/
       page.tsx              # Home — unauthenticated: marketing landing page; authenticated: redirect to first workspace item
       pricing/page.tsx      # Public pricing page (MarketingShell + PricingSection)
       contact/page.tsx      # Public contact page (MarketingShell + ContactSection)
+      download/page.tsx     # Public desktop download page (LandingNav/Footer + DownloadView)
       login/page.tsx        # Auth page (client component)
       register/page.tsx     # Auth page (client component)
       db/[id]/page.tsx      # Database view (table/kanban/calendar)
@@ -26,6 +27,7 @@ src/
   components/marketing/     # Marketing/landing page components (public, no auth)
     # MarketingShell (auth-aware wrapper), MarketingHeader (client, sticky nav),
     # MarketingFooter, HeroSection, FeaturesSection, PricingSection, ContactSection
+    # DownloadView (client, OS detection + static releases/latest/download links; stable asset names from tauri-release.yml)
   components/features/      # All feature React components (see mem:conventions)
     # Key components: WorkspaceSidebar, DatabaseView, MobileNavWrapper, ViewsBar,
     # StandalonePageEditor, PageEditor, TemplatePickerModal, WorkspaceSettingsModal,

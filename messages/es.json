@@ -599,7 +599,8 @@
     "bridgePricingFreeF3": "50 MB de almacenamiento",
     "bridgePricingFreeF4": "Acceso MCP ilimitado",
     "bridgePricingFreeF5": "Todas las vistas y bases de datos",
-    "bridgePricingFreeCta": "Registrarse gratis"
+    "bridgePricingFreeCta": "Registrarse gratis",
+    "bridgeNavDownload": "Descargar"
   },
   "Pricing": {
     "title": "Precios",
@@ -638,5 +639,29 @@
     "communityDesc": "Más opciones próximamente",
     "communityLabel": "Próximamente",
     "responseNote": "Solemos responder en un día o dos en GitHub."
+  },
+  "Download": {
+    "eyebrow": "APLICACIÓN DE ESCRITORIO",
+    "title": "Descargar Remnus",
+    "subtitle": "La aplicación de escritorio nativa para Windows, macOS y Linux. Todo tu espacio de trabajo en la nube en su propia ventana.",
+    "detecting": "Detectando tu sistema…",
+    "downloadFor": "Descargar para {os}",
+    "yourSystemBadge": "Lo elegimos para tu sistema",
+    "chooseBelow": "Elige tu plataforma abajo",
+    "allPlatforms": "Todas las plataformas",
+    "osWindows": "Windows",
+    "osMac": "macOS",
+    "osLinux": "Linux",
+    "osMacApple": "macOS (Apple Silicon)",
+    "osMacIntel": "macOS (Intel)",
+    "osLinuxApp": "Linux (AppImage)",
+    "osLinuxDeb": "Linux (Debian/Ubuntu)",
+    "fileExe": "Instalador de 64 bits (.exe)",
+    "fileDmgApple": "Para Mac con Apple Silicon (.dmg)",
+    "fileDmgIntel": "Para Mac con Intel (.dmg)",
+    "fileAppImage": "AppImage portátil",
+    "fileDeb": "Paquete Debian (.deb)",
+    "viewAllReleases": "Ver todas las versiones en GitHub",
+    "latestNote": "Estos enlaces siempre llevan a la última versión."
   }
 }

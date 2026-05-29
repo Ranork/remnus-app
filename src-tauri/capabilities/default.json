@@ -4,12 +4,7 @@
   "description": "Default capabilities for Remnus desktop app",
   "windows": ["main"],
   "remote": {
-    "urls": [
-      "https://remnus.com",
-      "https://remnus.com/*",
-      "http://localhost:3000",
-      "http://localhost:3000/*"
-    ]
+    "urls": ["https://*", "http://localhost:3000/*"]
   },
   "permissions": [
     "core:default",

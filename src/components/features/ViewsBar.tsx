@@ -187,7 +187,8 @@ export default function ViewsBar({
     )}
 
     {/* Desktop full tab list */}
-    <div className="hidden sm:flex items-center gap-0 overflow-x-auto scrollbar-hide"
+    <div className="hidden sm:flex items-center gap-0">
+    <div className="flex items-center gap-0 overflow-x-auto scrollbar-hide min-w-0"
       style={{ scrollbarWidth: 'none' }}
     >
       {views.map((view) => {
@@ -272,6 +273,7 @@ export default function ViewsBar({
           </div>
         );
       })}
+    </div>
 
       <div className="relative ml-0.5 shrink-0" ref={addRef}>
         <button

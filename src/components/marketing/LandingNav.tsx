@@ -32,15 +32,26 @@ export default async function LandingNav() {
               { key: 'bridgeNavIntegrations', href: '#integrations'  },
               { key: 'bridgeNavMcp',          href: '#tools'         },
               { key: 'bridgeNavPricing',      href: '#pricing'       },
+              { key: 'bridgeNavDownload',     href: '/download'      },
               // { key: 'bridgeNavDocs',         href: '#'              },
             ].map(({ key, href }) => (
-              <a
-                key={key}
-                href={href}
-                className="transition-colors duration-150 hover:text-neutral-100"
-              >
-                {t(key as Parameters<typeof t>[0])}
-              </a>
+              href.startsWith('/') ? (
+                <Link
+                  key={key}
+                  href={href}
+                  className="transition-colors duration-150 hover:text-neutral-100"
+                >
+                  {t(key as Parameters<typeof t>[0])}
+                </Link>
+              ) : (
+                <a
+                  key={key}
+                  href={href}
+                  className="transition-colors duration-150 hover:text-neutral-100"
+                >
+                  {t(key as Parameters<typeof t>[0])}
+                </a>
+              )
             ))}
           </nav>
 

@@ -70,3 +70,41 @@ jobs:
           releaseDraft: true
           prerelease: false
           args: ${{ matrix.args }}
+
+      # Upload version-less, stable-named copies so /download can link to
+      # https://github.com/<repo>/releases/latest/download/<stable-name> without
+      # ever needing the page updated per release. Note: latest/download only
+      # resolves once the draft release is published.
+      - name: Upload stable-named installers
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -e
+          TAG="${{ github.ref_name }}"
+          shopt -s nullglob
+          upload() {
+            local pattern="$1"; local stable="$2"
+            local matches=( $pattern )
+            if [ ${#matches[@]} -gt 0 ]; then
+              local dest="${RUNNER_TEMP}/${stable}"
+              cp "${matches[0]}" "$dest"
+              echo "Uploading ${matches[0]} as ${stable}"
+              gh release upload "$TAG" "$dest" --clobber --repo "$GITHUB_REPOSITORY"
+            else
+              echo "No match for ${pattern} (skipping)"
+            fi
+          }
+          case "$RUNNER_OS" in
+            Windows)
+              upload "src-tauri/target/release/bundle/nsis/*-setup.exe" "Remnus-windows-x64-setup.exe"
+              ;;
+            macOS)
+              upload "src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/*.dmg" "Remnus-macos-aarch64.dmg"
+              upload "src-tauri/target/x86_64-apple-darwin/release/bundle/dmg/*.dmg" "Remnus-macos-intel.dmg"
+              ;;
+            Linux)
+              upload "src-tauri/target/release/bundle/appimage/*.AppImage" "Remnus-linux-x86_64.AppImage"
+              upload "src-tauri/target/release/bundle/deb/*.deb" "Remnus-linux-amd64.deb"
+              ;;
+          esac
