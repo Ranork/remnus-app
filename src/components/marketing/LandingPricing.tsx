@@ -1,5 +1,5 @@
 import { getTranslations } from 'next-intl/server';
-import LandingChip from './LandingChip';
+import Link from 'next/link';
 
 export default async function LandingPricing() {
   const t = await getTranslations('Landing');
@@ -54,13 +54,66 @@ export default async function LandingPricing() {
         </h2>
       </div>
 
-      {/* Paid plan cards — 2 columns */}
+      {/* Plan cards — 3 columns */}
       <div className="max-w-275 mx-auto mt-10 lg:mt-12">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:gap-5 items-start">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 lg:gap-5 items-start">
+
+          {/* ── Free ── */}
+          <div
+            className="flex flex-col p-6 lg:p-8 rounded-xl border border-neutral-800"
+            style={{ background: 'linear-gradient(160deg, rgba(127,195,109,0.05) 0%, transparent 50%)' }}
+          >
+            <div className="flex items-center justify-between mb-4">
+              <span className="font-semibold text-neutral-100 text-[20px] lg:text-[22px]" style={{ letterSpacing: '-0.018em' }}>
+                {t('bridgePricingFreeTitle')}
+              </span>
+              <span
+                className="font-mono text-[10px] uppercase tracking-widest px-2.5 py-1 rounded-full"
+                style={{
+                  color: 'var(--color-green-400)',
+                  border: '1px solid rgba(127,195,109,0.35)',
+                  background: 'rgba(127,195,109,0.08)',
+                }}
+              >
+                {t('bridgePricingFreeTag')}
+              </span>
+            </div>
+
+            <p className="m-0 mb-6 text-dim text-[13px] leading-[1.6]">{t('bridgePricingFreeSub')}</p>
+
+            <div className="mb-6 flex items-end gap-2">
+              <span
+                className="font-sans font-bold text-neutral-100 text-[48px] lg:text-[56px]"
+                style={{ letterSpacing: '-0.04em', lineHeight: 1 }}
+              >
+                {t('bridgePricingFreePrice')}
+              </span>
+            </div>
+
+            <div className="h-px mb-5" style={{ background: 'rgba(127,195,109,0.2)' }} />
+
+            <ul className="flex flex-col gap-2.5 flex-1 mb-6">
+              {freeFeatures.map((feat) => (
+                <li key={feat} className="flex gap-2.5 items-start text-[13.5px] text-neutral-50">
+                  <CheckIcon color="var(--color-green-400)" />
+                  {feat}
+                </li>
+              ))}
+            </ul>
+
+            <Link
+              href="/login"
+              className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-lg text-[13.5px] font-semibold transition-colors duration-150"
+              style={{ background: 'var(--color-green-400)', color: '#1d1f23' }}
+            >
+              {t('bridgePricingFreeCta')}
+              <span aria-hidden>→</span>
+            </Link>
+          </div>
 
           {/* ── Startup — featured ── */}
           <div
-            className="flex flex-col p-6 lg:p-8 rounded-xl border sm:-mt-3 sm:pb-10"
+            className="flex flex-col p-6 lg:p-8 rounded-xl border md:-mt-3 md:pb-10"
             style={{
               background: 'linear-gradient(160deg, rgba(68,92,149,0.14) 0%, rgba(28,30,38,1) 55%)',
               borderColor: 'rgba(68,92,149,0.5)',
@@ -111,13 +164,14 @@ export default async function LandingPricing() {
               ))}
             </ul>
 
-            <button
+            <Link
+              href="/login"
               className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-lg text-[13.5px] font-semibold text-white transition-colors duration-150"
               style={{ background: 'var(--color-blue-500)' }}
             >
               {t('bridgePricingStartupCta')}
               <span aria-hidden>→</span>
-            </button>
+            </Link>
           </div>
 
           {/* ── Professional ── */}
@@ -164,71 +218,20 @@ export default async function LandingPricing() {
               ))}
             </ul>
 
-            <button
+            <Link
+              href="/login"
               className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-lg border border-neutral-700 text-[13.5px] font-medium text-neutral-100 hover:border-neutral-500 transition-colors duration-150"
             >
               {t('bridgePricingProCta')}
               <span aria-hidden>→</span>
-            </button>
+            </Link>
           </div>
 
         </div>
 
-        {/* ── Free + Open Source horizontal box ── */}
+        {/* ── Self-Host horizontal box ── */}
         <div className="mt-4 lg:mt-5 rounded-xl border border-neutral-800 overflow-hidden">
-
-          {/* Free hosted tier */}
-          <div className="flex flex-col lg:flex-row lg:items-center gap-5 lg:gap-8 p-6 lg:p-8 bg-neutral-900">
-            {/* Title + price */}
-            <div className="shrink-0 min-w-[120px]">
-              <div className="flex items-center gap-2.5 mb-2">
-                <span className="font-semibold text-neutral-100 text-[20px] lg:text-[22px]" style={{ letterSpacing: '-0.018em' }}>
-                  {t('bridgePricingFreeTitle')}
-                </span>
-                <LandingChip color="var(--color-green-400)" mono dot>
-                  {t('bridgePricingFreeTag')}
-                </LandingChip>
-              </div>
-              <span
-                className="font-sans font-bold text-neutral-100 text-[40px] lg:text-[48px]"
-                style={{ letterSpacing: '-0.04em', lineHeight: 1 }}
-              >
-                {t('bridgePricingFreePrice')}
-              </span>
-            </div>
-
-            {/* Vertical divider (desktop) */}
-            <div className="hidden lg:block w-px self-stretch bg-neutral-800 shrink-0" />
-            {/* Horizontal divider (mobile) */}
-            <div className="lg:hidden h-px bg-neutral-800" />
-
-            {/* Features */}
-            <ul className="flex flex-wrap gap-x-5 gap-y-2.5 flex-1">
-              {freeFeatures.map((feat) => (
-                <li key={feat} className="flex items-center gap-1.5 text-[13px] text-neutral-50">
-                  <CheckIcon color="var(--color-green-400)" />
-                  {feat}
-                </li>
-              ))}
-            </ul>
-
-            {/* CTA */}
-            <div className="shrink-0">
-              <button
-                className="inline-flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg text-[13.5px] font-semibold transition-colors duration-150"
-                style={{ background: 'var(--color-green-400)', color: '#1d1f23' }}
-              >
-                {t('bridgePricingFreeCta')}
-                <span aria-hidden>→</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Divider */}
-          <div className="h-px bg-neutral-800" />
-
-          {/* Open Source row */}
-          <div className="flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-8 px-6 lg:px-8 py-4 lg:py-5 bg-neutral-850">
+          <div className="flex flex-col lg:flex-row lg:items-center gap-4 lg:gap-8 px-6 lg:px-8 py-5 lg:py-6 bg-neutral-850">
             {/* Title */}
             <div className="flex items-center gap-2.5 shrink-0">
               <GithubIcon size={16} />
@@ -260,7 +263,6 @@ export default async function LandingPricing() {
               <span aria-hidden className="text-dim text-[11px]">↗</span>
             </a>
           </div>
-
         </div>
       </div>
     </section>
