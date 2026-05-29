@@ -7,7 +7,7 @@ import { useTranslations } from 'next-intl';
 import { createPage, getPage, deletePage, duplicatePage, reorderPages, updatePageProperties } from '@/lib/actions/page';
 import { updateDatabaseViews } from '@/lib/actions/database';
 import { updateWorkspaceItemIcon } from '@/lib/actions/workspace';
-import { Plus, Settings, Columns3, Filter, ArrowUpDown, X, Maximize2, Database, ArrowLeftRight, MoreHorizontal, Trash2, Copy, ChevronLeft } from 'lucide-react';
+import { Plus, Settings, Columns3, Filter, ArrowUpDown, X, Maximize2, Database, ArrowLeftRight, MoreHorizontal, Trash2, Copy, ChevronLeft, RefreshCw } from 'lucide-react';
 import TableLayout from './TableLayout';
 import { ConfirmDialog } from './ConfirmDialog';
 import KanbanBoard from './KanbanBoard';
@@ -159,8 +159,18 @@ export default function DatabaseView({
 }) {
   const t = useTranslations('Database');
   const tPage = useTranslations('Page');
+  const tWs = useTranslations('Workspace');
   const schema: any[] = database.schema ?? [];
   const router = useRouter();
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleManualRefresh = useCallback(() => {
+    setIsRefreshing(true);
+    router.refresh();
+    setTimeout(() => {
+      setIsRefreshing(false);
+    }, 1000);
+  }, [router]);
 
   // Local pages state so that we can update them instantly in the UI when they are updated in peek mode
   const [localPages, setLocalPages] = useState<any[]>(() => initialPages);
@@ -717,6 +727,16 @@ export default function DatabaseView({
         />
 
         <div className="flex items-center gap-0 pb-1.5">
+          {/* Refresh Button */}
+          <button
+            onClick={handleManualRefresh}
+            className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-neutral-500 hover:text-neutral-200 transition-colors cursor-pointer rounded"
+            title={tWs('refresh') || 'Refresh'}
+          >
+            <RefreshCw size={13} className={isRefreshing ? 'animate-spin text-blue-400' : ''} />
+            {tWs('refresh')}
+          </button>
+
           {/* Full Width Toggle — hidden on mobile */}
           <button
             onClick={cycleWidth}

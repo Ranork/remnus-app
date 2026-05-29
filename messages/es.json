@@ -87,6 +87,7 @@
   "Workspace": {
     "saving": "Guardando...",
     "save": "Guardar",
+    "refresh": "Actualizar",
     "creating": "Creando...",
     "create": "Crear",
     "cancel": "Cancelar",

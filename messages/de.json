@@ -87,6 +87,7 @@
   "Workspace": {
     "saving": "Wird gespeichert...",
     "save": "Speichern",
+    "refresh": "Aktualisieren",
     "creating": "Wird erstellt...",
     "create": "Erstellen",
     "cancel": "Abbrechen",

@@ -147,6 +147,8 @@ We use the **JSON Column Pattern** (not EAV) for dynamic user-defined properties
 - **Revalidation:** Call `revalidatePath('/')` only for sidebar-structural mutations (create/delete items, workspace rename/delete). Content saves (`updatePageContent`, `updatePageProperties`) must NOT call revalidatePath.
 - **Optimistic UI:** `WorkspaceSidebar` applies mutations to local state immediately; server revalidation is background.
 - **SQLite PRAGMAs:** WAL mode, `synchronous=NORMAL`, `foreign_keys=ON`, `cache_size=-20000`, `temp_store=MEMORY` applied at startup in `src/db/index.ts`.
+- **Idle Polling Convention:** Automatic background content refreshing via `useWorkspaceEvents()` is configured to only run when the user is inactive (idle) for at least 10 seconds. Active user interactions (keyboard, mouse, touches, scrolling) pause automatic polling to avoid jarring layout/focus resets during data entry.
+- **Manual Refresh:** Pages (Databases and Standalone Pages) have a dedicated, localized refresh/sync button in the upper header bar next to the width settings to allow on-demand synchronization when the user is actively working.
 
 ### Migration Notes
 

@@ -2,7 +2,8 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 
 import Link from 'next/link';
-import { ChevronLeft, ArrowLeftRight } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { ChevronLeft, ArrowLeftRight, RefreshCw } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { updateStandalonePageContent, updateWorkspaceItemTitle, updateWorkspaceItemIcon } from '@/lib/actions/workspace';
 import BlockEditor from '@/components/features/editor/BlockEditor';
@@ -33,6 +34,9 @@ export default function StandalonePageEditor({
 }) {
   const t = useTranslations('Page');
   const tEditor = useTranslations('Editor');
+  const tWs = useTranslations('Workspace');
+  const router = useRouter();
+  const [isRefreshing, setIsRefreshing] = useState(false);
   const [title, setTitle] = useState(item.title);
   const savedTitle = useRef(item.title);
   const [icon, setIcon] = useState(item.icon);
@@ -42,6 +46,14 @@ export default function StandalonePageEditor({
   const [saveState, setSaveState] = useState<SaveState>('idle');
   type WidthMode = 'narrow' | 'wide' | 'full';
   const [widthMode, setWidthMode] = useState<WidthMode>('narrow');
+
+  const handleRefresh = useCallback(() => {
+    setIsRefreshing(true);
+    router.refresh();
+    setTimeout(() => {
+      setIsRefreshing(false);
+    }, 1000);
+  }, [router]);
 
   useEffect(() => {
     const saved = localStorage.getItem(`page-width-${item.id}`) as WidthMode | null;
@@ -112,6 +124,17 @@ export default function StandalonePageEditor({
         </div>
         <div className="flex items-center gap-3">
           <SaveStatus state={saveState} />
+          
+          {/* Manual Refresh Button */}
+          <button
+            onClick={handleRefresh}
+            className="inline-flex items-center gap-1.5 text-xs text-neutral-500 hover:text-neutral-300 transition-colors p-1 cursor-pointer"
+            title={tWs('refresh') || 'Refresh'}
+          >
+            <RefreshCw size={14} className={isRefreshing ? 'animate-spin text-blue-400' : ''} />
+            {tWs('refresh')}
+          </button>
+
           <button
             onClick={cycleWidth}
             className="hidden sm:inline-flex items-center gap-1.5 text-xs text-neutral-500 hover:text-neutral-300 transition-colors p-1 cursor-pointer"
