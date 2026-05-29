@@ -528,6 +528,46 @@ export default function DatabaseView({
     });
   };
 
+  const handleDuplicateView = (id: string) => {
+    const original = views.find((v) => v.id === id);
+    if (!original) return;
+
+    const clonedConfig = JSON.parse(JSON.stringify(original.config));
+
+    if (Array.isArray(clonedConfig.filters)) {
+      clonedConfig.filters = clonedConfig.filters.map((f: any) => ({
+        ...f,
+        id: uid(),
+      }));
+    }
+    if (Array.isArray(clonedConfig.sorts)) {
+      clonedConfig.sorts = clonedConfig.sorts.map((s: any) => ({
+        ...s,
+        id: uid(),
+      }));
+    }
+
+    const newView: DatabaseView = {
+      id: uid(),
+      name: `${original.name} (${tWs('duplicate')})`,
+      config: clonedConfig,
+      icon: original.icon,
+      iconColor: original.iconColor,
+    };
+
+    mutateViews((vs) => {
+      const idx = vs.findIndex((v) => v.id === id);
+      if (idx !== -1) {
+        const next = [...vs];
+        next.splice(idx + 1, 0, newView);
+        return next;
+      }
+      return [...vs, newView];
+    });
+
+    handleActivate(newView.id);
+  };
+
   const handleReorderViews = (nextViews: DatabaseView[]) => {
     mutateViews(() => nextViews);
   };
@@ -722,6 +762,7 @@ export default function DatabaseView({
           onAdd={handleAddView}
           onRename={handleRenameView}
           onDelete={handleDeleteView}
+          onDuplicate={handleDuplicateView}
           onReorder={handleReorderViews}
           onUpdateIcon={handleUpdateViewIcon}
         />

@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
-import { LayoutList, KanbanSquare, Calendar as CalendarIcon, Plus, ChevronDown, Pencil, Trash2 } from 'lucide-react';
+import { LayoutList, KanbanSquare, Calendar as CalendarIcon, Plus, ChevronDown, Pencil, Trash2, Copy } from 'lucide-react';
 import type { DatabaseView } from '@/lib/types/views';
 import { useTranslations } from 'next-intl';
 import IconPicker from './IconPicker';
@@ -14,6 +14,7 @@ interface ViewsBarProps {
   onAdd: (type: 'table' | 'kanban' | 'calendar') => void;
   onRename: (id: string, name: string) => void;
   onDelete: (id: string) => void;
+  onDuplicate: (id: string) => void;
   onReorder: (views: DatabaseView[]) => void;
   onUpdateIcon?: (id: string, icon: string | null, color: string | null) => void;
 }
@@ -25,10 +26,12 @@ export default function ViewsBar({
   onAdd,
   onRename,
   onDelete,
+  onDuplicate,
   onReorder,
   onUpdateIcon,
 }: ViewsBarProps) {
   const t = useTranslations('Database');
+  const tWs = useTranslations('Workspace');
   const [addOpen, setAddOpen] = useState(false);
   const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
   const [menuPos, setMenuPos] = useState<{ top: number; left: number } | null>(null);
@@ -299,6 +302,16 @@ export default function ViewsBar({
                 >
                   <Pencil size={13} className="text-neutral-500 shrink-0" />
                   <span>{t('renameView')}</span>
+                </button>
+                <button
+                  onClick={() => {
+                    onDuplicate(view.id);
+                    setMenuOpenId(null);
+                  }}
+                  className="w-full text-left px-3 py-2 text-xs font-medium text-neutral-300 hover:bg-neutral-800/20 transition-colors rounded-none border-b border-neutral-850/60 cursor-pointer flex items-center gap-2"
+                >
+                  <Copy size={13} className="text-neutral-500 shrink-0" />
+                  <span>{tWs('duplicate')}</span>
                 </button>
                 {views.length > 1 && (
                   <button
