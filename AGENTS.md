@@ -183,11 +183,12 @@ We use the **JSON Column Pattern** (not EAV) for dynamic user-defined properties
 - `api/auth/client-poll/route.ts` — GET. Polled by the Tauri WebView every 2 s. Accepts `device_id`; returns `{ ready: false }` while waiting, `{ ready: true, token }` once the browser completes login (one-time consume).
 - `api/auth/client-activate/route.ts` — GET. Tauri WebView navigates here with the token from the poll response. Signs in via `client-token` provider, redirects to `/app`.
 - `api/upload/route.ts` — `POST`. Cloudinary image upload. Auth-gated (session required). Accepts `multipart/form-data` with `file` field (max 5 MB, image types only). Returns `{ url }`. Images stored in `remnus/icons/`, cropped to 256×256.
-- `api/mcp/route.ts` — MCP Streamable HTTP + Standard SSE: supports dual mode (stateless Streamable HTTP for Claude Code, and standard stateful SSE for Cursor, Windsurf, Continue, and Antigravity IDE via sessionId query param). Bearer auth, rate limit (60 req/min), 12 tools, 4 resource templates, 5 prompt templates, audit log.
-  - **Read resources:** `remnus://workspace/{id}/schema` (Workspace databases JSON schema), `remnus://page/{id}` (Markdown + properties content of page or db row, returns recent 20 pages on list), `remnus://database/{id}/schema` (Database JSON schema), `remnus://audit-log/recent` (Recent 50 activity logs)
-  - **Prompts:** `summarize-page` (page_id, style?), `weekly-status-report` (database_id, period?), `kanban-triage` (database_id), `extract-tasks` (page_id), `search-and-create` (title, query) — Remnus fetches DB content and returns a filled prompt string; the AI client executes the LLM call.
-  - **Read tools:** `search`, `list_workspace`, `get_page` (auto-detects type, no `isDbRow` flag needed), `get_database_schema` (schema only, no rows), `query_database` (supports `filters: Record<string,any>` for property matching)
-  - **Write tools:** `create_page`, `update_page` (merges `properties` — never overwrites), `bulk_update` (multiple pages/rows in one call), `delete_page` (workspace item or DB row; requires `confirm: true`), `move_item` (reparent sidebar item; `newParentId: null` → root), `create_database` (custom schema; title column auto-prepended), `update_database_schema` (add/remove columns; removing requires `confirm: true`; title column protected)
+- `api/mcp/route.ts` — MCP transport shell (~130 lines): bearer auth, rate limit (60 req/min), SSE connection store, Streamable HTTP (stateless) + SSE (stateful) dual transport.
+- `api/mcp/context.ts` — `TokenContext` type + `logActivity()` helper (audit log insert, best-effort). Imported by all tool/resource/prompt files.
+- `api/mcp/resources.ts` — Registers 4 resource templates: `remnus://workspace/{id}/schema`, `remnus://page/{id}` (lists recent 20 on `resources/list`), `remnus://database/{id}/schema`, `remnus://audit-log/recent`.
+- `api/mcp/prompts.ts` — Registers 5 prompt templates: `summarize-page` (page_id, style?), `weekly-status-report` (database_id, period?), `kanban-triage` (database_id), `extract-tasks` (page_id), `search-and-create` (title, query). Fetches DB content and returns filled prompt string; LLM call is done by the client.
+- `api/mcp/tools/read.ts` — 5 read tools: `search`, `list_workspace`, `get_page` (auto-detects type), `get_database_schema` (schema only, no rows), `query_database` (supports `filters: Record<string,any>`).
+- `api/mcp/tools/write.ts` — 7 write tools: `create_page`, `update_page` (merges properties, never overwrites), `bulk_update`, `delete_page` (requires `confirm: true`), `move_item` (`newParentId: null` → root), `create_database` (title column auto-prepended), `update_database_schema` (removing requires `confirm: true`; title column protected).
 
 **Server Actions (`src/lib/actions/`)**
 - `workspace.ts` — Workspace + sidebar item CRUD (all auth-gated via `assertWorkspaceAccess`). Includes `updateWorkspaceIcon(id, icon, iconColor)`.
@@ -204,10 +205,10 @@ We use the **JSON Column Pattern** (not EAV) for dynamic user-defined properties
 
 **Core feature components (`src/components/features/`)**
 - `WorkspaceSidebar` — Collapsible workspace tree, drag-and-drop reorder, optimistic mutations, mobile bottom-sheet context menu.
-- `WorkspaceSettingsModal` — 3-tab modal: General, Members, API/MCP Tokens.
+- `WorkspaceSettingsModal` — 3-tab modal shell (~130 lines). Tabs live in `workspace-settings/`: `GeneralTab` (rename, icon, danger zone), `MembersTab` (invite, member list), `TokensTab` (token CRUD + integration guide). Shared types in `workspace-settings/types.ts`.
 - `TemplatePickerModal` — 2-step item creation from templates (defined in `src/lib/templates.ts`).
 - `DatabaseView` — View orchestrator: tabs, filters, sorts, peek modals, URL deep-link (`?v=view_id`).
-- `DatabasePropertiesSidebar` — Schema editor, column visibility, filters, sorts, group-by, card layout settings.
+- `DatabasePropertiesSidebar` — Shell (~250 lines). Sub-panels in `database-sidebar/`: `PropertiesPanel` (column schema editor), `KanbanLayoutSection` (group-by, card props, colors), `CalendarLayoutSection` (date col, view mode, card props), `FiltersSection`, `SortsSection`. Shared utilities (`Checkbox`, `getPropertyIcon`, `selectCls`) in `database-sidebar/shared.tsx`.
 - `TableLayout` — Notion-style grid, draggable columns, inline cell editing, row color tinting.
 - `KanbanBoard` — Grouped by select column, draggable groups, card color, group bg tint.
 - `CalendarView` — Monthly/weekly grid, card drag-to-reschedule, card color.
