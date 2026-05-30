@@ -8,7 +8,7 @@ export const metadata: Metadata = {
   description: 'Remnus privacy policy — how we collect, use, and protect your data in the MCP-native workspace for vibe coders.',
   alternates: { canonical: 'https://remnus.com/privacy' },
   openGraph: {
-    title: 'Privacy Policy — Remnus',
+    title: 'Privacy Policy | Remnus',
     description: 'Remnus privacy policy — how we collect, use, and protect your data in the MCP-native workspace for vibe coders.',
     url: 'https://remnus.com/privacy',
   },

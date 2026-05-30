@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   description: 'Download Remnus for Windows, macOS, or Linux. The MCP-native workspace for vibe coders — now as a native desktop app powered by Tauri.',
   alternates: { canonical: 'https://remnus.com/download' },
   openGraph: {
-    title: 'Download — Remnus',
+    title: 'Download | Remnus',
     description: 'Download Remnus for Windows, macOS, or Linux. The MCP-native workspace for vibe coders — now as a native desktop app powered by Tauri.',
     url: 'https://remnus.com/download',
   },

@@ -7,7 +7,7 @@ import AdminUsersTable from '@/components/features/AdminUsersTable';
 import AdminWorkspacesTable from '@/components/features/AdminWorkspacesTable';
 import { getTranslations } from 'next-intl/server';
 
-export const metadata = { title: 'Admin — Remnus' };
+export const metadata = { title: 'Admin | Remnus' };
 
 function safeDate(val: Date | string | number | null | undefined): Date | null {
   if (!val) return null;

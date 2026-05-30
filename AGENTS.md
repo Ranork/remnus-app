@@ -160,12 +160,17 @@ We use the **JSON Column Pattern** (not EAV) for dynamic user-defined properties
 **Auth & middleware**
 - `src/auth.config.ts` — Edge-compatible config (middleware only, no DB import). `/client-login` is handled specially: logged-in users with a `device_id` param are redirected straight to `/api/auth/client-bridge?device_id=…`; without a `device_id` they go to `/app`.
 - `src/auth.ts` — Full config: DrizzleAdapter, `client-token` credentials provider (desktop OAuth), JWT callbacks, first-user bootstrap event.
-- `src/proxy.ts` — Protects all routes (Next.js 16 proxy, replaces `middleware.ts`); whitelists `/login`, `/client-login`, `/tauri-app`, `/api/auth/*`, `/api/auth/client-activate`, `/api/mcp`, static assets, `/`, `/pricing`, `/contact`, `/download`.
+- `src/proxy.ts` — Protects all routes (Next.js 16 proxy, replaces `middleware.ts`); whitelists `/login`, `/client-login`, `/tauri-app`, `/api/auth/*`, `/api/auth/client-activate`, `/api/mcp`, static assets, `/`, `/pricing`, `/contact`, `/download`. Matcher explicitly excludes `sitemap.xml` and `robots.txt` so Next.js metadata routes bypass the intl middleware entirely.
 - `src/lib/auth/session.ts` — `getCurrentUser()` — `React.cache`-wrapped `auth()`. Use this everywhere in server actions.
 
+**Root app files (`src/app/`)**
+- `layout.tsx` — True root layout. Renders `<html lang={locale}>` + `<body>` with Geist/GeistMono/InstrumentSerif font CSS variables. Reads locale from `NEXT_LOCALE` cookie (falls back to `'en'`). Defines `export const viewport`. **All other layouts must NOT render `<html>`/`<body>`.**
+- `sitemap.ts` — Generates `/sitemap.xml`. Lists 5 public URLs (`/`, `/pricing`, `/download`, `/contact`, `/privacy`) with priorities and change frequencies.
+- `robots.ts` — Generates `/robots.txt`. Allows public marketing paths; disallows `/app`, `/db/`, `/page/`, `/admin/`, `/api/`, `/login`.
+
 **Routes (`src/app/[locale]/`)**
-- `layout.tsx` — Locale validation, `NextIntlClientProvider`, session check, sidebar + mobile nav render.
-- `page.tsx` — Public landing (always `LandingBridgeSwitcher`, no auth check).
+- `layout.tsx` — Locale validation, `NextIntlClientProvider`, session check, sidebar + mobile nav render. Does NOT render `<html>`/`<body>` (those live in root layout); returns a React Fragment with providers. Exports `metadata` (global title template + OG/Twitter tags).
+- `page.tsx` — Landing page; redirects authed users to `/app`, otherwise renders `LandingBridgeSwitcher`. Exports `metadata` with `title.absolute`, landing-specific description, `alternates.canonical: 'https://remnus.com'`, and hreflang for all 6 supported locales (all point to same URL — `localePrefix: 'never'` constraint).
 - `app/page.tsx` — Authenticated redirect gateway → first workspace item or `/login`.
 - `login/page.tsx` — Google + GitHub OAuth login. In Tauri mode, renders a minimal UI (logo + "Sign in" button); on click generates a UUID `device_id`, opens `client-login?device_id=<uuid>` in the system browser, then polls `/api/auth/client-poll` every 2 s until a token arrives.
 - `client-login/page.tsx` — Public. Full login page (Google + GitHub) opened in the system browser by Tauri. Reads `device_id` from URL search params and threads it through both auth paths so `/api/auth/client-bridge` can store the resulting token keyed by that id.
@@ -173,10 +178,10 @@ We use the **JSON Column Pattern** (not EAV) for dynamic user-defined properties
 - `db/[id]/page.tsx` — Database view (Table / Kanban / Calendar).
 - `db/[id]/[pageId]/page.tsx` — Database row page editor.
 - `page/[itemId]/page.tsx` — Standalone page editor.
-- `pricing/page.tsx` — Public pricing (MarketingShell-wrapped).
-- `contact/page.tsx` — Public contact (MarketingShell-wrapped).
-- `download/page.tsx` — Public desktop download page (MarketingShell-wrapped). Renders `DownloadView` with static `releases/latest/download/<stable-name>` links.
-- `privacy/page.tsx` — Public privacy page (MarketingShell-wrapped).
+- `pricing/page.tsx` — Public pricing (MarketingShell-wrapped). Exports page-specific `metadata` with canonical URL.
+- `contact/page.tsx` — Public contact (MarketingShell-wrapped). Exports page-specific `metadata` with canonical URL.
+- `download/page.tsx` — Public desktop download page (MarketingShell-wrapped). Renders `DownloadView` with static `releases/latest/download/<stable-name>` links. Exports page-specific `metadata` with canonical URL.
+- `privacy/page.tsx` — Public privacy page (MarketingShell-wrapped). Exports page-specific `metadata` with canonical URL.
 - `admin/page.tsx` — Admin dashboard (users + workspaces tables, stat cards).
 - `api/auth/[...nextauth]/route.ts` — Auth.js handler.
 - `api/auth/client-bridge/route.ts` — GET. Called after browser-side login (as callbackUrl). Requires `device_id` query param. Creates a 5-min JWT signed with AUTH_SECRET, stores it in the in-memory `client-auth-store` keyed by `device_id`, and returns a "Close this tab" HTML page.

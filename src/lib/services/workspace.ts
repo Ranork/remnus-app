@@ -532,6 +532,12 @@ export async function updatePageById(
         .update(workspaceItems)
         .set({ title: patch.title, updatedAt: new Date() })
         .where(eq(workspaceItems.id, itemId));
+      if (item.type === 'database') {
+        await db
+          .update(databases)
+          .set({ name: patch.title, updatedAt: new Date() })
+          .where(eq(databases.itemId, itemId));
+      }
     }
     if (patch.content !== undefined && item.type === 'page') {
       await db

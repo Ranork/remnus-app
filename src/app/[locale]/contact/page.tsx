@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   description: 'Get in touch with the Remnus team. Questions about MCP integration, enterprise plans, or self-hosting? We\'re here to help.',
   alternates: { canonical: 'https://remnus.com/contact' },
   openGraph: {
-    title: 'Contact — Remnus',
+    title: 'Contact | Remnus',
     description: 'Get in touch with the Remnus team. Questions about MCP integration, enterprise plans, or self-hosting? We\'re here to help.',
     url: 'https://remnus.com/contact',
   },

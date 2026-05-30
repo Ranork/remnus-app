@@ -7,7 +7,7 @@ export const metadata: Metadata = {
   description: 'Simple, transparent pricing for Remnus — the MCP-native workspace for vibe coders. Start free with unlimited pages and databases.',
   alternates: { canonical: 'https://remnus.com/pricing' },
   openGraph: {
-    title: 'Pricing — Remnus',
+    title: 'Pricing | Remnus',
     description: 'Simple, transparent pricing for Remnus — the MCP-native workspace for vibe coders. Start free with unlimited pages and databases.',
     url: 'https://remnus.com/pricing',
   },
