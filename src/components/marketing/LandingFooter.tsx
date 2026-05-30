@@ -8,48 +8,30 @@ export default async function LandingFooter() {
 
   const cols = [
     {
-      head: t('bridgeFooterColProduct'),
-      links: [
-        { label: t('bridgeFooterProductFeatures'),  href: '#' },
-        { label: t('bridgeFooterProductTemplates'), href: '#' },
-        { label: t('bridgeFooterProductChangelog'), href: '#' },
-        { label: t('bridgeFooterProductRoadmap'),   href: '#' },
-      ],
-    },
-    {
       head: t('bridgeFooterColIntegrations'),
       links: [
-        { label: 'Claude',   href: '#' },
-        { label: 'Cursor',   href: '#' },
-        { label: 'Windsurf', href: '#' },
-        { label: 'ChatGPT',  href: '#' },
-      ],
-    },
-    {
-      head: t('bridgeFooterColProtocol'),
-      links: [
-        { label: t('bridgeFooterProtocolMcp'),       href: '#' },
-        { label: t('bridgeFooterProtocolTools'),     href: '#' },
-        { label: t('bridgeFooterProtocolResources'), href: '#' },
-        { label: t('bridgeFooterProtocolSdk'),       href: '#' },
+        { label: 'Claude',   href: '/#integrations' },
+        { label: 'Cursor',   href: '/#integrations' },
+        { label: 'Windsurf', href: '/#integrations' },
+        { label: 'ChatGPT',  href: '/#integrations' },
       ],
     },
     {
       head: t('bridgeFooterColCompany'),
       links: [
-        { label: t('bridgeFooterCompanyManifesto'), href: '#'        },
-        { label: t('bridgeFooterCompanyPricing'),   href: '#pricing' },
-        { label: t('bridgeFooterCompanyContact'),   href: '#'        },
-        { label: t('bridgeFooterCompanyPrivacy'),   href: '#'        },
+        { label: t('bridgeFooterCompanyManifesto'), href: '/#why' },
+        { label: t('bridgeFooterCompanyPricing'),   href: '/pricing' },
+        { label: t('bridgeFooterCompanyContact'),   href: '/contact' },
+        { label: t('bridgeFooterCompanyPrivacy'),   href: '/privacy' },
       ],
     },
   ];
 
   return (
     <footer className="px-4 sm:px-8 lg:px-14 py-12 lg:py-16 border-t border-neutral-800">
-      <div className="max-w-7xl mx-auto grid gap-10 lg:gap-16 grid-cols-2 sm:grid-cols-4 lg:grid-cols-[1.4fr_1fr_1fr_1fr_1fr]">
+      <div className="max-w-7xl mx-auto grid gap-10 lg:gap-16 grid-cols-2 sm:grid-cols-3 lg:grid-cols-[1.4fr_1fr_1fr]">
         {/* Left: logo + tagline + copyright */}
-        <div className="flex flex-col gap-4 col-span-2 sm:col-span-4 lg:col-span-1">
+        <div className="flex flex-col gap-4 col-span-2 sm:col-span-3 lg:col-span-1">
           <Link href="/" className="inline-flex items-center gap-2.5">
             <Image src="/logo-square-transparent.png" alt="Remnus" width={22} height={22} />
             <span className="font-semibold text-neutral-100 text-[15px] tracking-[-0.01em]">Remnus</span>
@@ -62,20 +44,20 @@ export default async function LandingFooter() {
           </span>
         </div>
 
-        {/* 4 link columns */}
+        {/* 2 link columns */}
         {cols.map((col) => (
           <div key={col.head} className="flex flex-col gap-3">
             <span className="font-mono text-[11px] text-dim uppercase tracking-[0.12em] mb-1">
               {col.head}
             </span>
             {col.links.map((l) => (
-              <a
+              <Link
                 key={l.label}
                 href={l.href}
                 className="text-[13.5px] text-neutral-50 hover:text-neutral-100 transition-colors duration-150"
               >
                 {l.label}
-              </a>
+              </Link>
             ))}
           </div>
         ))}

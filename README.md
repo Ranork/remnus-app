@@ -37,7 +37,7 @@ A self-hostable, Notion-like workspace application. Create pages, build database
 ### AI Agent Integration (MCP)
 - **Streamable HTTP MCP server** at `/api/mcp` — connect Claude Code, Cursor, Windsurf, Continue, or any MCP-compatible agent
 - **Bearer token auth** scoped per workspace with read-only or read/write permissions
-- **6 MCP tools:** `list_workspace`, `search`, `get_page`, `query_database`, `create_page`, `update_page`
+- **12 MCP tools & 4 resources:** full read/write workspace capabilities with dual-mode (Streamable HTTP + SSE) support.
 - **Audit log** — every agent tool call is logged with status and target
 - Token management in Workspace Settings → API / MCP Tokens
 
@@ -181,16 +181,31 @@ Add to your MCP config file (e.g. `.cursor/mcp.json`):
 }
 ```
 
-### Available tools
+### Available tools & resources
 
+#### Tools
 | Tool | Scope | Description |
 |---|---|---|
 | `list_workspace` | read | List pages and databases (optionally by parent) |
 | `search` | read | Search by title across the workspace |
-| `get_page` | read | Get full content of a page or database item |
-| `query_database` | read | Get schema and rows of a database |
+| `get_page` | read | Get full content of a page or database item (auto-detects type) |
+| `get_database_schema` | read | Get schema details of a specific database |
+| `query_database` | read | Get schema and filtered rows of a database |
 | `create_page` | write | Create a standalone page or database row |
-| `update_page` | write | Update title, content, or properties |
+| `update_page` | write | Update title, content, or properties (merges properties) |
+| `bulk_update` | write | Perform batch updates on multiple pages or database rows |
+| `delete_page` | write | Delete a workspace item or database row (requires confirmation) |
+| `move_item` | write | Reparent a sidebar item in the workspace tree |
+| `create_database` | write | Create a database with a custom column schema |
+| `update_database_schema`| write | Add or remove columns in a database schema |
+
+#### Resources
+| Resource Template / URI | Description |
+|---|---|
+| `remnus://workspace/{id}/schema` | Database schema structure for the workspace |
+| `remnus://page/{id}` | Markdown content and properties for pages (lists recent 20 pages) |
+| `remnus://database/{id}/schema` | Dynamic column schema definitions for a specific database |
+| `remnus://audit-log/recent` | Recent 50 agent activity logs and tool calls |
 
 ---
 

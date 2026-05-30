@@ -28,30 +28,20 @@ export default async function LandingNav() {
 
           <nav className="hidden lg:flex items-center gap-6.5 text-[13.5px] text-neutral-50">
             {[
-              { key: 'bridgeNavWhyRemnus',    href: '#why'          },
-              { key: 'bridgeNavIntegrations', href: '#integrations'  },
-              { key: 'bridgeNavMcp',          href: '#tools'         },
-              { key: 'bridgeNavPricing',      href: '#pricing'       },
+              { key: 'bridgeNavWhyRemnus',    href: '/#why'          },
+              { key: 'bridgeNavIntegrations', href: '/#integrations' },
+              { key: 'bridgeNavMcp',          href: '/#tools'        },
+              { key: 'bridgeNavPricing',      href: '/pricing'       },
               { key: 'bridgeNavDownload',     href: '/download'      },
               // { key: 'bridgeNavDocs',         href: '#'              },
             ].map(({ key, href }) => (
-              href.startsWith('/') ? (
-                <Link
-                  key={key}
-                  href={href}
-                  className="transition-colors duration-150 hover:text-neutral-100"
-                >
-                  {t(key as Parameters<typeof t>[0])}
-                </Link>
-              ) : (
-                <a
-                  key={key}
-                  href={href}
-                  className="transition-colors duration-150 hover:text-neutral-100"
-                >
-                  {t(key as Parameters<typeof t>[0])}
-                </a>
-              )
+              <Link
+                key={key}
+                href={href}
+                className="transition-colors duration-150 hover:text-neutral-100"
+              >
+                {t(key as Parameters<typeof t>[0])}
+              </Link>
             ))}
           </nav>
 

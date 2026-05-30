@@ -175,15 +175,17 @@ We use the **JSON Column Pattern** (not EAV) for dynamic user-defined properties
 - `page/[itemId]/page.tsx` — Standalone page editor.
 - `pricing/page.tsx` — Public pricing (MarketingShell-wrapped).
 - `contact/page.tsx` — Public contact (MarketingShell-wrapped).
-- `download/page.tsx` — Public desktop download page (LandingNav + LandingFooter shell). Renders `DownloadView` with static `releases/latest/download/<stable-name>` links.
+- `download/page.tsx` — Public desktop download page (MarketingShell-wrapped). Renders `DownloadView` with static `releases/latest/download/<stable-name>` links.
+- `privacy/page.tsx` — Public privacy page (MarketingShell-wrapped).
 - `admin/page.tsx` — Admin dashboard (users + workspaces tables, stat cards).
 - `api/auth/[...nextauth]/route.ts` — Auth.js handler.
 - `api/auth/client-bridge/route.ts` — GET. Called after browser-side login (as callbackUrl). Requires `device_id` query param. Creates a 5-min JWT signed with AUTH_SECRET, stores it in the in-memory `client-auth-store` keyed by `device_id`, and returns a "Close this tab" HTML page.
 - `api/auth/client-poll/route.ts` — GET. Polled by the Tauri WebView every 2 s. Accepts `device_id`; returns `{ ready: false }` while waiting, `{ ready: true, token }` once the browser completes login (one-time consume).
 - `api/auth/client-activate/route.ts` — GET. Tauri WebView navigates here with the token from the poll response. Signs in via `client-token` provider, redirects to `/app`.
 - `api/upload/route.ts` — `POST`. Cloudinary image upload. Auth-gated (session required). Accepts `multipart/form-data` with `file` field (max 5 MB, image types only). Returns `{ url }`. Images stored in `remnus/icons/`, cropped to 256×256.
-- `api/mcp/route.ts` — MCP Streamable HTTP + Standard SSE: supports dual mode (stateless Streamable HTTP for Claude Code, and standard stateful SSE for Cursor, Windsurf, Continue, and Antigravity IDE via sessionId query param). Bearer auth, rate limit (60 req/min), 12 tools, 4 resource templates, audit log.
+- `api/mcp/route.ts` — MCP Streamable HTTP + Standard SSE: supports dual mode (stateless Streamable HTTP for Claude Code, and standard stateful SSE for Cursor, Windsurf, Continue, and Antigravity IDE via sessionId query param). Bearer auth, rate limit (60 req/min), 12 tools, 4 resource templates, 5 prompt templates, audit log.
   - **Read resources:** `remnus://workspace/{id}/schema` (Workspace databases JSON schema), `remnus://page/{id}` (Markdown + properties content of page or db row, returns recent 20 pages on list), `remnus://database/{id}/schema` (Database JSON schema), `remnus://audit-log/recent` (Recent 50 activity logs)
+  - **Prompts:** `summarize-page` (page_id, style?), `weekly-status-report` (database_id, period?), `kanban-triage` (database_id), `extract-tasks` (page_id), `search-and-create` (title, query) — Remnus fetches DB content and returns a filled prompt string; the AI client executes the LLM call.
   - **Read tools:** `search`, `list_workspace`, `get_page` (auto-detects type, no `isDbRow` flag needed), `get_database_schema` (schema only, no rows), `query_database` (supports `filters: Record<string,any>` for property matching)
   - **Write tools:** `create_page`, `update_page` (merges `properties` — never overwrites), `bulk_update` (multiple pages/rows in one call), `delete_page` (workspace item or DB row; requires `confirm: true`), `move_item` (reparent sidebar item; `newParentId: null` → root), `create_database` (custom schema; title column auto-prepended), `update_database_schema` (add/remove columns; removing requires `confirm: true`; title column protected)
 
@@ -236,8 +238,8 @@ We use the **JSON Column Pattern** (not EAV) for dynamic user-defined properties
 - `WhatsInsideViewer` — Client component. Auto-cycling Kanban/Table/Calendar viewer (4 s). All strings passed as props.
 - `SetupGuideModal` — Client component. MCP connection steps modal with endpoint + auth header snippets. All strings passed as props.
 - `DownloadView` — Client component for `/download`. Detects OS (`navigator`), shows a smart primary "Download for {os}" button + full platform grid (Windows .exe, macOS Apple Silicon/Intel .dmg, Linux .AppImage/.deb). Links target `github.com/Ranork/remnus-app/releases/latest/download/<stable-name>` — never needs per-release updates, but only resolves once the draft release is published. Stable-named assets are produced by the "Upload stable-named installers" step in `tauri-release.yml`.
-- `MarketingShell` — Auth-aware wrapper for `/pricing` and `/contact` (adds header/footer only when unauthenticated).
-- `MarketingHeader` / `MarketingFooter` / `HeroSection` / `FeaturesSection` / `PricingSection` / `ContactSection` — Legacy marketing shell components.
+- `MarketingShell` — Layout wrapper wrapping `/pricing`, `/contact`, `/download`, and `/privacy` with the unified LandingNav and LandingFooter.
+- `HeroSection` / `FeaturesSection` / `PricingSection` / `ContactSection` — Legacy marketing shell components.
 - `LandingChip` / `AIMark` — Utility: status pill, AI client SVG marks.
 - `mini/` — Static mini previews: `KanbanMini`, `TableMini`, `CalendarMini`, `MarkdownPageMini`, `ViewTab`.
 
