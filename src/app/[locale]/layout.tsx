@@ -1,6 +1,4 @@
-import type { Metadata, Viewport } from 'next';
-import { Geist, Geist_Mono, Instrument_Serif } from 'next/font/google';
-import '../globals.css';
+import type { Metadata } from 'next';
 import { Analytics } from '@vercel/analytics/next';
 import { auth, signOut } from '@/auth';
 import { cookies } from 'next/headers';
@@ -17,27 +15,6 @@ import { getTranslations } from 'next-intl/server';
 import { PostHogProvider } from '@/components/providers/PostHogProvider';
 import PostHogPageView from '@/components/providers/PostHogPageView';
 import PostHogIdentify from '@/components/providers/PostHogIdentify';
-
-const geist = Geist({
-  subsets: ['latin'],
-  variable: '--font-geist-sans',
-});
-const geistMono = Geist_Mono({
-  subsets: ['latin'],
-  variable: '--font-geist-mono',
-});
-const instrumentSerif = Instrument_Serif({
-  subsets: ['latin'],
-  weight: '400',
-  style: 'italic',
-  variable: '--font-instrument-serif',
-});
-
-export const viewport: Viewport = {
-  width: 'device-width',
-  initialScale: 1,
-  maximumScale: 1,
-};
 
 export const metadata: Metadata = {
   title: {
@@ -90,17 +67,15 @@ export default async function LocaleLayout({
 
   if (!session?.user) {
     return (
-      <html lang={locale} className={`${geist.variable} ${geistMono.variable} ${instrumentSerif.variable}`}>
-        <body className="font-sans bg-neutral-950 text-neutral-50">
-          <PostHogProvider>
-            <PostHogPageView />
-            <NextIntlClientProvider messages={messages}>
-              {children}
-            </NextIntlClientProvider>
-          </PostHogProvider>
-          <Analytics />
-        </body>
-      </html>
+      <>
+        <PostHogProvider>
+          <PostHogPageView />
+          <NextIntlClientProvider messages={messages}>
+            {children}
+          </NextIntlClientProvider>
+        </PostHogProvider>
+        <Analytics />
+      </>
     );
   }
 
@@ -147,39 +122,37 @@ export default async function LocaleLayout({
   ) : undefined;
 
   return (
-    <html lang={locale} className={`${geist.variable} ${geistMono.variable} ${instrumentSerif.variable}`}>
-      <body className="font-sans bg-neutral-950 text-neutral-50">
-        <PostHogProvider>
-          <PostHogPageView skip={currentUser?.role === 'admin'} />
-          <PostHogIdentify user={currentUser} />
-          <NextIntlClientProvider messages={messages}>
-            <QueryProvider>
-              <AppShell
-                sidebar={
-                  <WorkspaceSidebar
-                    items={items}
-                    workspaces={workspacesList}
-                    activeWorkspace={activeWorkspace ?? { id: '', name: 'Workspace' }}
-                    currentUser={currentUser}
-                  />
-                }
-                mobileNav={
-                  <MobileNavWrapper
-                    items={items}
-                    workspaces={workspacesList}
-                    activeWorkspace={activeWorkspace ?? { id: '', name: 'Workspace' }}
-                    currentUser={currentUser}
-                  />
-                }
-                demoBanner={demoBanner}
-              >
-                {children}
-              </AppShell>
-            </QueryProvider>
-          </NextIntlClientProvider>
-        </PostHogProvider>
-        <Analytics />
-      </body>
-    </html>
+    <>
+      <PostHogProvider>
+        <PostHogPageView skip={currentUser?.role === 'admin'} />
+        <PostHogIdentify user={currentUser} />
+        <NextIntlClientProvider messages={messages}>
+          <QueryProvider>
+            <AppShell
+              sidebar={
+                <WorkspaceSidebar
+                  items={items}
+                  workspaces={workspacesList}
+                  activeWorkspace={activeWorkspace ?? { id: '', name: 'Workspace' }}
+                  currentUser={currentUser}
+                />
+              }
+              mobileNav={
+                <MobileNavWrapper
+                  items={items}
+                  workspaces={workspacesList}
+                  activeWorkspace={activeWorkspace ?? { id: '', name: 'Workspace' }}
+                  currentUser={currentUser}
+                />
+              }
+              demoBanner={demoBanner}
+            >
+              {children}
+            </AppShell>
+          </QueryProvider>
+        </NextIntlClientProvider>
+      </PostHogProvider>
+      <Analytics />
+    </>
   );
 }

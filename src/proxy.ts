@@ -25,6 +25,6 @@ export default authMiddleware(function proxy(req: NextRequest) {
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|logo.*|.*\\.(?:png|ico|svg|jpg|jpeg|webp|woff2?)).*)',
+    '/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|logo.*|.*\\.(?:png|ico|svg|jpg|jpeg|webp|woff2?)).*)',
   ],
 };
