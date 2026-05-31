@@ -1,12 +1,11 @@
 use tauri::{
     menu::{Menu, MenuItem},
     tray::{MouseButton, TrayIconBuilder, TrayIconEvent},
-    webview::PageLoadEvent,
-    Manager, WindowEvent,
+    Manager, WebviewUrl, WebviewWindowBuilder, WindowEvent,
 };
 use tauri_plugin_deep_link::DeepLinkExt;
 
-const ZOOM_INIT: &str = "(function(){try{var z=parseFloat(localStorage.getItem('remnus_desktop_zoom'));if(z&&z>=0.5&&z<=2.0){document.documentElement.style.zoom=String(z);}}catch(e){}})();";
+const ZOOM_INIT: &str = "(function(){try{var z=parseFloat(localStorage.getItem('remnus_desktop_zoom'));if(z&&z>=0.5&&z<=2.0){var el=document.documentElement;el.style.zoom=String(z);if(z<1){var p=(100/z).toFixed(2)+'%';el.style.width=p;el.style.height=p;el.style.overflow='hidden';}}}catch(e){}})();";
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -16,22 +15,33 @@ pub fn run() {
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_deep_link::init())
         .setup(|app| {
-            // Debug builds load the local dev server instead of the production URL.
             #[cfg(debug_assertions)]
-            if let Some(window) = app.get_webview_window("main") {
-                let _ = window.eval(
-                    "window.location.replace('http://localhost:3000/tauri-app')"
-                );
-            }
+            let url = "http://localhost:3000/tauri-app";
+            #[cfg(not(debug_assertions))]
+            let url = "https://remnus.com/tauri-app";
 
-            // Re-apply saved zoom after every page load (binary-embedded, server-independent).
-            if let Some(window) = app.get_webview_window("main") {
-                window.on_page_load(move |webview, payload| {
-                    if payload.event() == PageLoadEvent::Finished {
-                        let _ = webview.eval(ZOOM_INIT);
-                    }
-                });
-            }
+            let window = WebviewWindowBuilder::new(
+                app,
+                "main",
+                WebviewUrl::External(url.parse().unwrap()),
+            )
+            .title("Remnus")
+            .inner_size(1280.0, 800.0)
+            .min_inner_size(900.0, 600.0)
+            .center()
+            .decorations(false)
+            .shadow(true)
+            .initialization_script(ZOOM_INIT)
+            .build()?;
+
+            // Hide to tray on window close instead of quitting.
+            let win = window.clone();
+            window.on_window_event(move |event| {
+                if let WindowEvent::CloseRequested { api, .. } = event {
+                    api.prevent_close();
+                    let _ = win.hide();
+                }
+            });
 
             // Handle OAuth deep-link callbacks: remnus://auth?token=<jwt>
             let handle = app.handle().clone();
@@ -53,25 +63,16 @@ pub fn run() {
                                 "http://localhost:3000/api/auth/client-activate?token={}",
                                 token
                             );
-                            if let Some(window) = handle.get_webview_window("main") {
-                                let js = format!("window.location.replace('{}')", activate_url);
-                                let _ = window.eval(&js);
+                            if let Some(w) = handle.get_webview_window("main") {
+                                let _ = w.eval(&format!(
+                                    "window.location.replace('{}')",
+                                    activate_url
+                                ));
                             }
                         }
                     }
                 }
             });
-
-            // Hide to tray on window close instead of quitting.
-            if let Some(window) = app.get_webview_window("main") {
-                let win = window.clone();
-                window.on_window_event(move |event| {
-                    if let WindowEvent::CloseRequested { api, .. } = event {
-                        api.prevent_close();
-                        let _ = win.hide();
-                    }
-                });
-            }
 
             let quit = MenuItem::with_id(app, "quit", "Quit Remnus", true, None::<&str>)?;
             let show = MenuItem::with_id(app, "show", "Show Window", true, None::<&str>)?;
@@ -84,9 +85,9 @@ pub fn run() {
                 .on_menu_event(|app, event| match event.id.as_ref() {
                     "quit" => app.exit(0),
                     "show" => {
-                        if let Some(window) = app.get_webview_window("main") {
-                            let _ = window.show();
-                            let _ = window.set_focus();
+                        if let Some(w) = app.get_webview_window("main") {
+                            let _ = w.show();
+                            let _ = w.set_focus();
                         }
                     }
                     _ => {}
@@ -98,9 +99,9 @@ pub fn run() {
                     } = event
                     {
                         let app = tray.app_handle();
-                        if let Some(window) = app.get_webview_window("main") {
-                            let _ = window.show();
-                            let _ = window.set_focus();
+                        if let Some(w) = app.get_webview_window("main") {
+                            let _ = w.show();
+                            let _ = w.set_focus();
                         }
                     }
                 })

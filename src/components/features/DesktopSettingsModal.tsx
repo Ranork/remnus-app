@@ -10,18 +10,12 @@ const ZOOM_STEP = 0.1;
 const ZOOM_DEFAULT = 1.0;
 
 export function applyDesktopZoom(factor: number) {
-  document.documentElement.style.zoom = factor === 1 ? '' : String(factor);
   try { localStorage.setItem(ZOOM_KEY, String(factor)); } catch {}
+  window.dispatchEvent(new Event('remnus-zoom-changed'));
 }
 
 export function initDesktopZoom() {
-  try {
-    const saved = localStorage.getItem(ZOOM_KEY);
-    if (!saved) return;
-    const factor = parseFloat(saved);
-    if (isNaN(factor) || factor < ZOOM_MIN || factor > ZOOM_MAX) return;
-    document.documentElement.style.zoom = String(factor);
-  } catch {}
+  // ZoomProvider handles initialization on mount — nothing to do here
 }
 
 function round1(n: number) {

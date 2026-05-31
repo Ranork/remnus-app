@@ -9,20 +9,6 @@
     "frontendDist": "../public"
   },
   "app": {
-    "windows": [
-      {
-        "label": "main",
-        "title": "Remnus",
-        "url": "https://remnus.com/tauri-app",
-        "width": 1280,
-        "height": 800,
-        "minWidth": 900,
-        "minHeight": 600,
-        "center": true,
-        "decorations": false,
-        "shadow": true
-      }
-    ],
     "security": {
       "csp": null
     }
