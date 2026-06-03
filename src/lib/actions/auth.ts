@@ -4,7 +4,7 @@ import { AuthError } from 'next-auth';
 import { auth } from '@/auth';
 import bcrypt from 'bcryptjs';
 import { db } from '@/db';
-import { users, workspaceMembers, workspaces, accounts } from '@/db/schema';
+import { users, workspaceMembers, workspaces, accounts, sessions } from '@/db/schema';
 import { eq, and, sql, ne } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
@@ -185,6 +185,13 @@ export async function adminDeleteUser(userId: string) {
   if (session.user.id === userId) {
     return { error: t('cannotDeleteSelf') };
   }
+  // Delete dependent rows explicitly. ON DELETE CASCADE only fires when
+  // PRAGMA foreign_keys=ON, which we don't enable on the serverless/Turso
+  // connection — so relying on it would leave orphaned auth rows in prod
+  // (the exact corruption that caused cross-account identity bleaks).
+  await db.delete(accounts).where(eq(accounts.userId, userId));
+  await db.delete(sessions).where(eq(sessions.userId, userId));
+  await db.delete(workspaceMembers).where(eq(workspaceMembers.userId, userId));
   await db.delete(users).where(eq(users.id, userId));
   revalidatePath('/');
   return { success: true };
