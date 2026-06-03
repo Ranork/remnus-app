@@ -1,15 +1,12 @@
 'use server';
-import { signOut, signIn } from '@/auth';
-import { AuthError } from 'next-auth';
+import { signOut } from '@/auth';
 import { auth } from '@/auth';
-import bcrypt from 'bcryptjs';
 import { db } from '@/db';
-import { users, workspaceMembers, workspaces, accounts, sessions, userSessions } from '@/db/schema';
-import { eq, and, sql, ne } from 'drizzle-orm';
+import { users, workspaceMembers, accounts, sessions, userSessions, agentTokens } from '@/db/schema';
+import { eq, and, sql } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
-import { createSeedWorkspace } from '@/lib/seed';
 import { getTranslations } from 'next-intl/server';
 
 export async function logout() {
@@ -193,6 +190,9 @@ export async function adminDeleteUser(userId: string) {
   await db.delete(sessions).where(eq(sessions.userId, userId));
   await db.delete(workspaceMembers).where(eq(workspaceMembers.userId, userId));
   await db.delete(userSessions).where(eq(userSessions.userId, userId));
+  // agent_tokens.created_by references user(id) with no cascade — null it out
+  // so the token (which belongs to the workspace, not the user) survives.
+  await db.update(agentTokens).set({ createdBy: null }).where(eq(agentTokens.createdBy, userId));
   await db.delete(users).where(eq(users.id, userId));
   revalidatePath('/');
   return { success: true };
