@@ -8,10 +8,14 @@ import { users, workspaceMembers, workspaces, accounts } from '@/db/schema';
 import { eq, and, sql, ne } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
+import { cookies } from 'next/headers';
 import { createSeedWorkspace } from '@/lib/seed';
 import { getTranslations } from 'next-intl/server';
 
 export async function logout() {
+  // Clear the persisted workspace selection so the next account doesn't inherit it
+  const cookieStore = await cookies();
+  cookieStore.delete('remnus_workspace_id');
   await signOut({ redirectTo: '/login' });
 }
 
