@@ -87,7 +87,7 @@ export default async function LandingHero() {
                 <span aria-hidden>→</span>
               </Link>
               <Link
-                href="#integrations"
+                href="#mcp"
                 className="inline-flex items-center gap-1.5 text-sm text-neutral-100 border-b border-neutral-800 pb-1 hover:border-neutral-100 transition-colors duration-150"
               >
                 {t('bridgeHeroCtaSecondary')}
@@ -117,9 +117,13 @@ export default async function LandingHero() {
                   </div>
                 ))}
               </div>
-              <p className="font-mono text-[10.5px] text-dim tracking-[0.02em]">
+              <Link
+                href="#tools"
+                className="inline-flex items-center gap-1 font-mono text-[10.5px] text-accent-strong tracking-[0.02em] hover:underline"
+              >
                 {t('bridgeHeroStatNote')}
-              </p>
+                <span aria-hidden className="text-[10px]">→</span>
+              </Link>
             </div>
           </div>
 
