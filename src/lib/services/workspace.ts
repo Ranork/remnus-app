@@ -415,13 +415,17 @@ export async function createPageInWorkspace(
       .where(eq(pages.databaseId, resolvedDbId));
     const maxSort = existing.reduce((max, p) => (p.sortOrder > max ? p.sortOrder : max), 0);
 
+    const resolvedProps = input.properties
+      ? await resolvePropertiesBySchema(resolvedDbId, input.properties)
+      : {};
+
     const id = crypto.randomUUID();
     await db.insert(pages).values({
       id,
       databaseId: resolvedDbId,
       title: input.title,
       content: input.content ?? '',
-      properties: { title: input.title, ...input.properties },
+      properties: { title: input.title, ...resolvedProps },
       sortOrder: maxSort + 1,
       ...(agentCtx ? { agentEditedAt: new Date(), agentTokenId: agentCtx.tokenId } : {}),
     });
@@ -666,6 +670,27 @@ export async function updateDatabaseSchemaById(
   return { updated: true, schema: newSchema };
 }
 
+async function resolvePropertiesBySchema(
+  databaseId: string,
+  properties: Record<string, any>,
+): Promise<Record<string, any>> {
+  const [dbRecord] = await db
+    .select({ schema: databases.schema })
+    .from(databases)
+    .where(eq(databases.id, databaseId))
+    .limit(1);
+
+  const schema: Array<{ id: string; name: string }> = dbRecord?.schema ?? [];
+  const nameToId = new Map(schema.map(col => [col.name.toLowerCase(), col.id]));
+
+  const resolved: Record<string, any> = {};
+  for (const [key, value] of Object.entries(properties)) {
+    const colId = nameToId.get(key.toLowerCase());
+    resolved[colId ?? key] = value;
+  }
+  return resolved;
+}
+
 export async function updatePageById(
   workspaceId: string,
   itemId: string,
@@ -705,7 +730,7 @@ export async function updatePageById(
 
   // Try as DB row (pages table)
   const [page] = await db
-    .select({ databaseId: pages.databaseId })
+    .select({ databaseId: pages.databaseId, properties: pages.properties })
     .from(pages)
     .where(eq(pages.id, itemId))
     .limit(1);
@@ -717,12 +742,8 @@ export async function updatePageById(
   if (patch.title !== undefined) updateData.title = patch.title;
   if (patch.content !== undefined) updateData.content = patch.content;
   if (patch.properties !== undefined) {
-    const [existing] = await db
-      .select({ properties: pages.properties })
-      .from(pages)
-      .where(eq(pages.id, itemId))
-      .limit(1);
-    updateData.properties = { ...(existing?.properties ?? {}), ...patch.properties };
+    const resolved = await resolvePropertiesBySchema(page.databaseId, patch.properties);
+    updateData.properties = { ...(page.properties ?? {}), ...resolved };
   }
   if (agentCtx) {
     updateData.agentEditedAt = new Date();
