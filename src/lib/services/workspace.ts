@@ -27,6 +27,29 @@ function decodeCursor(cursor: string): { so: number; id: string } {
   return JSON.parse(Buffer.from(cursor, 'base64url').toString());
 }
 
+// ── Select option auto-coloring ───────────────────────────────────────────────
+
+const COLOR_CYCLE = ['red', 'orange', 'yellow', 'green', 'teal', 'blue', 'purple', 'pink'] as const;
+
+function autoColorOptions(options: any[]): { value: string; color: string }[] {
+  return options.map((opt, i) => {
+    const value = typeof opt === 'string' ? opt : opt.value ?? String(opt);
+    const color = typeof opt === 'object' && opt.color ? opt.color : COLOR_CYCLE[i % COLOR_CYCLE.length];
+    return { value, color };
+  });
+}
+
+function normalizeSchemaColumns(
+  cols: Array<{ id?: string; name: string; type: string; options?: any[] }>,
+): any[] {
+  return cols.map(col => ({
+    ...col,
+    ...(col.options && (col.type === 'select' || col.type === 'multi_select')
+      ? { options: autoColorOptions(col.options) }
+      : {}),
+  }));
+}
+
 // ── Internal boundary check ───────────────────────────────────────────────────
 
 async function assertItemInWorkspace(itemId: string, workspaceId: string) {
@@ -583,7 +606,7 @@ export async function createDatabaseInWorkspace(
   const itemId = crypto.randomUUID();
   const dbId = crypto.randomUUID();
 
-  const resolvedSchema: any[] = input.schema?.length
+  const rawSchema: any[] = input.schema?.length
     ? input.schema.map(col => ({
         id: `col_${crypto.randomUUID().slice(0, 8)}`,
         name: col.name,
@@ -594,6 +617,8 @@ export async function createDatabaseInWorkspace(
         { id: 'title', name: 'Title', type: 'text' },
         { id: 'status', name: 'Status', type: 'select', options: ['To Do', 'In Progress', 'Done'] },
       ];
+
+  const resolvedSchema = normalizeSchemaColumns(rawSchema);
 
   if (!resolvedSchema.some((c: any) => c.id === 'title')) {
     resolvedSchema.unshift({ id: 'title', name: 'Title', type: 'text' });
@@ -654,12 +679,14 @@ export async function updateDatabaseSchemaById(
   let newSchema = currentSchema.filter((c: any) => !safeRemoveIds.includes(c.id));
 
   if (changes.addColumns?.length) {
-    const added = changes.addColumns.map(col => ({
-      id: `col_${crypto.randomUUID().slice(0, 8)}`,
-      name: col.name,
-      type: col.type,
-      ...(col.options ? { options: col.options } : {}),
-    }));
+    const added = normalizeSchemaColumns(
+      changes.addColumns.map(col => ({
+        id: `col_${crypto.randomUUID().slice(0, 8)}`,
+        name: col.name,
+        type: col.type,
+        ...(col.options ? { options: col.options } : {}),
+      })),
+    );
     newSchema = [...newSchema, ...added];
   }
 
