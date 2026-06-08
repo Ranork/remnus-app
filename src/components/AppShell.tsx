@@ -16,7 +16,7 @@ export default function AppShell({
   children: ReactNode;
 }) {
   const pathname = usePathname();
-  const MARKETING_PATHS = new Set(['/', '/pricing', '/contact', '/download', '/privacy']);
+  const MARKETING_PATHS = new Set(['/', '/pricing', '/contact', '/download', '/privacy', '/security']);
   const isMarketing = MARKETING_PATHS.has(pathname);
 
   if (isMarketing) {
