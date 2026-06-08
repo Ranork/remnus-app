@@ -1,3 +1,5 @@
+'use client';
+
 import { useState } from 'react';
 import { Type, List, Tags, Hash, Calendar, Clock, AlignLeft, CheckSquare, Link, Mail, Phone, ChevronDown } from 'lucide-react';
 
