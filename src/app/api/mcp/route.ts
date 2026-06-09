@@ -47,15 +47,31 @@ class SseCustomTransport {
 const TOKEN_PREFIX = process.env.MCP_TOKEN_PREFIX ?? 'rmns';
 
 async function verifyBearerToken(authHeader: string | null): Promise<TokenContext | null> {
+  console.log('[mcp/auth] enter', {
+    hasHeader: !!authHeader,
+    headerPreview: authHeader ? authHeader.slice(0, 20) + '...' : null,
+  });
+
   const match = authHeader?.match(/^Bearer\s+(.+)$/i);
-  if (!match) return null;
+  if (!match) {
+    console.error('[mcp/auth] no_bearer_match', { headerPreview: authHeader?.slice(0, 30) ?? null });
+    return null;
+  }
   const token = match[1];
 
   const parts = token.split('_');
-  if (parts.length < 3) return null;
+  if (parts.length < 3) {
+    console.error('[mcp/auth] bad_token_shape', { partsLen: parts.length, tokenPreview: token.slice(0, 12) });
+    return null;
+  }
   const [scheme, prefix8, ...secretParts] = parts;
   const secret = secretParts.join('_');
-  if (!prefix8 || !secret) return null;
+  if (!prefix8 || !secret) {
+    console.error('[mcp/auth] empty_prefix_or_secret', { scheme, hasPrefix: !!prefix8, hasSecret: !!secret });
+    return null;
+  }
+
+  console.log('[mcp/auth] parsed', { scheme, prefix8 });
 
   // OAuth access token (oa_ prefix)
   if (scheme === 'oa') {
@@ -83,7 +99,10 @@ async function verifyBearerToken(authHeader: string | null): Promise<TokenContex
   }
 
   // Personal access token (rmns_ prefix)
-  if (scheme !== TOKEN_PREFIX) return null;
+  if (scheme !== TOKEN_PREFIX) {
+    console.error('[mcp/auth] unknown_scheme', { scheme, expectedPat: TOKEN_PREFIX });
+    return null;
+  }
 
   const [row] = await db
     .select()
