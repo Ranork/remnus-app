@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { AlertCircle, Check, Copy, ArrowRight, ChevronLeft, X } from 'lucide-react';
 import AIMark from '@/components/marketing/AIMark';
+import { buildCursorUrl, buildVscodeUrl } from '@/lib/mcp/deeplinks';
 
 type ToolId = 'claude' | 'cursor' | 'windsurf' | 'continue' | 'antigravity';
 type OS = 'mac' | 'linux' | 'windows';
@@ -21,16 +22,6 @@ const FILE_PATHS: Record<Exclude<ToolId, 'claude'>, Record<OS, string>> = {
   continue:    { mac: '~/.continue/config.json',             linux: '~/.continue/config.json',             windows: '%USERPROFILE%\\.continue\\config.json' },
   antigravity: { mac: '~/.gemini/config/mcp_config.json',   linux: '~/.gemini/config/mcp_config.json',   windows: '%USERPROFILE%\\.gemini\\config\\mcp_config.json' },
 };
-
-function buildCursorUrl(token: string, mcpUrl: string) {
-  const cfg = JSON.stringify({ url: mcpUrl, headers: { Authorization: `Bearer ${token}` } });
-  return `cursor://anysphere.cursor-deeplink/mcp/install?name=remnus&config=${btoa(cfg)}`;
-}
-
-function buildVscodeUrl(token: string, mcpUrl: string) {
-  const payload = JSON.stringify({ name: 'remnus', config: { type: 'http', url: mcpUrl, headers: { Authorization: `Bearer ${token}` } } });
-  return `vscode:mcp/install?${encodeURIComponent(payload)}`;
-}
 
 function getConfig(
   tool: ToolId,
@@ -256,14 +247,14 @@ function StepConfig({
       {(tool === 'cursor' || tool === 'claude') && (
         <div className="flex gap-2 flex-wrap">
           {tool === 'cursor' && (
-            <a href={buildCursorUrl(token, mcpUrl)}
+            <a href={buildCursorUrl(mcpUrl, token)}
               className="inline-flex items-center gap-1.5 text-[11px] font-semibold bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-neutral-200 px-3 py-1.5 rounded transition-colors">
               <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor"><path d="M3 3l9 9-9 9h4l7-7.5V12l-7-7.5H3zm10 0l9 9-9 9h4l7-7.5V12l-7-7.5h-4z"/></svg>
               {t('installCursor')}
             </a>
           )}
           {tool === 'claude' && (
-            <a href={buildVscodeUrl(token, mcpUrl)}
+            <a href={buildVscodeUrl(mcpUrl, token)}
               className="inline-flex items-center gap-1.5 text-[11px] font-semibold bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-neutral-200 px-3 py-1.5 rounded transition-colors">
               <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" className="text-blue-400"><path d="M17.583.063L9.963 7.087 4.19 2.383 2 3.436v17.125l2.19 1.054 5.773-4.704 7.62 7.026L22 22.564V1.436L17.583.063zM20 19.437l-6-5.453v-3.97l6-5.451v14.874zM4 19.204V4.797l4 3.26v7.888L4 19.204z"/></svg>
               {t('installVSCode')}

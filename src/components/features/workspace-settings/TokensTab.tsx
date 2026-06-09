@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
-import { AlertCircle, Check, Copy, Plus, ChevronDown, Zap, Pencil } from 'lucide-react';
+import { AlertCircle, Check, Copy, Plus, ChevronDown, Zap, Pencil, Link2 } from 'lucide-react';
 import AIMark from '@/components/marketing/AIMark';
 import { getAgentTokens, revokeAgentToken } from '@/lib/actions/agentToken';
 import { AGENT_OPTIONS, type AgentId, type AgentToken } from './types';
@@ -9,19 +9,8 @@ import McpOnboarding from './McpOnboarding';
 import McpCreateToken from './McpCreateToken';
 import McpEditToken from './McpEditToken';
 import { ConfirmDialog } from '@/components/features/ConfirmDialog';
-
-function buildCursorInstallUrl(token: string, mcpUrl: string): string {
-  const config = JSON.stringify({ url: mcpUrl, headers: { Authorization: `Bearer ${token}` } });
-  return `cursor://anysphere.cursor-deeplink/mcp/install?name=remnus&config=${btoa(config)}`;
-}
-
-function buildVscodeInstallUrl(token: string, mcpUrl: string): string {
-  const payload = JSON.stringify({
-    name: 'remnus',
-    config: { type: 'http', url: mcpUrl, headers: { Authorization: `Bearer ${token}` } },
-  });
-  return `vscode:mcp/install?${encodeURIComponent(payload)}`;
-}
+import { buildCursorUrl, buildVscodeUrl } from '@/lib/mcp/deeplinks';
+import ConnectFlow from '@/components/features/agents/ConnectFlow';
 
 const GUIDES = [
   { id: 'claude'      as const, label: 'Claude Code' },
@@ -50,10 +39,11 @@ const AGENT_TO_TOOL: Partial<Record<AgentId, 'claude' | 'cursor' | 'windsurf' | 
 
 interface TokensTabProps {
   workspaceId: string;
+  workspaceName: string;
   hasPrivilegedAccess: boolean;
 }
 
-export default function TokensTab({ workspaceId, hasPrivilegedAccess }: TokensTabProps) {
+export default function TokensTab({ workspaceId, workspaceName, hasPrivilegedAccess }: TokensTabProps) {
   const t = useTranslations('WorkspaceSettings');
 
   const mcpUrl = typeof window !== 'undefined' ? `${window.location.origin}/api/mcp` : '/api/mcp';
@@ -67,6 +57,7 @@ export default function TokensTab({ workspaceId, hasPrivilegedAccess }: TokensTa
   const [tokens, setTokens] = useState<AgentToken[]>([]);
   const [isLoadingTokens, setIsLoadingTokens] = useState(false);
   const [showCreateFlow, setShowCreateFlow] = useState(false);
+  const [showConnect, setShowConnect] = useState(false);
   const [newTokenValue, setNewTokenValue] = useState<string | null>(null);
   const [newTokenName, setNewTokenName] = useState<string | null>(null);
   const [newTokenAgent, setNewTokenAgent] = useState<AgentId | null>(null);
@@ -204,6 +195,16 @@ export default function TokensTab({ workspaceId, hasPrivilegedAccess }: TokensTa
 
   // ── Early returns for full-screen flows ──────────────────────────────────────
 
+  if (showConnect) {
+    return (
+      <ConnectFlow
+        mcpUrl={mcpUrl}
+        onClose={() => { setShowConnect(false); loadTokens(); }}
+        mintTargets={hasPrivilegedAccess ? [{ id: workspaceId, name: workspaceName }] : []}
+      />
+    );
+  }
+
   if (showOnboarding && newTokenValue) {
     return (
       <McpOnboarding
@@ -262,34 +263,16 @@ export default function TokensTab({ workspaceId, hasPrivilegedAccess }: TokensTa
               </div>
             </div>
 
-            <ol className="space-y-2.5 pl-1">
-              {([
-                { n: 1, title: t('mcpStep1Title'), desc: t('mcpStep1Desc') },
-                { n: 2, title: t('mcpStep2Title'), desc: t('mcpStep2Desc') },
-                { n: 3, title: t('mcpStep3Title'), desc: t('mcpStep3Desc') },
-              ]).map(({ n, title, desc }) => (
-                <li key={n} className="flex items-start gap-2.5">
-                  <span className="w-5 h-5 rounded-full bg-neutral-800 border border-neutral-700 flex items-center justify-center text-[9px] font-bold text-neutral-300 shrink-0 mt-0.5">
-                    {n}
-                  </span>
-                  <div className="text-xs leading-relaxed">
-                    <span className="font-semibold text-neutral-200">{title}</span>
-                    <span className="text-neutral-500 ml-1.5">{desc}</span>
-                  </div>
-                </li>
-              ))}
-            </ol>
+            <p className="text-xs text-neutral-300 leading-relaxed">{t('connectHeroDesc')}</p>
 
-            {/* CTA only when no tokens */}
-            {!isLoadingTokens && tokens.length === 0 && (
-              <button
-                onClick={() => setShowCreateFlow(true)}
-                className="flex items-center gap-1.5 text-xs font-semibold text-white bg-blue-500 hover:bg-blue-400 px-4 py-2 rounded-md transition-colors"
-              >
-                <Plus size={13} />
-                {t('createFirstToken')}
-              </button>
-            )}
+            {/* Primary CTA: opens the editor connect flow (OAuth + token) */}
+            <button
+              onClick={() => setShowConnect(true)}
+              className="w-full sm:w-auto flex items-center justify-center gap-2 text-sm font-semibold text-white bg-blue-500 hover:bg-blue-400 px-5 py-3 rounded-lg shadow-[0_0_20px_-6px_rgba(68,92,149,0.6)] transition-colors"
+            >
+              <Link2 size={16} />
+              {t('connectButton')}
+            </button>
           </div>
 
           {/* ── Token list ── */}
@@ -404,7 +387,7 @@ export default function TokensTab({ workspaceId, hasPrivilegedAccess }: TokensTa
                                     <p className="text-[10px] text-neutral-400">{t('installIn')}</p>
                                     <div className="flex gap-2 flex-wrap">
                                       <a
-                                        href={buildCursorInstallUrl(newTokenValue, mcpUrl)}
+                                        href={buildCursorUrl(mcpUrl, newTokenValue)}
                                         className="flex items-center gap-1.5 text-[11px] font-semibold bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 hover:border-neutral-600 text-neutral-200 px-3 py-1.5 rounded transition-colors"
                                       >
                                         <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" className="text-neutral-300">
@@ -413,7 +396,7 @@ export default function TokensTab({ workspaceId, hasPrivilegedAccess }: TokensTa
                                         {t('installCursor')}
                                       </a>
                                       <a
-                                        href={buildVscodeInstallUrl(newTokenValue, mcpUrl)}
+                                        href={buildVscodeUrl(mcpUrl, newTokenValue)}
                                         className="flex items-center gap-1.5 text-[11px] font-semibold bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 hover:border-neutral-600 text-neutral-200 px-3 py-1.5 rounded transition-colors"
                                       >
                                         <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" className="text-blue-400">

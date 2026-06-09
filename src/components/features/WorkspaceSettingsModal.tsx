@@ -187,6 +187,7 @@ export default function WorkspaceSettingsModal({
             {activeTab === 'tokens' && (
               <TokensTab
                 workspaceId={workspaceId}
+                workspaceName={workspaceName}
                 hasPrivilegedAccess={hasPrivilegedAccess}
               />
             )}

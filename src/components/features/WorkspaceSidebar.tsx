@@ -1304,14 +1304,6 @@ export default function WorkspaceSidebar({
             setAgentsModalOpen(false);
             getUserAgentTokenCount().then(setAgentTokenCount).catch(() => {});
           }}
-          onAddToken={(workspaceId) => {
-            setAgentsModalOpen(false);
-            const ws = localWorkspaces.find(w => w.id === workspaceId);
-            if (ws) {
-              setSettingsInitialTab('tokens');
-              setSettingsModalWorkspace({ id: ws.id, name: ws.name, icon: ws.icon, iconColor: ws.iconColor });
-            }
-          }}
         />
       )}
 

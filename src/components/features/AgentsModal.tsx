@@ -1,10 +1,11 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
-import { X, Bot, ChevronDown, Plus, Zap, Globe } from 'lucide-react';
+import { X, Bot, ChevronDown, Zap, Globe, RefreshCw, Link2 } from 'lucide-react';
 import AIMark from '@/components/marketing/AIMark';
 import PageIcon from '@/components/features/PageIcon';
 import { ConfirmDialog } from '@/components/features/ConfirmDialog';
+import ConnectFlow from '@/components/features/agents/ConnectFlow';
 import {
   getUserWorkspacesWithTokens,
   getUserAgentActivity,
@@ -18,6 +19,10 @@ type WsWithTokens = Awaited<ReturnType<typeof getUserWorkspacesWithTokens>>[numb
 type WorkspaceToken = WsWithTokens['tokens'][number];
 type ActivityRow = Awaited<ReturnType<typeof getUserAgentActivity>>[number];
 type OAuthToken = Awaited<ReturnType<typeof getUserOAuthTokens>>[number];
+
+type UnifiedRow =
+  | { kind: 'pat';   data: WorkspaceToken }
+  | { kind: 'oauth'; data: OAuthToken };
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -59,55 +64,92 @@ function formatTool(tool: string): string {
 // ── TokenRow ──────────────────────────────────────────────────────────────────
 
 function TokenRow({
-  token, t, onRevoked,
+  row, t, onRevoked,
 }: {
-  token: WorkspaceToken;
+  row: UnifiedRow;
   t: ReturnType<typeof useTranslations>;
   onRevoked: () => void;
 }) {
   const [revoking, setRevoking] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
-  const state = expiryState(token.expiresAt);
-  const agent = AGENT_OPTIONS.find(a => a.id === token.agentName);
 
-  const handleRevoke = () => {
-    setShowConfirm(true);
-  };
+  // Normalize fields across the two token kinds
+  const isPat = row.kind === 'pat';
+  const name = isPat
+    ? row.data.name
+    : (row.data.clientName ?? row.data.clientId.slice(0, 12));
+  const scope = row.data.scope;
+  const canRevoke = isPat ? row.data.canRevoke : row.data.canRevoke;
+  const id = row.data.id;
+
+  // For PAT: agent icon from agentName; for OAuth: client icon
+  const agent = isPat ? AGENT_OPTIONS.find(a => a.id === row.data.agentName) : null;
 
   const doRevoke = async () => {
     setShowConfirm(false);
     setRevoking(true);
-    try { await revokeAgentToken(token.id); onRevoked(); }
-    catch { /* silent */ }
+    try {
+      if (isPat) await revokeAgentToken(id);
+      else        await revokeOAuthToken(id);
+      onRevoked();
+    } catch { /* silent */ }
     finally { setRevoking(false); }
   };
 
+  const expiryBadge = isPat
+    ? (() => {
+        const state = expiryState(row.data.expiresAt);
+        return (
+          <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-full border shrink-0 ${expiryCls(state)}`}>
+            {expiryLabel(row.data.expiresAt, t)}
+          </span>
+        );
+      })()
+    : (
+        <span className="flex items-center gap-1 text-[9px] font-semibold px-1.5 py-0.5 rounded-full border shrink-0 text-green-400 bg-green-500/10 border-green-500/20" title="Access token auto-refreshes every hour; session valid for 30 days from initial login">
+          <RefreshCw size={8} />
+          Auto-renewing
+        </span>
+      );
+
+  const subline = isPat
+    ? `${row.data.tokenPrefix}… · ${t('lastUsed')}: ${row.data.lastUsedAt ? relativeTime(row.data.lastUsedAt) : t('never')}`
+    : `OAuth · ${relativeTime(row.data.createdAt)}`;
+
   return (
     <div className="flex items-center gap-2.5 p-3 group">
-      <div className="shrink-0 w-7 h-7 rounded-md bg-neutral-800 border border-neutral-700 flex items-center justify-center">
-        {agent ? <AIMark name={agent.aiMarkName} size={14} /> : <Zap size={12} className="text-amber-400/60" />}
+      <div className={`shrink-0 w-7 h-7 rounded-md flex items-center justify-center border ${
+        isPat ? 'bg-neutral-800 border-neutral-700' : 'bg-blue-500/10 border-blue-500/20'
+      }`}>
+        {isPat
+          ? (agent ? <AIMark name={agent.aiMarkName} size={14} /> : <Zap size={12} className="text-amber-400/60" />)
+          : <Globe size={12} className="text-blue-400" />
+        }
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="text-xs font-semibold text-neutral-200 truncate">{token.name}</span>
+          <span className="text-xs font-semibold text-neutral-200 truncate">{name}</span>
           <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full border shrink-0 ${
-            token.scope === 'write'
+            isPat
+              ? 'text-neutral-400 bg-neutral-800 border-neutral-700'
+              : 'text-blue-400 bg-blue-500/10 border-blue-500/20'
+          }`}>
+            {isPat ? 'PAT' : 'OAuth'}
+          </span>
+          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full border shrink-0 ${
+            scope === 'write'
               ? 'text-amber-400 bg-amber-500/10 border-amber-500/20'
               : 'text-blue-400 bg-blue-500/10 border-blue-500/20'
           }`}>
-            {token.scope === 'write' ? t('tokenScopeWrite') : t('tokenScopeRead')}
+            {scope === 'write' ? t('tokenScopeWrite') : t('tokenScopeRead')}
           </span>
-          <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-full border shrink-0 ${expiryCls(state)}`}>
-            {expiryLabel(token.expiresAt, t)}
-          </span>
+          {expiryBadge}
         </div>
-        <p className="text-[10px] text-neutral-500 mt-0.5 font-mono">
-          {token.tokenPrefix}… · {t('lastUsed')}: {token.lastUsedAt ? relativeTime(token.lastUsedAt) : t('never')}
-        </p>
+        <p className="text-[10px] text-neutral-500 mt-0.5 font-mono">{subline}</p>
       </div>
-      {token.canRevoke && (
+      {canRevoke && (
         <button
-          onClick={handleRevoke}
+          onClick={() => setShowConfirm(true)}
           disabled={revoking}
           className="shrink-0 text-[10px] font-semibold text-red-400 hover:text-red-300 bg-red-500/10 hover:bg-red-500/20 px-2 py-1 rounded border border-red-500/20 transition-colors opacity-0 group-hover:opacity-100 disabled:opacity-50"
         >
@@ -117,7 +159,7 @@ function TokenRow({
       {showConfirm && (
         <ConfirmDialog
           title={t('revokeToken')}
-          description={t('removeConfirm', { name: token.name })}
+          description={t('removeConfirm', { name })}
           confirmLabel={t('revokeToken')}
           cancelLabel={t('cancel')}
           onConfirm={doRevoke}
@@ -131,14 +173,18 @@ function TokenRow({
 // ── WorkspaceSection ──────────────────────────────────────────────────────────
 
 function WorkspaceSection({
-  ws, t, onRevoked, onAddToken,
+  ws, oauthTokens, t, onRevoked,
 }: {
   ws: WsWithTokens;
+  oauthTokens: OAuthToken[];
   t: ReturnType<typeof useTranslations>;
   onRevoked: () => void;
-  onAddToken?: (wsId: string) => void;
 }) {
-  const canAdd = ws.canManage && typeof onAddToken === 'function';
+  // Combine PAT + OAuth into a single ordered list
+  const rows: UnifiedRow[] = [
+    ...ws.tokens.map<UnifiedRow>(t => ({ kind: 'pat', data: t })),
+    ...oauthTokens.map<UnifiedRow>(t => ({ kind: 'oauth', data: t })),
+  ];
 
   return (
     <div className="space-y-1">
@@ -153,35 +199,17 @@ function WorkspaceSection({
         <span className="text-[10px] font-semibold text-neutral-400 uppercase tracking-widest truncate flex-1">
           {ws.name}
         </span>
-        {canAdd && (
-          <button
-            onClick={() => onAddToken!(ws.id)}
-            className="shrink-0 flex items-center gap-1 text-[10px] font-semibold text-blue-400 hover:text-blue-300 transition-colors"
-          >
-            <Plus size={10} />
-            {t('agentsAddToken')}
-          </button>
-        )}
       </div>
 
       {/* Token list or empty state */}
       <div className="divide-y divide-neutral-800 border border-neutral-800 rounded-lg overflow-hidden bg-neutral-900/20">
-        {ws.tokens.length === 0 ? (
-          <div className="flex items-center justify-between px-3 py-2.5">
+        {rows.length === 0 ? (
+          <div className="px-3 py-2.5">
             <span className="text-[11px] text-neutral-600 italic">{t('agentsWorkspaceEmpty')}</span>
-            {canAdd && (
-              <button
-                onClick={() => onAddToken!(ws.id)}
-                className="flex items-center gap-1 text-[10px] font-semibold text-blue-400 hover:text-blue-300 bg-blue-500/10 hover:bg-blue-500/15 border border-blue-500/20 px-2 py-1 rounded transition-colors"
-              >
-                <Plus size={10} />
-                {t('agentsAddToken')}
-              </button>
-            )}
           </div>
         ) : (
-          ws.tokens.map(token => (
-            <TokenRow key={token.id} token={token} t={t} onRevoked={onRevoked} />
+          rows.map(row => (
+            <TokenRow key={`${row.kind}-${row.data.id}`} row={row} t={t} onRevoked={onRevoked} />
           ))
         )}
       </div>
@@ -193,10 +221,9 @@ function WorkspaceSection({
 
 interface Props {
   onClose: () => void;
-  onAddToken?: (workspaceId: string) => void;
 }
 
-export default function AgentsModal({ onClose, onAddToken }: Props) {
+export default function AgentsModal({ onClose }: Props) {
   const t = useTranslations('WorkspaceSettings');
 
   const [workspaces,    setWorkspaces]    = useState<WsWithTokens[]>([]);
@@ -204,23 +231,28 @@ export default function AgentsModal({ onClose, onAddToken }: Props) {
   const [oauthTokens,   setOAuthTokens]   = useState<OAuthToken[]>([]);
   const [loading,       setLoading]       = useState(true);
   const [showActivity,  setShowActivity]  = useState(false);
-  const [showOAuth,     setShowOAuth]     = useState(false);
-  const [revokingOAuth, setRevokingOAuth] = useState<string | null>(null);
+  const [showConnect,   setShowConnect]   = useState(false);
 
-  const totalTokens = workspaces.reduce((s, ws) => s + ws.tokens.length, 0);
+  const mcpUrl = typeof window !== 'undefined' ? `${window.location.origin}/api/mcp` : '/api/mcp';
+
+  const totalPat   = workspaces.reduce((s, ws) => s + ws.tokens.length, 0);
+  const totalTokens = totalPat + oauthTokens.length;
+
+  // Workspaces the user can mint a PAT in — passed to ConnectFlow's Advanced/token section.
+  const mintTargets = workspaces
+    .filter(ws => ws.canManage)
+    .map(ws => ({ id: ws.id, name: ws.name }));
+
+  const oauthByWorkspace = oauthTokens.reduce<Record<string, OAuthToken[]>>((acc, tok) => {
+    (acc[tok.workspaceId] ??= []).push(tok);
+    return acc;
+  }, {});
 
   const load = () => {
     setLoading(true);
     Promise.all([getUserWorkspacesWithTokens(), getUserAgentActivity(), getUserOAuthTokens()])
       .then(([ws, acts, oauth]) => { setWorkspaces(ws); setActivity(acts); setOAuthTokens(oauth); })
       .finally(() => setLoading(false));
-  };
-
-  const handleRevokeOAuth = async (id: string) => {
-    setRevokingOAuth(id);
-    try { await revokeOAuthToken(id); load(); }
-    catch { /* silent */ }
-    finally { setRevokingOAuth(null); }
   };
 
   useEffect(() => { load(); }, []);
@@ -254,16 +286,34 @@ export default function AgentsModal({ onClose, onAddToken }: Props) {
               </span>
             )}
           </div>
-          <button
-            onClick={onClose}
-            className="p-1 text-neutral-500 hover:text-neutral-200 transition-colors rounded hover:bg-neutral-800"
-          >
-            <X size={16} />
-          </button>
+          <div className="flex items-center gap-1.5">
+            {!showConnect && (
+              <button
+                onClick={() => setShowConnect(true)}
+                className="flex items-center gap-1.5 text-[11px] font-semibold text-white bg-blue-500 hover:bg-blue-400 px-3 py-1.5 rounded-md transition-colors"
+              >
+                <Link2 size={12} />
+                {t('connectButton')}
+              </button>
+            )}
+            <button
+              onClick={onClose}
+              className="p-1 text-neutral-500 hover:text-neutral-200 transition-colors rounded hover:bg-neutral-800"
+            >
+              <X size={16} />
+            </button>
+          </div>
         </div>
 
         {/* Body */}
         <div className="overflow-y-auto flex-1 p-6 space-y-5">
+          {showConnect && (
+            <ConnectFlow
+              mcpUrl={mcpUrl}
+              onClose={() => { setShowConnect(false); load(); }}
+              mintTargets={mintTargets}
+            />
+          )}
           {loading ? (
             <div className="py-16 flex justify-center">
               <div className="w-5 h-5 rounded-full border-2 border-neutral-800 border-t-neutral-500 animate-spin" />
@@ -280,76 +330,11 @@ export default function AgentsModal({ onClose, onAddToken }: Props) {
               <WorkspaceSection
                 key={ws.id}
                 ws={ws}
+                oauthTokens={oauthByWorkspace[ws.id] ?? []}
                 t={t}
                 onRevoked={load}
-                onAddToken={onAddToken}
               />
             ))
-          )}
-
-          {/* OAuth Sessions section */}
-          {!loading && oauthTokens.length > 0 && (
-            <div className="border-t border-neutral-800 pt-4">
-              <button
-                onClick={() => setShowOAuth(v => !v)}
-                className="w-full flex items-center justify-between group py-1"
-              >
-                <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-semibold text-neutral-300 group-hover:text-white transition-colors uppercase tracking-widest">
-                    OAuth Sessions
-                  </span>
-                  <span className="text-[9px] font-bold text-blue-400 bg-blue-500/10 border border-blue-500/20 px-1.5 py-0.5 rounded-full">
-                    {oauthTokens.length}
-                  </span>
-                </div>
-                <ChevronDown
-                  size={14}
-                  className={`text-neutral-400 group-hover:text-neutral-200 transition-all ${showOAuth ? 'rotate-180' : ''}`}
-                />
-              </button>
-
-              {showOAuth && (
-                <div className="mt-3 divide-y divide-neutral-800 border border-neutral-800 rounded-lg overflow-hidden bg-neutral-900/20">
-                  {oauthTokens.map(tok => {
-                    const isExpired = tok.expiresAt.getTime() < Date.now();
-                    return (
-                      <div key={tok.id} className="flex items-center gap-2.5 p-3 group">
-                        <div className="shrink-0 w-7 h-7 rounded-md bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
-                          <Globe size={12} className="text-blue-400" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-1.5 flex-wrap">
-                            <span className="text-xs font-semibold text-neutral-200 truncate">
-                              {tok.clientName ?? tok.clientId.slice(0, 8)}
-                            </span>
-                            <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full border shrink-0 ${
-                              tok.scope === 'write'
-                                ? 'text-amber-400 bg-amber-500/10 border-amber-500/20'
-                                : 'text-blue-400 bg-blue-500/10 border-blue-500/20'
-                            }`}>
-                              {tok.scope}
-                            </span>
-                            <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-full border shrink-0 ${
-                              isExpired ? 'text-red-400 bg-red-500/10 border-red-500/20' : 'text-green-400 bg-green-500/10 border-green-500/20'
-                            }`}>
-                              {isExpired ? t('tokenExpired') : expiryLabel(tok.expiresAt, t)}
-                            </span>
-                          </div>
-                          <p className="text-[10px] text-neutral-500 mt-0.5">{tok.workspaceName}</p>
-                        </div>
-                        <button
-                          onClick={() => handleRevokeOAuth(tok.id)}
-                          disabled={revokingOAuth === tok.id}
-                          className="shrink-0 text-[10px] font-semibold text-red-400 hover:text-red-300 bg-red-500/10 hover:bg-red-500/20 px-2 py-1 rounded border border-red-500/20 transition-colors opacity-0 group-hover:opacity-100 disabled:opacity-50"
-                        >
-                          {revokingOAuth === tok.id ? t('revoking') : t('revokeToken')}
-                        </button>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
           )}
 
           {/* Activity section */}
