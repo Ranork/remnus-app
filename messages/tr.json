@@ -538,6 +538,8 @@
     "blockDelete": "Sil",
     "codeShowMore": "Daha fazla göster",
     "codeShowLess": "Daha az göster",
+    "codeCopy": "Kopyala",
+    "codeCopied": "Kopyalandı",
     "deleteChildTitle": "Bu öğe silinsin mi?",
     "deleteChildDesc": "Bu öğenin kalıcı olarak silinecek içeriği var.",
     "deleteChildConfirm": "Sil",

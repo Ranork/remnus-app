@@ -538,6 +538,8 @@
     "blockDelete": "Löschen",
     "codeShowMore": "Mehr anzeigen",
     "codeShowLess": "Weniger anzeigen",
+    "codeCopy": "Kopieren",
+    "codeCopied": "Kopiert",
     "deleteChildTitle": "Dieses Element löschen?",
     "deleteChildDesc": "Dieses Element hat Inhalt, der dauerhaft gelöscht wird.",
     "deleteChildConfirm": "Löschen",

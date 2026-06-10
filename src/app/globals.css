@@ -273,6 +273,7 @@ pre,
 .prose-editor pre {
   background: var(--color-neutral-900);
   border: 1px solid var(--color-neutral-800);
+  border-radius: 8px;
   padding: 1rem;
   overflow-x: auto;
   margin: 0.75rem 0;
@@ -300,36 +301,94 @@ pre,
   max-height: 320px;
   overflow: hidden;
 }
-.prose-editor .code-block-fade {
+
+/* Copy button — top-right of every code block, subtle until hovered */
+.prose-editor .code-block-copy {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.5rem;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  color: var(--color-neutral-400);
+  background: var(--color-neutral-850);
+  border: 1px solid var(--color-neutral-800);
+  border-radius: 7px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s, color 0.15s, background 0.15s, border-color 0.15s;
+}
+.prose-editor .code-block-pre-wrap:hover .code-block-copy,
+.prose-editor .code-block-copy:focus-visible {
+  opacity: 1;
+}
+.prose-editor .code-block-copy:hover {
+  color: var(--color-neutral-100);
+  background: var(--color-neutral-800);
+  border-color: var(--color-neutral-700);
+}
+/* Touch devices have no hover — keep the copy button discoverable. */
+@media (hover: none) {
+  .prose-editor .code-block-copy {
+    opacity: 0.55;
+  }
+}
+
+/* "Show more" — full-width gradient overlay fading the block out, label centered */
+.prose-editor .code-block-expand {
   position: absolute;
   left: 1px;
   right: 1px;
   bottom: 1px;
-  height: 64px;
-  pointer-events: none;
+  height: 96px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 0.65rem;
+  border: none;
+  cursor: pointer;
+  border-radius: 0 0 8px 8px;
   background: linear-gradient(
     to bottom,
     rgba(33, 37, 43, 0) 0%,
-    var(--color-neutral-900) 90%
+    rgba(33, 37, 43, 0.7) 45%,
+    var(--color-neutral-900) 100%
   );
 }
-.prose-editor .code-block-toggle {
+.prose-editor .code-block-expand-label,
+.prose-editor .code-block-collapse {
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
-  margin: 0;
-  padding: 0.25rem 0.6rem;
   font-size: 0.75rem;
-  color: var(--color-neutral-400);
-  background: var(--color-neutral-900);
-  border: 1px solid var(--color-neutral-800);
-  border-top: none;
-  cursor: pointer;
-  transition: color 0.15s, background 0.15s;
-}
-.prose-editor .code-block-toggle:hover {
-  color: var(--color-neutral-100);
+  font-weight: 500;
+  color: var(--color-neutral-300);
+  padding: 0.28rem 0.75rem;
+  border-radius: 9999px;
   background: var(--color-neutral-800);
+  border: 1px solid var(--color-neutral-700);
+  transition: color 0.15s, background 0.15s, border-color 0.15s;
+}
+.prose-editor .code-block-expand:hover .code-block-expand-label {
+  color: var(--color-neutral-100);
+  background: var(--color-neutral-700);
+  border-color: var(--color-neutral-600);
+}
+
+/* "Show less" — centered pill below the expanded block */
+.prose-editor .code-block-collapse {
+  display: flex;
+  width: fit-content;
+  margin: 0.5rem auto 0;
+  cursor: pointer;
+}
+.prose-editor .code-block-collapse:hover {
+  color: var(--color-neutral-100);
+  background: var(--color-neutral-700);
+  border-color: var(--color-neutral-600);
 }
 
 .prose-editor ul {

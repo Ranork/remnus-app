@@ -538,6 +538,8 @@
     "blockDelete": "Delete",
     "codeShowMore": "Show more",
     "codeShowLess": "Show less",
+    "codeCopy": "Copy",
+    "codeCopied": "Copied",
     "deleteChildTitle": "Delete this item?",
     "deleteChildDesc": "This item has content that will be permanently deleted.",
     "deleteChildConfirm": "Delete",

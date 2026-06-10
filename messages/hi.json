@@ -538,6 +538,8 @@
     "blockDelete": "हटाएं",
     "codeShowMore": "और दिखाएँ",
     "codeShowLess": "कम दिखाएँ",
+    "codeCopy": "कॉपी करें",
+    "codeCopied": "कॉपी किया गया",
     "deleteChildTitle": "यह आइटम हटाएं?",
     "deleteChildDesc": "इस आइटम में सामग्री है जो स्थायी रूप से हटा दी जाएगी।",
     "deleteChildConfirm": "हटाएं",
