@@ -536,6 +536,8 @@
     "blockHandleTooltip": "ले जाने के लिए खींचें, क्रियाओं के लिए क्लिक करें",
     "blockDuplicate": "डुप्लिकेट करें",
     "blockDelete": "हटाएं",
+    "codeShowMore": "और दिखाएँ",
+    "codeShowLess": "कम दिखाएँ",
     "deleteChildTitle": "यह आइटम हटाएं?",
     "deleteChildDesc": "इस आइटम में सामग्री है जो स्थायी रूप से हटा दी जाएगी।",
     "deleteChildConfirm": "हटाएं",

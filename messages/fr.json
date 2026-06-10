@@ -536,6 +536,8 @@
     "blockHandleTooltip": "Glisser pour déplacer, cliquer pour les actions",
     "blockDuplicate": "Dupliquer",
     "blockDelete": "Supprimer",
+    "codeShowMore": "Afficher plus",
+    "codeShowLess": "Afficher moins",
     "deleteChildTitle": "Supprimer cet élément ?",
     "deleteChildDesc": "Cet élément a du contenu qui sera définitivement supprimé.",
     "deleteChildConfirm": "Supprimer",

@@ -536,6 +536,8 @@
     "blockHandleTooltip": "Drag to move, click for actions",
     "blockDuplicate": "Duplicate",
     "blockDelete": "Delete",
+    "codeShowMore": "Show more",
+    "codeShowLess": "Show less",
     "deleteChildTitle": "Delete this item?",
     "deleteChildDesc": "This item has content that will be permanently deleted.",
     "deleteChildConfirm": "Delete",

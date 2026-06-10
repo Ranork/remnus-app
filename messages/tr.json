@@ -536,6 +536,8 @@
     "blockHandleTooltip": "Taşımak için sürükle, işlemler için tıkla",
     "blockDuplicate": "Çoğalt",
     "blockDelete": "Sil",
+    "codeShowMore": "Daha fazla göster",
+    "codeShowLess": "Daha az göster",
     "deleteChildTitle": "Bu öğe silinsin mi?",
     "deleteChildDesc": "Bu öğenin kalıcı olarak silinecek içeriği var.",
     "deleteChildConfirm": "Sil",

@@ -1,4 +1,6 @@
 import CodeBlock from '@tiptap/extension-code-block';
+import { ReactNodeViewRenderer } from '@tiptap/react';
+import CodeBlockView from './CodeBlockView';
 
 // Default @tiptap/extension-code-block always serializes with a 3-backtick fence.
 // When the code body itself contains a ``` run, CommonMark requires the opening
@@ -6,6 +8,11 @@ import CodeBlock from '@tiptap/extension-code-block';
 // ``` closes the block early and the markdown round-trip corrupts the content.
 // We override renderMarkdown to size the fence accordingly (4+ backticks when needed).
 export const FencedCodeBlock = CodeBlock.extend({
+  // React node view: collapses long code blocks behind a "Show more" toggle.
+  addNodeView() {
+    return ReactNodeViewRenderer(CodeBlockView);
+  },
+
   // @ts-ignore — renderMarkdown is a @tiptap/markdown extension field, not in Tiptap core types
   renderMarkdown(node: any, h: any) {
     const language = node.attrs?.language || '';

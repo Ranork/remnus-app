@@ -536,6 +536,8 @@
     "blockHandleTooltip": "Ziehen zum Verschieben, klicken für Aktionen",
     "blockDuplicate": "Duplizieren",
     "blockDelete": "Löschen",
+    "codeShowMore": "Mehr anzeigen",
+    "codeShowLess": "Weniger anzeigen",
     "deleteChildTitle": "Dieses Element löschen?",
     "deleteChildDesc": "Dieses Element hat Inhalt, der dauerhaft gelöscht wird.",
     "deleteChildConfirm": "Löschen",
