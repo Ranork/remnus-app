@@ -7,6 +7,7 @@ export const workspaces = sqliteTable('workspaces', {
   icon:      text('icon'),
   iconColor: text('icon_color'),
   sortOrder: integer('sort_order').notNull().default(0),
+  hidden:    integer('hidden', { mode: 'boolean' }).notNull().default(false),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`CURRENT_TIMESTAMP`),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().default(sql`CURRENT_TIMESTAMP`),
 });

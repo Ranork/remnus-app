@@ -123,7 +123,7 @@ We use the **JSON Column Pattern** (not EAV) for dynamic user-defined properties
 
 | Table | Purpose |
 | ----- | ------- |
-| `workspaces` | Workspace list — `icon` (emoji/lucide/https URL), `icon_color` |
+| `workspaces` | Workspace list — `icon` (emoji/lucide/https URL), `icon_color`, `hidden` (boolean, default false — hides the workspace from the sidebar behind a "Show hidden" toggle; migration `0025`) |
 | `workspace_items` | Sidebar items (pages + databases), recursive `parent_id` nesting |
 | `standalone_pages` | Markdown content for page-type items (1:1 with `workspace_items`) |
 | `databases` | `schema` JSON (columns) + `views` JSON (named view configs) |
@@ -170,6 +170,7 @@ We use the **JSON Column Pattern** (not EAV) for dynamic user-defined properties
 - `0020_shared_pages`, `0021_shared_pages_width`, `0022_shared_pages_sitemap` — also manually applied. Scripts: `src/db/apply-002{0,1,2}-*.ts`. Apply to both local and Turso.
 - `0023_oauth` — OAuth 2.1 tables (`oauth_clients`, `oauth_auth_codes`, `oauth_access_tokens`). Script: `src/db/apply-0023-oauth.ts`. Applied manually (same idempotent pattern).
 - `0024_oauth_agent_name` — adds nullable `agent_name` to `oauth_access_tokens` (user-set canonical agent id for brand-icon display). Idempotent (PRAGMA column check). Script: `src/db/apply-0024-oauth-agent-name.ts`. Applied to both local + Turso.
+- `0025_workspace_hidden` — adds `hidden` (boolean, NOT NULL default 0) to `workspaces` (hide a workspace from the sidebar behind a "Show hidden" toggle; toggled via `setWorkspaceHidden`). Idempotent (PRAGMA column check). Script: `src/db/apply-0025-workspace-hidden.ts`. Applied to both local + Turso.
 - **Two databases / env precedence gotcha:** `.env` has the **Turso** `DATABASE_URL`; `.env.local` overrides it with `file:local.db`. Next.js (dev) uses `.env.local` → **local.db**, but the apply scripts call `dotenv.config()` which reads only `.env` → **Turso**. So a plain `npx tsx src/db/apply-00xx-*.ts` migrates Turso only; for local dev also run it with an explicit override: `DATABASE_URL="file:local.db" npx tsx src/db/apply-00xx-*.ts`. Apply every manual migration to **both**.
 - **libsql DDL caveat:** Drizzle's `migrate()` runs SQL in a `batch()` call. libsql's `batch()` silently fails DDL statements (ALTER TABLE, CREATE TABLE, etc.) — the call returns "complete" but changes are not applied. Use `client.execute()` directly for DDL, or manually apply + insert into `__drizzle_migrations` via a helper script. Migration 0016 was applied this way.
 - Apply with: `npx tsx src/db/migrate.ts`
@@ -226,7 +227,7 @@ We use the **JSON Column Pattern** (not EAV) for dynamic user-defined properties
 - `api/mcp/tools/write.ts` — 7 write tools: `create_page`, `update_page` (merges properties, never overwrites), `bulk_update`, `delete_page` (requires `confirm: true`), `move_item` (`newParentId: null` → root), `create_database` (title column auto-prepended), `update_database_schema` (removing requires `confirm: true`; title column protected).
 
 **Server Actions (`src/lib/actions/`)**
-- `workspace.ts` — Workspace + sidebar item CRUD (all auth-gated via `assertWorkspaceAccess`). Includes `updateWorkspaceIcon(id, icon, iconColor)`.
+- `workspace.ts` — Workspace + sidebar item CRUD (all auth-gated via `assertWorkspaceAccess`). Includes `updateWorkspaceIcon(id, icon, iconColor)` and `setWorkspaceHidden(id, hidden)` (sidebar hide/show).
 - `database.ts` — Database schema + view mutations (`assertDatabaseAccess`). `updateDatabaseSchema` automatically propagates renamed select/multi-select options to all workspace pages to prevent data loss.
 - `page.ts` — Database row CRUD (`assertDatabaseAccess`).
 - `auth.ts` — User auth, registration, role management, workspace membership, admin user ops.

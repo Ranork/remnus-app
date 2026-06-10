@@ -23,6 +23,8 @@ import {
   Monitor,
   Bot,
   Globe,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import PageIcon from './PageIcon';
 import {
@@ -30,6 +32,7 @@ import {
   switchWorkspace,
   updateWorkspaceItemIcon,
   updateWorkspaceIcon,
+  setWorkspaceHidden,
   updateWorkspaceItemTitle,
   deleteWorkspaceItem,
   duplicateWorkspaceItem,
@@ -61,6 +64,7 @@ type WorkspaceType = {
   name: string;
   icon?: string | null;
   iconColor?: string | null;
+  hidden?: boolean | null;
 };
 
 type CurrentUser = {
@@ -160,6 +164,12 @@ export default function WorkspaceSidebar({
     updateWorkspaceIcon(workspaceId, newIcon, newColor);
   };
 
+  const handleToggleWorkspaceHidden = (workspaceId: string, hidden: boolean) => {
+    // Optimistic update — server revalidates in the background
+    setLocalWorkspaces(prev => prev.map(w => w.id === workspaceId ? { ...w, hidden } : w));
+    setWorkspaceHidden(workspaceId, hidden);
+  };
+
   const [isCreatingWorkspace, setIsCreatingWorkspace] = useState(false);
   const [newWorkspaceName, setNewWorkspaceName] = useState('');
   const [settingsModalWorkspace, setSettingsModalWorkspace] = useState<{ id: string; name: string; icon?: string | null; iconColor?: string | null } | null>(null);
@@ -215,6 +225,21 @@ export default function WorkspaceSidebar({
       localStorage.setItem('remnus_expanded_items', JSON.stringify(expandedItems));
     }
   }, [expandedItems]);
+
+  // Whether hidden workspaces are currently revealed (persisted in localStorage)
+  const [showHidden, setShowHidden] = useState(false);
+  useEffect(() => {
+    try {
+      setShowHidden(localStorage.getItem('remnus_show_hidden_workspaces') === '1');
+    } catch { /* ignore */ }
+  }, []);
+  const toggleShowHidden = () => {
+    setShowHidden(prev => {
+      const next = !prev;
+      try { localStorage.setItem('remnus_show_hidden_workspaces', next ? '1' : '0'); } catch { /* ignore */ }
+      return next;
+    });
+  };
 
   // Local state for optimistic UI during drag and drop
   const [localWorkspaces, setLocalWorkspaces] = useState<WorkspaceType[]>(workspaces);
@@ -763,7 +788,9 @@ export default function WorkspaceSidebar({
 
       {/* Tree view list */}
       <div className="flex-1 overflow-y-auto px-2 py-4 space-y-4 group/wslist">
-        {localWorkspaces.map((w) => {
+        {localWorkspaces
+          .filter((w) => showHidden || !w.hidden || w.id === activeWorkspaceIdFromPath)
+          .map((w) => {
           const isExpanded = expandedWorkspaces[w.id] !== false;
           const workspaceChildren = itemsByWorkspace[w.id] || [];
           const isCurrentActive = w.id === activeWorkspaceIdFromPath;
@@ -863,6 +890,13 @@ export default function WorkspaceSidebar({
                     title={t('newItem')}
                   >
                     <Plus size={12} />
+                  </button>
+                  <button
+                    onClick={() => handleToggleWorkspaceHidden(w.id, !w.hidden)}
+                    className="p-1 rounded hover:bg-neutral-700 text-neutral-400 hover:text-white"
+                    title={w.hidden ? t('unhideWorkspace') : t('hideWorkspace')}
+                  >
+                    {w.hidden ? <EyeOff size={12} /> : <Eye size={12} />}
                   </button>
                   <button
                     onClick={() => {
@@ -1063,6 +1097,21 @@ export default function WorkspaceSidebar({
             </div>
           );
         })}
+
+        {/* Show / hide hidden workspaces toggle */}
+        {localWorkspaces.some((w) => w.hidden) && (
+          <button
+            onClick={toggleShowHidden}
+            className="flex items-center gap-1.5 px-2 py-1 text-[11px] text-neutral-500 hover:text-neutral-300 transition-colors"
+          >
+            {showHidden ? <EyeOff size={12} /> : <Eye size={12} />}
+            <span>
+              {showHidden
+                ? t('hideHiddenWorkspaces')
+                : t('showHiddenWorkspaces', { count: localWorkspaces.filter((w) => w.hidden).length })}
+            </span>
+          </button>
+        )}
 
         {/* Add Workspace Action Row */}
         <div className="pt-2">

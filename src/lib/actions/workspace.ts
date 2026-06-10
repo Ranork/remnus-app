@@ -192,6 +192,17 @@ export async function updateWorkspaceIcon(id: string, icon: string | null, iconC
   publish({ scope: 'sidebar', workspaceId: id, actorId: userId });
 }
 
+export async function setWorkspaceHidden(id: string, hidden: boolean) {
+  const userId = await assertWorkspaceAccess(id);
+
+  await db.update(workspaces)
+    .set({ hidden, updatedAt: new Date() })
+    .where(eq(workspaces.id, id));
+
+  revalidatePath('/', 'layout');
+  publish({ scope: 'sidebar', workspaceId: id, actorId: userId });
+}
+
 export async function switchWorkspace(workspaceId: string) {
   await assertWorkspaceAccess(workspaceId);
   const cookieStore = await cookies();
