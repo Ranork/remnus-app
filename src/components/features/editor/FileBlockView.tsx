@@ -34,6 +34,15 @@ export default function FileBlockView({
   const { url, name, size } = node.attrs as { url: string | null; name: string; size: number };
   // Only ever put an http(s) URL into the download href (attributes may be tampered/synced).
   const safeUrl = /^https?:\/\//i.test(url || '') ? (url as string) : '';
+  // The HTML `download` attribute is ignored for cross-origin URLs (Cloudinary).
+  // Use Cloudinary's fl_attachment flag to force Content-Disposition: attachment
+  // with the original filename so the browser saves it with the correct name + extension.
+  function toDownloadUrl(rawUrl: string, filename: string): string {
+    if (!rawUrl || !filename || !rawUrl.includes('res.cloudinary.com')) return rawUrl;
+    const safeName = filename.replace(/\s+/g, '_').replace(/[^\w.\-]/g, '_');
+    return rawUrl.replace(/\/upload\//, `/upload/fl_attachment:${safeName}/`);
+  }
+  const downloadUrl = safeUrl ? toDownloadUrl(safeUrl, name) : '';
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -75,10 +84,9 @@ export default function FileBlockView({
               {size > 0 && <div className="text-xs text-neutral-500">{formatSize(size)}</div>}
             </div>
             <a
-              href={safeUrl || '#'}
+              href={downloadUrl || safeUrl || '#'}
               target="_blank"
               rel="noopener noreferrer"
-              download={name || undefined}
               className="shrink-0 p-1.5 rounded text-neutral-400 hover:text-neutral-100 hover:bg-neutral-800 transition-colors"
               title={t('fileDownload')}
             >
