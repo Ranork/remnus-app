@@ -92,13 +92,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           devLog('[client-token] accept');
           return { id: user.id, name: user.name, email: user.email, image: user.image, role: user.role };
         } catch (err) {
-          // Dev-only: full error shape — message helps distinguish "no such table",
-          // "DATABASE_URL not set", schema mismatch, etc. Stays behind the dev gate.
+          // Dev-only: log just enough to distinguish "no such table" from
+          // connection errors / schema mismatch. NEVER the raw DATABASE_URL
+          // (it can carry an authToken when pointing at Turso) — only its
+          // scheme. libsql error messages don't include parameter values, so
+          // `message` is safe to keep behind the dev gate.
+          const dbUrl = process.env.DATABASE_URL ?? '';
+          const dbScheme = dbUrl ? dbUrl.split(':')[0] + ':' : '(unset)';
           devLog('[client-token] reject: db lookup threw', {
             name: (err as Error)?.name,
             message: (err as Error)?.message,
             sub,
-            DATABASE_URL: process.env.DATABASE_URL,
+            dbScheme,
           });
           return null;
         }
