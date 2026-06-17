@@ -1134,7 +1134,10 @@
     "readyTitle": "Güncelleme Yüklendi",
     "readyDesc": "Güncellemeyi uygulamak için uygulamayı yeniden başlatın.",
     "installButton": "İndir ve Kur",
-    "restartNote": "Uygulamayı kapatıp tekrar açarak güncelleyin."
+    "restartNote": "Uygulamayı kapatıp tekrar açarak güncelleyin.",
+    "errorTitle": "Güncelleme Başarısız",
+    "errorNoUpdate": "İndirme başlatılamadı. Lütfen tekrar deneyin.",
+    "retryButton": "Tekrar Dene"
   },
   "Sharing": {
     "revokeShare": "Kaldır",

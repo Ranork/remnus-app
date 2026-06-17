@@ -1134,7 +1134,10 @@
     "readyTitle": "Mise à jour installée",
     "readyDesc": "Redémarrez l'application pour appliquer la mise à jour.",
     "installButton": "Télécharger et installer",
-    "restartNote": "Fermez et rouvrez Remnus pour appliquer."
+    "restartNote": "Fermez et rouvrez Remnus pour appliquer.",
+    "errorTitle": "Échec de la mise à jour",
+    "errorNoUpdate": "Impossible de démarrer le téléchargement. Veuillez réessayer.",
+    "retryButton": "Réessayer"
   },
   "Sharing": {
     "revokeShare": "Révoquer",

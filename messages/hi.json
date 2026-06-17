@@ -1134,7 +1134,10 @@
     "readyTitle": "अपडेट इंस्टॉल हो गया",
     "readyDesc": "अपडेट लागू करने के लिए ऐप को पुनः प्रारंभ करें।",
     "installButton": "डाउनलोड और इंस्टॉल करें",
-    "restartNote": "Remnus को बंद करके दोबारा खोलें।"
+    "restartNote": "Remnus को बंद करके दोबारा खोलें।",
+    "errorTitle": "अपडेट विफल",
+    "errorNoUpdate": "डाउनलोड शुरू नहीं हो सका। कृपया पुनः प्रयास करें।",
+    "retryButton": "पुनः प्रयास करें"
   },
   "Sharing": {
     "revokeShare": "हटाएं",

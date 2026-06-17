@@ -1134,7 +1134,10 @@
     "readyTitle": "Update Installed",
     "readyDesc": "Restart the app to apply the update.",
     "installButton": "Download & Install",
-    "restartNote": "Close and reopen Remnus to apply."
+    "restartNote": "Close and reopen Remnus to apply.",
+    "errorTitle": "Update Failed",
+    "errorNoUpdate": "Could not start the download. Please try again.",
+    "retryButton": "Try Again"
   },
   "Sharing": {
     "revokeShare": "Revoke",

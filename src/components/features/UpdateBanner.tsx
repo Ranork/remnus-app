@@ -8,7 +8,8 @@ type UpdatePhase =
   | { phase: 'idle' }
   | { phase: 'available'; version: string }
   | { phase: 'downloading'; progress: number }
-  | { phase: 'ready' };
+  | { phase: 'ready' }
+  | { phase: 'error'; message: string; version: string };
 
 declare global {
   interface Window {
@@ -38,10 +39,17 @@ export default function UpdateBanner() {
   }, []);
 
   async function handleInstall() {
+    const version = state.phase === 'available' ? state.version : '';
     try {
       const { check } = await import('@tauri-apps/plugin-updater');
       const update = await check();
-      if (!update) return;
+      if (!update) {
+        // The native check at startup found an update but this re-check did
+        // not — surface it instead of silently doing nothing.
+        console.error('[Remnus] Update re-check returned no update.');
+        setState({ phase: 'error', message: t('errorNoUpdate'), version });
+        return;
+      }
 
       setState({ phase: 'downloading', progress: 0 });
 
@@ -61,7 +69,8 @@ export default function UpdateBanner() {
       });
     } catch (err) {
       console.error('[Remnus] Update install failed:', err);
-      setState({ phase: 'idle' });
+      const message = err instanceof Error ? err.message : String(err);
+      setState({ phase: 'error', message, version });
     }
   }
 
@@ -81,7 +90,11 @@ export default function UpdateBanner() {
       <div className="flex items-start justify-between gap-2">
         <div className="flex flex-col gap-0.5">
           <span className="text-sm font-semibold text-neutral-100">
-            {state.phase === 'ready' ? t('readyTitle') : t('availableTitle')}
+            {state.phase === 'ready'
+              ? t('readyTitle')
+              : state.phase === 'error'
+                ? t('errorTitle')
+                : t('availableTitle')}
           </span>
           {state.phase === 'available' && (
             <span className="text-xs text-neutral-400">
@@ -95,6 +108,9 @@ export default function UpdateBanner() {
           )}
           {state.phase === 'ready' && (
             <span className="text-xs text-neutral-400">{t('readyDesc')}</span>
+          )}
+          {state.phase === 'error' && (
+            <span className="text-xs text-red-400 wrap-break-word">{state.message}</span>
           )}
         </div>
         {state.phase !== 'downloading' && (
@@ -123,6 +139,16 @@ export default function UpdateBanner() {
         >
           <Download size={13} />
           {t('installButton')}
+        </button>
+      )}
+
+      {state.phase === 'error' && (
+        <button
+          onClick={handleInstall}
+          className="flex items-center justify-center gap-2 px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white text-xs font-medium transition-colors"
+        >
+          <RefreshCw size={13} />
+          {t('retryButton')}
         </button>
       )}
 
