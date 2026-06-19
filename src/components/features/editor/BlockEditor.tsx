@@ -39,7 +39,18 @@ function safeColor(value: unknown): string | null {
   return typeof value === 'string' && SAFE_COLOR_RE.test(value.trim()) ? value.trim() : null;
 }
 
+// Priority < 100 keeps these color marks INNERMOST during markdown
+// serialization (below bold/italic/strike/code at 100). Otherwise the color
+// `<span>`/`<mark>` wraps the formatting marks — e.g. `<span style="color:…">
+// ~~text~~</span>` — and marked parses the whole span as one inline-HTML blob,
+// so the `~~`/`**`/`*` inside it never re-tokenize and show up literally on
+// reload. Innermost color emits `~~<span style="color:…">text</span>~~`
+// instead, where the delimiters sit outside the HTML and round-trip cleanly.
+// (TextStyle defaults to priority 101, which caused exactly this bug.)
+const COLOR_MARK_PRIORITY = 99;
+
 const ColorTextStyle = TextStyle.extend({
+  priority: COLOR_MARK_PRIORITY,
   renderMarkdown(node: any, helpers: any) {
     const color = safeColor(node?.attrs?.color);
     const inner = helpers.renderChildren();
@@ -48,6 +59,7 @@ const ColorTextStyle = TextStyle.extend({
 });
 
 const ColorHighlight = Highlight.extend({
+  priority: COLOR_MARK_PRIORITY,
   renderMarkdown(node: any, helpers: any) {
     const color = safeColor(node?.attrs?.color);
     const inner = helpers.renderChildren();
@@ -515,6 +527,43 @@ const BlockEditor = forwardRef<BlockEditorHandle, Props>(function BlockEditor({
 
   useEffect(() => {
     editorRef.current = editor;
+  }, [editor]);
+
+  // Heal a schema-invalid initial document. @tiptap/markdown can parse certain
+  // HTML-bearing / Notion-imported markdown into structurally invalid nodes — a
+  // stray top-level text node, a paragraph nested inside a paragraph, or an empty
+  // listItem. ProseMirror builds the doc anyway (fromJSON doesn't validate), then
+  // the editor hard-crashes on the very next transaction: TrailingNode's
+  // appendTransaction calls contentMatchAt on the invalid doc and throws
+  // "Called contentMatchAt on a node with invalid content", which made every
+  // interaction (even starting a marquee selection) blow up.
+  //
+  // Fix: round-trip the doc through HTML. ProseMirror's DOMParser enforces the
+  // schema (auto-wraps stray inline content, drops illegal nesting), producing a
+  // valid doc. Only runs when actually invalid (no-op otherwise) and does NOT
+  // emit an update — it heals in memory; a later real edit re-saves clean markdown.
+  useEffect(() => {
+    if (!editor) return;
+    const doc = editor.state.doc;
+    let invalid = !doc.type.validContent(doc.content);
+    if (!invalid) {
+      doc.descendants((node) => {
+        if (invalid) return false;
+        if (!node.type.validContent(node.content)) { invalid = true; return false; }
+        return true;
+      });
+    }
+    if (!invalid) return;
+    try {
+      editor.commands.setContent(editor.getHTML(), { contentType: 'html', emitUpdate: false });
+      if (process.env.NODE_ENV !== 'production') {
+         
+        console.warn('[BlockEditor] normalized a schema-invalid parsed document via HTML round-trip');
+      }
+    } catch (e) {
+       
+      console.error('[BlockEditor] failed to normalize invalid document:', e);
+    }
   }, [editor]);
 
   // Sync child block title/icon/iconColor from initialSubItems.

@@ -1,10 +1,12 @@
 'use client';
 
 import React, { useState, useMemo, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { createPortal } from 'react-dom';
 import { getOptionColorByValue, getCardBorderDots, getCardBgColor, formatDateValue } from '@/lib/types/properties';
-import { ChevronLeft, ChevronRight, GripVertical, Trash2, Calendar as CalendarIcon, Clock, Plus, Copy } from 'lucide-react';
+import { ChevronLeft, ChevronRight, GripVertical, Trash2, Calendar as CalendarIcon, Clock, Plus, Copy, ArrowUpRight, Maximize2, Link2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { useContextMenu, type MenuItem } from './ContextMenu';
 import PageIcon from './PageIcon';
 import IconPicker from './IconPicker';
 import AgentEditBadge from './AgentEditBadge';
@@ -127,6 +129,7 @@ export default function CalendarView({
 }: CalendarViewProps) {
   const t = useTranslations('Database');
   const tPage = useTranslations('Page');
+  const router = useRouter();
   const [currentDate, setCurrentDate] = useState(() => new Date());
   const [activeIconPickerPageId, setActiveIconPickerPageId] = useState<string | null>(null);
   // Anchor for the open icon picker — set from the button's click handler (an
@@ -146,6 +149,17 @@ export default function CalendarView({
   const [activeMenuCardId, setActiveMenuCardId] = useState<string | null>(null);
   const [menuCoords, setMenuCoords] = useState<{ top: number; left: number } | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
+  // Notion-style right-click menu for calendar cards
+  const cardMenu = useContextMenu();
+  const buildCardMenu = (pageId: string): MenuItem[] => [
+    { id: 'open', label: t('open'), icon: ArrowUpRight, onSelect: () => onCardClick(pageId) },
+    { id: 'open-full', label: t('openInFullPage'), icon: Maximize2, onSelect: () => router.push(`/db/${database.id}/${pageId}`) },
+    { id: 'copy-link', label: t('copyLink'), icon: Link2, onSelect: () => { navigator.clipboard?.writeText(`${window.location.origin}/db/${database.id}/${pageId}`); } },
+    { kind: 'separator' },
+    { id: 'duplicate', label: t('duplicatePage'), icon: Copy, onSelect: () => onDuplicatePage(pageId) },
+    { id: 'delete', label: tPage('deletePage'), icon: Trash2, danger: true, onSelect: () => setConfirmDeleteId(pageId) },
+  ];
 
   const schema = database.schema as any[];
   const dateProperty = schema.find((c) => c.id === dateCol);
@@ -404,6 +418,7 @@ export default function CalendarView({
                     <div
                       key={page.id}
                       onClick={() => onCardClick(page.id)}
+                      onContextMenu={(e) => cardMenu.open(e, buildCardMenu(page.id))}
                       draggable={isCardDragReady}
                       onDragStart={(e) => {
                         e.stopPropagation();
@@ -628,6 +643,7 @@ export default function CalendarView({
           onCancel={() => setConfirmDeleteId(null)}
         />
       )}
+      {cardMenu.node}
     </div>
   );
 }

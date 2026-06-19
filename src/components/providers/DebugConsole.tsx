@@ -45,19 +45,30 @@ function readDebugFlag(): boolean {
 function reportError(error: unknown, source: string) {
   // Never throw from inside an error handler.
   try {
-    void import('posthog-js').then(({ default: posthog }) => {
-      // posthog is only initialized under the locale layout; guard for safety.
-      if (!posthog.__loaded) return;
-      const err = error instanceof Error ? error : new Error(String(error));
-      const capture = (posthog as unknown as {
-        captureException?: (e: Error, props?: Record<string, unknown>) => void;
-      }).captureException;
-      if (capture) {
-        capture(err, { source });
-      } else {
-        posthog.capture('client_error', { message: err.message, stack: err.stack, source });
-      }
-    });
+    void import('posthog-js')
+      .then(({ default: posthog }) => {
+        // posthog is only initialized under the locale layout; guard for safety.
+        if (!posthog.__loaded) return;
+        const err = error instanceof Error ? error : new Error(String(error));
+        // Call as a method (NOT a detached `const capture = posthog.captureException`)
+        // — captureException reads `this.exceptions` internally, so detaching it
+        // makes the call throw `this is undefined`. That throw lands in this
+        // promise, becomes an unhandledrejection, and re-enters reportError →
+        // infinite loop. Keep the binding and `.catch` the promise so a failure
+        // here can never feed itself back through the error listeners.
+        const ph = posthog as unknown as {
+          captureException?: (e: Error, props?: Record<string, unknown>) => void;
+          capture: (event: string, props?: Record<string, unknown>) => void;
+        };
+        if (typeof ph.captureException === 'function') {
+          ph.captureException(err, { source });
+        } else {
+          posthog.capture('client_error', { message: err.message, stack: err.stack, source });
+        }
+      })
+      .catch(() => {
+        /* swallow — must never re-throw from the error path */
+      });
   } catch {
     /* swallow */
   }

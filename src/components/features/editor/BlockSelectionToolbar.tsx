@@ -1,9 +1,8 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import type { Editor } from '@tiptap/core';
-import { DOMSerializer, Fragment } from '@tiptap/pm/model';
 import {
-  Trash2, Copy, ClipboardCopy, Bold, Italic, Strikethrough, Code, ChevronDown,
+  Trash2, Copy, CopyPlus, Bold, Italic, Strikethrough, Code, ChevronDown,
   Pilcrow, Heading1, Heading2, Heading3, List, ListOrdered, Quote, Code2, X,
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
@@ -11,6 +10,8 @@ import { useZoom } from '@/components/providers/ZoomProvider';
 import {
   blockSelectionKey,
   getBlockSelection,
+  serializeBlockSelectionMarkdown,
+  deleteBlockSelection,
   type BlockSelectionState,
 } from './BlockSelectionExtension';
 
@@ -197,73 +198,41 @@ export default function BlockSelectionToolbar({ editor }: Props) {
   // ── Actions ──────────────────────────────────────────────────────────────────
 
   const deleteSelected = () => {
-    const s = getBlockSelection(editor.state);
-    if (!s.selected.length) return;
-    const sorted = [...s.selected].sort((a, b) => b - a);
-    let tr = editor.state.tr;
-    for (const pos of sorted) {
-      const mappedPos = tr.mapping.map(pos);
-      const node = tr.doc.nodeAt(mappedPos);
-      if (!node) continue;
-      tr = tr.delete(mappedPos, mappedPos + node.nodeSize);
-    }
-    tr.setMeta(blockSelectionKey, EMPTY);
-    editor.view.dispatch(tr);
-    editor.view.focus();
+    if (deleteBlockSelection(editor.view)) editor.view.focus();
   };
 
   const duplicateSelected = () => {
     const s = getBlockSelection(editor.state);
     if (!s.selected.length) return;
-    const sorted = [...s.selected].sort((a, b) => a - b);
-    const lastPos = sorted[sorted.length - 1];
-    const lastNode = editor.state.doc.nodeAt(lastPos);
-    if (!lastNode) return;
-
-    const insertAt = lastPos + lastNode.nodeSize;
-    const nodes = sorted
-      .map(pos => editor.state.doc.nodeAt(pos))
-      .filter((n): n is NonNullable<typeof n> => n != null);
-
+    // High → low so inserting after one node doesn't shift the positions we
+    // haven't processed yet. Each copy lands immediately after its own original,
+    // so it always stays in a valid parent (a duplicated listItem remains inside
+    // its list; a paragraph stays at doc level). Inserting every node after the
+    // LAST selected node instead could drop e.g. a paragraph into a bulletList —
+    // invalid content that crashes the next normalization transaction.
+    const sorted = [...s.selected].sort((a, b) => b - a);
     let tr = editor.state.tr;
-    let offset = 0;
-    for (const node of nodes) {
-      tr = tr.insert(insertAt + offset, node);
-      offset += node.nodeSize;
+    for (const pos of sorted) {
+      const node = editor.state.doc.nodeAt(pos);
+      if (!node) continue;
+      tr = tr.insert(pos + node.nodeSize, node);
     }
     tr.setMeta(blockSelectionKey, EMPTY);
     editor.view.dispatch(tr);
   };
 
   const copySelected = async () => {
-    const s = getBlockSelection(editor.state);
-    if (!s.selected.length) return;
-    const sorted = [...s.selected].sort((a, b) => a - b);
-    const nodes = sorted
-      .map(pos => editor.state.doc.nodeAt(pos))
-      .filter((n): n is NonNullable<typeof n> => n != null);
-    if (!nodes.length) return;
-
+    // Same markdown as Ctrl/Cmd+C (shared serializer). The toolbar button isn't a
+    // native copy event, so it writes via the async clipboard API.
+    const markdown = serializeBlockSelectionMarkdown(editor);
+    if (markdown == null) return;
     try {
-      const fragment = Fragment.fromArray(nodes);
-      const domFragment = DOMSerializer.fromSchema(editor.schema).serializeFragment(fragment);
-      const div = document.createElement('div');
-      div.appendChild(domFragment);
-      const html = div.innerHTML;
-      const text = nodes.map(n => n.textContent).join('\n\n');
-
-      if (navigator.clipboard && typeof ClipboardItem !== 'undefined') {
-        await navigator.clipboard.write([
-          new ClipboardItem({
-            'text/html': new Blob([html], { type: 'text/html' }),
-            'text/plain': new Blob([text], { type: 'text/plain' }),
-          }),
-        ]);
-      } else {
-        await navigator.clipboard.writeText(text);
-      }
+      await navigator.clipboard.writeText(markdown);
     } catch {
       /* best-effort */
+    } finally {
+      // Close the block selection after copying (mirrors duplicate/delete).
+      editor.view.dispatch(editor.state.tr.setMeta(blockSelectionKey, EMPTY));
     }
   };
 
@@ -332,10 +301,10 @@ export default function BlockSelectionToolbar({ editor }: Props) {
 
             {/* Block actions */}
             <button onMouseDown={(e) => { e.preventDefault(); copySelected(); }} className={btnCls()} title={t('blockCopy')}>
-              <ClipboardCopy size={13} />
+              <Copy size={13} />
             </button>
             <button onMouseDown={(e) => { e.preventDefault(); duplicateSelected(); }} className={btnCls()} title={t('blockDuplicate')}>
-              <Copy size={13} />
+              <CopyPlus size={13} />
             </button>
             <button
               onMouseDown={(e) => { e.preventDefault(); deleteSelected(); }}

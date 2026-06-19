@@ -1,12 +1,14 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { createPortal } from 'react-dom';
-import { GripVertical, Settings, Trash2, Plus, Copy, CheckSquare, Square, ExternalLink } from 'lucide-react';
+import { GripVertical, Settings, Trash2, Plus, Copy, CheckSquare, Square, ExternalLink, ArrowUpRight, Maximize2, Link2 } from 'lucide-react';
 import { normalizeOption, getOptionColorByValue, getCardBorderDots, getCardBgColor, formatDateValue } from '@/lib/types/properties';
 import { useTranslations } from 'next-intl';
 import type { SelectOption } from '@/lib/types/properties';
 import InlineCellEditor from './InlineCellEditor';
+import { useContextMenu, type MenuItem } from './ContextMenu';
 import { StatusChip, UserChip, UserTags } from './PropertyTags';
 import PageIcon from './PageIcon';
 import IconPicker from './IconPicker';
@@ -73,7 +75,19 @@ export default function KanbanBoard({
 }) {
   const t = useTranslations('Database');
   const tPage = useTranslations('Page');
+  const router = useRouter();
   const schema = database.schema as any[];
+
+  // Notion-style right-click menu for cards
+  const cardMenu = useContextMenu();
+  const buildCardMenu = (pageId: string): MenuItem[] => [
+    { id: 'open', label: t('open'), icon: ArrowUpRight, onSelect: () => onCardClick(pageId) },
+    { id: 'open-full', label: t('openInFullPage'), icon: Maximize2, onSelect: () => router.push(`/db/${database.id}/${pageId}`) },
+    { id: 'copy-link', label: t('copyLink'), icon: Link2, onSelect: () => { navigator.clipboard?.writeText(`${window.location.origin}/db/${database.id}/${pageId}`); } },
+    { kind: 'separator' },
+    { id: 'duplicate', label: t('duplicatePage'), icon: Copy, onSelect: () => onDuplicatePage(pageId) },
+    { id: 'delete', label: tPage('deletePage'), icon: Trash2, danger: true, onSelect: () => setConfirmDeleteId(pageId) },
+  ];
 
   const [editingCell, setEditingCell] = useState<{ pageId: string; colId: string } | null>(null);
   const [activeIconPickerPageId, setActiveIconPickerPageId] = useState<string | null>(null);
@@ -313,6 +327,7 @@ export default function KanbanBoard({
                   <div
                     key={page.id}
                     onClick={() => onCardClick(page.id)}
+                    onContextMenu={(e) => cardMenu.open(e, buildCardMenu(page.id))}
                     draggable={isCardDragReady}
                     onDragStart={(e) => {
                       e.stopPropagation();
@@ -573,6 +588,7 @@ export default function KanbanBoard({
           onCancel={() => setConfirmDeleteId(null)}
         />
       )}
+      {cardMenu.node}
     </div>
   );
 }

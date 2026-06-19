@@ -1,9 +1,15 @@
 'use client';
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import type { Editor } from '@tiptap/core';
-import { NodeSelection } from '@tiptap/pm/state';
+import { NodeSelection, TextSelection } from '@tiptap/pm/state';
 import {
-  GripVertical, MoreVertical, ArrowUp, ArrowDown, ChevronsDownUp, Trash2, Copy, Check, ChevronRight,
+  getBlockSelection,
+  serializeBlockSelectionMarkdown,
+  deleteBlockSelection,
+  blockSelectionKey,
+} from './BlockSelectionExtension';
+import {
+  GripVertical, MoreVertical, ArrowUp, ArrowDown, ChevronsDownUp, Trash2, Copy, CopyPlus, Scissors, Check, ChevronRight,
   Pilcrow, Heading1, Heading2, Heading3, List, ListOrdered, Quote, Code2,
   Link2, Image as ImageIcon, SquarePlay, File as FileIcon,
 } from 'lucide-react';
@@ -165,6 +171,13 @@ function blockAt(editor: Editor, clientY: number): { pos: number; dom: HTMLEleme
   return null;
 }
 
+// What a right-click acts on: a partial text range, a multi-block (marquee)
+// selection, or — with no selection — the single block under the cursor.
+type Target =
+  | { kind: 'block'; pos: number }
+  | { kind: 'range'; from: number; to: number }
+  | { kind: 'blocks'; positions: number[] };
+
 type Handle = { pos: number; top: number; left: number };
 type DropIndicator = { top: number; left: number; width: number; height: number; zone: 'above' | 'inside' | 'below' };
 type Props = { editor: Editor };
@@ -182,6 +195,11 @@ export default function BlockDragHandle({ editor }: Props) {
   zoomRef.current = zoom;
   const [handle, setHandle] = useState<Handle | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
+  // When the menu is opened via right-click, this holds the cursor point so the
+  // menu appears there (and the gutter grip stays hidden). Null = opened from grip.
+  const [menuAnchor, setMenuAnchor] = useState<{ x: number; y: number } | null>(null);
+  // What the menu's actions operate on. Null is treated as the block at handle.pos.
+  const [target, setTarget] = useState<Target | null>(null);
   const [subOpen, setSubOpen] = useState(false);
   const [subPos, setSubPos] = useState<{ top: number; left: number }>({ top: 0, left: 0 });
   const [confirmChild, setConfirmChild] = useState<{ pos: number; itemId: string } | null>(null);
@@ -361,17 +379,63 @@ export default function BlockDragHandle({ editor }: Props) {
     };
   }, [editor]);
 
-  // Close menu on outside click.
+  // Right-click anywhere in the editor opens the block menu at the cursor for the
+  // block under it — replaces the native browser context menu. Form fields inside
+  // node views (callout textarea, URL inputs) keep their native menu.
+  useEffect(() => {
+    if (isCoarse) return;
+    const dom = editor.view.dom;
+    const onContextMenu = (e: MouseEvent) => {
+      const el = e.target as HTMLElement | null;
+      if (el && el.closest('input, textarea')) return;
+
+      // Resolve the target from the live selection, most-specific first.
+      const state = editor.state;
+      const blockSel = getBlockSelection(state);
+      let tgt: Target;
+      let pos: number;
+      if (blockSel.selected.length) {
+        tgt = { kind: 'blocks', positions: blockSel.selected };
+        pos = [...blockSel.selected].sort((a, b) => a - b)[0];
+      } else if (state.selection instanceof TextSelection && !state.selection.empty) {
+        tgt = { kind: 'range', from: state.selection.from, to: state.selection.to };
+        // Block containing the selection start — used for "Turn into" + menu meta.
+        const $f = state.doc.resolve(state.selection.from);
+        pos = $f.depth > 0 ? $f.before(1) : state.selection.from;
+        for (let d = $f.depth; d >= 1; d--) {
+          if (ITEM_NODES.has($f.node(d).type.name)) { pos = $f.before(d); break; }
+        }
+      } else {
+        const found = blockAt(editor, e.clientY);
+        if (!found) return;
+        tgt = { kind: 'block', pos: found.pos };
+        pos = found.pos;
+      }
+      e.preventDefault();
+      const z = zoomRef.current;
+      setTarget(tgt);
+      setHandle({ pos, top: e.clientY / z, left: e.clientX / z });
+      setMenuAnchor({ x: e.clientX / z, y: e.clientY / z });
+      setMenuOpen(true);
+    };
+    dom.addEventListener('contextmenu', onContextMenu);
+    return () => dom.removeEventListener('contextmenu', onContextMenu);
+  }, [editor, isCoarse]);
+
+  // Close menu on outside click or Escape.
   useEffect(() => {
     if (!menuOpen) return;
+    const close = () => { setMenuOpen(false); setMenuAnchor(null); setHandle(null); };
     const onDown = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
-        setMenuOpen(false);
-        setHandle(null);
-      }
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) close();
     };
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') close(); };
     document.addEventListener('mousedown', onDown);
-    return () => document.removeEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('keydown', onKey);
+    };
   }, [menuOpen]);
 
   // Hide the handle while the user is typing/selecting (fine pointer only — on
@@ -385,7 +449,9 @@ export default function BlockDragHandle({ editor }: Props) {
   }, [editor, menuOpen, isCoarse]);
 
   // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => { if (!menuOpen) setSubOpen(false); }, [menuOpen]);
+  useEffect(() => { if (!menuOpen) { setSubOpen(false); setMenuAnchor(null); setTarget(null); } }, [menuOpen]);
+
+  const closeMenu = () => { setMenuOpen(false); setMenuAnchor(null); setTarget(null); setHandle(null); };
 
   const removeBlockAt = (pos: number) => {
     editor.chain().focus().setNodeSelection(pos).deleteSelection().run();
@@ -485,28 +551,72 @@ export default function BlockDragHandle({ editor }: Props) {
     setHandle(null);
   };
 
-  const doDelete = () => {
-    const pos = handle.pos;
-    const node = editor.state.doc.nodeAt(pos);
-    if (node?.type.name === 'childBlock') { deleteChild(pos, node); return; }
-    removeBlockAt(pos);
-    setMenuOpen(false);
-    setHandle(null);
+  // The thing the menu acts on (falls back to the single block under the grip).
+  const currentTarget = (): Target => target ?? { kind: 'block', pos: handle.pos };
+
+  // ── Target-aware primitives (no menu side-effects) ──
+  const copyTarget = (tgt: Target) => {
+    const manager = (editor as any).markdown ?? (editor as any).storage?.markdown?.manager;
+    let text: string | null = null;
+    try {
+      if (tgt.kind === 'blocks') {
+        text = serializeBlockSelectionMarkdown(editor);
+      } else if (tgt.kind === 'range') {
+        // Plain text of the exact range (preserves line breaks within the block).
+        text = editor.state.doc.textBetween(tgt.from, tgt.to, '\n', '\n');
+      } else {
+        const node = editor.state.doc.nodeAt(tgt.pos);
+        if (node) text = manager?.serialize ? manager.serialize({ type: 'doc', content: [node.toJSON()] }) : node.textContent;
+      }
+    } catch { /* best-effort */ }
+    if (text != null) void navigator.clipboard?.writeText(text).catch(() => {});
   };
 
-  const doDuplicate = () => {
-    const pos = handle.pos;
-    const node = editor.state.doc.nodeAt(pos);
+  // Returns false when it deferred to an async confirm (childBlock) — caller then
+  // skips closing the menu (deleteChild closes it itself).
+  const deleteTarget = (tgt: Target): boolean => {
+    if (tgt.kind === 'range') { editor.chain().focus().deleteRange({ from: tgt.from, to: tgt.to }).run(); return true; }
+    if (tgt.kind === 'blocks') { deleteBlockSelection(editor.view); return true; }
+    const node = editor.state.doc.nodeAt(tgt.pos);
+    if (node?.type.name === 'childBlock') { deleteChild(tgt.pos, node); return false; }
+    removeBlockAt(tgt.pos);
+    return true;
+  };
+
+  const duplicateTarget = (tgt: Target) => {
+    if (tgt.kind === 'range') {
+      // Insert a copy of the selected slice right after it.
+      editor.view.dispatch(editor.state.tr.insert(tgt.to, editor.state.doc.slice(tgt.from, tgt.to).content));
+      return;
+    }
+    if (tgt.kind === 'blocks') {
+      // High → low so each insert doesn't shift the positions we haven't copied
+      // yet; every copy lands right after its own original (stays in a valid parent).
+      const sorted = [...tgt.positions].sort((a, b) => b - a);
+      let tr = editor.state.tr;
+      for (const pos of sorted) {
+        const node = editor.state.doc.nodeAt(pos);
+        if (node) tr = tr.insert(pos + node.nodeSize, node);
+      }
+      tr.setMeta(blockSelectionKey, { selected: [], anchor: null });
+      editor.view.dispatch(tr);
+      return;
+    }
+    const node = editor.state.doc.nodeAt(tgt.pos);
     if (node) {
       let json: any = node.toJSON();
       if (node.type.name === 'childBlock' && !node.attrs.linkOnly) {
         json = { ...json, attrs: { ...json.attrs, linkOnly: true } };
       }
-      editor.chain().focus().insertContentAt(pos + node.nodeSize, json).run();
+      editor.chain().focus().insertContentAt(tgt.pos + node.nodeSize, json).run();
     }
-    setMenuOpen(false);
-    setHandle(null);
   };
+
+  // ── Menu button handlers ──
+  const doCopy = () => { copyTarget(currentTarget()); closeMenu(); };
+  const doCut = () => { const t = currentTarget(); copyTarget(t); if (deleteTarget(t)) closeMenu(); };
+  const doDuplicate = () => { duplicateTarget(currentTarget()); closeMenu(); };
+  const doDelete = () => { if (deleteTarget(currentTarget())) closeMenu(); };
 
   // Touch reorder: swap the block with its previous/next sibling (HTML5 DnD
   // doesn't fire on touch, so the menu provides Move up / Move down instead).
@@ -604,13 +714,27 @@ export default function BlockDragHandle({ editor }: Props) {
         key: type, label: BLOCK_LABELS[type], icon: BLOCK_ICONS[type],
         active: type === activeType, apply: () => turnInto(type),
       }));
-  const showTurnInto = isMedia || !hovNode?.isAtom;
+  const targetKind = target?.kind ?? 'block';
+  // "Turn into" is block-level — for a multi-block marquee it's offered by the
+  // floating block toolbar instead, so the right-click menu hides it there.
+  const showTurnInto = (isMedia || !hovNode?.isAtom) && targetKind !== 'blocks';
+  // "Cut" only makes sense when there's an actual selection to remove (text range
+  // or multi-block); a single block already has Delete.
+  const showCut = targetKind === 'range' || targetKind === 'blocks';
   const currentTurnInto = turnOptions.find((o) => o.active)?.icon ?? <Pilcrow size={14} />;
   // eslint-disable-next-line react-hooks/refs
-  const menuTop = Math.min(handle.top + 26, window.innerHeight / zoomRef.current - 200);
+  const vh = window.innerHeight / zoomRef.current;
+  // eslint-disable-next-line react-hooks/refs
+  const vw = window.innerWidth / zoomRef.current;
+  // Right-click → menu at the cursor; grip click → menu just below the grip.
+  const menuTop = Math.min(menuAnchor ? menuAnchor.y : handle.top + 26, vh - 200);
+  const menuLeft = Math.min(Math.max(4, menuAnchor ? menuAnchor.x : handle.left), vw - 210);
 
   return (
     <>
+      {/* The gutter grip is hidden when the menu was opened by right-click (the
+          menu then floats at the cursor instead of beside the grip). */}
+      {!menuAnchor && (
       <button
         draggable={!isCoarse}
         // eslint-disable-next-line react-hooks/immutability
@@ -620,7 +744,7 @@ export default function BlockDragHandle({ editor }: Props) {
         // Touch: keep the editor focused so the selection-anchored handle survives
         // the tap (a blur would otherwise dismiss it before the menu opens).
         onMouseDown={isCoarse ? (e) => e.preventDefault() : undefined}
-        onClick={(e) => { e.preventDefault(); setMenuOpen((v) => !v); }}
+        onClick={(e) => { e.preventDefault(); setMenuAnchor(null); setMenuOpen((v) => !v); }}
         onMouseEnter={() => { if (hideTimer.current) { clearTimeout(hideTimer.current); hideTimer.current = null; } }}
         style={{ position: 'fixed', top: handle.top, left: handle.left, zIndex: 100 }}
         className={`block-drag-handle flex items-center justify-center p-1 text-neutral-600 hover:text-neutral-200 hover:bg-neutral-800/60 rounded transition-colors ${isCoarse ? 'cursor-pointer' : 'cursor-grab active:cursor-grabbing'}`}
@@ -628,6 +752,7 @@ export default function BlockDragHandle({ editor }: Props) {
       >
         {isCoarse ? <MoreVertical size={16} /> : <GripVertical size={16} />}
       </button>
+      )}
 
       {/* Custom drop indicator — replaces ProseMirror dropcursor for all our drags */}
       {dropIndicator && createPortal(
@@ -656,7 +781,7 @@ export default function BlockDragHandle({ editor }: Props) {
       {menuOpen && (
         <div
           ref={menuRef}
-          style={{ position: 'fixed', top: menuTop, left: Math.max(4, handle.left), zIndex: 9998 }}
+          style={{ position: 'fixed', top: menuTop, left: menuLeft, zIndex: 9998 }}
           className="min-w-50 bg-neutral-850 border border-neutral-800 shadow-xl py-1 rounded-md overflow-hidden"
         >
           {isCoarse && hovNode?.type.name === 'heading' && (
@@ -687,19 +812,35 @@ export default function BlockDragHandle({ editor }: Props) {
               <div className="my-1 h-px bg-neutral-800" />
             </>
           )}
+          {showCut && (
+            <button
+              onClick={doCut}
+              className="w-full flex items-center gap-3 px-3 py-2 text-left text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/60 transition-colors"
+            >
+              <Scissors size={14} className="text-neutral-600" />
+              <span className="text-sm">{t('blockCut')}</span>
+            </button>
+          )}
+          <button
+            onClick={doCopy}
+            className="w-full flex items-center gap-3 px-3 py-2 text-left text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/60 transition-colors"
+          >
+            <Copy size={14} className="text-neutral-600" />
+            <span className="text-sm">{t('blockCopy')}</span>
+          </button>
+          <button
+            onClick={doDuplicate}
+            className="w-full flex items-center gap-3 px-3 py-2 text-left text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/60 transition-colors"
+          >
+            <CopyPlus size={14} className="text-neutral-600" />
+            <span className="text-sm">{t('blockDuplicate')}</span>
+          </button>
           <button
             onClick={doDelete}
             className="w-full flex items-center gap-3 px-3 py-2 text-left text-neutral-400 hover:text-red-400 hover:bg-neutral-800/60 transition-colors"
           >
             <Trash2 size={14} className="text-neutral-600" />
             <span className="text-sm">{t('blockDelete')}</span>
-          </button>
-          <button
-            onClick={doDuplicate}
-            className="w-full flex items-center gap-3 px-3 py-2 text-left text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/60 transition-colors"
-          >
-            <Copy size={14} className="text-neutral-600" />
-            <span className="text-sm">{t('blockDuplicate')}</span>
           </button>
 
           {showTurnInto && <div className="my-1 h-px bg-neutral-800" />}

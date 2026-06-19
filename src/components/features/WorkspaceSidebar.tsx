@@ -26,8 +26,11 @@ import {
   Eye,
   EyeOff,
   CreditCard,
+  ArrowUpRight,
+  Link2,
 } from 'lucide-react';
 import PageIcon from './PageIcon';
+import { useContextMenu, type MenuItem } from './ContextMenu';
 import {
   createWorkspace,
   switchWorkspace,
@@ -130,7 +133,6 @@ export default function WorkspaceSidebar({
 
   // Item context menu
   const [openMenuItemId, setOpenMenuItemId] = useState<string | null>(null);
-  const [menuAnchor, setMenuAnchor] = useState<{ x: number; y: number } | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const mobileMenuRef = useRef<HTMLDivElement>(null);
 
@@ -791,13 +793,43 @@ export default function WorkspaceSidebar({
     });
   };
 
-  const openMenuFor = (e: React.MouseEvent, itemId: string) => {
+  // Notion-style right-click menu for sidebar items (desktop). On touch we keep
+  // the bottom-sheet (openMenuItemId) since coarse pointers have no right-click.
+  const itemMenu = useContextMenu(() => setOpenMenuItemId(null));
+
+  const buildItemMenu = (item: WorkspaceItemRow, workspaceId: string): MenuItem[] => [
+    { id: 'open', label: t('open'), icon: ArrowUpRight, onSelect: () => router.push(hrefFor(item)) },
+    { id: 'rename', label: t('rename'), icon: Edit3, onSelect: () => { setRenamingItemId(item.id); setRenamingTitle(item.title); } },
+    { id: 'duplicate', label: t('duplicate'), icon: Copy, onSelect: () => handleDuplicateItem(item) },
+    { id: 'copy-link', label: t('copyLink'), icon: Link2, onSelect: () => { navigator.clipboard?.writeText(window.location.origin + hrefFor(item)); } },
+    { kind: 'separator' },
+    ...(item.type === 'page'
+      ? [{
+          id: 'add-inside',
+          label: t('addSubPage'),
+          icon: Plus,
+          onSelect: () => {
+            setTemplatePickerParentId(item.id);
+            setTemplatePickerWorkspaceId(workspaceId);
+            setExpandedItems(prev => ({ ...prev, [item.id]: true }));
+          },
+        } as MenuItem]
+      : []),
+    { id: 'share', label: tSharing('shareButton'), icon: Globe, onSelect: () => setShareModalItemId(item.id) },
+    { kind: 'separator' },
+    { id: 'delete', label: t('delete'), icon: Trash, danger: true, onSelect: () => handleDeleteItem(item) },
+  ];
+
+  const openMenuFor = (e: React.MouseEvent, item: WorkspaceItemRow, workspaceId: string) => {
     e.preventDefault();
     e.stopPropagation();
-    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    // right-align: menu's right edge aligns with button's right edge
-    setMenuAnchor({ x: window.innerWidth - rect.right, y: rect.bottom + 4 });
-    setOpenMenuItemId(prev => (prev === itemId ? null : itemId));
+    const isDesktop = typeof window !== 'undefined' && window.matchMedia('(min-width: 640px)').matches;
+    if (isDesktop) {
+      setOpenMenuItemId(item.id); // keep the row highlighted while the menu is open
+      itemMenu.open(e, buildItemMenu(item, workspaceId));
+    } else {
+      setOpenMenuItemId(prev => (prev === item.id ? null : item.id)); // mobile bottom sheet
+    }
   };
 
   const isActive = (item: WorkspaceItemRow) => {
@@ -1022,6 +1054,7 @@ export default function WorkspaceSidebar({
                             onDragOver={(e) => handleItemDragOver(e, item.id, w.id)}
                             onDragEnd={handleItemDragEnd}
                             onDrop={(e) => handleItemDrop(e, item.id, w.id)}
+                            onContextMenu={(e) => openMenuFor(e, item, w.id)}
                           >
                             {/* Drop INSIDE: highlight the whole row */}
                             {isItemDragOver && itemDropPosition === 'inside' && (
@@ -1135,7 +1168,7 @@ export default function WorkspaceSidebar({
                                     </button>
                                   )}
                                   <button
-                                    onClick={(e) => openMenuFor(e, item.id)}
+                                    onClick={(e) => openMenuFor(e, item, w.id)}
                                     className={`p-1 rounded transition-colors text-neutral-500 hover:text-neutral-200 hover:bg-neutral-700 ${
                                       openMenuItemId === item.id ? 'bg-neutral-700 text-neutral-200' : ''
                                     }`}
@@ -1286,57 +1319,11 @@ export default function WorkspaceSidebar({
               {t('delete')}
             </button>
           </div>
-
-          {/* Desktop floating dropdown */}
-          {menuAnchor && (
-            <div
-              ref={menuRef}
-              style={{
-                top: Math.min(menuAnchor.y, window.innerHeight - 160),
-                right: Math.max(menuAnchor.x, 8),
-              }}
-              className="fixed z-200 hidden sm:block bg-neutral-850 border border-neutral-800 rounded-lg shadow-[0_8px_32px_rgba(0,0,0,0.5)] py-1 min-w-44 animate-scale-in"
-            >
-              <button
-                onClick={() => {
-                  setOpenMenuItemId(null);
-                  setRenamingItemId(activeMenuItem.id);
-                  setRenamingTitle(activeMenuItem.title);
-                }}
-                className="w-full flex items-center gap-2.5 px-3 py-1.5 text-xs text-neutral-300 hover:bg-neutral-800 hover:text-neutral-50 transition-colors"
-              >
-                <Edit3 size={12} className="text-neutral-500" />
-                {t('rename')}
-              </button>
-              <button
-                onClick={() => handleDuplicateItem(activeMenuItem)}
-                className="w-full flex items-center gap-2.5 px-3 py-1.5 text-xs text-neutral-300 hover:bg-neutral-800 hover:text-neutral-50 transition-colors"
-              >
-                <Copy size={12} className="text-neutral-500" />
-                {t('duplicate')}
-              </button>
-              <button
-                onClick={() => {
-                  setOpenMenuItemId(null);
-                  setShareModalItemId(activeMenuItem.id);
-                }}
-                className="w-full flex items-center gap-2.5 px-3 py-1.5 text-xs text-neutral-300 hover:bg-neutral-800 hover:text-neutral-50 transition-colors"
-              >
-                <Globe size={12} className="text-neutral-500" />
-                {tSharing('shareButton')}
-              </button>
-              <div className="border-t border-neutral-800 my-1" />
-              <button
-                onClick={() => handleDeleteItem(activeMenuItem)}
-                className="w-full flex items-center gap-2.5 px-3 py-1.5 text-xs text-red-400 hover:bg-neutral-800 hover:text-red-300 transition-colors"
-              >
-                <Trash size={12} />
-                {t('delete')}
-              </button>
-            </div>
-          )}
         </>
       )}
+
+      {/* Desktop: Notion-style right-click / ⋯ menu (rendered via portal) */}
+      {itemMenu.node}
 
       {shareModalItemId && (
         <ShareModal

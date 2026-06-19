@@ -1,12 +1,14 @@
 'use client';
 
 import { useRef, useState, useEffect, useSyncExternalStore } from 'react';
+import { useRouter } from 'next/navigation';
 import { getOptionColorByValue, formatDateValue, normalizeOption, type SelectOption } from '@/lib/types/properties';
 import { useTranslations } from 'next-intl';
 import { useZoom } from '@/components/providers/ZoomProvider';
 import InlineCellEditor from './InlineCellEditor';
+import { useContextMenu, type MenuItem } from './ContextMenu';
 import { StatusChip, UserChip, UserTags } from './PropertyTags';
-import { GripHorizontal, GripVertical, Settings, Trash2, Type, List, Hash, AlignLeft, Calendar, Clock, Tags, CircleDashed, User, Users, Plus, Copy, EyeOff, ArrowUp, ArrowDown, Filter, X, RotateCcw, CheckSquare, Square, ExternalLink } from 'lucide-react';
+import { GripHorizontal, GripVertical, Settings, Trash2, Type, List, Hash, AlignLeft, Calendar, Clock, Tags, CircleDashed, User, Users, Plus, Copy, EyeOff, ArrowUp, ArrowDown, Filter, X, RotateCcw, CheckSquare, Square, ExternalLink, ArrowUpRight, Maximize2, Link2 } from 'lucide-react';
 import type { ViewFilter, ViewSort, FilterOperator } from '@/lib/types/views';
 import PageIcon from './PageIcon';
 import IconPicker from './IconPicker';
@@ -112,11 +114,23 @@ export default function TableLayout({
   const t = useTranslations('Database');
   const tPage = useTranslations('Page');
   const zoom = useZoom();
+  const router = useRouter();
   const schema: any[] = database.schema ?? [];
   const visibleCols = getVisibleColumns(schema, columnOrder, hiddenColumns);
 
   const [localWidths, setLocalWidths] = useState<Record<string, number>>(() => columnWidths ?? {});
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
+  // Notion-style right-click menu for rows
+  const rowMenu = useContextMenu();
+  const buildRowMenu = (pageId: string): MenuItem[] => [
+    { id: 'open', label: t('open'), icon: ArrowUpRight, onSelect: () => onRowClick(pageId) },
+    { id: 'open-full', label: t('openInFullPage'), icon: Maximize2, onSelect: () => router.push(`/db/${database.id}/${pageId}`) },
+    { id: 'copy-link', label: t('copyLink'), icon: Link2, onSelect: () => { navigator.clipboard?.writeText(`${window.location.origin}/db/${database.id}/${pageId}`); } },
+    { kind: 'separator' },
+    { id: 'duplicate', label: t('duplicatePage'), icon: Copy, onSelect: () => onDuplicatePage(pageId) },
+    { id: 'delete', label: tPage('deletePage'), icon: Trash2, danger: true, onSelect: () => setConfirmDeleteId(pageId) },
+  ];
 
   useEffect(() => {
     setLocalWidths(columnWidths ?? {});
@@ -566,6 +580,7 @@ export default function TableLayout({
                     else rowRefs.current.delete(page.id);
                   }}
                   onClick={() => onRowClick(page.id)}
+                  onContextMenu={(e) => rowMenu.open(e, buildRowMenu(page.id))}
                   onMouseEnter={(e) => handleRowMouseEnter(e, page.id)}
                   onMouseLeave={(e) => handleRowMouseLeave(e, page.id)}
                   onDragOver={(e) => handleRowDragOver(e, page.id)}
@@ -1061,6 +1076,7 @@ export default function TableLayout({
           onCancel={() => setConfirmDeleteId(null)}
         />
       )}
+      {rowMenu.node}
     </>
   );
 }

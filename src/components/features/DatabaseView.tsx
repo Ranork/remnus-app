@@ -803,7 +803,7 @@ export default function DatabaseView({
 
   return (
     <MembersProvider members={members}>
-    <div className="flex-1 flex flex-col overflow-hidden min-w-0 h-full">
+    <div className="relative flex-1 flex flex-col overflow-hidden min-w-0 h-full">
       <div className={`flex-1 flex flex-col w-full min-w-0 max-w-full overflow-hidden pt-6 sm:pt-8 ${widthMode === 'full' ? 'px-4 sm:px-8 lg:px-16' : 'px-4 sm:px-8'} ${widthMode === 'full' ? '' : widthMode === 'wide' ? 'max-w-screen-2xl mx-auto' : 'max-w-6xl mx-auto'}`}>
       {/* Back button for nested databases */}
       {database.parentId && (
@@ -1093,12 +1093,12 @@ export default function DatabaseView({
           {/* Dark Glassmorphism Backdrop */}
           <div
             onClick={() => setPeekPageId(null)}
-            className="fixed inset-x-0 top-0 bottom-14 lg:bottom-0 bg-black/40 backdrop-blur-xs z-50 animate-fade-in transition-opacity cursor-pointer animate-duration-200"
+            className="absolute inset-0 bg-black/40 backdrop-blur-xs z-50 animate-fade-in transition-opacity cursor-pointer animate-duration-200"
           />
 
           {/* Center Peek Modal */}
           {(config.openBehavior ?? 'center') === 'center' && (
-            <div className="fixed z-50 inset-x-0 bottom-14 sm:inset-0 sm:flex sm:items-center sm:justify-center sm:p-4 md:p-10 sm:pointer-events-none">
+            <div className="absolute z-50 inset-x-0 bottom-0 sm:inset-0 sm:flex sm:items-center sm:justify-center sm:p-4 md:p-10 sm:pointer-events-none">
               <div className="w-full sm:max-w-4xl max-h-[92vh] sm:max-h-[90vh] bg-neutral-850 border-t sm:border border-neutral-800 flex flex-col sm:modal-shadow overflow-hidden rounded-t-2xl sm:rounded-lg pointer-events-auto animate-in slide-in-from-bottom sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-200">
                 {/* Peek Sticky Header */}
                 <div className="flex items-center justify-between px-6 py-3 border-b border-neutral-850 shrink-0 bg-neutral-900/30">
@@ -1204,7 +1204,7 @@ export default function DatabaseView({
 
           {/* Side Peek Drawer */}
           {(config.openBehavior ?? 'center') === 'side' && (
-            <div className="fixed z-50 flex flex-col overflow-hidden bg-neutral-850 inset-x-0 bottom-14 max-h-[92vh] rounded-t-2xl border-t border-neutral-800 sm:left-auto sm:top-0 sm:right-0 sm:bottom-0 sm:h-full sm:w-full sm:max-w-2xl sm:max-h-none sm:rounded-none sm:border-t-0 sm:border-l sm:modal-shadow animate-in slide-in-from-bottom sm:slide-in-from-right duration-300">
+            <div className="absolute z-50 flex flex-col overflow-hidden bg-neutral-850 inset-x-0 bottom-0 max-h-[92vh] rounded-t-2xl border-t border-neutral-800 sm:left-auto sm:top-0 sm:right-0 sm:bottom-0 sm:h-full sm:w-full sm:max-w-2xl sm:max-h-none sm:rounded-none sm:border-t-0 sm:border-l sm:modal-shadow animate-in slide-in-from-bottom sm:slide-in-from-right duration-300">
               {/* Peek Sticky Header */}
               <div className="flex items-center justify-between px-6 py-3 border-b border-neutral-850 shrink-0 bg-neutral-900/30">
                 <div className="flex items-center gap-3">

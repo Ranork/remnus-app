@@ -23,6 +23,54 @@ export function hasBlockSelection(editorState: any): boolean {
   return (getBlockSelection(editorState).selected.length > 0);
 }
 
+/**
+ * Serialize the currently block-selected nodes to markdown — the single source
+ * of truth for "copy block selection" (the toolbar Copy button, Ctrl/Cmd+C and
+ * Ctrl/Cmd+X all go through this so they produce identical output). Matches the
+ * editor's storage format, so it pastes back cleanly through the markdown paste
+ * path. Returns null when there is no block selection.
+ */
+export function serializeBlockSelectionMarkdown(editor: any): string | null {
+  const s = getBlockSelection(editor.state);
+  if (!s.selected.length) return null;
+  const sorted = [...s.selected].sort((a, b) => a - b);
+  const nodes = sorted
+    .map((pos: number) => editor.state.doc.nodeAt(pos))
+    .filter((n: PmNode | null): n is PmNode => n != null);
+  if (!nodes.length) return null;
+  const manager = (editor as any).markdown ?? (editor as any).storage?.markdown?.manager;
+  try {
+    if (manager?.serialize) {
+      return manager.serialize({ type: 'doc', content: nodes.map((n) => n.toJSON()) });
+    }
+  } catch {
+    /* fall through to plain text */
+  }
+  return nodes.map((n) => n.textContent).join('\n\n');
+}
+
+/**
+ * Delete every block-selected node and clear the selection. Uses `deleteRange`
+ * (not `delete`) so a now-empty parent — e.g. the last listItem in a list — is
+ * removed too; a raw delete would leave an empty bulletList, which is invalid
+ * schema content and crashes the next normalization transaction.
+ */
+export function deleteBlockSelection(view: EditorView): boolean {
+  const s = getBlockSelection(view.state);
+  if (!s.selected.length) return false;
+  const sorted = [...s.selected].sort((a, b) => b - a);
+  let tr = view.state.tr;
+  for (const pos of sorted) {
+    const mappedPos = tr.mapping.map(pos);
+    const node = tr.doc.nodeAt(mappedPos);
+    if (!node) continue;
+    tr = tr.deleteRange(mappedPos, mappedPos + node.nodeSize);
+  }
+  tr.setMeta(blockSelectionKey, EMPTY);
+  view.dispatch(tr);
+  return true;
+}
+
 // ── Document helpers ──────────────────────────────────────────────────────────
 
 /**
@@ -121,6 +169,7 @@ export const BlockSelection = Extension.create({
   name: 'blockSelection',
 
   addProseMirrorPlugins() {
+    const getEditor = () => this.editor;
     return [
       new Plugin({
         key: blockSelectionKey,
@@ -192,19 +241,10 @@ export const BlockSelection = Extension.create({
 
             if (!s.selected.length) return false;
 
-            // Delete / Backspace → remove all selected blocks (high → low).
+            // Delete / Backspace → remove all selected blocks.
             if (event.key === 'Delete' || event.key === 'Backspace') {
               event.preventDefault();
-              const sorted = [...s.selected].sort((a, b) => b - a);
-              let tr = view.state.tr;
-              for (const pos of sorted) {
-                const mappedPos = tr.mapping.map(pos);
-                const node = tr.doc.nodeAt(mappedPos);
-                if (!node) continue;
-                tr = tr.delete(mappedPos, mappedPos + node.nodeSize);
-              }
-              tr.setMeta(blockSelectionKey, EMPTY);
-              view.dispatch(tr);
+              deleteBlockSelection(view);
               return true;
             }
 
@@ -312,6 +352,31 @@ export const BlockSelection = Extension.create({
             teardown();
           };
 
+          // Ctrl/Cmd+C and Ctrl/Cmd+X over a block selection — copy the same
+          // markdown the toolbar Copy button produces (and, for cut, delete the
+          // blocks). This is a DOCUMENT-level capture listener (not the editor's
+          // handleDOMEvents.copy/cut) because the marquee mousedown preventDefaults
+          // focus, so the editor usually ISN'T focused and the copy/cut events
+          // never reach view.dom. Gated on an active block selection, so normal
+          // text copy/cut anywhere else is untouched. Uses the async clipboard API
+          // (the keydown is a user gesture, so writeText is permitted).
+          const onKeyDown = (e: KeyboardEvent) => {
+            if (!(e.ctrlKey || e.metaKey) || e.shiftKey || e.altKey) return;
+            const key = e.key.toLowerCase();
+            if (key !== 'c' && key !== 'x') return;
+            if (!hasBlockSelection(editorView.state)) return;
+            const md = serializeBlockSelectionMarkdown(getEditor());
+            if (md == null) return;
+            e.preventDefault();
+            void navigator.clipboard?.writeText(md).catch(() => {});
+            if (key === 'x') {
+              deleteBlockSelection(editorView);
+            } else {
+              // Copy keeps the blocks but closes the selection (mirrors the button).
+              editorView.dispatch(editorView.state.tr.setMeta(blockSelectionKey, EMPTY));
+            }
+          };
+
           const onMouseDown = (event: MouseEvent) => {
             if (event.button !== 0 || event.shiftKey) return;
             if (isInteractiveTarget(event.target)) return;
@@ -372,11 +437,15 @@ export const BlockSelection = Extension.create({
           // Listen on the editor's scroll container so margin mousedowns are caught.
           const container = findScrollParent(editorView.dom);
           container.addEventListener('mousedown', onMouseDown);
+          // Capture phase so we beat any other handler and can preventDefault the
+          // browser's native copy/cut before it fires.
+          document.addEventListener('keydown', onKeyDown, true);
 
           return {
             destroy() {
               teardown();
               container.removeEventListener('mousedown', onMouseDown);
+              document.removeEventListener('keydown', onKeyDown, true);
             },
           };
         },
