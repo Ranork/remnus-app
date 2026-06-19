@@ -63,16 +63,23 @@ export default function LoginPage() {
     pollIntervalRef.current = setInterval(async () => {
       if (deviceIdRef.current !== deviceId) return;
       try {
-        const res = await fetch(`/api/auth/client-poll?device_id=${encodeURIComponent(deviceId)}`);
+        // `cache: 'no-store'` defends against the webview memoizing the first
+        // {ready:false} response and serving it on every later poll.
+        const res = await fetch(
+          `/api/auth/client-poll?device_id=${encodeURIComponent(deviceId)}`,
+          { cache: 'no-store' },
+        );
         const data: { ready: boolean; token?: string } = await res.json();
+        console.log('[client-login] poll', { ready: data.ready, hasToken: !!data.token });
         if (data.ready && data.token) {
           clearInterval(pollIntervalRef.current!);
           clearTimeout(timeoutRef.current!);
           setTauriState('activating');
           window.location.href = `/api/auth/client-activate?token=${encodeURIComponent(data.token)}`;
         }
-      } catch {
+      } catch (err) {
         // Network error — keep polling
+        console.log('[client-login] poll error', err);
       }
     }, 2000);
 

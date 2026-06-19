@@ -35,7 +35,13 @@ export default function AppShell({
   if (isTauri) {
     return (
       <ZoomProvider>
-        <TabsProvider key={activeWorkspaceId} items={items} workspaceId={activeWorkspaceId}>
+        {/* Tabs are a GLOBAL, browser-style strip — never per-workspace. The
+            server-side layout flips `remnus_workspace_id` whenever the user
+            navigates to a page in a different workspace, so keying the provider
+            on `activeWorkspaceId` would unmount/remount it mid-session and load
+            a different localStorage bucket — that's how 12 user-opened tabs were
+            replaced by another workspace's 6 saved tabs. */}
+        <TabsProvider items={items}>
           <div className="flex h-full overflow-hidden">
             <aside className="hidden lg:flex w-72 bg-neutral-900 border-r border-neutral-800 flex-col">
               {sidebar}

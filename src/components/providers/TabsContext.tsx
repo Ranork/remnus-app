@@ -75,18 +75,91 @@ function cleanDocTitle(): string {
   return raw.replace(/\s*\|\s*Remnus\s*$/, '').trim();
 }
 
+ 
+// Temporary diagnostic logger — gated on `localStorage.remnus_tabs_debug === '1'`
+// or the global `__remnus_tabs_debug` flag. Set either to '1' in DevTools to enable.
+// REMOVE once the disappearing-tabs bug is fully diagnosed.
+function tlog(...args: any[]) {
+  if (typeof window === 'undefined') return;
+  const enabled =
+    (window as any).__remnus_tabs_debug === '1' ||
+    (() => { try { return localStorage.getItem('remnus_tabs_debug') === '1'; } catch { return false; } })();
+  if (enabled) console.log('[tabs]', ...args);
+}
+ 
+
+// Single GLOBAL storage key — the tab strip is not per-workspace. Navigating
+// to a page in another workspace causes the server to flip `remnus_workspace_id`,
+// which would otherwise rebuild a per-workspace key and load a different bucket
+// of tabs (root cause of the "tabs replaced by other tabs" bug).
+const TABS_STORAGE_KEY = 'remnus_tabs';
+const LEGACY_KEY_PREFIX = 'remnus_tabs_';
+
+/**
+ * One-shot migration: previous versions kept tabs in `remnus_tabs_<workspaceId>`
+ * buckets. On first mount we merge any leftover per-workspace entries into the
+ * global key (preserving order, de-duped by href so opening multiple workspaces
+ * doesn't show the same page twice) and delete the old keys.
+ */
+function migrateLegacyTabs(globalKey: string): Tab[] {
+  if (typeof window === 'undefined') return [];
+  try {
+    const merged: Tab[] = [];
+    const seenHrefs = new Set<string>();
+    // Start with whatever is already in the global key.
+    const existingRaw = localStorage.getItem(globalKey);
+    if (existingRaw) {
+      try {
+        const parsed = JSON.parse(existingRaw) as { tabs?: Tab[] };
+        for (const t of parsed.tabs ?? []) {
+          if (t && typeof t.href === 'string' && typeof t.id === 'string' && !seenHrefs.has(t.href)) {
+            merged.push(t);
+            seenHrefs.add(t.href);
+          }
+        }
+      } catch { /* ignore */ }
+    }
+    // Then pull in every legacy per-workspace bucket.
+    const legacyKeys: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.startsWith(LEGACY_KEY_PREFIX) && k !== globalKey) legacyKeys.push(k);
+    }
+    for (const k of legacyKeys) {
+      try {
+        const parsed = JSON.parse(localStorage.getItem(k) ?? '') as { tabs?: Tab[] };
+        for (const t of parsed.tabs ?? []) {
+          if (t && typeof t.href === 'string' && typeof t.id === 'string' && !seenHrefs.has(t.href)) {
+            merged.push(t);
+            seenHrefs.add(t.href);
+          }
+        }
+      } catch { /* ignore corrupt entry */ }
+      localStorage.removeItem(k);
+    }
+    return merged;
+  } catch {
+    return [];
+  }
+}
+
 export function TabsProvider({
   items,
-  workspaceId,
   children,
 }: {
   items: WorkspaceItemRow[];
-  workspaceId: string;
   children: React.ReactNode;
 }) {
   const router = useRouter();
   const pathname = usePathname();
-  const storageKey = `remnus_tabs_${workspaceId || 'default'}`;
+  const storageKey = TABS_STORAGE_KEY;
+
+  // Diagnostic: track provider mount/unmount cycles to catch unexpected remounts.
+  useEffect(() => {
+    tlog('PROVIDER mount', { storageKey });
+    return () => tlog('PROVIDER unmount', { storageKey });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const [tabs, setTabs] = useState<Tab[]>([]);
   const [activeIdState, setActiveIdState] = useState<string | null>(null);
@@ -145,32 +218,31 @@ export function TabsProvider({
     [resolveMeta],
   );
 
-  // ── Hydrate from localStorage on mount (keyed per workspace) ──────────────
+  // ── Hydrate from localStorage on mount (single GLOBAL key) ──────────────
   useEffect(() => {
-    let loaded: { tabs?: Tab[]; activeId?: string | null } | null = null;
+    // Pulls in any old per-workspace buckets the first time we run, then drops
+    // them — afterwards this is just reading the global key.
+    const merged = migrateLegacyTabs(storageKey);
+
+    // Also re-read the stored activeId from the global bucket (migration
+    // doesn't preserve it; we'll prefer the URL anyway below).
+    let storedActiveId: string | null = null;
     try {
       const raw = localStorage.getItem(storageKey);
-      if (raw) loaded = JSON.parse(raw);
-    } catch {
-      /* ignore corrupt storage */
-    }
+      if (raw) {
+        const parsed = JSON.parse(raw) as { activeId?: string | null };
+        if (parsed.activeId && typeof parsed.activeId === 'string') {
+          storedActiveId = parsed.activeId;
+        }
+      }
+    } catch { /* ignore */ }
 
-    let nextTabs: Tab[] = [];
-    if (loaded?.tabs?.length) {
-      // Accept any well-formed tab. Pruning deleted items is the prune effect's
-      // job — running below only once `items` has actually loaded — so a transient
-      // empty `items` prop can never wipe the strip on mount.
-      nextTabs = loaded.tabs.filter(
-        (t) => t && typeof t.href === 'string' && typeof t.id === 'string',
-      );
-    }
-
-    setTabs(nextTabs);
-    // Prefer the tab matching the current URL; else the stored active id if still valid.
+    tlog('HYDRATE', { storageKey, acceptedLen: merged.length, pathname, storedActive: storedActiveId });
+    setTabs(merged);
     const norm = normalizePath(pathname);
-    const match = nextTabs.find((t) => normalizePath(t.href) === norm);
+    const match = merged.find((t) => normalizePath(t.href) === norm);
     if (match) setActiveIdState(match.id);
-    else if (loaded?.activeId && nextTabs.some((t) => t.id === loaded!.activeId)) setActiveIdState(loaded.activeId);
+    else if (storedActiveId && merged.some((t) => t.id === storedActiveId)) setActiveIdState(storedActiveId);
 
     setHydrated(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -184,6 +256,7 @@ export function TabsProvider({
     if (!hydrated || items.length === 0) return;
     setTabs((prev) => {
       const dropIds = new Set<string>();
+      tlog('PRUNE check', { itemsLen: items.length, tabsLen: prev.length });
       for (const t of prev) {
         const norm = normalizePath(t.href);
         if (isRowPath(norm)) continue;
@@ -195,6 +268,7 @@ export function TabsProvider({
         }
       }
       if (dropIds.size === 0) return prev;
+      tlog('PRUNE drop', { droppedIds: Array.from(dropIds), keptLen: prev.length - dropIds.size });
       return prev.filter((t) => !dropIds.has(t.id));
     });
   }, [items, hydrated]);
@@ -204,6 +278,7 @@ export function TabsProvider({
     if (!hydrated) return;
     try {
       localStorage.setItem(storageKey, JSON.stringify({ tabs, activeId: activeIdState }));
+      tlog('PERSIST', { storageKey, tabsLen: tabs.length, activeIdState });
     } catch {
       /* ignore quota errors */
     }
@@ -217,16 +292,21 @@ export function TabsProvider({
   useEffect(() => {
     if (!hydrated) return;
     const norm = normalizePath(pathname);
-    if (!isTabbable(norm)) return; // ignore /app, /login, redirects-in-progress
+    if (!isTabbable(norm)) {
+      tlog('RECONCILE skip (not tabbable)', { pathname });
+      return;
+    }
 
     const cur = tabsRef.current;
     const activeTab = cur.find((t) => t.id === activeIdRef.current);
+    tlog('RECONCILE', { pathname, activeIdRef: activeIdRef.current, activeTabFound: !!activeTab, tabsLen: cur.length });
 
     if (activeTab) {
       if (normalizePath(activeTab.href) === norm) return; // already showing this path
       // Navigate the active tab in place.
       const meta = resolveMeta(norm);
       const id = activeTab.id;
+      tlog('RECONCILE navigate-in-place', { from: activeTab.href, to: norm, id });
       setTabs((prev) =>
         prev.map((t) =>
           t.id === id
@@ -240,14 +320,16 @@ export function TabsProvider({
     // No valid active tab → switch to an existing match, or auto-create one.
     const match = cur.find((t) => normalizePath(t.href) === norm);
     if (match) {
+      tlog('RECONCILE activate match', { matchId: match.id });
       setActiveIdState(match.id);
       return;
     }
     const autoId = `auto:${norm}`;
     const tab = makeTab(norm, autoId);
+    tlog('RECONCILE auto-create', { autoId, href: norm });
     setTabs((prev) => (prev.some((t) => normalizePath(t.href) === norm) ? prev : [...prev, tab]));
     setActiveIdState(autoId);
-     
+
   }, [pathname, hydrated, resolveMeta, makeTab]);
 
   // ── Keep DB-row tab titles in sync with document.title ────────────────────
@@ -278,6 +360,7 @@ export function TabsProvider({
     (href: string, metaHint?: Partial<TabMeta>) => {
       const norm = normalizePath(href);
       const tab = makeTab(norm, newId(), metaHint);
+      tlog('ACTION openInNewTab', { href: norm, newId: tab.id });
       setTabs((prev) => [...prev, tab]);
       setActiveIdState(tab.id);
       router.push(href);
@@ -289,6 +372,7 @@ export function TabsProvider({
     (id: string) => {
       const tab = tabsRef.current.find((t) => t.id === id);
       if (!tab) return;
+      tlog('ACTION activateTab', { id, href: tab.href });
       setActiveIdState(id);
       router.push(tab.href);
     },
@@ -300,6 +384,7 @@ export function TabsProvider({
       const cur = tabsRef.current;
       const idx = cur.findIndex((t) => t.id === id);
       if (idx === -1) return;
+      tlog('ACTION closeTab', { id, idx, tabsLenBefore: cur.length });
 
       const rawActive = activeIdRef.current;
       const effActive =
@@ -328,6 +413,7 @@ export function TabsProvider({
     (id: string) => {
       const keep = tabsRef.current.find((t) => t.id === id);
       if (!keep) return;
+      tlog('ACTION closeOthers', { keepId: id, droppedLen: tabsRef.current.length - 1, stack: new Error().stack?.split('\n').slice(1, 5) });
       setTabs([keep]);
       setActiveIdState(keep.id);
       if (normalizePath(keep.href) !== normalizePath(pathnameRef.current)) router.push(keep.href);
@@ -336,6 +422,7 @@ export function TabsProvider({
   );
 
   const closeAll = useCallback(() => {
+    tlog('ACTION closeAll', { stack: new Error().stack?.split('\n').slice(1, 5) });
     setTabs([]);
     setActiveIdState(null);
     router.push('/app');
