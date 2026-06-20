@@ -3,7 +3,7 @@ import { db } from '@/db';
 import {
   users, accounts, userSessions, workspaceMembers, workspaces, workspaceItems, uploadedAssets, subscriptions,
 } from '@/db/schema';
-import { eq, inArray, asc, sql } from 'drizzle-orm';
+import { eq, ne, and, inArray, asc, sql } from 'drizzle-orm';
 import { getCurrentUser } from '@/lib/auth/session';
 import { getTranslations } from 'next-intl/server';
 import { isPlanTier, type PlanTier } from '@/lib/billing/plans';
@@ -35,6 +35,9 @@ export type EngagementOverview = {
   newThisMonth: number;
   signupTrend: { date: string; count: number }[]; // last 30 days, oldest → newest
   perUser: Record<string, PerUserActivity>;
+  // Demo is excluded from every metric above. These surface it separately:
+  demoActiveSessions: number; // distinct demo users active in the last 15 min
+  demoTotal: number;          // current ephemeral demo accounts (≈ last 6h)
 };
 
 const DAY = 24 * 60 * 60;
@@ -66,14 +69,17 @@ export async function getEngagementOverview(): Promise<EngagementOverview> {
       week: sql<number>`count(case when ${users.createdAt} >= ${weekCut} then 1 end)`,
       month: sql<number>`count(case when ${users.createdAt} >= ${monthCut} then 1 end)`,
     })
-    .from(users);
+    .from(users)
+    .where(ne(users.role, 'demo'));
 
   const [agg] = await db
     .select({
       totalSeconds: sql<number>`coalesce(sum(${userSessions.durationSeconds}), 0)`,
       sessionCount: sql<number>`cast(count(*) as int)`,
     })
-    .from(userSessions);
+    .from(userSessions)
+    .innerJoin(users, eq(userSessions.userId, users.id))
+    .where(ne(users.role, 'demo'));
 
   const [active] = await db
     .select({
@@ -81,7 +87,9 @@ export async function getEngagementOverview(): Promise<EngagementOverview> {
       wau: sql<number>`count(distinct case when ${userSessions.lastSeenAt} >= ${weekCut} then ${userSessions.userId} end)`,
       mau: sql<number>`count(distinct case when ${userSessions.lastSeenAt} >= ${monthCut} then ${userSessions.userId} end)`,
     })
-    .from(userSessions);
+    .from(userSessions)
+    .innerJoin(users, eq(userSessions.userId, users.id))
+    .where(ne(users.role, 'demo'));
 
   const perUserRows = await db
     .select({
@@ -91,12 +99,16 @@ export async function getEngagementOverview(): Promise<EngagementOverview> {
       lastSeen: sql<number>`max(${userSessions.lastSeenAt})`,
     })
     .from(userSessions)
+    .innerJoin(users, eq(userSessions.userId, users.id))
+    .where(ne(users.role, 'demo'))
     .groupBy(userSessions.userId);
 
   // Storage per user (uploaders) — independent of whether they have sessions.
   const storageRows = await db
     .select({ userId: uploadedAssets.userId, total: sql<number>`coalesce(sum(${uploadedAssets.bytes}), 0)` })
     .from(uploadedAssets)
+    .innerJoin(users, eq(uploadedAssets.userId, users.id))
+    .where(ne(users.role, 'demo'))
     .groupBy(uploadedAssets.userId);
   const storageByUser: Record<string, number> = {};
   for (const r of storageRows) storageByUser[r.userId] = Number(r.total ?? 0);
@@ -121,7 +133,7 @@ export async function getEngagementOverview(): Promise<EngagementOverview> {
   const signupRows = await db
     .select({ createdAt: sql<number>`${users.createdAt}` })
     .from(users)
-    .where(sql`${users.createdAt} >= ${monthCut}`);
+    .where(and(sql`${users.createdAt} >= ${monthCut}`, ne(users.role, 'demo')));
 
   const buckets = new Map<string, number>();
   for (let i = 29; i >= 0; i--) {
@@ -135,6 +147,18 @@ export async function getEngagementOverview(): Promise<EngagementOverview> {
     if (buckets.has(key)) buckets.set(key, (buckets.get(key) ?? 0) + 1);
   }
   const signupTrend = [...buckets.entries()].map(([date, count]) => ({ date, count }));
+
+  // Demo activity — deliberately kept OUT of every metric above; reported on its own.
+  const demoActiveCut = nowSec - 15 * 60; // "active" = a heartbeat in the last 15 min
+  const [demoActive] = await db
+    .select({ count: sql<number>`count(distinct ${userSessions.userId})` })
+    .from(userSessions)
+    .innerJoin(users, eq(userSessions.userId, users.id))
+    .where(and(eq(users.role, 'demo'), sql`${userSessions.lastSeenAt} >= ${demoActiveCut}`));
+  const [demoCount] = await db
+    .select({ count: sql<number>`cast(count(*) as int)` })
+    .from(users)
+    .where(eq(users.role, 'demo'));
 
   const sessionCount = agg?.sessionCount ?? 0;
   const totalSeconds = agg?.totalSeconds ?? 0;
@@ -150,6 +174,8 @@ export async function getEngagementOverview(): Promise<EngagementOverview> {
     newThisMonth: signups?.month ?? 0,
     signupTrend,
     perUser,
+    demoActiveSessions: demoActive?.count ?? 0,
+    demoTotal: demoCount?.count ?? 0,
   };
 }
 

@@ -62,7 +62,6 @@ export default async function LandingHero() {
             {t('bridgeHeroSnum')}
           </span>
           <span className="flex-1 h-px bg-neutral-800" />
-          <span className="font-mono text-[11px] text-dim hidden sm:block">{t('bridgeHeroCaption')}</span>
         </div>
 
         {/* two-column grid — single column on mobile */}
@@ -96,7 +95,7 @@ export default async function LandingHero() {
                 <span aria-hidden>→</span>
               </Link>
               <Link
-                href="#mcp"
+                href="#integrations"
                 className="inline-flex items-center gap-1.5 text-sm text-neutral-100 border-b border-neutral-800 pb-1 hover:border-neutral-100 transition-colors duration-150"
               >
                 {t('bridgeHeroCtaSecondary')}

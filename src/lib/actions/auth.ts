@@ -3,7 +3,7 @@ import { signOut } from '@/auth';
 import { auth } from '@/auth';
 import { db } from '@/db';
 import { users, workspaces, workspaceMembers, workspaceInvites, accounts, sessions, userSessions, agentTokens } from '@/db/schema';
-import { eq, and, sql, isNull } from 'drizzle-orm';
+import { eq, ne, and, sql, isNull } from 'drizzle-orm';
 import { randomBytes } from 'crypto';
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
@@ -175,7 +175,7 @@ export async function getAllUsers() {
     role: users.role,
     createdAt: users.createdAt,
     hasPassword: sql<number>`case when ${users.passwordHash} is not null then 1 else 0 end`,
-  }).from(users);
+  }).from(users).where(ne(users.role, 'demo')); // demo users are ephemeral — keep them out of the admin list
 
   const accountRows = await db.select({ userId: accounts.userId, provider: accounts.provider }).from(accounts);
   const providerMap = new Map<string, string[]>();

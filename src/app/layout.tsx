@@ -2,7 +2,7 @@ import type { Viewport } from 'next';
 import { Onest, JetBrains_Mono, Fraunces } from 'next/font/google';
 import './globals.css';
 import { cookies } from 'next/headers';
-import { routing } from '@/i18n/routing';
+import { getLocale } from 'next-intl/server';
 import DebugConsole from '@/components/providers/DebugConsole';
 
 const onest = Onest({
@@ -29,10 +29,10 @@ const VALID_THEMES = new Set(['remnus', 'dracula', 'tokyo-night', 'nord', 'catpp
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const cookieStore = await cookies();
-  const localeCookie = cookieStore.get('NEXT_LOCALE')?.value;
-  const locale = routing.locales.includes(localeCookie as (typeof routing.locales)[number])
-    ? localeCookie!
-    : 'en';
+  // Use the locale next-intl actually resolved for this request (cookie →
+  // Accept-Language → default), not just the cookie — otherwise <html lang> stays
+  // "en" on a first visit even when the content is rendered in the detected locale.
+  const locale = await getLocale();
   const editorFontSize = cookieStore.get('remnus_editor_font_size')?.value ?? 'md';
   const defaultPageWidth = cookieStore.get('remnus_default_width')?.value ?? 'narrow';
   const rawTheme = cookieStore.get('remnus_theme')?.value;

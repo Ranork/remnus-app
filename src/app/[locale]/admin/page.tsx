@@ -2,7 +2,7 @@ import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
 import { getAllUsers } from '@/lib/actions/auth';
 import { getEngagementOverview } from '@/lib/actions/analytics';
-import { Shield, Users, TrendingUp, Clock, Activity, Timer } from 'lucide-react';
+import { Shield, Users, TrendingUp, Clock, Activity, Timer, MonitorPlay } from 'lucide-react';
 import AdminUsersTable from '@/components/features/AdminUsersTable';
 import { formatDuration } from '@/components/features/admin/format';
 import { getTranslations, getLocale } from 'next-intl/server';
@@ -89,13 +89,14 @@ export default async function AdminPage() {
       <div className="flex-1 overflow-auto px-8 py-6 flex flex-col gap-8">
 
         {/* Stats row */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3">
           <StatCard icon={<Users size={14} />} label={t('totalUsers')} value={userList.length} />
           <StatCard icon={<TrendingUp size={14} />} label={t('newThisWeek')} value={engagement.newThisWeek} sub={t('last7Days')} />
           <StatCard icon={<TrendingUp size={14} />} label={t('newThisMonth')} value={engagement.newThisMonth} sub={t('last30Days')} />
           <StatCard icon={<Activity size={14} />} label={t('activeUsers')} value={engagement.wau} sub={t('last7Days')} />
           <StatCard icon={<Timer size={14} />} label={t('avgSession')} value={formatDuration(engagement.avgSessionSeconds)} sub={t('perSession')} />
           <StatCard icon={<Clock size={14} />} label={t('totalTime')} value={formatDuration(engagement.totalSeconds)} sub={t('allUsers')} />
+          <StatCard icon={<MonitorPlay size={14} className="text-amber-500" />} label={t('activeDemoSessions')} value={engagement.demoActiveSessions} sub={t('demoTotalSub', { count: engagement.demoTotal })} />
         </div>
 
         {/* Acquisition trend */}

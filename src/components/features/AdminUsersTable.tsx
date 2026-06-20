@@ -136,7 +136,6 @@ export default function AdminUsersTable({
           <option value="all">{t('allRoles')}</option>
           <option value="admin">{t('roleAdmin')}</option>
           <option value="user">{t('roleUser')}</option>
-          <option value="demo">{t('roleDemo')}</option>
         </select>
         <select value={authFilter} onChange={(e) => { setAuthFilter(e.target.value); setPage(0); }} className={selectCls}>
           <option value="all">{t('allMethods')}</option>

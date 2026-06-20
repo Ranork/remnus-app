@@ -22,11 +22,7 @@ export default async function LandingNav() {
           </Link>
 
           <span className="hidden sm:inline-flex items-center gap-1 font-mono text-[10px] text-amber-400/70 bg-amber-500/8 border border-amber-500/20 px-1.5 py-0.5 rounded-full shrink-0 tracking-wide">
-            {t('earlyAccess')} · v0.1.2
-          </span>
-
-          <span className="font-mono text-[11px] text-dimmer tracking-widest ml-2 hidden md:block">
-            {t('bridgeNavCaption')}
+            {t('earlyAccess')}
           </span>
 
           <span className="flex-1" />
@@ -50,12 +46,13 @@ export default async function LandingNav() {
             ))}
           </nav>
 
-          <LandingThemeToggle label={t('navThemeToggle')} />
+          <div className="flex items-center gap-1 sm:gap-2">
+            <LandingThemeToggle label={t('navThemeToggle')} />
 
-          <LanguageSwitcher variant="header" />
+            <LanguageSwitcher variant="header" />
 
-          <div className="flex items-center gap-2">
-            {isAuthed ? (
+            <div className="flex items-center gap-1.5">
+              {isAuthed ? (
               <Link
                 href="/app"
                 className="inline-flex items-center gap-1.5 px-3 sm:px-4 py-2 text-[13px] font-medium bg-blue-500 hover:bg-accent-strong text-white rounded-md transition-colors duration-150"
@@ -79,6 +76,7 @@ export default async function LandingNav() {
                 </Link>
               </>
             )}
+            </div>
           </div>
         </div>
       </div>
