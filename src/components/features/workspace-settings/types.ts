@@ -31,7 +31,7 @@ export const AGENT_OPTIONS = [
   { id: 'cursor',       label: 'Cursor',        aiMarkName: 'cursor'      as const },
   { id: 'windsurf',     label: 'Windsurf',      aiMarkName: 'windsurf'    as const },
   { id: 'continue',     label: 'Continue',      aiMarkName: 'continue'    as const },
-  { id: 'codex',        label: 'Codex',         aiMarkName: 'chatgpt'     as const },
+  { id: 'codex',        label: 'Codex',         aiMarkName: 'codex'       as const },
   { id: 'antigravity',  label: 'Antigravity',   aiMarkName: 'antigravity' as const },
 ] as const;
 

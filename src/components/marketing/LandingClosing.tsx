@@ -2,13 +2,13 @@ import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import AIMark from './AIMark';
 
-type AIId = 'claude' | 'cursor' | 'windsurf' | 'chatgpt' | 'continue' | 'antigravity';
+type AIId = 'claude' | 'cursor' | 'windsurf' | 'codex' | 'continue' | 'antigravity';
 
 const AI_CLIENTS: { id: AIId; name: string }[] = [
   { id: 'claude',   name: 'Claude'   },
   { id: 'cursor',   name: 'Cursor'   },
   { id: 'windsurf', name: 'Windsurf' },
-  { id: 'chatgpt',  name: 'ChatGPT'  },
+  { id: 'codex',    name: 'Codex'    },
   { id: 'continue', name: 'Continue' },
   { id: 'antigravity', name: 'Antigravity' },
 ];

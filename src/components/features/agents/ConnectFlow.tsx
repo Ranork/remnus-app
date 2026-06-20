@@ -1,13 +1,13 @@
 'use client';
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Check, Copy, ArrowRight, ChevronLeft, ChevronDown, X, KeyRound, Globe, AlertCircle, AlertTriangle } from 'lucide-react';
+import { Check, Copy, ArrowRight, ChevronLeft, ChevronDown, X, KeyRound, Globe, AlertCircle, AlertTriangle, Plug } from 'lucide-react';
 import AIMark from '@/components/marketing/AIMark';
 import { VscodeMark } from '@/components/features/agents/AgentMark';
 import { mintAgentToken } from '@/lib/actions/agentToken';
 import {
-  EDITORS, OAUTH_READY, CONFIG_PATHS, TEST_PROMPT,
-  buildCursorUrl, buildVscodeUrl, buildClaudeCmd, buildJsonConfig,
+  EDITORS, OAUTH_READY, CONFIG_PATHS, TEST_PROMPT, CODEX_LOGIN_CMD,
+  buildCursorUrl, buildVscodeUrl, buildClaudeCmd, buildJsonConfig, buildCodexToml,
   type EditorId, type OS,
 } from '@/lib/mcp/deeplinks';
 
@@ -16,6 +16,7 @@ export interface MintTarget { id: string; name: string }
 
 function EditorMark({ id, size = 14 }: { id: EditorId; size?: number }) {
   const meta = EDITORS.find(e => e.id === id);
+  if (id === 'custom') return <Plug size={size} className="text-blue-400" />;
   if (id === 'vscode' || !meta?.aiMark) return <VscodeMark size={size} />;
   return <AIMark name={meta.aiMark} size={size} />;
 }
@@ -87,25 +88,41 @@ function StepChoose({
         <p className="text-[11px] text-neutral-400">{t('connectChooseHint')}</p>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-        {EDITORS.map(({ id, label }) => {
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {EDITORS.map(({ id, label, descKey }) => {
           const selected = current === id;
           return (
             <button
               key={id}
               onClick={() => onSelect(id)}
-              className={`group relative flex items-center gap-2.5 px-3 py-3 rounded-lg border text-xs font-semibold transition-all text-left ${
+              className={`group relative flex items-start gap-3 p-4 rounded-xl border text-left transition-all ${
                 selected
-                  ? 'bg-blue-500/15 border-blue-500/50 text-blue-200 shadow-[0_0_12px_rgba(68,92,149,0.25)]'
-                  : 'bg-neutral-900 border-neutral-800 text-neutral-300 hover:bg-neutral-800 hover:border-neutral-700 hover:text-white'
+                  ? 'bg-blue-500/15 border-blue-500/50 shadow-[0_0_18px_rgba(68,92,149,0.3)]'
+                  : 'bg-neutral-900 border-neutral-800 hover:bg-neutral-800 hover:border-neutral-700 hover:-translate-y-0.5'
               }`}
             >
-              <EditorMark id={id} size={15} />
-              <span>{label}</span>
-              {selected
-                ? <Check size={11} className="ml-auto text-blue-400 shrink-0" />
-                : <ArrowRight size={11} className="ml-auto opacity-0 group-hover:opacity-100 text-neutral-500 transition-opacity shrink-0" />
-              }
+              <span
+                className={`shrink-0 flex items-center justify-center w-10 h-10 rounded-lg border transition-colors ${
+                  selected
+                    ? 'bg-blue-500/10 border-blue-500/30'
+                    : 'bg-neutral-950/60 border-neutral-800 group-hover:border-neutral-700'
+                }`}
+              >
+                <EditorMark id={id} size={22} />
+              </span>
+              <span className="min-w-0 flex flex-col gap-0.5">
+                <span className={`text-sm font-semibold ${selected ? 'text-blue-100' : 'text-neutral-200 group-hover:text-white'}`}>
+                  {label}
+                </span>
+                <span className="text-[11px] leading-snug text-neutral-400">
+                  {t(descKey as Parameters<typeof t>[0])}
+                </span>
+              </span>
+              {selected && (
+                <span className="absolute top-2.5 right-2.5 flex items-center justify-center w-5 h-5 rounded-full bg-blue-500 text-white">
+                  <Check size={12} />
+                </span>
+              )}
             </button>
           );
         })}
@@ -146,7 +163,8 @@ function StepConnect({
     setMintError('');
     try {
       // Pass the editor id as the canonical agent id so the right brand icon renders.
-      const res = await mintAgentToken(selectedWs, meta.label, scope, editor);
+      // 'custom' isn't a real brand id — leave it unset so it falls back to a generic icon.
+      const res = await mintAgentToken(selectedWs, meta.label, scope, editor === 'custom' ? undefined : editor);
       setMintedToken(res.token);
     } catch (err) {
       setMintError(err instanceof Error ? err.message : 'Failed to create token');
@@ -197,12 +215,37 @@ function StepConnect({
         </div>
       );
     }
+    if (meta.kind === 'toml') {
+      // Codex — add the server to config.toml, then sign in with one command.
+      return (
+        <div className="space-y-3">
+          <CodeBlock
+            code={buildCodexToml(mcpUrl)}
+            isCmd={false}
+            filePath={CONFIG_PATHS.codex[os]}
+            hint={t('connectAddToFile')}
+            t={t}
+          />
+          <CodeBlock code={CODEX_LOGIN_CMD} isCmd hint={t('connectCodexLoginHint')} t={t} />
+        </div>
+      );
+    }
+    if (meta.kind === 'generic') {
+      // Any other MCP-capable tool — give them the raw endpoint + a standard config.
+      return (
+        <div className="space-y-3">
+          <CodeBlock code={mcpUrl} isCmd hint={t('connectEndpointLabel')} t={t} />
+          <p className="text-[11px] text-neutral-400 leading-relaxed">{t('connectCustomHint')}</p>
+          <CodeBlock code={buildJsonConfig('custom', mcpUrl)} isCmd={false} hint={t('connectGenericConfig')} t={t} />
+        </div>
+      );
+    }
     // json-only editors (windsurf / continue / antigravity) — not OAuth-ready
     return (
       <CodeBlock
         code={buildJsonConfig(editor, mcpUrl)}
         isCmd={false}
-        filePath={CONFIG_PATHS[editor as Exclude<EditorId, 'claude' | 'vscode'>][os]}
+        filePath={CONFIG_PATHS[editor as Exclude<EditorId, 'claude' | 'vscode' | 'custom'>][os]}
         hint={t('connectAddToFile')}
         t={t}
       />
@@ -227,11 +270,25 @@ function StepConnect({
     if (meta.kind === 'command') {
       return <CodeBlock code={buildClaudeCmd(mcpUrl, token)} isCmd hint={t('connectRunCommand')} t={t} />;
     }
+    if (meta.kind === 'toml') {
+      return (
+        <CodeBlock
+          code={buildCodexToml(mcpUrl, token)}
+          isCmd={false}
+          filePath={CONFIG_PATHS.codex[os]}
+          hint={t('connectAddToFile')}
+          t={t}
+        />
+      );
+    }
+    if (meta.kind === 'generic') {
+      return <CodeBlock code={buildJsonConfig('custom', mcpUrl, token)} isCmd={false} hint={t('connectGenericConfig')} t={t} />;
+    }
     return (
       <CodeBlock
         code={buildJsonConfig(editor, mcpUrl, token)}
         isCmd={false}
-        filePath={CONFIG_PATHS[editor as Exclude<EditorId, 'claude' | 'vscode'>][os]}
+        filePath={CONFIG_PATHS[editor as Exclude<EditorId, 'claude' | 'vscode' | 'custom'>][os]}
         hint={t('connectAddToFile')}
         t={t}
       />
@@ -330,7 +387,7 @@ function StepConnect({
     );
   };
 
-  const needsOs = meta.kind === 'json' || (showAdvanced && editor === 'cursor');
+  const needsOs = meta.kind === 'json' || meta.kind === 'toml' || (showAdvanced && editor === 'cursor');
 
   return (
     <div className="space-y-4">
@@ -485,7 +542,8 @@ export default function ConnectFlow({ mcpUrl, onClose, mintTargets = [], bare = 
   const [editor, setEditor] = useState<EditorId | null>(null);
 
   const steps = (
-    <>
+    // key={step} remounts on each transition so the fade/slide-in replays.
+    <div key={step} className="animate-step-in">
       {step === 1 && (
         <StepChoose t={t} current={editor ?? undefined} onSelect={id => { setEditor(id); setStep(2); }} />
       )}
@@ -502,7 +560,7 @@ export default function ConnectFlow({ mcpUrl, onClose, mintTargets = [], bare = 
       {step === 3 && (
         <StepTest t={t} onDone={onClose} onBack={() => setStep(2)} />
       )}
-    </>
+    </div>
   );
 
   if (bare) return steps;

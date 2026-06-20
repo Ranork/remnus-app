@@ -2,13 +2,13 @@ import { getTranslations } from 'next-intl/server';
 import AIMark from './AIMark';
 import SetupGuideModal from './SetupGuideModal';
 
-type AIId = 'claude' | 'cursor' | 'windsurf' | 'chatgpt' | 'continue' | 'antigravity';
+type AIId = 'claude' | 'cursor' | 'windsurf' | 'codex' | 'continue' | 'antigravity';
 
 const CLIENTS: { id: AIId; name: string; sub: string; descKey: string; status: 'native' | 'beta' }[] = [
   { id: 'claude',   name: 'Claude',   sub: 'Desktop · Claude Code', descKey: 'bridgeIntClaudeDesc',   status: 'native' },
   { id: 'cursor',   name: 'Cursor',   sub: 'IDE · Composer',        descKey: 'bridgeIntCursorDesc',   status: 'native' },
   { id: 'windsurf', name: 'Windsurf', sub: 'IDE · Cascade',         descKey: 'bridgeIntWindsurfDesc', status: 'native' },
-  { id: 'chatgpt',  name: 'ChatGPT',  sub: 'Desktop · OAuth',       descKey: 'bridgeIntChatgptDesc',  status: 'beta'   },
+  { id: 'codex',    name: 'Codex',    sub: 'OpenAI · CLI · OAuth',  descKey: 'bridgeIntCodexDesc',    status: 'native' },
   { id: 'continue', name: 'Continue', sub: 'VS Code · open source', descKey: 'bridgeIntContinueDesc', status: 'native' },
   { id: 'antigravity', name: 'Antigravity', sub: 'Agent · Gemini',       descKey: 'bridgeIntAntigravityDesc', status: 'native' },
 ];

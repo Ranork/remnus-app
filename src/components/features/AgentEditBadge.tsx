@@ -14,6 +14,7 @@ const BRAND_COLORS: Record<AIMarkName, string> = {
   zed:         '#5B8EF0',
   gemini:      '#8AB4F8',
   antigravity: '#3186FF',
+  codex:       '#C8C8C8',  // Codex mark is monochrome — silver tint, like Cursor
 };
 
 function resolveAgent(agentName: string | null): { aiMarkName: AIMarkName; label: string } | null {

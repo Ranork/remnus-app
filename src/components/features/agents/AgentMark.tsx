@@ -21,7 +21,7 @@ export const AGENT_MARKS: { id: string; label: string; mark: AgentMarkName }[] =
   { id: 'vscode',      label: 'VS Code',     mark: 'vscode'      },
   { id: 'windsurf',    label: 'Windsurf',    mark: 'windsurf'    },
   { id: 'continue',    label: 'Continue',    mark: 'continue'    },
-  { id: 'codex',       label: 'Codex',       mark: 'chatgpt'     },
+  { id: 'codex',       label: 'Codex',       mark: 'codex'       },
   { id: 'antigravity', label: 'Antigravity', mark: 'antigravity' },
   { id: 'gemini',      label: 'Gemini',      mark: 'gemini'      },
   { id: 'zed',         label: 'Zed',         mark: 'zed'         },
@@ -56,7 +56,8 @@ export function resolveAgentMark(hint?: string | null): AgentMarkName | null {
   // which dynamic-registers under a generic name ("MCP CLI Proxy"/"MCP CLI Client").
   // Map those to Claude so the bundle shows the right brand icon out of the box.
   if (s.includes('mcp cli') || s.includes('mcp-remote') || s.includes('mcp remote')) return 'claude';
-  if (s.includes('codex') || s.includes('chatgpt') || s.includes('openai')) return 'chatgpt';
+  if (s.includes('codex')) return 'codex';
+  if (s.includes('chatgpt') || s.includes('openai')) return 'chatgpt';
   if (s.includes('gemini'))      return 'gemini';
   if (s.includes('zed'))         return 'zed';
   if (s.includes('vscode') || s.includes('vs code') || s.includes('visual studio')) return 'vscode';

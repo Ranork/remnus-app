@@ -177,12 +177,19 @@ export default async function LandingHero() {
               <span className="hero-flow-dot" />
             </div>
 
-            {/* MCP pill — border/glow follows the active agent, text stays fixed */}
+            {/* MCP pill — border/glow follows the active agent, text stays fixed.
+                Hover reveals a short MCP explainer (CSS-only, named group). */}
             <div
-              className="hero-mcp-pill absolute left-1/2 -translate-x-1/2 z-10 bg-neutral-950 border border-blue-500 rounded-full px-3 py-0.5 font-mono text-[10.5px] tracking-[0.04em]"
+              className="hero-mcp-pill group/mcp absolute left-1/2 -translate-x-1/2 z-10 bg-neutral-950 border border-blue-500 rounded-full px-6 py-1 font-mono text-[12px] tracking-[0.18em] cursor-help"
               style={{ top: 82 }}
             >
               <span className="text-accent-strong">{t('bridgeHeroPill')}</span>
+              <span
+                role="tooltip"
+                className="pointer-events-none absolute bottom-full left-1/2 -translate-x-1/2 mb-2.5 w-96 max-w-[90vw] rounded-lg border border-neutral-800 bg-neutral-900 px-3.5 py-2 font-sans text-[11px] leading-normal tracking-normal text-neutral-100 text-center opacity-0 transition-opacity duration-200 group-hover/mcp:opacity-100 z-20"
+              >
+                {t('bridgeHeroPillTip')}
+              </span>
             </div>
 
             {/* Workspace shot — only this is scaled up. Origin top-left keeps the
