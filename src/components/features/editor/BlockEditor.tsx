@@ -51,6 +51,32 @@ const COLOR_MARK_PRIORITY = 99;
 
 const ColorTextStyle = TextStyle.extend({
   priority: COLOR_MARK_PRIORITY,
+  addCommands() {
+    return {
+      ...this.parent?.(),
+      // The stock `removeEmptyTextStyle` (invoked by `unsetColor`) walks every
+      // node intersecting the selection and calls
+      // `tr.removeMark(pos, pos + node.nodeSize)` — using the NODE's full span,
+      // not clamped to the selection. For container nodes (a `listItem`, or the
+      // whole `orderedList`/`bulletList`) that span reaches far beyond the
+      // selection, so "set default" on a few list items wiped the color from
+      // every sibling in the list — even unselected ones. Clamp the removal to
+      // the actual selection range so it only touches what the user picked.
+      removeEmptyTextStyle: () => ({ tr }: any) => {
+        const { from, to } = tr.selection;
+        tr.doc.nodesBetween(from, to, (node: any, pos: number) => {
+          if (node.isTextblock) return true;
+          const hasStyle = node.marks
+            .filter((m: any) => m.type === this.type)
+            .some((m: any) => Object.values(m.attrs).some((v) => !!v));
+          if (!hasStyle) {
+            tr.removeMark(Math.max(pos, from), Math.min(pos + node.nodeSize, to), this.type);
+          }
+        });
+        return true;
+      },
+    };
+  },
   renderMarkdown(node: any, helpers: any) {
     const color = safeColor(node?.attrs?.color);
     const inner = helpers.renderChildren();

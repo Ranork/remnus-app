@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import { NodeViewWrapper } from '@tiptap/react';
-import { Download, File as FileIcon, Loader2, Upload } from 'lucide-react';
+import { Download, Loader2, Upload } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { deleteUploadedAsset } from './assetClient';
 
@@ -41,7 +41,36 @@ export default function FileBlockView({
     : '';
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
+  const [downloading, setDownloading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+
+  // A plain `<a href download>` is silently swallowed by the Tauri WebView
+  // (WebView2 / WKWebView intercept navigation-based downloads), so the desktop
+  // app's download buttons never fire. Fetching the file ourselves and saving it
+  // via a blob URL works everywhere — web, Tauri, and Capacitor. The session
+  // cookie rides along, so the auth-gated proxy route still authorizes.
+  const handleDownload = async () => {
+    if (!downloadUrl || downloading) return;
+    setDownloading(true);
+    try {
+      const res = await fetch(downloadUrl);
+      if (!res.ok) throw new Error('download failed');
+      const blob = await res.blob();
+      const objUrl = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = objUrl;
+      a.download = name || 'download';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(objUrl), 2000);
+    } catch {
+      // Best-effort web fallback — open the proxy route in a new tab.
+      if (safeUrl) window.open(downloadUrl, '_blank', 'noopener');
+    } finally {
+      setDownloading(false);
+    }
+  };
 
   useEffect(() => {
     if (!url) fileRef.current?.click();
@@ -74,19 +103,18 @@ export default function FileBlockView({
 
         {url ? (
           <div className="relative flex items-center gap-3 rounded-md border border-neutral-800 bg-neutral-900 px-3 py-2.5">
-            <FileIcon size={18} className="shrink-0 text-neutral-400" />
             <div className="flex-1 min-w-0">
               <div className="text-sm text-neutral-100 truncate">{name || t('fileUntitled')}</div>
               {size > 0 && <div className="text-xs text-neutral-500">{formatSize(size)}</div>}
             </div>
-            <a
-              href={downloadUrl || '#'}
-              download={name || true}
-              className="shrink-0 p-1.5 rounded text-neutral-400 hover:text-neutral-100 hover:bg-neutral-800 transition-colors"
+            <button
+              onClick={handleDownload}
+              disabled={downloading || !downloadUrl}
+              className="shrink-0 p-1.5 rounded text-neutral-400 hover:text-neutral-100 hover:bg-neutral-800 transition-colors cursor-pointer disabled:opacity-50"
               title={t('fileDownload')}
             >
-              <Download size={15} />
-            </a>
+              {downloading ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />}
+            </button>
             <button
               onClick={() => {
                 deleteUploadedAsset(url);

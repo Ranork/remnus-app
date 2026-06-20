@@ -36,7 +36,7 @@ export default function HeadingView({ node, getPos, editor, decorations }: Props
       <button
         contentEditable={false}
         onClick={handleToggle}
-        className="heading-collapse-btn"
+        className={`heading-collapse-btn${isCollapsed ? ' heading-collapse-btn--collapsed' : ''}`}
         aria-label={isCollapsed ? 'Expand section' : 'Collapse section'}
         title={isCollapsed ? 'Expand section' : 'Collapse section'}
       >

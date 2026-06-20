@@ -392,6 +392,13 @@ pre,
   opacity: 1;
 }
 
+/* When a section is collapsed, keep its chevron visible without hover so it's
+   clear something is hidden underneath (the heading only enters the collapsed
+   set when it has content below it). */
+.heading-collapse-btn--collapsed {
+  opacity: 1;
+}
+
 .heading-collapse-btn:hover {
   color: var(--color-neutral-300);
   background: var(--color-neutral-800);
