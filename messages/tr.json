@@ -135,7 +135,21 @@
     "planTier_free": "Ücretsiz",
     "planTier_startup": "Startup",
     "planTier_professional": "Professional",
-    "planTier_enterprise": "Enterprise"
+    "planTier_enterprise": "Enterprise",
+    "contentSection": "İçerik",
+    "ownedWorkspaces": "Sahip",
+    "contentPages": "Sayfalar",
+    "contentDatabases": "Veritabanları",
+    "contentRecords": "Kayıtlar",
+    "agentsSection": "AI ajanları (MCP)",
+    "agentsConnected": "Bağlı",
+    "agentsCalls": "Araç çağrıları",
+    "agentsLastCall": "Son çağrı",
+    "agentsNone": "Bağlı AI ajanı yok.",
+    "agentsOauthCount": "{count} etkin OAuth bağlantısı",
+    "agentStatusActive": "Etkin",
+    "agentStatusExpired": "Süresi doldu",
+    "agentStatusRevoked": "İptal edildi"
   },
   "Workspace": {
     "planBilling": "Plan ve Faturalama",

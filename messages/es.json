@@ -135,7 +135,21 @@
     "planTier_free": "Gratis",
     "planTier_startup": "Startup",
     "planTier_professional": "Professional",
-    "planTier_enterprise": "Enterprise"
+    "planTier_enterprise": "Enterprise",
+    "contentSection": "Contenido",
+    "ownedWorkspaces": "Propios",
+    "contentPages": "Páginas",
+    "contentDatabases": "Bases de datos",
+    "contentRecords": "Registros",
+    "agentsSection": "Agentes de IA (MCP)",
+    "agentsConnected": "Conectados",
+    "agentsCalls": "Llamadas",
+    "agentsLastCall": "Última llamada",
+    "agentsNone": "No hay agentes de IA conectados.",
+    "agentsOauthCount": "{count} conexiones OAuth activas",
+    "agentStatusActive": "Activo",
+    "agentStatusExpired": "Caducado",
+    "agentStatusRevoked": "Revocado"
   },
   "Workspace": {
     "planBilling": "Plan y facturación",

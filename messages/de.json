@@ -135,7 +135,21 @@
     "planTier_free": "Kostenlos",
     "planTier_startup": "Startup",
     "planTier_professional": "Professional",
-    "planTier_enterprise": "Enterprise"
+    "planTier_enterprise": "Enterprise",
+    "contentSection": "Inhalte",
+    "ownedWorkspaces": "Eigene",
+    "contentPages": "Seiten",
+    "contentDatabases": "Datenbanken",
+    "contentRecords": "Datensätze",
+    "agentsSection": "KI-Agenten (MCP)",
+    "agentsConnected": "Verbunden",
+    "agentsCalls": "Aufrufe",
+    "agentsLastCall": "Letzter Aufruf",
+    "agentsNone": "Keine KI-Agenten verbunden.",
+    "agentsOauthCount": "{count} aktive OAuth-Verbindungen",
+    "agentStatusActive": "Aktiv",
+    "agentStatusExpired": "Abgelaufen",
+    "agentStatusRevoked": "Widerrufen"
   },
   "Workspace": {
     "planBilling": "Plan & Abrechnung",

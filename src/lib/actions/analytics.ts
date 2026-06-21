@@ -2,8 +2,9 @@
 import { db } from '@/db';
 import {
   users, accounts, userSessions, workspaceMembers, workspaces, workspaceItems, uploadedAssets, subscriptions,
+  agentTokens, oauthAccessTokens, agentActivity, databases, pages,
 } from '@/db/schema';
-import { eq, ne, and, inArray, asc, sql } from 'drizzle-orm';
+import { eq, ne, and, inArray, asc, desc, isNull, sql } from 'drizzle-orm';
 import { getCurrentUser } from '@/lib/auth/session';
 import { getTranslations } from 'next-intl/server';
 import { isPlanTier, type PlanTier } from '@/lib/billing/plans';
@@ -196,6 +197,30 @@ export type UserSubscription = {
   currentPeriodEnd: number | null; // epoch ms
 };
 
+export type UserContentStats = {
+  pages: number;      // standalone + page-type workspace items the user can see
+  databases: number;  // database-type workspace items
+  records: number;    // rows across those databases
+};
+
+export type AgentTokenSummary = {
+  id: string;
+  name: string;
+  agentName: string | null;
+  scope: string; // 'read' | 'write'
+  status: 'active' | 'revoked' | 'expired';
+  lastUsedAt: number | null; // epoch ms
+  createdAt: number | null;  // epoch ms
+};
+
+export type UserAgents = {
+  active: number;            // active PAT tokens + active OAuth connections
+  oauthActive: number;       // active (non-revoked) OAuth connections
+  calls: number;             // MCP tool calls logged across the user's workspaces
+  lastCall: number | null;   // epoch ms of the most recent call
+  tokens: AgentTokenSummary[]; // long-lived PAT tokens, newest first
+};
+
 export type UserDetail = {
   account: {
     id: string;
@@ -205,9 +230,12 @@ export type UserDetail = {
     role: string;
     createdAt: number | null; // epoch ms
     authType: 'google' | 'github' | 'email' | 'unknown';
+    ownedWorkspaces: number;  // workspaces where this user is owner
   };
   activity: PerUserActivity;
   storageBytes: number; // total bytes this user has uploaded
+  content: UserContentStats;
+  agents: UserAgents;
   subscription: UserSubscription;
   workspaces: UserDetailWorkspace[];
 };
@@ -328,6 +356,94 @@ export async function getUserDetail(userId: string): Promise<UserDetail> {
     items: itemsByWs[m.workspaceId] ?? [],
   }));
 
+  const ownedWorkspaces = memberships.filter((m) => m.role === 'owner').length;
+
+  // ── Content stats — counted across the user's workspaces ──
+  const itemTypeRows = wsIds.length
+    ? await db
+        .select({ type: workspaceItems.type, c: sql<number>`cast(count(*) as int)` })
+        .from(workspaceItems)
+        .where(inArray(workspaceItems.workspaceId, wsIds))
+        .groupBy(workspaceItems.type)
+    : [];
+  let pageCount = 0;
+  let databaseCount = 0;
+  for (const r of itemTypeRows) {
+    if (r.type === 'database') databaseCount = Number(r.c);
+    else pageCount = Number(r.c);
+  }
+  const [recordAgg] = wsIds.length
+    ? await db
+        .select({ c: sql<number>`cast(count(*) as int)` })
+        .from(pages)
+        .innerJoin(databases, eq(pages.databaseId, databases.id))
+        .innerJoin(workspaceItems, eq(databases.itemId, workspaceItems.id))
+        .where(inArray(workspaceItems.workspaceId, wsIds))
+    : [{ c: 0 }];
+
+  // ── MCP agents — PAT tokens live in the user's workspaces; OAuth tokens are
+  // bound to the user. Activity is logged per workspace, so count across wsIds. ──
+  const nowMs = Date.now();
+  const patRows = wsIds.length
+    ? await db
+        .select({
+          id: agentTokens.id,
+          name: agentTokens.name,
+          agentName: agentTokens.agentName,
+          scope: agentTokens.scope,
+          createdAt: agentTokens.createdAt,
+          lastUsedAt: agentTokens.lastUsedAt,
+          expiresAt: agentTokens.expiresAt,
+          revokedAt: agentTokens.revokedAt,
+        })
+        .from(agentTokens)
+        .where(inArray(agentTokens.workspaceId, wsIds))
+        .orderBy(desc(agentTokens.createdAt))
+    : [];
+
+  const patTokens: AgentTokenSummary[] = patRows.map((r) => {
+    const expMs = r.expiresAt ? new Date(r.expiresAt).getTime() : null;
+    const status: AgentTokenSummary['status'] = r.revokedAt
+      ? 'revoked'
+      : expMs != null && expMs < nowMs
+        ? 'expired'
+        : 'active';
+    return {
+      id: r.id,
+      name: r.name,
+      agentName: r.agentName,
+      scope: r.scope,
+      status,
+      lastUsedAt: r.lastUsedAt ? new Date(r.lastUsedAt).getTime() : null,
+      createdAt: r.createdAt ? new Date(r.createdAt).getTime() : null,
+    };
+  });
+  const patActive = patTokens.filter((t) => t.status === 'active').length;
+
+  const [oauthAgg] = await db
+    .select({ c: sql<number>`cast(count(*) as int)` })
+    .from(oauthAccessTokens)
+    .where(and(eq(oauthAccessTokens.userId, userId), isNull(oauthAccessTokens.revokedAt)));
+  const oauthActive = Number(oauthAgg?.c ?? 0);
+
+  const [callAgg] = wsIds.length
+    ? await db
+        .select({
+          c: sql<number>`cast(count(*) as int)`,
+          last: sql<number>`max(${agentActivity.createdAt})`,
+        })
+        .from(agentActivity)
+        .where(inArray(agentActivity.workspaceId, wsIds))
+    : [{ c: 0, last: null }];
+
+  const agents: UserAgents = {
+    active: patActive + oauthActive,
+    oauthActive,
+    calls: Number(callAgg?.c ?? 0),
+    lastCall: toEpochMs(callAgg?.last),
+    tokens: patTokens,
+  };
+
   return {
     account: {
       id: u.id,
@@ -337,6 +453,7 @@ export async function getUserDetail(userId: string): Promise<UserDetail> {
       role: u.role,
       createdAt: toEpochMs(u.createdAt),
       authType,
+      ownedWorkspaces,
     },
     activity: {
       totalSeconds: act?.totalSeconds ?? 0,
@@ -345,6 +462,12 @@ export async function getUserDetail(userId: string): Promise<UserDetail> {
       storageBytes: Number(userStorage?.total ?? 0),
     },
     storageBytes: Number(userStorage?.total ?? 0),
+    content: {
+      pages: pageCount,
+      databases: databaseCount,
+      records: Number(recordAgg?.c ?? 0),
+    },
+    agents,
     subscription,
     workspaces: workspacesDetail,
   };

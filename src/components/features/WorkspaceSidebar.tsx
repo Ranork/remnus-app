@@ -708,12 +708,12 @@ export default function WorkspaceSidebar({
   const handleSwitchWorkspace = (id: string) => {
     if (id === activeWorkspaceIdFromPath) return;
 
-    // Find first item in this workspace to navigate directly, ensuring an instant client-side transition
+    // Navigate to the TOP of the hierarchy (first root item), not merely the
+    // oldest item in the flat list — ensuring an instant client-side transition.
     const workspaceChildren = itemsByWorkspace[id] || [];
-    if (workspaceChildren.length > 0) {
-      const firstItem = workspaceChildren[0];
-      const targetHref = hrefFor(firstItem);
-      router.push(targetHref);
+    const firstItem = workspaceChildren.find((i) => i.parentId === null) ?? workspaceChildren[0];
+    if (firstItem) {
+      router.push(hrefFor(firstItem));
     } else {
       // No items — switch workspace then show the empty state
       switchWorkspace(id).then(() => {

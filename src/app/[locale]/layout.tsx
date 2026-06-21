@@ -21,6 +21,7 @@ import CookieConsentBanner from '@/components/features/CookieConsentBanner';
 import { CONSENT_COOKIE, isConsentRequired, parseConsent } from '@/lib/consent';
 import UpdateBanner from '@/components/features/UpdateBanner';
 import ActivityTracker from '@/components/providers/ActivityTracker';
+import LastPathTracker from '@/components/providers/LastPathTracker';
 import BillingSuccessModal from '@/components/features/BillingSuccessModal';
 import { METADATA_BASE_URL, DEFAULT_OG_IMAGE, DEFAULT_TWITTER_IMAGE } from '@/lib/metadata';
 
@@ -151,6 +152,7 @@ export default async function LocaleLayout({
           userRole={currentUser.role}
         >
         <ActivityTracker />
+        <LastPathTracker />
         <BillingSuccessModal />
         <UpdateBanner />
         <QueryProvider>

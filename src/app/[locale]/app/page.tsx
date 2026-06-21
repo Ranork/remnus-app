@@ -1,9 +1,28 @@
 import { auth } from '@/auth';
-import { getActiveWorkspaceId, getWorkspaceItems } from '@/lib/actions/workspace';
+import { getActiveWorkspaceId, getAllWorkspaceItems, type WorkspaceItemRow } from '@/lib/actions/workspace';
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import { getTranslations } from 'next-intl/server';
 import Image from 'next/image';
+import { LAST_PATH_COOKIE } from '@/lib/constants/cookies';
+
+// Validate a remembered path still points at an item the user can open, so a
+// deleted/inaccessible page falls through to the default instead of 404ing.
+function resolveLastPath(lastPath: string | undefined, items: WorkspaceItemRow[]): string | null {
+  if (!lastPath) return null;
+
+  const pageMatch = lastPath.match(/^\/page\/([^/?#]+)/);
+  if (pageMatch) {
+    return items.some((i) => i.id === pageMatch[1] && i.type === 'page') ? lastPath : null;
+  }
+
+  const dbMatch = lastPath.match(/^\/db\/([^/?#]+)/);
+  if (dbMatch) {
+    return items.some((i) => i.databaseId === dbMatch[1]) ? lastPath : null;
+  }
+
+  return null;
+}
 
 export default async function AppRedirectPage({
   searchParams,
@@ -26,16 +45,26 @@ export default async function AppRedirectPage({
   const sp = await searchParams;
   const suffix = sp?.billing === 'success' ? '?billing=success' : '';
 
+  const [allItems, cookieStore] = await Promise.all([getAllWorkspaceItems(), cookies()]);
+
+  // 1) Resume where the user left off — restore the last visited page if it still exists.
+  const restored = resolveLastPath(cookieStore.get(LAST_PATH_COOKIE)?.value, allItems);
+  if (restored) {
+    redirect(`${restored}${suffix}`);
+  }
+
+  // 2) Otherwise open the TOP of the active workspace's hierarchy (first root item),
+  //    not merely the oldest item in the flat list.
   const activeWorkspaceId = await getActiveWorkspaceId();
 
   let hasWorkspace = false;
 
   if (activeWorkspaceId) {
     hasWorkspace = true;
-    const items = await getWorkspaceItems(activeWorkspaceId);
+    const items = allItems.filter((i) => i.workspaceId === activeWorkspaceId);
+    const first = items.find((i) => i.parentId === null) ?? items[0];
 
-    if (items.length > 0) {
-      const first = items[0];
+    if (first) {
       if (first.type === 'database' && first.databaseId) {
         redirect(`/db/${first.databaseId}${suffix}`);
       } else {

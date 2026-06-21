@@ -135,7 +135,21 @@
     "planTier_free": "मुफ़्त",
     "planTier_startup": "Startup",
     "planTier_professional": "Professional",
-    "planTier_enterprise": "Enterprise"
+    "planTier_enterprise": "Enterprise",
+    "contentSection": "सामग्री",
+    "ownedWorkspaces": "स्वामित्व",
+    "contentPages": "पृष्ठ",
+    "contentDatabases": "डेटाबेस",
+    "contentRecords": "रिकॉर्ड",
+    "agentsSection": "AI एजेंट (MCP)",
+    "agentsConnected": "जुड़े हुए",
+    "agentsCalls": "टूल कॉल",
+    "agentsLastCall": "अंतिम कॉल",
+    "agentsNone": "कोई AI एजेंट जुड़ा नहीं है।",
+    "agentsOauthCount": "{count} सक्रिय OAuth कनेक्शन",
+    "agentStatusActive": "सक्रिय",
+    "agentStatusExpired": "समाप्त",
+    "agentStatusRevoked": "रद्द"
   },
   "Workspace": {
     "planBilling": "प्लान और बिलिंग",
