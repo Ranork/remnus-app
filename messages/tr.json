@@ -717,7 +717,8 @@
     "itemNotFound": "Öğe bulunamadı",
     "resourceNotFound": "Bu sayfa artık mevcut değil.",
     "resourceNotFoundDesc": "Silinmiş veya taşınmış olabilir.",
-    "goHome": "Çalışma alanına dön"
+    "goHome": "Çalışma alanına dön",
+    "billingDemoBlocked": "Demo hesapları abone olamaz. Bir plan seçmek için kendi hesabınızla giriş yapın."
   },
   "LanguageSwitcher": {
     "label": "Dil"
@@ -1066,7 +1067,10 @@
     "tabHeroSubtitle": "Aboneliğiniz sahip olduğunuz tüm çalışma alanlarını kapsar. Planınızı, koltuklarınızı ve kullanımınızı faturalama merkezinden yönetin.",
     "openBilling": "Faturalamayı aç",
     "seatsUsage": "{used} / {limit} koltuk",
-    "seatLimitHint": "Planınızın koltuk limitine ulaştınız. Daha fazla üye davet etmek için yükseltin."
+    "seatLimitHint": "Planınızın koltuk limitine ulaştınız. Daha fazla üye davet etmek için yükseltin.",
+    "demoTitle": "Devam etmek için giriş yapın",
+    "demoBody": "Remnus'u demo modunda inceliyorsunuz, bu yüzden ödeme burada kullanılamıyor. Bir plan seçmek için kendi hesabınızla giriş yapın.",
+    "demoCta": "Kendi hesabımla giriş yap"
   },
   "Pricing": {
     "title": "Fiyatlandırma",

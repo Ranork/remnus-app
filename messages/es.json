@@ -717,7 +717,8 @@
     "itemNotFound": "Elemento no encontrado",
     "resourceNotFound": "Esta página ya no existe.",
     "resourceNotFoundDesc": "Puede haber sido eliminada o movida.",
-    "goHome": "Ir al espacio de trabajo"
+    "goHome": "Ir al espacio de trabajo",
+    "billingDemoBlocked": "Las cuentas de demostración no pueden suscribirse. Inicia sesión con tu propia cuenta para elegir un plan."
   },
   "LanguageSwitcher": {
     "label": "Idioma"
@@ -1066,7 +1067,10 @@
     "tabHeroSubtitle": "Tu suscripción cubre todos los espacios de trabajo que posees. Gestiona tu plan, asientos y uso desde el centro de facturación.",
     "openBilling": "Abrir facturación",
     "seatsUsage": "{used} / {limit} asientos",
-    "seatLimitHint": "Has alcanzado el límite de asientos de tu plan. Mejóralo para invitar a más miembros."
+    "seatLimitHint": "Has alcanzado el límite de asientos de tu plan. Mejóralo para invitar a más miembros.",
+    "demoTitle": "Inicia sesión para continuar",
+    "demoBody": "Estás probando Remnus en modo demo, así que el pago no está disponible aquí. Inicia sesión con tu propia cuenta para elegir un plan.",
+    "demoCta": "Iniciar sesión con mi cuenta"
   },
   "Pricing": {
     "title": "Precios",

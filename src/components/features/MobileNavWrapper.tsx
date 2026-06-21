@@ -261,7 +261,7 @@ export default function MobileNavWrapper({
         <AgentsModal onClose={() => setAgentsModalOpen(false)} />
       )}
       {billingModalOpen && (
-        <BillingModal onClose={() => setBillingModalOpen(false)} />
+        <BillingModal isDemo={currentUser.role === 'demo'} onClose={() => setBillingModalOpen(false)} />
       )}
 
       {/* Template picker */}

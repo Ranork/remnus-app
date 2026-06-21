@@ -42,6 +42,8 @@ async function getOrCreateCustomer(userId: string, email?: string | null, name?:
 export async function createCheckoutSession(tier: PlanTier): Promise<{ url?: string; error?: string }> {
   const user = await getCurrentUser();
   const t = await getTranslations('Errors');
+  // Demo accounts are throwaway — never let them open Checkout, even if the UI is bypassed.
+  if (user.role === 'demo') return { error: t('billingDemoBlocked') };
   if (!stripe) return { error: t('billingUnavailable') };
   if (tier !== 'startup' && tier !== 'professional') return { error: t('billingInvalidTier') };
 
@@ -93,6 +95,7 @@ export async function createCheckoutSession(tier: PlanTier): Promise<{ url?: str
 export async function createPortalSession(): Promise<{ url?: string; error?: string }> {
   const user = await getCurrentUser();
   const t = await getTranslations('Errors');
+  if (user.role === 'demo') return { error: t('billingDemoBlocked') };
   if (!stripe) return { error: t('billingUnavailable') };
 
   const [row] = await db.select().from(subscriptions).where(eq(subscriptions.ownerUserId, user.id)).limit(1);
@@ -146,6 +149,7 @@ export async function getMyTier(): Promise<PlanTier> {
 export async function cancelSubscription(): Promise<{ ok?: boolean; error?: string }> {
   const user = await getCurrentUser();
   const t = await getTranslations('Errors');
+  if (user.role === 'demo') return { error: t('billingDemoBlocked') };
   if (!stripe) return { error: t('billingUnavailable') };
 
   const [row] = await db.select().from(subscriptions).where(eq(subscriptions.ownerUserId, user.id)).limit(1);

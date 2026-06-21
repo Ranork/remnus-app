@@ -717,7 +717,8 @@
     "itemNotFound": "Element nicht gefunden",
     "resourceNotFound": "Diese Seite existiert nicht mehr.",
     "resourceNotFoundDesc": "Sie wurde möglicherweise gelöscht oder verschoben.",
-    "goHome": "Zum Arbeitsbereich"
+    "goHome": "Zum Arbeitsbereich",
+    "billingDemoBlocked": "Mit Demokonten ist kein Abo möglich. Melden Sie sich mit Ihrem eigenen Konto an, um einen Tarif zu wählen."
   },
   "LanguageSwitcher": {
     "label": "Sprache"
@@ -1066,7 +1067,10 @@
     "tabHeroSubtitle": "Ihr Abonnement umfasst alle Arbeitsbereiche, die Ihnen gehören. Verwalten Sie Plan, Sitzplätze und Nutzung im Abrechnungscenter.",
     "openBilling": "Abrechnung öffnen",
     "seatsUsage": "{used} / {limit} Sitzplätze",
-    "seatLimitHint": "Sie haben das Sitzplatzlimit Ihres Plans erreicht. Upgraden Sie, um mehr Mitglieder einzuladen."
+    "seatLimitHint": "Sie haben das Sitzplatzlimit Ihres Plans erreicht. Upgraden Sie, um mehr Mitglieder einzuladen.",
+    "demoTitle": "Zum Fortfahren anmelden",
+    "demoBody": "Sie testen Remnus im Demomodus, daher ist der Bezahlvorgang hier nicht verfügbar. Melden Sie sich mit Ihrem eigenen Konto an, um einen Tarif zu wählen.",
+    "demoCta": "Mit meinem Konto anmelden"
   },
   "Pricing": {
     "title": "Preise",

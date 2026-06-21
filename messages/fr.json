@@ -717,7 +717,8 @@
     "itemNotFound": "Élément introuvable",
     "resourceNotFound": "Cette page n'existe plus.",
     "resourceNotFoundDesc": "Elle a peut-être été supprimée ou déplacée.",
-    "goHome": "Aller à l'espace de travail"
+    "goHome": "Aller à l'espace de travail",
+    "billingDemoBlocked": "Les comptes de démonstration ne peuvent pas souscrire. Connectez-vous avec votre propre compte pour choisir une formule."
   },
   "LanguageSwitcher": {
     "label": "Langue"
@@ -1066,7 +1067,10 @@
     "tabHeroSubtitle": "Votre abonnement couvre tous les espaces de travail que vous possédez. Gérez votre forfait, vos sièges et votre utilisation depuis le centre de facturation.",
     "openBilling": "Ouvrir la facturation",
     "seatsUsage": "{used} / {limit} sièges",
-    "seatLimitHint": "Vous avez atteint la limite de sièges de votre forfait. Améliorez-le pour inviter plus de membres."
+    "seatLimitHint": "Vous avez atteint la limite de sièges de votre forfait. Améliorez-le pour inviter plus de membres.",
+    "demoTitle": "Connectez-vous pour continuer",
+    "demoBody": "Vous découvrez Remnus en mode démo, le paiement n'est donc pas disponible ici. Connectez-vous avec votre propre compte pour choisir une formule.",
+    "demoCta": "Se connecter avec mon compte"
   },
   "Pricing": {
     "title": "Tarifs",

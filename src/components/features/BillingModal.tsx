@@ -25,7 +25,7 @@ const TIER_ACCENT: Record<PlanTier, string> = {
   enterprise: 'var(--color-amber-500)',
 };
 
-export default function BillingModal({ onClose }: { onClose: () => void }) {
+export default function BillingModal({ isDemo = false, onClose }: { isDemo?: boolean; onClose: () => void }) {
   const t = useTranslations('Billing');
   const [data, setData] = useState<Usage | null>(null);
   const [loading, setLoading] = useState(true);
@@ -124,14 +124,16 @@ export default function BillingModal({ onClose }: { onClose: () => void }) {
                 >
                   {t('changePlan')}
                 </button>
-                <button
-                  onClick={() => go(createPortalSession, 'portal')}
-                  disabled={!!busy}
-                  className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-[13px] font-medium text-neutral-300 hover:text-neutral-100 hover:bg-neutral-800 disabled:opacity-50 transition-colors"
-                >
-                  {busy === 'portal' ? <Loader2 size={14} className="animate-spin" /> : <ExternalLink size={13} />}
-                  {t('manageBilling')}
-                </button>
+                {!isDemo && (
+                  <button
+                    onClick={() => go(createPortalSession, 'portal')}
+                    disabled={!!busy}
+                    className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-[13px] font-medium text-neutral-300 hover:text-neutral-100 hover:bg-neutral-800 disabled:opacity-50 transition-colors"
+                  >
+                    {busy === 'portal' ? <Loader2 size={14} className="animate-spin" /> : <ExternalLink size={13} />}
+                    {t('manageBilling')}
+                  </button>
+                )}
               </div>
             </>
           )}
@@ -139,7 +141,7 @@ export default function BillingModal({ onClose }: { onClose: () => void }) {
       </div>
 
       {pickerOpen && data && (
-        <PlanPickerModal currentTier={tier} onClose={() => setPickerOpen(false)} />
+        <PlanPickerModal currentTier={tier} isDemo={isDemo} onClose={() => setPickerOpen(false)} />
       )}
     </>
   );

@@ -4,11 +4,13 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { Loader2 } from 'lucide-react';
 import { createCheckoutSession } from '@/lib/actions/billing';
+import DemoBillingNotice from '@/components/features/DemoBillingNotice';
 import type { PlanTier } from '@/lib/billing/plans';
 
 interface Props {
   tier: PlanTier;
   isAuthed: boolean;
+  isDemo?: boolean;
   href: string;          // fallback link (guests / free / enterprise)
   label: string;
   variant: 'solid' | 'outline';
@@ -18,8 +20,9 @@ interface Props {
 
 // Paid tiers, when the visitor is logged in, start a Stripe Checkout directly.
 // Everyone else just follows the link (sign up / contact / go to app).
-export default function PricingCtaButton({ tier, isAuthed, href, label, variant, accentColor, solidTextLight }: Props) {
+export default function PricingCtaButton({ tier, isAuthed, isDemo = false, href, label, variant, accentColor, solidTextLight }: Props) {
   const [busy, setBusy] = useState(false);
+  const [demoOpen, setDemoOpen] = useState(false);
   const isPaid = tier === 'startup' || tier === 'professional';
 
   const base = 'inline-flex items-center justify-center gap-2 px-5 py-3 rounded-lg text-[13.5px] transition-colors duration-150';
@@ -36,6 +39,26 @@ export default function PricingCtaButton({ tier, isAuthed, href, label, variant,
         {label}
         <span aria-hidden>→</span>
       </Link>
+    );
+  }
+
+  // Demo accounts can see pricing but can't check out — invite them to sign in instead.
+  if (isDemo) {
+    return (
+      <>
+        <button type="button" onClick={() => setDemoOpen(true)} className={cls} style={style}>
+          {label}
+          <span aria-hidden>→</span>
+        </button>
+        {demoOpen && (
+          <>
+            <div className="fixed inset-0 z-100 bg-black/60" onClick={() => setDemoOpen(false)} />
+            <div className="fixed inset-x-4 top-1/2 -translate-y-1/2 z-100 sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:w-full sm:max-w-sm">
+              <DemoBillingNotice onClose={() => setDemoOpen(false)} />
+            </div>
+          </>
+        )}
+      </>
     );
   }
 

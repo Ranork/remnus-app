@@ -1433,7 +1433,7 @@ export default function WorkspaceSidebar({
       )}
 
       {billingModalOpen && (
-        <BillingModal onClose={() => {
+        <BillingModal isDemo={currentUser.role === 'demo'} onClose={() => {
           setBillingModalOpen(false);
           getMyTier().then(setPlanTier).catch(() => {});
         }} />

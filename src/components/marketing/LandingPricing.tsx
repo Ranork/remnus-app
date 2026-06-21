@@ -50,6 +50,7 @@ export default async function LandingPricing({ showComparison = false }: { showC
   const t = await getTranslations('Landing');
   const session = await auth();
   const isAuthed = !!session?.user;
+  const isDemo = session?.user?.role === 'demo';
 
   const tU = t('bridgePricingTblValUnlimited');
   const tCustom = t('bridgePricingTblValCustom');
@@ -202,7 +203,7 @@ export default async function LandingPricing({ showComparison = false }: { showC
       <div className="max-w-7xl mx-auto mt-10 lg:mt-12">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-5 items-stretch">
           {plans.map(({ key, ...rest }) => (
-            <PlanCard key={key} {...rest} isAuthed={isAuthed} />
+            <PlanCard key={key} {...rest} isAuthed={isAuthed} isDemo={isDemo} />
           ))}
         </div>
 
@@ -333,6 +334,7 @@ function HelpTip({ text }: { text: string }) {
 type PlanCardProps = {
   tier: PlanTier;
   isAuthed: boolean;
+  isDemo: boolean;
   accent: Accent;
   title: string;
   tag: string;
@@ -349,7 +351,7 @@ type PlanCardProps = {
 };
 
 function PlanCard({
-  tier, isAuthed, accent, title, tag, sub, price, priceSub, originalPrice, discountLabel, features, cta, ctaHref, ctaVariant, featured,
+  tier, isAuthed, isDemo, accent, title, tag, sub, price, priceSub, originalPrice, discountLabel, features, cta, ctaHref, ctaVariant, featured,
 }: PlanCardProps) {
   const a = ACCENTS[accent];
   return (
@@ -419,6 +421,7 @@ function PlanCard({
       <PricingCtaButton
         tier={tier}
         isAuthed={isAuthed}
+        isDemo={isDemo}
         href={ctaHref}
         label={cta}
         variant={ctaVariant}

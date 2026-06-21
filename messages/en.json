@@ -717,7 +717,8 @@
     "itemNotFound": "Item not found",
     "resourceNotFound": "This page no longer exists.",
     "resourceNotFoundDesc": "It may have been deleted or moved.",
-    "goHome": "Go to workspace"
+    "goHome": "Go to workspace",
+    "billingDemoBlocked": "Demo accounts can't subscribe. Sign in with your own account to choose a plan."
   },
   "LanguageSwitcher": {
     "label": "Language"
@@ -1066,7 +1067,10 @@
     "tabHeroSubtitle": "Your subscription covers every workspace you own. Manage your plan, seats and usage from the billing center.",
     "openBilling": "Open billing",
     "seatsUsage": "{used} / {limit} seats",
-    "seatLimitHint": "You've reached your plan's seat limit. Upgrade to invite more members."
+    "seatLimitHint": "You've reached your plan's seat limit. Upgrade to invite more members.",
+    "demoTitle": "Sign in to continue",
+    "demoBody": "You're exploring Remnus in demo mode, so checkout isn't available here. Sign in with your own account to choose a plan.",
+    "demoCta": "Sign in with my account"
   },
   "Pricing": {
     "title": "Pricing",
