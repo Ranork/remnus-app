@@ -3,7 +3,7 @@ import { useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Shield, Calendar, ChevronLeft, ChevronRight, ChevronUp, ChevronDown,
-  Mail, Globe, Trash2, Search, Clock, Activity, HardDrive,
+  Mail, Globe, Trash2, Search, Clock, Activity, HardDrive, Bot,
 } from 'lucide-react';
 import { adminDeleteUser } from '@/lib/actions/auth';
 import type { PerUserActivity } from '@/lib/actions/analytics';
@@ -21,7 +21,7 @@ type UserRow = {
   authType: 'google' | 'github' | 'email' | 'unknown';
 };
 
-type SortKey = 'name' | 'email' | 'authType' | 'role' | 'createdAt' | 'lastActive' | 'totalSeconds' | 'storageBytes';
+type SortKey = 'name' | 'email' | 'authType' | 'role' | 'createdAt' | 'lastActive' | 'totalSeconds' | 'storageBytes' | 'mcpCalls';
 type SortDir = 'asc' | 'desc';
 
 const PAGE_SIZE = 10;
@@ -84,6 +84,7 @@ export default function AdminUsersTable({
           case 'lastActive': va = activity[a.id]?.lastActive ?? 0; vb = activity[b.id]?.lastActive ?? 0; break;
           case 'totalSeconds': va = activity[a.id]?.totalSeconds ?? 0; vb = activity[b.id]?.totalSeconds ?? 0; break;
           case 'storageBytes': va = activity[a.id]?.storageBytes ?? 0; vb = activity[b.id]?.storageBytes ?? 0; break;
+          case 'mcpCalls': va = activity[a.id]?.mcpCalls ?? 0; vb = activity[b.id]?.mcpCalls ?? 0; break;
         }
         if (va < vb) return -1 * dir;
         if (va > vb) return 1 * dir;
@@ -159,6 +160,7 @@ export default function AdminUsersTable({
                 <Th sk="role" label={t('colRole')} sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} className="w-24" />
                 <Th sk="lastActive" label={t('colLastActive')} sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} className="hidden lg:table-cell w-32" />
                 <Th sk="totalSeconds" label={t('colTotalTime')} sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} className="hidden lg:table-cell w-28" />
+                <Th sk="mcpCalls" label={t('colMcpCalls')} sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} className="hidden lg:table-cell w-24" />
                 <Th sk="storageBytes" label={t('colStorage')} sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} className="hidden lg:table-cell w-24" />
                 <Th sk="createdAt" label={t('colJoined')} sortKey={sortKey} sortDir={sortDir} onSort={toggleSort} className="hidden md:table-cell w-36" />
                 <th className="w-24 px-4 py-2.5" />
@@ -178,7 +180,17 @@ export default function AdminUsersTable({
                     className="border-b border-neutral-800/50 hover:bg-neutral-800/20 transition-colors last:border-0 cursor-pointer"
                   >
                     <td className="px-4 py-3">
-                      <span className="text-neutral-200 font-medium">{u.name ?? <span className="text-neutral-600 italic">—</span>}</span>
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        {u.image ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={u.image} alt="" className="w-7 h-7 rounded-full object-cover shrink-0" />
+                        ) : (
+                          <div className="w-7 h-7 rounded-full bg-neutral-800 flex items-center justify-center text-neutral-400 text-xs font-medium shrink-0">
+                            {(u.name ?? u.email ?? '?').slice(0, 1).toUpperCase()}
+                          </div>
+                        )}
+                        <span className="text-neutral-200 font-medium truncate">{u.name ?? <span className="text-neutral-600 italic">—</span>}</span>
+                      </div>
                     </td>
                     <td className="px-4 py-3">
                       <span className="text-neutral-400 text-xs">{u.email ?? '—'}</span>
@@ -225,6 +237,12 @@ export default function AdminUsersTable({
                       <div className="flex items-center gap-1.5 text-neutral-500 text-xs">
                         <Clock size={11} />
                         {formatDuration(act?.totalSeconds)}
+                      </div>
+                    </td>
+                    <td className="hidden lg:table-cell px-4 py-3">
+                      <div className="flex items-center gap-1.5 text-neutral-500 text-xs">
+                        <Bot size={11} className={act?.mcpCalls ? 'text-amber-400/80' : ''} />
+                        {act?.mcpCalls ?? 0}
                       </div>
                     </td>
                     <td className="hidden lg:table-cell px-4 py-3">

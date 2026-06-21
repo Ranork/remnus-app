@@ -125,6 +125,7 @@
     "userNotFound": "Kullanıcı bulunamadı.",
     "storageUsed": "Depolama",
     "colStorage": "Depolama",
+    "colMcpCalls": "MCP çağrıları",
     "subscriptionPlan": "Abonelik Planı",
     "setPlanManually": "Planı manuel olarak ayarla",
     "planRenews": "Yenilenme",

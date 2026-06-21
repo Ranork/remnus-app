@@ -125,6 +125,7 @@
     "userNotFound": "उपयोगकर्ता नहीं मिला।",
     "storageUsed": "भंडारण",
     "colStorage": "भंडारण",
+    "colMcpCalls": "MCP कॉल",
     "subscriptionPlan": "सदस्यता योजना",
     "setPlanManually": "योजना मैन्युअल रूप से सेट करें",
     "planRenews": "नवीनीकरण",

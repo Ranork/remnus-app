@@ -125,6 +125,7 @@
     "userNotFound": "Utilisateur introuvable.",
     "storageUsed": "Stockage",
     "colStorage": "Stockage",
+    "colMcpCalls": "Appels MCP",
     "subscriptionPlan": "Forfait d'abonnement",
     "setPlanManually": "Définir le forfait manuellement",
     "planRenews": "Renouvellement",

@@ -23,6 +23,7 @@ export type PerUserActivity = {
   sessionCount: number;
   lastActive: number | null; // epoch ms
   storageBytes: number;
+  mcpCalls: number; // MCP tool calls across the user's workspaces
 };
 
 export type EngagementOverview = {
@@ -114,21 +115,40 @@ export async function getEngagementOverview(): Promise<EngagementOverview> {
   const storageByUser: Record<string, number> = {};
   for (const r of storageRows) storageByUser[r.userId] = Number(r.total ?? 0);
 
+  // MCP tool calls — logged per workspace, so count per workspace then attribute
+  // to each (non-demo) member, mirroring getUserDetail's "calls across the user's
+  // workspaces" definition.
+  const callsByWsRows = await db
+    .select({ workspaceId: agentActivity.workspaceId, c: sql<number>`cast(count(*) as int)` })
+    .from(agentActivity)
+    .groupBy(agentActivity.workspaceId);
+  const callsByWs: Record<string, number> = {};
+  for (const r of callsByWsRows) callsByWs[r.workspaceId] = Number(r.c ?? 0);
+
+  const memberRows = await db
+    .select({ userId: workspaceMembers.userId, workspaceId: workspaceMembers.workspaceId })
+    .from(workspaceMembers)
+    .innerJoin(users, eq(workspaceMembers.userId, users.id))
+    .where(ne(users.role, 'demo'));
+  const mcpCallsByUser: Record<string, number> = {};
+  for (const m of memberRows) {
+    const c = callsByWs[m.workspaceId] ?? 0;
+    if (c) mcpCallsByUser[m.userId] = (mcpCallsByUser[m.userId] ?? 0) + c;
+  }
+
   const perUser: Record<string, PerUserActivity> = {};
+  const ensure = (userId: string): PerUserActivity =>
+    (perUser[userId] ??= { totalSeconds: 0, sessionCount: 0, lastActive: null, storageBytes: 0, mcpCalls: 0 });
+
   for (const r of perUserRows) {
-    perUser[r.userId] = {
-      totalSeconds: r.totalSeconds,
-      sessionCount: r.sessionCount,
-      lastActive: toEpochMs(r.lastSeen),
-      storageBytes: storageByUser[r.userId] ?? 0,
-    };
+    const e = ensure(r.userId);
+    e.totalSeconds = r.totalSeconds;
+    e.sessionCount = r.sessionCount;
+    e.lastActive = toEpochMs(r.lastSeen);
   }
-  // Include users who uploaded but have no sessions yet.
-  for (const [userId, bytes] of Object.entries(storageByUser)) {
-    if (!perUser[userId]) {
-      perUser[userId] = { totalSeconds: 0, sessionCount: 0, lastActive: null, storageBytes: bytes };
-    }
-  }
+  // Include users who uploaded / made MCP calls but have no sessions yet.
+  for (const [userId, bytes] of Object.entries(storageByUser)) ensure(userId).storageBytes = bytes;
+  for (const [userId, calls] of Object.entries(mcpCallsByUser)) ensure(userId).mcpCalls = calls;
 
   // Acquisition trend: signups per day over the last 30 days, bucketed in JS.
   const signupRows = await db
@@ -460,6 +480,7 @@ export async function getUserDetail(userId: string): Promise<UserDetail> {
       sessionCount: act?.sessionCount ?? 0,
       lastActive: toEpochMs(act?.lastSeen),
       storageBytes: Number(userStorage?.total ?? 0),
+      mcpCalls: agents.calls,
     },
     storageBytes: Number(userStorage?.total ?? 0),
     content: {

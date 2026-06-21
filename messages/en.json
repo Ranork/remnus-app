@@ -125,6 +125,7 @@
     "userNotFound": "User not found.",
     "storageUsed": "Storage",
     "colStorage": "Storage",
+    "colMcpCalls": "MCP calls",
     "subscriptionPlan": "Subscription Plan",
     "setPlanManually": "Set plan manually",
     "planRenews": "Renews",

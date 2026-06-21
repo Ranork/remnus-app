@@ -125,6 +125,7 @@
     "userNotFound": "Usuario no encontrado.",
     "storageUsed": "Almacenamiento",
     "colStorage": "Almacenamiento",
+    "colMcpCalls": "Llamadas MCP",
     "subscriptionPlan": "Plan de suscripción",
     "setPlanManually": "Establecer plan manualmente",
     "planRenews": "Se renueva",

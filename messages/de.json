@@ -125,6 +125,7 @@
     "userNotFound": "Benutzer nicht gefunden.",
     "storageUsed": "Speicher",
     "colStorage": "Speicher",
+    "colMcpCalls": "MCP-Aufrufe",
     "subscriptionPlan": "Abonnement-Plan",
     "setPlanManually": "Plan manuell festlegen",
     "planRenews": "Verlängert sich",
