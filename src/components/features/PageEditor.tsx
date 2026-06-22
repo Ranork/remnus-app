@@ -132,6 +132,20 @@ export default function PageEditor({
   const menuDropdownRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<BlockEditorHandle>(null);
 
+  // Keep the latest edited values in refs so debounced / id-memoized savers
+  // (which capture state from their creation render) always emit the CURRENT
+  // properties/icon back to the parent list. Without this, a content save ships
+  // the original `properties` and clobbers a more recent inline property edit —
+  // the page reverts in the table/kanban/calendar a moment after editing.
+  const propertiesRef = useRef(properties);
+  const iconRef = useRef(icon);
+  const iconColorRef = useRef(iconColor);
+  useEffect(() => {
+    propertiesRef.current = properties;
+    iconRef.current = icon;
+    iconColorRef.current = iconColor;
+  }, [properties, icon, iconColor]);
+
   useEffect(() => {
     if (!openMenu) return;
     const handler = (e: MouseEvent) => {
@@ -178,7 +192,7 @@ export default function PageEditor({
       setSaveState('error');
     }
     if (onPageUpdated) {
-      onPageUpdated({ ...initialPage, properties, content: md });
+      onPageUpdated({ ...initialPage, icon: iconRef.current, iconColor: iconColorRef.current, properties: propertiesRef.current, content: md });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialPage.id]);
@@ -193,7 +207,7 @@ export default function PageEditor({
     () =>
       debounce((props: Record<string, any>) => {
         updatePageProperties(initialPage.id, props);
-        onPageUpdated?.({ ...initialPage, properties: props });
+        onPageUpdated?.({ ...initialPage, icon: iconRef.current, iconColor: iconColorRef.current, properties: props });
       }, 600),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [initialPage.id]

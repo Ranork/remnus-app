@@ -413,9 +413,11 @@ export default function DatabaseView({
   }, [peekPageId]);
 
   const handlePageUpdated = (updatedPage: any) => {
-    // Update local state instantly so Table and Kanban update in the background
+    // Update local state instantly so Table and Kanban update in the background.
+    // Merge (not replace) so a partial/older payload can never drop fields that
+    // a more recent edit already set on the local row.
     setLocalPages((prev) =>
-      prev.map((p) => (p.id === updatedPage.id ? updatedPage : p))
+      prev.map((p) => (p.id === updatedPage.id ? { ...p, ...updatedPage } : p))
     );
     // Also, if the active peeked page is this page, update its cache
     setPeekPage((prev: any) => {
