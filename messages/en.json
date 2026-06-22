@@ -1331,5 +1331,28 @@
     "accept": "Accept",
     "reject": "Reject",
     "gotIt": "Got it"
+  },
+  "Onboarding": {
+    "welcomeTitle": "Welcome to Remnus",
+    "welcomeSubtitle": "The workspace your AI agents can actually work in.",
+    "welcomeRecommended": "Recommended",
+    "welcomeConnectTitle": "Connect my AI agent",
+    "welcomeConnectDesc": "Hook up Claude, Cursor, or VS Code in under a minute and watch it work in your workspace.",
+    "welcomeConnectCta": "Connect",
+    "welcomeExploreTitle": "Explore on my own",
+    "welcomeExploreDesc": "Jump in and create your first page or database by hand.",
+    "welcomeExploreCta": "Start exploring",
+    "welcomeTrust": "You stay in control: tokens are scoped, every write is logged, and you can revoke access anytime.",
+    "welcomeSeedNote": "The sample 'Paint clone' workspace below was built by an AI agent over MCP — explore it whenever you like.",
+    "welcomeSkip": "Skip",
+    "checklistTitle": "Getting started",
+    "checklistDismiss": "Dismiss",
+    "checklistCollapse": "Minimize",
+    "checklistGo": "Start",
+    "checklist_account": "Create your account",
+    "checklist_connect": "Connect your AI agent",
+    "checklist_call": "Run your first agent call",
+    "checklistDoneTitle": "You're all set! 🎉",
+    "checklistDoneHint": "Your agent is connected and working."
   }
 }

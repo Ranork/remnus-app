@@ -1331,5 +1331,28 @@
     "accept": "स्वीकार करें",
     "reject": "अस्वीकार करें",
     "gotIt": "समझ गया"
+  },
+  "Onboarding": {
+    "welcomeTitle": "Remnus में आपका स्वागत है",
+    "welcomeSubtitle": "वह वर्कस्पेस जहाँ आपके AI एजेंट वास्तव में काम कर सकते हैं।",
+    "welcomeRecommended": "अनुशंसित",
+    "welcomeConnectTitle": "मेरा AI एजेंट कनेक्ट करें",
+    "welcomeConnectDesc": "Claude, Cursor या VS Code को एक मिनट से भी कम में जोड़ें और उसे अपने वर्कस्पेस में काम करते देखें।",
+    "welcomeConnectCta": "कनेक्ट करें",
+    "welcomeExploreTitle": "खुद एक्सप्लोर करें",
+    "welcomeExploreDesc": "शुरू करें और अपना पहला पेज या डेटाबेस हाथ से बनाएं।",
+    "welcomeExploreCta": "एक्सप्लोर करें",
+    "welcomeTrust": "नियंत्रण आपके पास रहता है: टोकन सीमित होते हैं, हर राइट लॉग होता है, और आप किसी भी समय एक्सेस रद्द कर सकते हैं।",
+    "welcomeSeedNote": "नीचे दिया गया उदाहरण 'Paint clone' वर्कस्पेस एक AI एजेंट ने MCP के ज़रिए बनाया था — जब चाहें इसे देखें।",
+    "welcomeSkip": "छोड़ें",
+    "checklistTitle": "शुरुआत करें",
+    "checklistDismiss": "बंद करें",
+    "checklistCollapse": "छोटा करें",
+    "checklistGo": "शुरू करें",
+    "checklist_account": "अपना खाता बनाएं",
+    "checklist_connect": "अपना AI एजेंट कनेक्ट करें",
+    "checklist_call": "अपनी पहली एजेंट कॉल चलाएं",
+    "checklistDoneTitle": "सब तैयार है! 🎉",
+    "checklistDoneHint": "आपका एजेंट कनेक्ट है और काम कर रहा है।"
   }
 }

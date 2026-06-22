@@ -53,6 +53,7 @@ import WorkspaceSettingsModal from './WorkspaceSettingsModal';
 import DesktopSettingsModal, { initDesktopZoom } from './DesktopSettingsModal';
 import LanguageSwitcher from '@/components/features/LanguageSwitcher';
 import AgentsModal from './AgentsModal';
+import OnboardingGuide from './onboarding/OnboardingGuide';
 import BillingModal from './BillingModal';
 import UserSettingsModal from './UserSettingsModal';
 import { getUserAgentTokenCount } from '@/lib/actions/agentToken';
@@ -97,6 +98,7 @@ export default function WorkspaceSidebar({
   currentUser,
   hideBrandHeader = false,
   density = 'comfortable',
+  showOnboarding = false,
 }: {
   items: WorkspaceItemRow[];
   workspaces: WorkspaceType[];
@@ -104,6 +106,9 @@ export default function WorkspaceSidebar({
   currentUser: CurrentUser;
   hideBrandHeader?: boolean;
   density?: 'compact' | 'comfortable';
+  /** Render the new-user onboarding surface here. Set only on the always-mounted
+   *  desktop sidebar so the welcome modal/checklist don't double up with the mobile drawer. */
+  showOnboarding?: boolean;
 }) {
   const t = useTranslations('Workspace');
   const tSharing = useTranslations('Sharing');
@@ -1474,6 +1479,15 @@ export default function WorkspaceSidebar({
           </>
         );
       })()}
+
+      {/* New-user onboarding: welcome modal + getting-started checklist.
+          Only the always-mounted desktop sidebar renders it (showOnboarding),
+          so it never doubles up with the mobile drawer's sidebar instance. */}
+      {showOnboarding && (
+        <div className="shrink-0">
+          <OnboardingGuide userRole={currentUser.role} />
+        </div>
+      )}
 
       {/* AI Agents button */}
       <div className="shrink-0 px-2 pt-1">

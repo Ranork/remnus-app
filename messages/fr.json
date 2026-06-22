@@ -1331,5 +1331,28 @@
     "accept": "Accepter",
     "reject": "Refuser",
     "gotIt": "J'ai compris"
+  },
+  "Onboarding": {
+    "welcomeTitle": "Bienvenue sur Remnus",
+    "welcomeSubtitle": "L'espace de travail où vos agents IA peuvent vraiment travailler.",
+    "welcomeRecommended": "Recommandé",
+    "welcomeConnectTitle": "Connecter mon agent IA",
+    "welcomeConnectDesc": "Connectez Claude, Cursor ou VS Code en moins d'une minute et regardez-le travailler dans votre espace.",
+    "welcomeConnectCta": "Connecter",
+    "welcomeExploreTitle": "Explorer par moi-même",
+    "welcomeExploreDesc": "Lancez-vous et créez votre première page ou base de données à la main.",
+    "welcomeExploreCta": "Explorer",
+    "welcomeTrust": "Vous gardez le contrôle : les tokens sont limités, chaque écriture est journalisée et vous pouvez révoquer l'accès à tout moment.",
+    "welcomeSeedNote": "L'espace de travail exemple 'clone de Paint' ci-dessous a été créé par un agent IA via MCP — explorez-le quand vous voulez.",
+    "welcomeSkip": "Passer",
+    "checklistTitle": "Pour commencer",
+    "checklistDismiss": "Fermer",
+    "checklistCollapse": "Réduire",
+    "checklistGo": "Commencer",
+    "checklist_account": "Créer votre compte",
+    "checklist_connect": "Connecter votre agent IA",
+    "checklist_call": "Lancer votre premier appel d'agent",
+    "checklistDoneTitle": "Tout est prêt ! 🎉",
+    "checklistDoneHint": "Votre agent est connecté et fonctionne."
   }
 }

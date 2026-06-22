@@ -167,6 +167,7 @@ export default async function LocaleLayout({
                 activeWorkspace={activeWorkspace ?? { id: '', name: 'Workspace' }}
                 currentUser={currentUser}
                 density={sidebarDensity}
+                showOnboarding
               />
             }
             mobileNav={

@@ -1331,5 +1331,28 @@
     "accept": "Kabul Et",
     "reject": "Reddet",
     "gotIt": "Tamam"
+  },
+  "Onboarding": {
+    "welcomeTitle": "Remnus'a hoş geldin",
+    "welcomeSubtitle": "AI agent'larının gerçekten çalışabileceği workspace.",
+    "welcomeRecommended": "Önerilen",
+    "welcomeConnectTitle": "AI agent'ımı bağla",
+    "welcomeConnectDesc": "Claude, Cursor veya VS Code'u bir dakikadan kısa sürede bağla ve workspace'inde çalışmasını izle.",
+    "welcomeConnectCta": "Bağla",
+    "welcomeExploreTitle": "Önce kendim keşfedeyim",
+    "welcomeExploreDesc": "Hemen başla, ilk sayfanı veya veritabanını elinle oluştur.",
+    "welcomeExploreCta": "Keşfetmeye başla",
+    "welcomeTrust": "Kontrol sende: token'lar kapsamlıdır, her yazma loglanır ve erişimi istediğin an iptal edebilirsin.",
+    "welcomeSeedNote": "Aşağıdaki örnek 'Paint clone' workspace'i bir AI agent tarafından MCP üzerinden kuruldu — istediğin zaman inceleyebilirsin.",
+    "welcomeSkip": "Atla",
+    "checklistTitle": "Başlarken",
+    "checklistDismiss": "Kapat",
+    "checklistCollapse": "Küçült",
+    "checklistGo": "Başla",
+    "checklist_account": "Hesabını oluştur",
+    "checklist_connect": "AI agent'ını bağla",
+    "checklist_call": "İlk agent çağrını çalıştır",
+    "checklistDoneTitle": "Her şey hazır! 🎉",
+    "checklistDoneHint": "Agent'ın bağlı ve çalışıyor."
   }
 }

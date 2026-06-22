@@ -1331,5 +1331,28 @@
     "accept": "Akzeptieren",
     "reject": "Ablehnen",
     "gotIt": "Verstanden"
+  },
+  "Onboarding": {
+    "welcomeTitle": "Willkommen bei Remnus",
+    "welcomeSubtitle": "Der Workspace, in dem deine KI-Agenten wirklich arbeiten können.",
+    "welcomeRecommended": "Empfohlen",
+    "welcomeConnectTitle": "Meinen KI-Agenten verbinden",
+    "welcomeConnectDesc": "Verbinde Claude, Cursor oder VS Code in unter einer Minute und sieh ihm bei der Arbeit in deinem Workspace zu.",
+    "welcomeConnectCta": "Verbinden",
+    "welcomeExploreTitle": "Selbst erkunden",
+    "welcomeExploreDesc": "Leg direkt los und erstelle deine erste Seite oder Datenbank von Hand.",
+    "welcomeExploreCta": "Erkunden",
+    "welcomeTrust": "Du behältst die Kontrolle: Tokens sind eingeschränkt, jeder Schreibvorgang wird protokolliert und du kannst den Zugriff jederzeit widerrufen.",
+    "welcomeSeedNote": "Der Beispiel-Workspace 'Paint-Klon' unten wurde von einem KI-Agenten per MCP erstellt — erkunde ihn, wann immer du möchtest.",
+    "welcomeSkip": "Überspringen",
+    "checklistTitle": "Erste Schritte",
+    "checklistDismiss": "Schließen",
+    "checklistCollapse": "Minimieren",
+    "checklistGo": "Los",
+    "checklist_account": "Konto erstellen",
+    "checklist_connect": "KI-Agenten verbinden",
+    "checklist_call": "Ersten Agenten-Aufruf ausführen",
+    "checklistDoneTitle": "Alles bereit! 🎉",
+    "checklistDoneHint": "Dein Agent ist verbunden und arbeitet."
   }
 }
