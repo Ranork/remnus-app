@@ -15,12 +15,14 @@ export default authMiddleware(function proxy(req: NextRequest) {
   if (req.nextUrl.pathname.startsWith('/api/') || req.nextUrl.pathname.startsWith('/.well-known/')) {
     return NextResponse.next();
   }
-  const response = intlMiddleware(req);
-  // Expose the clean external pathname to server layouts via header
-  if (response instanceof NextResponse) {
-    response.headers.set('x-pathname', req.nextUrl.pathname);
-  }
-  return response;
+  // Expose the clean external pathname to server layouts as a REQUEST header so it is
+  // readable via next/headers (e.g. to detect /share/* and skip the app shell). A header
+  // set on the middleware *response* would only reach the browser — next-intl instead
+  // clones the request headers onto its rewrite, so a header on the request we hand it
+  // propagates to the rendered route.
+  const headers = new Headers(req.headers);
+  headers.set('x-pathname', req.nextUrl.pathname);
+  return intlMiddleware(new NextRequest(req, { headers }));
 }) as (req: NextRequest) => Response | Promise<Response>;
 
 export const config = {

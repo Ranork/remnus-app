@@ -80,14 +80,37 @@ export default async function LocaleLayout({
   const consentRequired = isConsentRequired(headerStore.get('x-vercel-ip-country'));
   const initialConsent = parseConsent(consentCookieStore.get(CONSENT_COOKIE)?.value);
 
-  if (!session?.user) {
+  // Public share pages must never render the app shell (sidebar/tabs). A logged-in
+  // non-member would otherwise see the shared page nested inside their own workspace
+  // chrome. SharedPageView owns its own navbar; render it bare like a foreign visitor.
+  // (Workspace members are redirected to the real /page|/db route in the share route.)
+  const isShareRoute = headerStore.get('x-pathname')?.startsWith('/share/') ?? false;
+
+  if (isShareRoute || !session?.user) {
+    const sessionUser = session?.user ?? null;
+    const isAdmin = sessionUser?.role === 'admin';
     return (
       <>
         <PostHogProvider consentRequired={consentRequired} initialConsent={initialConsent}>
-          <PostHogPageView />
-          <AttributionCapture />
+          <PostHogPageView skip={isAdmin} />
+          {sessionUser ? (
+            <PostHogIdentify
+              user={{
+                id: sessionUser.id,
+                name: sessionUser.name ?? null,
+                email: sessionUser.email ?? null,
+                role: sessionUser.role,
+              }}
+            />
+          ) : (
+            <AttributionCapture />
+          )}
           <NextIntlClientProvider messages={messages}>
-            <ConsentProvider consentRequired={consentRequired} initialConsent={initialConsent}>
+            <ConsentProvider
+              consentRequired={consentRequired}
+              initialConsent={initialConsent}
+              userRole={sessionUser?.role}
+            >
               {children}
               <CookieConsentBanner />
             </ConsentProvider>
