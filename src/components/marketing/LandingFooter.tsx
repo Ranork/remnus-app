@@ -17,6 +17,17 @@ export default async function LandingFooter() {
       ],
     },
     {
+      head: t('bridgeFooterCompanyBlog'),
+      links: [
+        { label: 'Why AGPL-3.0',              href: '/share/blog/why-agpl-3' },
+        { label: 'MCP-Native vs Integrated',  href: '/share/blog/mcp-native-vs-integrated' },
+        { label: 'Claude Fable 5 + Remnus',   href: '/share/blog/claude-fable-5' },
+        { label: 'How I Built Remnus',        href: '/share/blog/how-i-built-mcp-native' },
+        { label: 'Remnus vs Notion MCP',      href: '/share/blog/remnus-vs-notion-mcp' },
+        { label: t('bridgeFooterBlogAll'),    href: '/share/blog' },
+      ],
+    },
+    {
       head: t('bridgeFooterColIntegrations'),
       links: [
         { label: 'Claude',   href: '/#integrations' },
@@ -29,7 +40,6 @@ export default async function LandingFooter() {
       head: t('bridgeFooterColCompany'),
       links: [
         { label: t('bridgeFooterCompanyManifesto'), href: '/#why' },
-        { label: t('bridgeFooterCompanyBlog'),      href: '/share/blog' },
         { label: t('bridgeFooterCompanyPricing'),   href: '/pricing' },
         { label: t('bridgeFooterCompanyContact'),   href: '/contact' },
         { label: t('bridgeFooterCompanyPrivacy'),   href: '/privacy' },
@@ -40,7 +50,7 @@ export default async function LandingFooter() {
 
   return (
     <footer className="px-4 sm:px-8 lg:px-14 py-12 lg:py-16 border-t border-neutral-800">
-      <div className="max-w-7xl mx-auto grid gap-10 lg:gap-16 grid-cols-2 sm:grid-cols-3 lg:grid-cols-[1.4fr_1fr_1fr_1fr]">
+      <div className="max-w-7xl mx-auto grid gap-10 lg:gap-16 grid-cols-2 sm:grid-cols-3 lg:grid-cols-[1.4fr_1fr_1fr_1fr_1fr]">
         {/* Left: logo + tagline + copyright */}
         <div className="flex flex-col gap-4 col-span-2 sm:col-span-3 lg:col-span-1">
           <Link href="/" className="inline-flex items-center gap-2.5">
