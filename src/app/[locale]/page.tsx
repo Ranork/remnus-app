@@ -17,6 +17,8 @@ export const metadata: Metadata = {
       'es': 'https://remnus.com',
       'fr': 'https://remnus.com',
       'de': 'https://remnus.com',
+      'zh': 'https://remnus.com',
+      'ru': 'https://remnus.com',
       'x-default': 'https://remnus.com',
     },
   },

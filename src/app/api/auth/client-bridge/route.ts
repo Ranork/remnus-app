@@ -24,7 +24,7 @@ export async function GET(request: Request) {
 
   await setPendingClientToken(deviceId, token);
 
-  const SUPPORTED_LOCALES = ['en', 'tr', 'hi', 'es', 'fr', 'de'] as const;
+  const SUPPORTED_LOCALES = ['en', 'tr', 'hi', 'es', 'fr', 'de', 'zh', 'ru'] as const;
   const cookieStore = await cookies();
   const rawLocale = cookieStore.get('NEXT_LOCALE')?.value;
   const locale = (SUPPORTED_LOCALES as readonly string[]).includes(rawLocale ?? '') ? rawLocale! : 'en';

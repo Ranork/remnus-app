@@ -49,6 +49,8 @@ Remnus is fully internationalized using **next-intl v4** (App Router native). Al
 | `es` | Español           |
 | `fr` | Français          |
 | `de` | Deutsch           |
+| `zh` | 中文 (Simplified)  |
+| `ru` | Русский           |
 
 ### Locale Resolution (priority order)
 
@@ -58,7 +60,7 @@ Remnus is fully internationalized using **next-intl v4** (App Router native). Al
 
 **Clean URLs:** `localePrefix: 'never'` — URLs stay as `/db/123`, never `/en/db/123`. All pages live under `src/app/[locale]/`.
 
-**Translation files:** `messages/{locale}.json` — `en.json` is the source of truth. **27 namespaces:** `Layout`, `Home`, `Auth`, `Workspace`, `WorkspaceSettings`, `Templates`, `Database`, `Editor`, `Page`, `IconPicker`, `Admin`, `Errors`, `LanguageSwitcher`, `MobileNav`, `Landing`, `Billing`, `Pricing`, `Contact`, `Download`, `Privacy`, `Updater`, `Sharing`, `UserSettings`, `OAuthAuthorize`, `Security`, `Consent`, `Onboarding`.
+**Translation files:** `messages/{locale}.json` — `en.json` is the source of truth, **8 locales** (`en`, `tr`, `hi`, `es`, `fr`, `de`, `zh`, `ru`). **English fallback:** `src/i18n/request.ts` deep-merges a non-default locale's messages onto `en.json`, so any untranslated key gracefully falls back to English instead of showing a raw key name. **27 namespaces:** `Layout`, `Home`, `Auth`, `Workspace`, `WorkspaceSettings`, `Templates`, `Database`, `Editor`, `Page`, `IconPicker`, `Admin`, `Errors`, `LanguageSwitcher`, `MobileNav`, `Landing`, `Billing`, `Pricing`, `Contact`, `Download`, `Privacy`, `Updater`, `Sharing`, `UserSettings`, `OAuthAuthorize`, `Security`, `Consent`, `Onboarding`.
 
 ### Rules for All Future Development
 
@@ -67,10 +69,10 @@ Remnus is fully internationalized using **next-intl v4** (App Router native). Al
 1. **Client components** — `import { useTranslations } from 'next-intl'` and call `useTranslations('Namespace')` inside the component body.
 2. **Server components / layouts** — `import { getTranslations } from 'next-intl/server'` and `await getTranslations('Namespace')`.
 3. **Server actions** — same as above; use `getTranslations('Errors')` for error messages returned to the client.
-4. **Add all new keys to ALL 6 files** before committing. Missing keys fall back to the key name.
+4. **Add all new keys to ALL 8 files** before committing. Missing keys fall back to English (`en.json`) via the deep-merge in `request.ts`, then to the key name.
 5. **No hardcoded display strings** — not even English fallbacks like `|| 'Untitled'`. Always use `t('key')`.
 6. **Date formatting** — use `useLocale()` (client) or locale from `getRequestConfig` (server) instead of `'en-US'`.
-7. **Namespace selection** — pick the closest existing namespace. Create a new one only for a clearly standalone domain (add to all 6 files and document here).
+7. **Namespace selection** — pick the closest existing namespace. Create a new one only for a clearly standalone domain (add to all 8 files and document here).
 
 ### Agent Task Management & Work Plan
 
@@ -230,7 +232,7 @@ We use the **JSON Column Pattern** (not EAV) for dynamic user-defined properties
 **Routes (`src/app/[locale]/`)**
 - `layout.tsx` — **Providers only** (shared by ALL `[locale]` routes — marketing, public share, auth, and in-app). Locale validation + `NextIntlClientProvider`, `PostHogProvider`/`PostHogPageView`/(`PostHogIdentify` when logged in, else `AttributionCapture`), `ConsentProvider` + `CookieConsentBanner`, `Analytics`. Does NOT render `<html>`/`<body>` (those live in root layout) and **does NOT render the app shell** — the sidebar/tabs live in `(app)/layout.tsx`. Exports `metadata` (global title template + OG/Twitter tags). **Why no shell here:** the app shell must mount/unmount when crossing between a public share page and the app; a conditional in this shared layout would instead be *preserved* by App Router across client navigation (e.g. "Go to app" from a share page wouldn't bring the sidebar back).
 - `(app)/layout.tsx` — **Route group** holding the authenticated app shell for the in-app routes (`(app)/app`, `(app)/db`, `(app)/page`, `(app)/admin` — the route group does not affect URLs). Guards `auth()` (→ `/login`), fetches `getWorkspaces()`/`getAllWorkspaceItems()`, and renders `ActivityTracker`/`LastPathTracker`/`BillingSuccessModal`/`UpdateBanner` + `QueryProvider` → `AppShell` (sidebar `WorkspaceSidebar` + `MobileNavWrapper` + demo banner). Public routes (share, marketing, auth) sit OUTSIDE this group, so they never get the shell — a logged-in non-member opening a `/share/*` link sees `SharedPageView` as a foreign visitor (members are still redirected to the real `/page|/db` route by the share route).
-- `page.tsx` — Landing page; redirects authed users to `/app`, otherwise renders `LandingBridgeSwitcher`. Exports `metadata` with `title.absolute`, landing-specific description, `alternates.canonical: 'https://remnus.com'`, and hreflang for all 6 supported locales (all point to same URL — `localePrefix: 'never'` constraint).
+- `page.tsx` — Landing page; redirects authed users to `/app`, otherwise renders `LandingBridgeSwitcher`. Exports `metadata` with `title.absolute`, landing-specific description, `alternates.canonical: 'https://remnus.com'`, and hreflang for all 8 supported locales (all point to same URL — `localePrefix: 'never'` constraint).
 - `(app)/app/page.tsx` — Authenticated redirect gateway. Resolution order: (1) pending-invite cookie → `/invite/[token]`; (2) **resume** — the `remnus_last_path` cookie (last visited `/page`/`/db` route, written by `LastPathTracker`) when its item still exists/is accessible (validated against `getAllWorkspaceItems`); (3) the **top of the active workspace's hierarchy** — first **root** item (`parentId === null`), NOT merely the oldest item in the flat list; (4) empty-state. `/login` when unauthenticated.
 - `login/page.tsx` — Google + GitHub OAuth login. In Tauri mode, renders a minimal UI (logo + "Sign in" button); on click generates a UUID `device_id`, opens `client-login?device_id=<uuid>` in the system browser, then polls `/api/auth/client-poll` every 2 s until a token arrives.
 - `client-login/page.tsx` — Public. Full login page (Google + GitHub) opened in the system browser by Tauri. Reads `device_id` from URL search params and threads it through both auth paths so `/api/auth/client-bridge` can store the resulting token keyed by that id.
@@ -398,7 +400,7 @@ We use the **JSON Column Pattern** (not EAV) for dynamic user-defined properties
 - `src/lib/import/notion-parser.ts` — **Isomorphic** ZIP parser for Notion exports (runs in browser AND server — uses JSZip + `'uint8array'`, never Node `Buffer`/`'nodebuffer'`). `parseNotionExport(input: Buffer | ArrayBuffer | Uint8Array)` handles the double-ZIP structure, builds a typed tree (`NotionSpace[]`), parses CSV databases with `_all.csv` files, infers column types (text/number/date/select/multi_select), matches database row MD pages to their CSV rows, strips child-page `.md`/`.csv` links that point into a page's own sub-folder (those sub-pages are embedded as child blocks — avoids duplicating their titles as bold text), converts other dead relative links to bold, strips the leading `# Title` H1 each page/row is exported with (the app renders the title in the header — avoids a duplicate heading), strips a database row's leading "Prop: value" block (one line per column, which Notion duplicates into the row body — the app shows these in the properties panel), and skips empty "Untitled" pages (Notion artifacts with a heading-only body and no children). Returns `{ spaces, stats, zip }`. Client-import helpers: `getImageBlobFromZip(zip, path)` (read an image as a Blob for direct upload), `materializeItems(items, imageMap)` (walk the tree → serializable `ImportItem[]`, substituting/stripping `__NOTION_IMG__` placeholders). Used directly by `ImportTab` (client-side parse — see `api/import/notion/route.ts`).
 - `src/db/` — Drizzle `schema.ts`, `index.ts` (WAL + PRAGMAs on startup), migrations.
 - `src/lib/metadata.ts` — Shared OG/Twitter metadata constants (`METADATA_BASE_URL`, `DEFAULT_OG_IMAGE`, `DEFAULT_TWITTER_IMAGE`). Imported by all public page metadata exports to keep OG image URL consistent.
-- `messages/` — Translation files (`en.json` source of truth, 27 namespaces, 6 locales).
+- `messages/` — Translation files (`en.json` source of truth, 27 namespaces, 8 locales: en/tr/hi/es/fr/de/zh/ru). Non-default locales deep-merge over `en.json` for graceful fallback (see `src/i18n/request.ts`).
 
 ### Common Commands
 

@@ -4,7 +4,7 @@ import { useRouter } from 'next/navigation';
 import { setLocale } from '@/lib/actions/locale';
 import { initDesktopZoom } from '@/components/features/DesktopSettingsModal';
 
-const SUPPORTED_LOCALES = ['en', 'tr', 'hi', 'es', 'fr', 'de'];
+const SUPPORTED_LOCALES = ['en', 'tr', 'hi', 'es', 'fr', 'de', 'zh', 'ru'];
 
 function detectLocale(): string | null {
   const lang = navigator.language || (navigator as { userLanguage?: string }).userLanguage || '';

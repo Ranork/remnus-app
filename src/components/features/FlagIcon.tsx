@@ -9,7 +9,7 @@
  * identically on every platform.
  */
 
-type FlagCode = 'en' | 'tr' | 'hi' | 'es' | 'fr' | 'de';
+type FlagCode = 'en' | 'tr' | 'hi' | 'es' | 'fr' | 'de' | 'zh' | 'ru';
 
 const flags: Record<FlagCode, React.ReactNode> = {
   // United Kingdom — Union Jack
@@ -87,6 +87,27 @@ const flags: Record<FlagCode, React.ReactNode> = {
       <path fill="#000" d="M0 0h640v160H0z" />
       <path fill="#d00" d="M0 160h640v160H0z" />
       <path fill="#ffce00" d="M0 320h640v160H0z" />
+    </>
+  ),
+  // China
+  zh: (
+    <>
+      <path fill="#de2910" d="M0 0h640v480H0z" />
+      <g fill="#ffde00">
+        <path transform="translate(150 120) scale(64)" d="M0,-1 0.588,0.809 -0.951,-0.309 0.951,-0.309 -0.588,0.809Z" />
+        <path transform="translate(256 52) scale(22)" d="M0,-1 0.588,0.809 -0.951,-0.309 0.951,-0.309 -0.588,0.809Z" />
+        <path transform="translate(304 104) scale(22)" d="M0,-1 0.588,0.809 -0.951,-0.309 0.951,-0.309 -0.588,0.809Z" />
+        <path transform="translate(304 176) scale(22)" d="M0,-1 0.588,0.809 -0.951,-0.309 0.951,-0.309 -0.588,0.809Z" />
+        <path transform="translate(256 228) scale(22)" d="M0,-1 0.588,0.809 -0.951,-0.309 0.951,-0.309 -0.588,0.809Z" />
+      </g>
+    </>
+  ),
+  // Russia
+  ru: (
+    <>
+      <path fill="#fff" d="M0 0h640v160H0z" />
+      <path fill="#0039a6" d="M0 160h640v160H0z" />
+      <path fill="#d52b1e" d="M0 320h640v160H0z" />
     </>
   ),
 };
