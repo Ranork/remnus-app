@@ -2,18 +2,18 @@ import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 
 const TOOLS = [
-  { scope: 'read',  tool: 'search',               descKey: 'search' },
-  { scope: 'read',  tool: 'list_workspace',        descKey: 'list_workspace' },
-  { scope: 'read',  tool: 'get_page',              descKey: 'get_page' },
-  { scope: 'read',  tool: 'get_database_schema',   descKey: 'get_database_schema' },
-  { scope: 'read',  tool: 'query_database',        descKey: 'query_database' },
-  { scope: 'write', tool: 'create_page',             descKey: 'create_page' },
-  { scope: 'write', tool: 'update_page',             descKey: 'update_page' },
-  { scope: 'write', tool: 'bulk_update',             descKey: 'bulk_update' },
-  { scope: 'write', tool: 'delete_page',             descKey: 'delete_page' },
-  { scope: 'write', tool: 'move_item',               descKey: 'move_item' },
-  { scope: 'write', tool: 'create_database',         descKey: 'create_database' },
-  { scope: 'write', tool: 'update_database_schema',  descKey: 'update_database_schema' },
+  { scope: 'read',  tool: 'search',                  descKey: 'bridgeToolsDescSearch' },
+  { scope: 'read',  tool: 'list_workspace',          descKey: 'bridgeToolsDescListWorkspace' },
+  { scope: 'read',  tool: 'get_page',                descKey: 'bridgeToolsDescGetPage' },
+  { scope: 'read',  tool: 'get_database_schema',     descKey: 'bridgeToolsDescGetDatabaseSchema' },
+  { scope: 'read',  tool: 'query_database',          descKey: 'bridgeToolsDescQueryDatabase' },
+  { scope: 'write', tool: 'create_page',             descKey: 'bridgeToolsDescCreatePage' },
+  { scope: 'write', tool: 'update_page',             descKey: 'bridgeToolsDescUpdatePage' },
+  { scope: 'write', tool: 'bulk_update',             descKey: 'bridgeToolsDescBulkUpdate' },
+  { scope: 'write', tool: 'delete_page',             descKey: 'bridgeToolsDescDeletePage' },
+  { scope: 'write', tool: 'move_item',               descKey: 'bridgeToolsDescMoveItem' },
+  { scope: 'write', tool: 'create_database',         descKey: 'bridgeToolsDescCreateDatabase' },
+  { scope: 'write', tool: 'update_database_schema',  descKey: 'bridgeToolsDescUpdateDatabaseSchema' },
 ] as const;
 
 const RESOURCES = [
@@ -43,25 +43,6 @@ const MIME_COLORS: Record<string, string> = {
 
 export default async function LandingTools() {
   const t = await getTranslations('Landing');
-
-  // Dynamically resolve tools desc fallback
-  const getToolDesc = (toolKey: string) => {
-    switch (toolKey) {
-      case 'search': return 'Search pages and databases in the workspace by title keyword.';
-      case 'list_workspace': return 'List all workspace items (pages & databases). Filter by parentId.';
-      case 'get_page': return 'Fetch full content of a page or database row by ID. Auto-detects type.';
-      case 'get_database_schema': return 'Get column definitions and select options without fetching rows.';
-      case 'query_database': return 'Return schema and rows of a database. Supports property filters.';
-      case 'create_page': return 'Create a standalone page or database row with title and content.';
-      case 'update_page': return 'Update title, content, or properties of a page. Merges properties safely.';
-      case 'bulk_update': return 'Update multiple pages or database rows in a single call.';
-      case 'delete_page': return 'Delete a page, database, or row. Requires confirm: true — dry-run by default.';
-      case 'move_item': return 'Reparent a sidebar item. Pass null to move to workspace root.';
-      case 'create_database': return 'Create a database with a custom column schema. Title column auto-added.';
-      case 'update_database_schema': return 'Add or remove columns. Removing requires confirm: true. Title protected.';
-      default: return '';
-    }
-  };
 
   return (
     <section id="tools" className="px-4 sm:px-8 lg:px-14 py-16 lg:py-27.5 bg-neutral-950">
@@ -96,7 +77,7 @@ export default async function LandingTools() {
           <div className="flex items-center gap-2">
             <span className="w-1.5 h-1.5 rounded-full bg-accent-strong" />
             <h3 className="m-0 font-mono text-[11px] text-neutral-100 uppercase tracking-widest font-semibold">
-              Protocol Tools <span className="text-dim font-normal">({TOOLS.length})</span>
+              {t('bridgeToolsSectionTools')} <span className="text-dim font-normal">({TOOLS.length})</span>
             </h3>
           </div>
 
@@ -115,7 +96,7 @@ export default async function LandingTools() {
 
               {TOOLS.map((row, i) => {
                 const sc = SCOPE_COLORS[row.scope];
-                const displayDesc = getToolDesc(row.descKey);
+                const displayDesc = t(row.descKey);
                 return (
                   <div
                     key={i}
@@ -136,7 +117,7 @@ export default async function LandingTools() {
                     <span className="font-mono text-neutral-100 font-medium">{row.tool}</span>
                     <span className="text-dim">{displayDesc}</span>
                     <span className="font-mono text-accent-strong text-[12.5px] text-right">
-                      {row.tool.includes('create') || row.tool.includes('schema') || row.tool.includes('move') ? 'Result' : 'Page'}
+                      {row.tool.includes('create') || row.tool.includes('schema') || row.tool.includes('move') ? t('bridgeToolsReturnResult') : t('bridgeToolsReturnPage')}
                     </span>
                   </div>
                 );
@@ -162,7 +143,7 @@ export default async function LandingTools() {
           <div className="flex items-center gap-2">
             <span className="w-1.5 h-1.5 rounded-full bg-accent-strong" />
             <h3 className="m-0 font-mono text-[11px] text-neutral-100 uppercase tracking-widest font-semibold">
-              Protocol Resources <span className="text-dim font-normal">({RESOURCES.length})</span>
+              {t('bridgeToolsSectionResources')} <span className="text-dim font-normal">({RESOURCES.length})</span>
             </h3>
           </div>
 
@@ -218,7 +199,7 @@ export default async function LandingTools() {
           <div className="flex items-center gap-2">
             <span className="w-1.5 h-1.5 rounded-full bg-accent-strong" />
             <h3 className="m-0 font-mono text-[11px] text-neutral-100 uppercase tracking-widest font-semibold">
-              Protocol Prompts <span className="text-dim font-normal">({PROMPTS.length})</span>
+              {t('bridgeToolsSectionPrompts')} <span className="text-dim font-normal">({PROMPTS.length})</span>
             </h3>
           </div>
 
