@@ -146,9 +146,19 @@ function migrateLegacyTabs(globalKey: string): Tab[] {
 export function TabsProvider({
   items,
   children,
+  enabled = true,
 }: {
   items: WorkspaceItemRow[];
   children: React.ReactNode;
+  /**
+   * When false (web build), the provider is inert: it renders a `null` context
+   * (so `useTabs()` returns null, exactly like no provider) and skips every
+   * effect/global listener. It is still ALWAYS mounted so the surrounding tree
+   * shape never changes when `isTauri` resolves from false→true after mount —
+   * otherwise adding/removing this wrapper remounts the whole app subtree, which
+   * raced the first navigation and crashed Next's Router with a hooks mismatch.
+   */
+  enabled?: boolean;
 }) {
   const router = useRouter();
   const pathname = usePathname();
@@ -219,7 +229,10 @@ export function TabsProvider({
   );
 
   // ── Hydrate from localStorage on mount (single GLOBAL key) ──────────────
+  // Gated on `enabled` so the web build (inert provider) never touches storage,
+  // and so hydration runs once `isTauri` flips on (deps include `enabled`).
   useEffect(() => {
+    if (!enabled) return;
     // Pulls in any old per-workspace buckets the first time we run, then drops
     // them — afterwards this is just reading the global key.
     const merged = migrateLegacyTabs(storageKey);
@@ -246,7 +259,7 @@ export function TabsProvider({
 
     setHydrated(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [enabled]);
 
   // ── Prune tabs whose backing workspace item was deleted ───────────────────
   // Empty `items` is treated as "still loading", never as "everything is gone",
@@ -444,6 +457,7 @@ export function TabsProvider({
   // ── Global ctrl/middle-click on internal links → open in a new tab ─────────
   // Covers the sidebar, in-editor page links, and links inside modals.
   useEffect(() => {
+    if (!enabled) return;
     const onAux = (e: MouseEvent) => {
       if (e.button !== 1) return;
       const a = (e.target as HTMLElement | null)?.closest('a');
@@ -470,7 +484,7 @@ export function TabsProvider({
       document.removeEventListener('auxclick', onAux, true);
       document.removeEventListener('click', onClick, true);
     };
-  }, [openInNewTab]);
+  }, [openInNewTab, enabled]);
 
   const value = useMemo<TabsContextValue>(
     () => ({
@@ -487,5 +501,7 @@ export function TabsProvider({
     [tabs, activeId, resolveMeta, openInNewTab, activateTab, closeTab, closeOthers, closeAll, reorderTabs],
   );
 
-  return <TabsContext.Provider value={value}>{children}</TabsContext.Provider>;
+  // Inert on web: provide `null` so `useTabs()` behaves exactly as if there were
+  // no provider (web keeps native browser-tab / ctrl-click semantics).
+  return <TabsContext.Provider value={enabled ? value : null}>{children}</TabsContext.Provider>;
 }
