@@ -197,6 +197,14 @@ We use the **JSON Column Pattern** (not EAV) for dynamic user-defined properties
 - **Dashboard:** build the PostHog funnel insight (`$pageview /` → `signup` → `mcp_token_created` → `agent_call`) with a breakdown on `initial_utm_source`/`initial_referrer` (PostHog-side config, not code). **Agent-add drill-down funnel:** `connect_flow_opened` → `connect_editor_selected` → `oauth_authorize_viewed` → `oauth_consent_result(approved)` → `mcp_token_created` → `agent_call`, with `oauth_token_exchange_failed`/`mcp_token_mint_blocked`/`oauth_consent_result(denied)` broken down by `reason`/`result` to pinpoint the drop cause (PostHog-side config).
 - **Env:** reuses `NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN` + `NEXT_PUBLIC_POSTHOG_HOST` server-side (no new env).
 
+### Crash Reporting & Source Maps
+
+Render crashes are caught by the error boundaries (`global-error.tsx` + `[locale]/error.tsx`) and forwarded to PostHog **Error Tracking** as `$exception` events via `src/lib/reportClientError.ts` (`posthog.captureException` + `digest`/`path`/`boundary` props). See the **Root app files** entry for the boundaries.
+
+- **Source-map upload (build-time):** [next.config.ts](next.config.ts) wraps the prod config with `withPostHogConfig` (`@posthog/nextjs-config`, devDependency). It generates hidden browser source maps during `next build`, uploads them to PostHog so minified production stacks (e.g. React #310 → `aP`/`L`) resolve to real component/file/line, then **deletes them (`deleteAfterUpload: true`) so they never ship to users**. EU cloud → upload `host: 'https://eu.posthog.com'` (the API host, NOT the `eu.i.posthog.com` INGEST host in `NEXT_PUBLIC_POSTHOG_HOST`).
+- **Gating:** applied only when `NODE_ENV === 'production'` **and** both build creds are set, so local builds / forks build untouched.
+- **New env (set in Vercel, build-time only — NOT `NEXT_PUBLIC`):** `POSTHOG_API_KEY` (a PostHog **Personal API key** with error-tracking/source-map write scope) + `POSTHOG_PROJECT_ID` (numeric project id). Without them the wrapper is skipped (reports still arrive, but stacks stay minified).
+
 ### Migration Notes
 
 - New migration `when` values must be **greater than** all existing values. Last journaled: `0016` → `1780700000000`. Reserve `0018_user_sessions` → `1780800000000`, `0019_uploaded_assets` → `1780900000000`, `0020_shared_pages` → `1781000000000`. **Next migration: `when` > `1781300000000`.**
@@ -224,6 +232,8 @@ We use the **JSON Column Pattern** (not EAV) for dynamic user-defined properties
 
 **Root app files (`src/app/`)**
 - `layout.tsx` — True root layout. Renders `<html lang={locale}>` + `<body>` with Onest (sans/UI) / JetBrains Mono (code) / Fraunces (serif/display, normal+italic) font CSS variables. Reads locale from `NEXT_LOCALE` cookie (falls back to `'en'`). Defines `export const viewport`. **All other layouts must NOT render `<html>`/`<body>`.**
+- `global-error.tsx` — Last-resort React error boundary (catches crashes in the root/locale **layouts** themselves, above `[locale]/error.tsx`). REPLACES the root layout when it fires, so it renders its own `<html>`/`<body>` and uses NO providers/i18n (plain dark-themed English fallback + Reload). Reports to PostHog via `reportClientError`.
+- `[locale]/error.tsx` — Branded, i18n'd error boundary for everything under `[locale]` (marketing/share/auth/in-app — route groups don't add segments, so it also catches `(app)` crashes). Renders inside `[locale]/layout` so `NextIntlClientProvider`+PostHog are available → localized (`Errors.crash{Title,Body,Reload,Back}`) UI (Reload=`reset()`, Back=`router.back()`) and crash reporting. **Why this matters:** before these existed there were NO error boundaries, so any render error (e.g. a Rules-of-Hooks violation → React #310) nuked the whole app to the bare browser "couldn't load" screen with ZERO telemetry. `src/lib/reportClientError.ts` is the shared best-effort reporter (forwards error + `digest` + path to `posthog.captureException`, never re-throws) — the `window error`/`unhandledrejection` listeners in `DebugConsole` do NOT catch React render errors, only boundaries do.
 - `sitemap.ts` — **Async.** Generates `/sitemap.xml`. Lists 5 static public URLs + all `shared_pages` where `in_sitemap = true` (admin-opted, priority 0.7). Child pages of sitemap-included parents are automatically included via `updateShare` cascade — no manual per-child toggle needed.
 - `robots.ts` — Generates `/robots.txt`. Allows public marketing paths + `/share/`; disallows `/app`, `/db/`, `/page/`, `/admin/`, `/api/`, `/login`.
 

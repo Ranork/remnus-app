@@ -733,7 +733,11 @@
     "resourceNotFound": "Diese Seite existiert nicht mehr.",
     "resourceNotFoundDesc": "Sie wurde möglicherweise gelöscht oder verschoben.",
     "goHome": "Zum Arbeitsbereich",
-    "billingDemoBlocked": "Mit Demokonten ist kein Abo möglich. Melden Sie sich mit Ihrem eigenen Konto an, um einen Tarif zu wählen."
+    "billingDemoBlocked": "Mit Demokonten ist kein Abo möglich. Melden Sie sich mit Ihrem eigenen Konto an, um einen Tarif zu wählen.",
+    "crashTitle": "Etwas ist schiefgelaufen",
+    "crashBody": "In der App ist ein unerwarteter Fehler aufgetreten. Du kannst die Seite neu laden oder zurückgehen.",
+    "crashReload": "Neu laden",
+    "crashBack": "Zurück"
   },
   "LanguageSwitcher": {
     "label": "Sprache"

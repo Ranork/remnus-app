@@ -84,6 +84,7 @@
   },
   "devDependencies": {
     "@ducanh2912/next-pwa": "^10.2.9",
+    "@posthog/nextjs-config": "^1.9.68",
     "@swc/helpers": "^0.5.23",
     "@tailwindcss/postcss": "^4",
     "@tauri-apps/cli": "^2.11.2",

@@ -733,7 +733,11 @@
     "resourceNotFound": "Cette page n'existe plus.",
     "resourceNotFoundDesc": "Elle a peut-être été supprimée ou déplacée.",
     "goHome": "Aller à l'espace de travail",
-    "billingDemoBlocked": "Les comptes de démonstration ne peuvent pas souscrire. Connectez-vous avec votre propre compte pour choisir une formule."
+    "billingDemoBlocked": "Les comptes de démonstration ne peuvent pas souscrire. Connectez-vous avec votre propre compte pour choisir une formule.",
+    "crashTitle": "Une erreur est survenue",
+    "crashBody": "L’application a rencontré une erreur inattendue. Vous pouvez recharger la page ou revenir en arrière.",
+    "crashReload": "Recharger",
+    "crashBack": "Retour"
   },
   "LanguageSwitcher": {
     "label": "Langue"

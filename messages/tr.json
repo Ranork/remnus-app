@@ -733,7 +733,11 @@
     "resourceNotFound": "Bu sayfa artık mevcut değil.",
     "resourceNotFoundDesc": "Silinmiş veya taşınmış olabilir.",
     "goHome": "Çalışma alanına dön",
-    "billingDemoBlocked": "Demo hesapları abone olamaz. Bir plan seçmek için kendi hesabınızla giriş yapın."
+    "billingDemoBlocked": "Demo hesapları abone olamaz. Bir plan seçmek için kendi hesabınızla giriş yapın.",
+    "crashTitle": "Bir şeyler ters gitti",
+    "crashBody": "Uygulama beklenmeyen bir hatayla karşılaştı. Sayfayı yeniden yükleyebilir ya da geri dönebilirsin.",
+    "crashReload": "Yeniden yükle",
+    "crashBack": "Geri dön"
   },
   "LanguageSwitcher": {
     "label": "Dil"

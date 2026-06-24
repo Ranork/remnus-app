@@ -733,7 +733,11 @@
     "resourceNotFound": "This page no longer exists.",
     "resourceNotFoundDesc": "It may have been deleted or moved.",
     "goHome": "Go to workspace",
-    "billingDemoBlocked": "Demo accounts can't subscribe. Sign in with your own account to choose a plan."
+    "billingDemoBlocked": "Demo accounts can't subscribe. Sign in with your own account to choose a plan.",
+    "crashTitle": "Something went wrong",
+    "crashBody": "The app ran into an unexpected error. You can reload the page or go back.",
+    "crashReload": "Reload",
+    "crashBack": "Go back"
   },
   "LanguageSwitcher": {
     "label": "Language"

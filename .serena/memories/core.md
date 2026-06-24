@@ -7,7 +7,9 @@ Notion-like workspace app. Pages (title + markdown) and databases (dynamic colum
 ```
 src/
   app/                      # Next.js App Router
-    layout.tsx              # Root passthrough (no HTML/body)
+    layout.tsx              # Root passthrough (no HTML/body) — renders DebugConsole
+    global-error.tsx        # Last-resort error boundary (catches root/locale LAYOUT crashes; own html/body, no i18n, English+Reload, reports via reportClientError)
+    [locale]/error.tsx      # Branded i18n error boundary for ALL [locale] routes (incl (app) group); reset()/router.back(); reports crashes to PostHog. Errors.crash{Title,Body,Reload,Back} keys (all 6 locales). NOTE: before this there were NO error boundaries → render errors (e.g. Rules-of-Hooks #310) nuked the app to the bare browser screen with zero telemetry. src/lib/reportClientError.ts = shared reporter (posthog.captureException + digest + path) → PostHog Error Tracking (EU). Source-map upload SET UP: next.config.ts wraps prod config with withPostHogConfig (@posthog/nextjs-config devDep; generates+uploads hidden browser sourcemaps on build, deleteAfterUpload, host https://eu.posthog.com = API host not ingest). Gated on prod + NEW build env POSTHOG_API_KEY (personal key) + POSTHOG_PROJECT_ID (must set in Vercel; without them stacks stay minified). Next 16.2.6 passes `reset` (+ unstable_retry) to error.tsx.
     [locale]/
       layout.tsx            # Full locale-aware layout, auth check, sidebar
       page.tsx              # Home — unauthenticated: marketing landing page; authenticated: redirect to first workspace item

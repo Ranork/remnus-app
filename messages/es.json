@@ -733,7 +733,11 @@
     "resourceNotFound": "Esta página ya no existe.",
     "resourceNotFoundDesc": "Puede haber sido eliminada o movida.",
     "goHome": "Ir al espacio de trabajo",
-    "billingDemoBlocked": "Las cuentas de demostración no pueden suscribirse. Inicia sesión con tu propia cuenta para elegir un plan."
+    "billingDemoBlocked": "Las cuentas de demostración no pueden suscribirse. Inicia sesión con tu propia cuenta para elegir un plan.",
+    "crashTitle": "Algo salió mal",
+    "crashBody": "La aplicación encontró un error inesperado. Puedes recargar la página o volver atrás.",
+    "crashReload": "Recargar",
+    "crashBack": "Volver"
   },
   "LanguageSwitcher": {
     "label": "Idioma"
