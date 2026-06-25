@@ -12,6 +12,7 @@ export default async function LandingFooter() {
       links: [
         { label: t('bridgeFooterProtocolMcp'),      href: '/share/docs/mcp' },
         { label: t('bridgeFooterProtocolSdk'),       href: '/share/docs/mcp/getting-started' },
+        { label: t('bridgeFooterProtocolConnect'),   href: '/share/docs/mcp/connect-editors' },
         { label: t('bridgeFooterProtocolTools'),     href: '/share/docs/mcp/read-tools' },
         { label: t('bridgeFooterProtocolResources'), href: '/share/docs/mcp/resources' },
       ],
