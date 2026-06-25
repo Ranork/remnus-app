@@ -13,7 +13,7 @@ import { logActivity, type TokenContext } from '../context';
 
 export function registerReadTools(server: McpServer, ctx: TokenContext) {
   server.registerTool(
-    'search',
+    'search_workspace',
     {
       description: 'Search pages and databases in the workspace by title.',
       inputSchema: {
@@ -33,10 +33,10 @@ export function registerReadTools(server: McpServer, ctx: TokenContext) {
     async ({ query, limit }) => {
       try {
         const results = await searchWorkspace(ctx.workspaceId, query, limit ?? 10);
-        await logActivity(ctx, 'search', 'success');
+        await logActivity(ctx, 'search_workspace', 'success');
         return { content: [{ type: 'text' as const, text: JSON.stringify(results, null, 2) }], structuredContent: { results } };
       } catch (err) {
-        await logActivity(ctx, 'search', 'error');
+        await logActivity(ctx, 'search_workspace', 'error');
         return { content: [{ type: 'text' as const, text: `Error: ${String(err)}` }], isError: true };
       }
     },

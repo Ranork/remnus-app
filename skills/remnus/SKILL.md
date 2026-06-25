@@ -29,7 +29,7 @@ Column types: `text` | `number` | `select` | `multi_select` | `date` | `datetime
 ## Tools at a glance
 
 **Read (safe, always allowed):**
-- `search` — find pages/databases by title. Your usual entry point.
+- `search_workspace` — find pages/databases by title. Your usual entry point.
 - `list_workspace` — list items, optionally under a `parentId`. Paginated.
 - `get_page` — full content of a page or row by ID. Auto-detects type.
 - `get_database_schema` — columns only, no rows. Cheap; call before querying.
@@ -40,7 +40,7 @@ Column types: `text` | `number` | `select` | `multi_select` | `date` | `datetime
 **Write (needs a write-scoped token):**
 - `create_page` — new standalone page OR database row (see decision below).
 - `update_page` — change title/content/properties of one item.
-- `bulk_update` — many updates in one call. Prefer this over a loop.
+- `bulk_update_pages` — many updates in one call. Prefer this over a loop.
 - `delete_page` — delete a page, row, or whole database. **Guarded.**
 - `move_item` — reparent a sidebar item; `newParentId: null` → root.
 - `create_database` — new database with a custom schema.
@@ -74,7 +74,7 @@ These only *fetch and format* — the actual writing/analysis is yours. If a cli
 ## Core rules — do not skip these
 
 ### 1. Inspect before you act
-Don't guess IDs or column names. Start from `search` or `list_workspace`, and run `get_database_schema` before `query_database` / before writing rows. You need real column IDs and the exact `select` option strings — invented values silently produce empty filters or unset properties.
+Don't guess IDs or column names. Start from `search_workspace` or `list_workspace`, and run `get_database_schema` before `query_database` / before writing rows. You need real column IDs and the exact `select` option strings — invented values silently produce empty filters or unset properties.
 
 ### 2. `update_page` MERGES properties — it never replaces
 Passing `properties: { status: "Done" }` changes only `status`; every other property is untouched. To *clear* a field, set it explicitly to `null`/`""`. Never re-send the whole property bag thinking you must preserve it — you don't, and doing so risks clobbering changes made since you read.
@@ -96,18 +96,18 @@ Deleting a database row is irreversible; deleting a database or a parent page ca
 Don't pass both `parentId` and `databaseId`. Property keys must match the database's column IDs.
 
 ### 6. Batch, don't loop
-Updating several rows (e.g. "mark all done")? Build one `bulk_update` call. It's one audit entry and one round-trip instead of N.
+Updating several rows (e.g. "mark all done")? Build one `bulk_update_pages` call. It's one audit entry and one round-trip instead of N.
 
 ### 7. Content is markdown
 `content` is plain markdown. Headings, lists, tables, checkboxes (`- [ ]`) all work. Write clean markdown, not HTML.
 
 ## Common recipes
 
-**"Find X and show me"** → `search` → `get_page` on the best hit.
+**"Find X and show me"** → `search_workspace` → `get_page` on the best hit.
 
-**"What's in my Tasks database?"** → `search` (or `list_workspace`) to get the DB id → `get_database_schema` → `query_database` (filter/paginate as needed).
+**"What's in my Tasks database?"** → `search_workspace` (or `list_workspace`) to get the DB id → `get_database_schema` → `query_database` (filter/paginate as needed).
 
-**"Mark these tasks done" / bulk edits** → `get_database_schema` for the status column id and the "Done" option string → `query_database` to resolve row IDs → one `bulk_update`.
+**"Mark these tasks done" / bulk edits** → `get_database_schema` for the status column id and the "Done" option string → `query_database` to resolve row IDs → one `bulk_update_pages`.
 
 **"Add a new task"** → resolve the database id → `get_database_schema` for property keys → `create_page` with `databaseId` + `properties`.
 

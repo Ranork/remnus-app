@@ -37,7 +37,7 @@ Suppose you want an agent to triage a backlog: read all open tickets, update the
 
 **In Remnus**, the same workflow maps directly to MCP tools:
 1. `query_database` with filters — cursor-based pagination built in
-2. `bulk_update` — sends all property changes in one call
+2. `bulk_update_pages` — sends all property changes in one call
 3. `update_page` on the summary page — same tool, consistent interface
 
 The difference is not "Remnus is faster." It is that the MCP surface was designed for *this kind of workflow* rather than retrofitted onto a surface designed for human clicks.

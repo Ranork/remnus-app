@@ -106,7 +106,7 @@ After signing in, open the **AI Agents** panel from the sidebar and click **Conn
 
 | Tool | Scope | Description |
 |------|-------|-------------|
-| `search` | read | Full-text search across pages and databases |
+| `search_workspace` | read | Full-text search across pages and databases |
 | `list_workspace` | read | List sidebar items with pagination |
 | `get_page` | read | Get a page or database row by ID |
 | `get_database_schema` | read | Get column schema of a database |
@@ -115,7 +115,7 @@ After signing in, open the **AI Agents** panel from the sidebar and click **Conn
 | `query_audit_log` | read | Filtered agent activity log |
 | `create_page` | write | Create a standalone page or database row |
 | `update_page` | write | Update title, content, or properties |
-| `bulk_update` | write | Update multiple rows in one call |
+| `bulk_update_pages` | write | Update multiple rows in one call |
 | `delete_page` | write | Delete a page (requires `confirm: true`) |
 | `move_item` | write | Move item to a new parent |
 | `create_database` | write | Create a database with custom schema |

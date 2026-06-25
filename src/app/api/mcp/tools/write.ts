@@ -90,7 +90,7 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
   );
 
   server.registerTool(
-    'bulk_update',
+    'bulk_update_pages',
     {
       description: 'Update multiple pages or database rows in a single call.',
       inputSchema: {
@@ -111,16 +111,16 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
     },
     async ({ updates }) => {
       if (ctx.scope !== 'write') {
-        await logActivity(ctx, 'bulk_update', 'error');
+        await logActivity(ctx, 'bulk_update_pages', 'error');
         return { content: [{ type: 'text' as const, text: READ_ONLY_ERROR }], isError: true };
       }
       try {
         const results = await bulkUpdatePages(ctx.workspaceId, updates, { tokenId: ctx.tokenId });
-        await logActivity(ctx, 'bulk_update', 'success');
+        await logActivity(ctx, 'bulk_update_pages', 'success');
         publish({ scope: 'database', workspaceId: ctx.workspaceId, actorId: actorId(ctx) });
         return { content: [{ type: 'text' as const, text: JSON.stringify(results) }], structuredContent: { results } };
       } catch (err) {
-        await logActivity(ctx, 'bulk_update', 'error');
+        await logActivity(ctx, 'bulk_update_pages', 'error');
         return { content: [{ type: 'text' as const, text: `Error: ${String(err)}` }], isError: true };
       }
     },

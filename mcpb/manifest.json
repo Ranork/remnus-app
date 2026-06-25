@@ -36,7 +36,7 @@
   },
   "tools_generated": true,
   "tools": [
-    { "name": "search", "description": "Search pages and databases in your workspace by title." },
+    { "name": "search_workspace", "description": "Search pages and databases in your workspace by title." },
     { "name": "list_workspace", "description": "List workspace items (pages and databases)." },
     { "name": "get_page", "description": "Get the full content of a page or database row." },
     { "name": "get_database_schema", "description": "Get a database's column schema." },
@@ -45,7 +45,7 @@
     { "name": "query_audit_log", "description": "Query the agent activity audit log." },
     { "name": "create_page", "description": "Create a new page or database row." },
     { "name": "update_page", "description": "Update a page or database row (merges properties)." },
-    { "name": "bulk_update", "description": "Update multiple database rows at once." },
+    { "name": "bulk_update_pages", "description": "Update multiple database rows at once." },
     { "name": "delete_page", "description": "Delete a page or database row." },
     { "name": "move_item", "description": "Move/reparent a workspace item." },
     { "name": "create_database", "description": "Create a new database with a custom schema." },

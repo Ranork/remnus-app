@@ -4,7 +4,7 @@ All 7 read tools are available to every token regardless of scope.
 
 ---
 
-## search
+## search_workspace
 
 Search pages and databases in the workspace by title.
 
@@ -57,7 +57,7 @@ Get only the column schema of a database, without fetching rows. Use this before
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
-| `databaseId` | string | ✓ | Database ID (from `list_workspace` or `search`) |
+| `databaseId` | string | ✓ | Database ID (from `list_workspace` or `search_workspace`) |
 
 **Returns** — `{ schema: [{ id, name, type, options? }] }`
 

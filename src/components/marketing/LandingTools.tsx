@@ -2,14 +2,14 @@ import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 
 const TOOLS = [
-  { scope: 'read',  tool: 'search',                  descKey: 'bridgeToolsDescSearch' },
+  { scope: 'read',  tool: 'search_workspace',        descKey: 'bridgeToolsDescSearch' },
   { scope: 'read',  tool: 'list_workspace',          descKey: 'bridgeToolsDescListWorkspace' },
   { scope: 'read',  tool: 'get_page',                descKey: 'bridgeToolsDescGetPage' },
   { scope: 'read',  tool: 'get_database_schema',     descKey: 'bridgeToolsDescGetDatabaseSchema' },
   { scope: 'read',  tool: 'query_database',          descKey: 'bridgeToolsDescQueryDatabase' },
   { scope: 'write', tool: 'create_page',             descKey: 'bridgeToolsDescCreatePage' },
   { scope: 'write', tool: 'update_page',             descKey: 'bridgeToolsDescUpdatePage' },
-  { scope: 'write', tool: 'bulk_update',             descKey: 'bridgeToolsDescBulkUpdate' },
+  { scope: 'write', tool: 'bulk_update_pages',       descKey: 'bridgeToolsDescBulkUpdate' },
   { scope: 'write', tool: 'delete_page',             descKey: 'bridgeToolsDescDeletePage' },
   { scope: 'write', tool: 'move_item',               descKey: 'bridgeToolsDescMoveItem' },
   { scope: 'write', tool: 'create_database',         descKey: 'bridgeToolsDescCreateDatabase' },

@@ -41,7 +41,7 @@ Update an existing page or database row. Properties are **merged** — existing 
 
 ---
 
-## bulk_update
+## bulk_update_pages
 
 Update multiple pages or database rows in a single call.
 
