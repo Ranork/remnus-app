@@ -7,7 +7,9 @@
     "tabClose": "Kapat",
     "tabCloseOthers": "Diğerlerini kapat",
     "tabCloseAll": "Tümünü kapat",
-    "tabUntitled": "Adsız"
+    "tabUntitled": "Adsız",
+    "showSidebar": "Kenar çubuğunu göster",
+    "hideSidebar": "Kenar çubuğunu gizle"
   },
   "Home": {
     "welcomeTitle": "Remnus'a Hoş Geldiniz",

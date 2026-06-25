@@ -7,7 +7,9 @@
     "tabClose": "बंद करें",
     "tabCloseOthers": "अन्य बंद करें",
     "tabCloseAll": "सभी बंद करें",
-    "tabUntitled": "शीर्षकहीन"
+    "tabUntitled": "शीर्षकहीन",
+    "showSidebar": "साइडबार दिखाएं",
+    "hideSidebar": "साइडबार छुपाएं"
   },
   "Home": {
     "welcomeTitle": "Remnus में आपका स्वागत है",
