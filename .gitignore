@@ -76,3 +76,6 @@ next-env.d.ts
 /mcpb/server/node_modules/
 /mcpb-build/
 *.pem
+
+# MCP registry publisher CLI binary (downloaded tool, not part of the app)
+/mcp-publisher.exe
