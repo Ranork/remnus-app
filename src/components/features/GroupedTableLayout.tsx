@@ -119,15 +119,17 @@ export default function GroupedTableLayout({
                 setDraggedGroup(null);
                 setDragOverGroup(null);
               }}
-              className={`mb-2 flex items-center justify-between border-b pb-2 ${groupColBg ? 'border-white/8' : 'border-neutral-800/50'}`}
+              className={`mb-3 flex items-center border-b pb-2.5 ${groupColBg ? 'border-white/8' : 'border-neutral-800/50'}`}
             >
-              <div className={`flex items-center gap-2 min-w-0 ${!isUncategorized ? 'cursor-grab active:cursor-grabbing' : ''}`}>
-                {!isUncategorized && <GripVertical size={12} className="text-neutral-600 shrink-0" />}
-                <h3 draggable={!isUncategorized} className="text-xs font-medium uppercase tracking-wider text-neutral-400 truncate">
+              <div className={`flex items-center gap-2.5 min-w-0 ${!isUncategorized ? 'cursor-grab active:cursor-grabbing' : ''}`}>
+                {!isUncategorized && <GripVertical size={15} className="text-neutral-600 shrink-0" />}
+                <h3 draggable={!isUncategorized} className="text-lg font-semibold text-neutral-200 truncate">
                   {isUncategorized ? t('uncategorized') : groupName}
                 </h3>
+                <span className="shrink-0 rounded-full border border-neutral-700/70 bg-neutral-800/70 px-2 py-0.5 text-xs font-medium text-neutral-400 tabular-nums">
+                  {groupRows.length}
+                </span>
               </div>
-              <span className="text-xs text-neutral-500 tabular-nums">{groupRows.length}</span>
             </div>
 
             {groupRows.length > 0 ? (
