@@ -27,6 +27,10 @@ export interface TableViewConfig {
   hiddenColumns: string[];
   columnWidths?: Record<string, number>;
   rowColorCol?: string;    // property ID of a select/multi_select column that drives the row's background tint color
+  groupByCol?: string;     // optional select/status column used to split the table into vertical groups
+  groupOrder?: string[];   // option values in display order; []/undefined = use options order
+  groupColBg?: boolean;    // tint each grouped table section with the group option's color
+  hiddenGroups?: string[];
   filters: ViewFilter[];
   sorts: ViewSort[];
   openBehavior?: OpenBehavior;
@@ -78,5 +82,4 @@ export interface DatabaseView {
   icon?: string;
   iconColor?: string;
 }
-
 

@@ -1041,7 +1041,7 @@ export default function DatabaseView({
               onOpenBehaviorChange={(behavior) =>
                 mutateConfig((cfg) => ({ ...cfg, openBehavior: behavior }))
               }
-              groupByCol={kanbanConfig?.groupByCol}
+              groupByCol={tableConfig?.groupByCol ?? kanbanConfig?.groupByCol}
               onGroupByColChange={handleGroupByChange}
               cardProperties={kanbanConfig?.cardProperties ?? calendarConfig?.cardProperties}
               onCardPropertiesChange={handleCardPropertiesChange}
@@ -1063,7 +1063,7 @@ export default function DatabaseView({
               onCardBgColChange={handleCardBgColChange}
               rowColorCol={(config as TableViewConfig).rowColorCol}
               onRowColorColChange={handleRowColorColChange}
-              groupColBg={kanbanConfig?.groupColBg ?? false}
+              groupColBg={tableConfig?.groupColBg ?? kanbanConfig?.groupColBg ?? false}
               onGroupColBgChange={handleGroupColBgChange}
               defaultPageIcon={config.defaultPageIcon}
               defaultPageIconColor={config.defaultPageIconColor}
@@ -1079,7 +1079,7 @@ export default function DatabaseView({
                   }))
                 )
               }
-              hiddenGroups={kanbanConfig?.hiddenGroups}
+              hiddenGroups={tableConfig?.hiddenGroups ?? kanbanConfig?.hiddenGroups}
               onHiddenGroupsChange={(hidden) =>
                 mutateConfig((cfg) => ({ ...cfg, hiddenGroups: hidden }))
               }

@@ -13,6 +13,7 @@ import FiltersSection from './database-sidebar/FiltersSection';
 import SortsSection from './database-sidebar/SortsSection';
 import KanbanLayoutSection from './database-sidebar/KanbanLayoutSection';
 import CalendarLayoutSection from './database-sidebar/CalendarLayoutSection';
+import GroupingLayoutSection from './database-sidebar/GroupingLayoutSection';
 import { selectCls } from './database-sidebar/shared';
 
 interface DatabasePropertiesSidebarProps {
@@ -234,49 +235,61 @@ export default function DatabasePropertiesSidebar({
 
             {/* Table: appearance */}
             {viewType === 'table' && (
-              <CollapsibleSection label={t('sectionAppearance')}>
-                <div className="px-4 pb-3 flex flex-col gap-3">
-                  <div>
-                    <span className="block text-[10px] text-neutral-500 uppercase tracking-wider mb-1.5">{t('rowColor')}</span>
-                    {colorColumns.length > 0 ? (
-                      <select value={rowColorCol ?? ''} onChange={(e) => onRowColorColChange?.(e.target.value)} className={`${selectCls} w-full`}>
-                        <option value="">None</option>
-                        {colorColumns.map((col: any) => <option key={col.id} value={col.id}>{col.name}</option>)}
-                      </select>
-                    ) : (
-                      <span className="text-xs text-amber-500/80">{t('addSelectProperty')}</span>
-                    )}
-                  </div>
-                  <div>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <span className="text-[10px] text-neutral-500 uppercase tracking-wider">{t('columns')}</span>
-                      <div className="flex gap-3">
-                        <button onClick={() => onHiddenColumnsChange([])} className="text-[10px] text-blue-400 hover:text-blue-300 cursor-pointer">{t('showAll')}</button>
-                        <button onClick={() => onHiddenColumnsChange(schema.map((c) => c.id).filter((id) => id !== 'title'))} className="text-[10px] text-neutral-500 hover:text-neutral-300 cursor-pointer">{t('hideAll')}</button>
+              <>
+                <GroupingLayoutSection
+                  schema={schema}
+                  groupByCol={groupByCol}
+                  onGroupByColChange={onGroupByColChange}
+                  groupColBg={groupColBg}
+                  onGroupColBgChange={onGroupColBgChange}
+                  hiddenGroups={hiddenGroups}
+                  onHiddenGroupsChange={onHiddenGroupsChange}
+                  allowNoGrouping
+                />
+                <CollapsibleSection label={t('sectionAppearance')}>
+                  <div className="px-4 pb-3 flex flex-col gap-3">
+                    <div>
+                      <span className="block text-[10px] text-neutral-500 uppercase tracking-wider mb-1.5">{t('rowColor')}</span>
+                      {colorColumns.length > 0 ? (
+                        <select value={rowColorCol ?? ''} onChange={(e) => onRowColorColChange?.(e.target.value)} className={`${selectCls} w-full`}>
+                          <option value="">None</option>
+                          {colorColumns.map((col: any) => <option key={col.id} value={col.id}>{col.name}</option>)}
+                        </select>
+                      ) : (
+                        <span className="text-xs text-amber-500/80">{t('addSelectProperty')}</span>
+                      )}
+                    </div>
+                    <div>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-[10px] text-neutral-500 uppercase tracking-wider">{t('columns')}</span>
+                        <div className="flex gap-3">
+                          <button onClick={() => onHiddenColumnsChange([])} className="text-[10px] text-blue-400 hover:text-blue-300 cursor-pointer">{t('showAll')}</button>
+                          <button onClick={() => onHiddenColumnsChange(schema.map((c) => c.id).filter((id) => id !== 'title'))} className="text-[10px] text-neutral-500 hover:text-neutral-300 cursor-pointer">{t('hideAll')}</button>
+                        </div>
+                      </div>
+                      <div className="flex flex-col">
+                        {schema.map((col) => {
+                          const isHidden = hiddenColumns.includes(col.id);
+                          const isTitle = col.id === 'title';
+                          return (
+                            <button
+                              key={col.id}
+                              onClick={() => !isTitle && onToggleHideColumn(col.id)}
+                              disabled={isTitle}
+                              className={`flex items-center gap-2 px-1 py-1.5 border-b border-neutral-800/30 text-left transition-colors ${isTitle ? 'opacity-40 cursor-not-allowed' : 'hover:bg-neutral-800/10 cursor-pointer'}`}
+                            >
+                              <span className="flex-1 text-xs text-neutral-300 truncate">{col.name}</span>
+                              <span className={`w-3.5 h-3.5 border flex items-center justify-center shrink-0 transition-colors rounded-sm ${!isHidden ? 'bg-blue-500 border-blue-500' : 'border-neutral-700'}`}>
+                                {!isHidden && <span className="text-[8px] font-bold text-white leading-none">✓</span>}
+                              </span>
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
-                    <div className="flex flex-col">
-                      {schema.map((col) => {
-                        const isHidden = hiddenColumns.includes(col.id);
-                        const isTitle = col.id === 'title';
-                        return (
-                          <button
-                            key={col.id}
-                            onClick={() => !isTitle && onToggleHideColumn(col.id)}
-                            disabled={isTitle}
-                            className={`flex items-center gap-2 px-1 py-1.5 border-b border-neutral-800/30 text-left transition-colors ${isTitle ? 'opacity-40 cursor-not-allowed' : 'hover:bg-neutral-800/10 cursor-pointer'}`}
-                          >
-                            <span className="flex-1 text-xs text-neutral-300 truncate">{col.name}</span>
-                            <span className={`w-3.5 h-3.5 border flex items-center justify-center shrink-0 transition-colors rounded-sm ${!isHidden ? 'bg-blue-500 border-blue-500' : 'border-neutral-700'}`}>
-                              {!isHidden && <span className="text-[8px] font-bold text-white leading-none">✓</span>}
-                            </span>
-                          </button>
-                        );
-                      })}
-                    </div>
                   </div>
-                </div>
-              </CollapsibleSection>
+                </CollapsibleSection>
+              </>
             )}
 
             {/* Kanban-specific settings */}
