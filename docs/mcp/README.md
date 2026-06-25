@@ -28,6 +28,7 @@ Supports both **Streamable HTTP** (stateless, one request per call) and **SSE** 
 | | |
 |---|---|
 | [Getting Started](getting-started.md) | Token setup, Claude Desktop config, first call |
+| [Connect Your Editor](connect-editors.md) | Windsurf, Cline, Zed & more — ready configs + OAuth |
 | [Authentication](authentication.md) | Bearer tokens, scopes, rate limits |
 | [Read Tools](read-tools.md) | 7 read-only tools |
 | [Write Tools](write-tools.md) | 7 write tools |
