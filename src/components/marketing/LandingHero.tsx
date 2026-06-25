@@ -268,7 +268,7 @@ export default async function LandingHero() {
                 className="hero-trust-badge group/badge inline-flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-neutral-900/60 transition-colors duration-150"
               >
                 <span className="inline-flex items-center justify-center w-7 h-7 shrink-0">
-                  <BadgeCheck className="w-5 h-5 text-accent-strong" strokeWidth={1.75} />
+                  <BadgeCheck className="w-7 h-7 text-accent-strong" strokeWidth={1.5} />
                 </span>
                 <span className="flex flex-col text-left leading-tight">
                   <span className="text-[12px] text-neutral-50">MCP Registry</span>
