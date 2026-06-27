@@ -77,7 +77,7 @@ export const ChildBlock = Node.create({
   // Outputs a <div data-cb-id> block; "div" is in marked's known block-HTML tag list
   // so marked tokenizes it as an HTML block, and parseHTMLToken re-parses it via
   // generateJSON + our parseHTML rule above.
-  // @ts-ignore — renderMarkdown is a @tiptap/markdown extension field, not in Tiptap core types
+  // renderMarkdown is a @tiptap/markdown extension field, not in Tiptap core types
   renderMarkdown(node: any) {
     const { itemId, databaseId, itemType, title, icon, iconColor, linkOnly, indent } = node.attrs;
     const safeTitle = (title || '').replace(/"/g, '&quot;');

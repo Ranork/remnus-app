@@ -61,7 +61,7 @@ export const FileBlock = Node.create({
     return ReactNodeViewRenderer(FileBlockView, { stopEvent: mediaStopEvent });
   },
 
-  // @ts-ignore — renderMarkdown is a @tiptap/markdown extension field, not in Tiptap core types
+  // renderMarkdown is a @tiptap/markdown extension field, not in Tiptap core types
   renderMarkdown(node: any) {
     const a = node.attrs;
     const indent = (a?.indent as number) ?? 0;

@@ -13,7 +13,7 @@ export const FencedCodeBlock = CodeBlock.extend({
     return ReactNodeViewRenderer(CodeBlockView);
   },
 
-  // @ts-ignore — renderMarkdown is a @tiptap/markdown extension field, not in Tiptap core types
+  // renderMarkdown is a @tiptap/markdown extension field, not in Tiptap core types
   renderMarkdown(node: any, h: any) {
     const language = node.attrs?.language || '';
     const content = node.content ? h.renderChildren(node.content) : '';

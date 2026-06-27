@@ -2,6 +2,7 @@
 import { usePathname } from 'next/navigation';
 import type { ReactNode } from 'react';
 import TauriTitlebar from './features/TauriTitlebar';
+import TabHost from './providers/TabHost';
 import ZoomProvider from './providers/ZoomProvider';
 import { TabsProvider } from './providers/TabsContext';
 import { useIsTauri } from '@/lib/hooks/useIsTauri';
@@ -13,6 +14,7 @@ export default function AppShell({
   demoBanner,
   items,
   activeWorkspaceId,
+  isAdmin = false,
   children,
 }: {
   sidebar: ReactNode;
@@ -20,12 +22,19 @@ export default function AppShell({
   demoBanner?: ReactNode;
   items: WorkspaceItemRow[];
   activeWorkspaceId: string;
+  isAdmin?: boolean;
   children: ReactNode;
 }) {
   const pathname = usePathname();
   const isTauri = useIsTauri();
   const MARKETING_PATHS = new Set(['/', '/pricing', '/contact', '/download', '/privacy', '/security']);
   const isMarketing = MARKETING_PATHS.has(pathname) || pathname.startsWith('/oauth/');
+
+  // Only /db/* and /page/* routes live in tabs. The keep-alive TabHost owns the
+  // content for those in Tauri; other in-app routes (e.g. /admin) keep their
+  // normal server-rendered `{children}`.
+  const isTabbablePath = /^\/(db|page)\//.test(pathname);
+  const showTabHost = isTauri && isTabbablePath;
 
   if (isMarketing) {
     return <>{children}</>;
@@ -58,7 +67,22 @@ export default function AppShell({
             {/* TauriTitlebar renders the browser-style TabBar inline in its row (Tauri only). */}
             <TauriTitlebar key="tauri-titlebar" />
             {demoBanner}
-            {children}
+            {/*
+              Keep-alive content area. `{children}` (the server-rendered route)
+              shows on web and on non-tabbable in-app routes (/admin) via
+              `display:contents`. On a /db|/page route in Tauri it's hidden (those
+              content routes also return null behind the `remnus_platform` cookie)
+              and TabHost owns the content, keeping every tab's pane mounted. Both
+              wrappers are always present and only toggle display — never
+              mount/unmount — so the isTauri false→true flip can't remount the
+              route subtree (the Router-crash hazard noted above).
+            */}
+            <div className={showTabHost ? undefined : 'contents'} style={showTabHost ? { display: 'none' } : undefined}>
+              {children}
+            </div>
+            <div className="flex-1 min-h-0 flex flex-col" style={showTabHost ? undefined : { display: 'none' }}>
+              <TabHost isAdmin={isAdmin} />
+            </div>
           </main>
         </div>
       </TabsProvider>

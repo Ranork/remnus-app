@@ -80,7 +80,7 @@ export const MarkdownTable = Table.extend({
   // BgTableCell.parseHTML (colors) + the cell `colwidth` attribute (widths). A
   // plain table keeps the clean GFM serialization (this.parent — the base
   // extension's renderMarkdown, bound by getExtensionField).
-  // @ts-ignore — renderMarkdown is a @tiptap/markdown extension field, not in Tiptap core types
+  // renderMarkdown is a @tiptap/markdown extension field, not in Tiptap core types
   renderMarkdown(this: any, node: any, helpers: any, context: any) {
     if (!tableNeedsHtml(node) || !extensionsForHtml) {
       return this.parent ? this.parent(node, helpers, context) : '';

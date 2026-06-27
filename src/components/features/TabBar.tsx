@@ -80,7 +80,7 @@ export default function TabBar() {
 
   if (!tabs || tabs.tabs.length === 0) return null;
 
-  const { tabs: list, resolveMeta, activateTab, closeTab, closeOthers, closeAll, reorderTabs, openInNewTab } = tabs;
+  const { tabs: list, suspendedIds, resolveMeta, activateTab, closeTab, closeOthers, closeAll, reorderTabs, openInNewTab } = tabs;
 
   const scrollByDir = (dir: 1 | -1) => scrollRef.current?.scrollBy({ left: dir * 220, behavior: 'smooth' });
 
@@ -114,6 +114,9 @@ export default function TabBar() {
         {list.map((tab) => {
           const meta = displayMeta(tab);
           const isActive = tab.id === activeId;
+          // Suspended/not-yet-loaded tabs render dimmed ("passive"); clicking one
+          // reactivates and re-loads it from scratch.
+          const isSuspended = suspendedIds.has(tab.id);
           return (
             <div
               key={tab.id}
@@ -137,7 +140,7 @@ export default function TabBar() {
               title={meta.title}
               className={`group/tab relative flex items-center gap-1.5 pl-3 pr-2 w-[170px] shrink-0 cursor-default border-r border-neutral-800 transition-colors ${
                 isActive ? 'bg-neutral-850 text-neutral-50' : 'bg-neutral-900 text-neutral-400 hover:bg-neutral-800/40'
-              } ${overId === tab.id ? 'border-l-2 border-l-blue-500' : ''}`}
+              } ${!isActive && isSuspended ? 'opacity-50' : ''} ${overId === tab.id ? 'border-l-2 border-l-blue-500' : ''}`}
             >
               <PageIcon
                 icon={meta.icon}

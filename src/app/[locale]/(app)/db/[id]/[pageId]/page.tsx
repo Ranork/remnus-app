@@ -6,8 +6,12 @@ import { getCurrentUser } from '@/lib/auth/session';
 import PageEditor from '@/components/features/PageEditor';
 import { MembersProvider } from '@/components/features/MembersContext';
 import NotFoundRedirect from '@/components/features/NotFoundRedirect';
+import { isTauriRequest } from '@/lib/server/platform';
 
 export default async function PageDetail(props: { params: Promise<{ id: string, pageId: string }> }) {
+  // In Tauri the client TabHost renders this content (keep-alive tabs).
+  if (await isTauriRequest()) return null;
+
   const params = await props.params;
   const [db, page, subItems, user] = await Promise.all([
     getDatabase(params.id),

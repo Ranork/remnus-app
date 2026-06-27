@@ -73,7 +73,7 @@ export const CollapsibleHeading = Heading.configure({ levels: [1, 2, 3] }).exten
     return ReactNodeViewRenderer(HeadingView);
   },
 
-  // @ts-ignore — renderMarkdown is a @tiptap/markdown extension field, not in Tiptap core types
+  // renderMarkdown is a @tiptap/markdown extension field, not in Tiptap core types
   renderMarkdown(node: any, h: any) {
     const level = node.attrs?.level ?? 1;
     const indent = (node.attrs?.indent as number) ?? 0;

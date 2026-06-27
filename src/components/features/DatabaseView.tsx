@@ -18,6 +18,7 @@ import PageEditor from './PageEditor';
 import PageIcon from './PageIcon';
 import IconPicker from './IconPicker';
 import { MembersProvider, type WorkspaceMember } from './MembersContext';
+import { useTabNav } from '@/components/providers/TabsContext';
 import type {
   DatabaseView,
   TableViewConfig,
@@ -240,15 +241,16 @@ export default function DatabaseView({
   const tWs = useTranslations('Workspace');
   const schema: any[] = database.schema ?? [];
   const router = useRouter();
+  const tabNav = useTabNav();
   const [isRefreshing, setIsRefreshing] = useState(false);
 
   const handleManualRefresh = useCallback(() => {
     setIsRefreshing(true);
-    router.refresh();
+    tabNav.refresh();
     setTimeout(() => {
       setIsRefreshing(false);
     }, 1000);
-  }, [router]);
+  }, [tabNav]);
 
   // Local pages state so that we can update them instantly in the UI when they are updated in peek mode
   const [localPages, setLocalPages] = useState<any[]>(() => initialPages);

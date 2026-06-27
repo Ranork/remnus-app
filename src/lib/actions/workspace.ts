@@ -63,7 +63,7 @@ export async function getActiveWorkspaceId(): Promise<string | null> {
   const user = await getCurrentUser();
 
   const cookieStore = await cookies();
-  let workspaceId = cookieStore.get('remnus_workspace_id')?.value;
+  const workspaceId = cookieStore.get('remnus_workspace_id')?.value;
 
   if (workspaceId) {
     // Verify user is a member of the stored workspace

@@ -45,7 +45,7 @@ export default function PlanPickerModal({ currentTier, isDemo = false, onClose }
     setError(null);
     // Demo accounts can browse pricing, but every plan change is gated behind sign-in.
     if (isDemo) { setDemoBlocked(true); return; }
-    if (tier === 'enterprise') { window.location.href = '/contact'; return; }
+    if (tier === 'enterprise') { window.location.assign('/contact'); return; }
 
     if (tier === 'free') {
       if (!confirmFree) { setConfirmFree(true); return; }
@@ -53,7 +53,7 @@ export default function PlanPickerModal({ currentTier, isDemo = false, onClose }
       try {
         const r = await cancelSubscription();
         if (r.error) { setError(r.error); setBusy(null); return; }
-        window.location.href = '/app';
+        window.location.assign('/app');
       } catch { setError(t('actionError')); setBusy(null); }
       return;
     }
@@ -61,7 +61,7 @@ export default function PlanPickerModal({ currentTier, isDemo = false, onClose }
     setBusy(tier);
     try {
       const r = await createCheckoutSession(tier);
-      if (r.url) { window.location.href = r.url; return; }
+      if (r.url) { window.location.assign(r.url); return; }
       if (r.error) setError(r.error);
     } catch { setError(t('actionError')); }
     setBusy(null);

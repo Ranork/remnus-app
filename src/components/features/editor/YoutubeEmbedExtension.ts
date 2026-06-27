@@ -60,7 +60,7 @@ export const YoutubeEmbed = Node.create({
   // @tiptap/markdown v3 serializer — outputs a <div data-yt-id> block; "div" is in
   // marked's known block-HTML tag list, so it round-trips via parseHTMLToken +
   // our parseHTML rule above (same approach as ChildBlock).
-  // @ts-ignore — renderMarkdown is a @tiptap/markdown extension field, not in Tiptap core types
+  // renderMarkdown is a @tiptap/markdown extension field, not in Tiptap core types
   renderMarkdown(node: any) {
     const indent = (node.attrs?.indent as number) ?? 0;
     const indentAttr = indent ? ` data-indent="${indent}"` : '';

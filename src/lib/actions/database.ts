@@ -131,8 +131,8 @@ export async function updateDatabaseSchema(id: string, newSchema: any[]) {
   }
 
   // 4. Build a member lookup (only when a conversion actually needs it).
-  let memberByKey = new Map<string, string>(); // normalized name/email -> userId
-  let memberIdToName = new Map<string, string>(); // userId -> display name
+  const memberByKey = new Map<string, string>(); // normalized name/email -> userId
+  const memberIdToName = new Map<string, string>(); // userId -> display name
   const needsMembers = typeChanges.length > 0;
   if (needsMembers) {
     const members = await db

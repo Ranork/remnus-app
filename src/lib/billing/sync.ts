@@ -40,7 +40,7 @@ export async function syncSubscriptionForCustomer(customerId: string, ownerUserI
     const st = best.sub.status;
     const status = st === 'active' || st === 'trialing' ? 'active' : st === 'past_due' || st === 'unpaid' ? 'past_due' : st;
     // current_period_end lives on the subscription (older API) or its items (newer API)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     const periodUnix = (best.sub as any).current_period_end ?? (best.sub.items?.data?.[0] as any)?.current_period_end ?? null;
     set = {
       tier: best.tier,
