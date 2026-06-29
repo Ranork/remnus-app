@@ -7,7 +7,9 @@
     "tabClose": "Закрыть",
     "tabCloseOthers": "Закрыть другие",
     "tabCloseAll": "Закрыть все",
-    "tabUntitled": "Без названия"
+    "tabUntitled": "Без названия",
+    "showSidebar": "Показать боковую панель",
+    "hideSidebar": "Скрыть боковую панель"
   },
   "Home": {
     "welcomeTitle": "Добро пожаловать в Remnus",

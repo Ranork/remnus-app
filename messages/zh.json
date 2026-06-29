@@ -7,7 +7,9 @@
     "tabClose": "关闭",
     "tabCloseOthers": "关闭其他",
     "tabCloseAll": "全部关闭",
-    "tabUntitled": "无标题"
+    "tabUntitled": "无标题",
+    "showSidebar": "显示侧边栏",
+    "hideSidebar": "隐藏侧边栏"
   },
   "Home": {
     "welcomeTitle": "欢迎使用 Remnus",

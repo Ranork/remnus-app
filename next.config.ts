@@ -2,10 +2,12 @@ import type { NextConfig } from "next";
 import createNextIntlPlugin from 'next-intl/plugin';
 import withPWAInit from '@ducanh2912/next-pwa';
 import { withPostHogConfig } from '@posthog/nextjs-config';
+import { getAllowedDevOrigins } from './src/lib/nextDevOrigins';
 
 const withNextIntl = createNextIntlPlugin('./src/i18n/request.ts');
 
 const nextConfig: NextConfig = {
+  allowedDevOrigins: getAllowedDevOrigins(),
   // Raise the Next.js proxy body limit for /api/upload (kind=file accepts up to
   // 25 MB attachments). The Notion import route receives only a JSON payload —
   // the ZIP is parsed entirely in the browser and never sent to the server.
