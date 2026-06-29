@@ -5,6 +5,8 @@ import { ArrowLeft, X, Check, ChevronDown, MoreHorizontal, Trash2, Copy, Smile, 
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
+import { useQueryClient } from '@tanstack/react-query';
+import { tabKeys } from './tabs/keys';
 import BlockEditor, { type BlockEditorHandle } from '@/components/features/editor/BlockEditor';
 import PageIcon from './PageIcon';
 import IconPicker from './IconPicker';
@@ -132,6 +134,19 @@ export default function PageEditor({
   const menuDropdownRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<BlockEditorHandle>(null);
 
+  // Keep the Tauri keep-alive query cache (TabPane) in sync with each save, so
+  // leaving and re-entering this tab within the staleTime window doesn't reload
+  // the pre-edit content/properties from the cache. No-op on web (never read).
+  const queryClient = useQueryClient();
+  const patchPageCache = useCallback(
+    (patch: Record<string, any>) => {
+      queryClient.setQueryData(tabKeys.dbPage(initialPage.id), (old: any) =>
+        old ? { ...old, ...patch } : old
+      );
+    },
+    [queryClient, initialPage.id]
+  );
+
   // Keep the latest edited values in refs so debounced / id-memoized savers
   // (which capture state from their creation render) always emit the CURRENT
   // properties/icon back to the parent list. Without this, a content save ships
@@ -187,6 +202,7 @@ export default function PageEditor({
     setSaveState('saving');
     try {
       await updatePageContent(initialPage.id, md);
+      patchPageCache({ content: md });
       setSaveState('saved');
     } catch {
       setSaveState('error');
@@ -207,6 +223,7 @@ export default function PageEditor({
     () =>
       debounce((props: Record<string, any>) => {
         updatePageProperties(initialPage.id, props);
+        patchPageCache({ properties: props });
         onPageUpdated?.({ ...initialPage, icon: iconRef.current, iconColor: iconColorRef.current, properties: props });
       }, 600),
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -225,6 +242,7 @@ export default function PageEditor({
     const newProps = { ...properties, [colId]: value };
     setProperties(newProps);
     await updatePageProperties(initialPage.id, newProps);
+    patchPageCache({ properties: newProps });
     if (onPageUpdated) {
       onPageUpdated({ ...initialPage, icon, iconColor, properties: newProps });
     }
@@ -234,6 +252,7 @@ export default function PageEditor({
     setIcon(newIcon);
     setIconColor(newColor);
     updatePageIcon(initialPage.id, newIcon, newColor);
+    patchPageCache({ icon: newIcon, iconColor: newColor });
     if (onPageUpdated) {
       onPageUpdated({ ...initialPage, icon: newIcon, iconColor: newColor, properties });
     }

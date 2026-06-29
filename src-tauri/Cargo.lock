@@ -3020,7 +3020,7 @@ checksum = "dc897dd8d9e8bd1ed8cdad82b5966c3e0ecae09fb1907d58efaa013543185d0a"
 
 [[package]]
 name = "remnus-app"
-version = "0.1.10"
+version = "0.1.11"
 dependencies = [
  "serde_json",
  "tauri",

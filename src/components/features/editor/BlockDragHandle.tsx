@@ -754,8 +754,12 @@ export default function BlockDragHandle({ editor }: Props) {
       </button>
       )}
 
-      {/* Custom drop indicator — replaces ProseMirror dropcursor for all our drags */}
-      {dropIndicator && createPortal(
+      {/* Custom drop indicator — replaces ProseMirror dropcursor for all our drags.
+          Rendered INLINE (not portaled to body) so its `position: fixed` resolves
+          against the same transformed containing block as the grip/menu — its
+          coords are already zoom-corrected (`/z`). Portaling to body would put it
+          outside the ZoomProvider transform and shift the line under desktop zoom. */}
+      {dropIndicator && (
         <div
           style={{
             position: 'fixed',
@@ -774,8 +778,7 @@ export default function BlockDragHandle({ editor }: Props) {
             pointerEvents: 'none',
             zIndex: 99,
           }}
-        />,
-        document.body,
+        />
       )}
 
       {menuOpen && (
