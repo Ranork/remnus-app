@@ -2,7 +2,6 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 import { ChevronLeft, RefreshCw, MoreHorizontal, Globe, ArrowLeftRight } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { updateStandalonePageContent, updateWorkspaceItemTitle, updateWorkspaceItemIcon } from '@/lib/actions/workspace';
@@ -11,6 +10,7 @@ import PageIcon from './PageIcon';
 import IconPicker from './IconPicker';
 import SaveStatus, { type SaveState } from './SaveStatus';
 import ShareModal from '@/components/share/ShareModal';
+import { useTabNav } from '@/components/providers/TabsContext';
 import type { WorkspaceItemRow } from '@/lib/actions/workspace';
 
 function debounce<T extends (...args: any[]) => any>(fn: T, delay: number) {
@@ -39,7 +39,6 @@ export default function StandalonePageEditor({
   const tEditor = useTranslations('Editor');
   const tWs = useTranslations('Workspace');
   const tSharing = useTranslations('Sharing');
-  const router = useRouter();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [title, setTitle] = useState(item.title);
   const savedTitle = useRef(item.title);
@@ -55,13 +54,14 @@ export default function StandalonePageEditor({
   const menuRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<BlockEditorHandle>(null);
 
+  const tabNav = useTabNav();
   const handleRefresh = useCallback(() => {
     setIsRefreshing(true);
-    router.refresh();
+    tabNav.refresh();
     setTimeout(() => {
       setIsRefreshing(false);
     }, 1000);
-  }, [router]);
+  }, [tabNav]);
 
   useEffect(() => {
     const saved = localStorage.getItem(`page-width-${item.id}`) as WidthMode | null;

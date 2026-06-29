@@ -192,7 +192,7 @@ export default function BlockDragHandle({ editor }: Props) {
   );
   const zoom = useZoom();
   const zoomRef = useRef(zoom);
-  // eslint-disable-next-line react-hooks/refs
+   
   zoomRef.current = zoom;
   const [handle, setHandle] = useState<Handle | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -212,7 +212,7 @@ export default function BlockDragHandle({ editor }: Props) {
   const rafRef = useRef<number | null>(null);
   const dragRafRef = useRef<number | null>(null);
   const handleRef = useRef<Handle | null>(null);
-  // eslint-disable-next-line react-hooks/refs
+   
   handleRef.current = handle;
 
   const BLOCK_LABELS: Record<BlockType, string> = {
@@ -449,7 +449,7 @@ export default function BlockDragHandle({ editor }: Props) {
     return () => { editor.off('blur', hide); };
   }, [editor, menuOpen, isCoarse]);
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect
+   
   useEffect(() => { if (!menuOpen) { setSubOpen(false); setMenuAnchor(null); setTarget(null); } }, [menuOpen]);
 
   const closeMenu = () => { setMenuOpen(false); setMenuAnchor(null); setTarget(null); setHandle(null); };
@@ -722,9 +722,9 @@ export default function BlockDragHandle({ editor }: Props) {
   // or multi-block); a single block already has Delete.
   const showCut = targetKind === 'range' || targetKind === 'blocks';
   const currentTurnInto = turnOptions.find((o) => o.active)?.icon ?? <Pilcrow size={14} />;
-  // eslint-disable-next-line react-hooks/refs
+   
   const vh = window.innerHeight / zoomRef.current;
-  // eslint-disable-next-line react-hooks/refs
+   
   const vw = window.innerWidth / zoomRef.current;
   // Right-click → menu at the cursor; grip click → menu just below the grip.
   const menuTop = Math.min(menuAnchor ? menuAnchor.y : handle.top + 26, vh - 200);

@@ -61,7 +61,7 @@ export const PageLink = Node.create({
   },
 
   // @tiptap/markdown v3 serializer — read via getExtensionField(ext, "renderMarkdown")
-  // @ts-ignore — renderMarkdown is a @tiptap/markdown extension field, not in Tiptap core types
+  // renderMarkdown is a @tiptap/markdown extension field, not in Tiptap core types
   renderMarkdown(node: any) {
     const { label, itemType } = node.attrs;
     const href = sanitizeHref(node.attrs.href);

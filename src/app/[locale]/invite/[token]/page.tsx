@@ -7,13 +7,10 @@ import { getTranslations } from 'next-intl/server';
 import { getInviteByToken } from '@/lib/actions/invites';
 import InviteAcceptClient from '@/components/features/InviteAcceptClient';
 
-export default async function InvitePage({ params }: { params: Promise<{ token: string }> }) {
-  const { token } = await params;
-  const t = await getTranslations('Billing');
-  const session = await auth();
-  const invite = await getInviteByToken(token);
-
-  const Shell = ({ children }: { children: React.ReactNode }) => (
+// Module-scope so it isn't recreated on every render (and to satisfy
+// react-hooks/static-components). It closes over nothing render-specific.
+function Shell({ children }: { children: React.ReactNode }) {
+  return (
     <div className="min-h-screen flex items-center justify-center bg-neutral-950 px-4">
       <div className="w-full max-w-sm bg-neutral-900 border border-neutral-800 rounded-xl p-7 flex flex-col items-center text-center gap-4">
         <Image src="/logo-square-transparent.png" alt="Remnus" width={44} height={44} />
@@ -21,6 +18,13 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
       </div>
     </div>
   );
+}
+
+export default async function InvitePage({ params }: { params: Promise<{ token: string }> }) {
+  const { token } = await params;
+  const t = await getTranslations('Billing');
+  const session = await auth();
+  const invite = await getInviteByToken(token);
 
   if (!invite) {
     return <Shell><p className="text-sm text-neutral-400">{t('inviteInvalid')}</p></Shell>;

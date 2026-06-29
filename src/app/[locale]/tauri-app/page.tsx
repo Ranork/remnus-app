@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { setLocale } from '@/lib/actions/locale';
 import { initDesktopZoom } from '@/lib/desktop/zoom';
+import { PLATFORM_COOKIE } from '@/lib/constants/cookies';
 
 const SUPPORTED_LOCALES = ['en', 'tr', 'hi', 'es', 'fr', 'de', 'zh', 'ru'];
 
@@ -23,6 +24,11 @@ export default function TauriEntryPage() {
     async function init() {
       // Apply saved zoom as early as possible
       initDesktopZoom();
+
+      // Mark this request context as the Tauri desktop shell so server-rendered
+      // content routes can defer to the client keep-alive tab host (`TabHost`).
+      // Tauri's WebView cookie jar is isolated, so this never reaches a browser.
+      document.cookie = `${PLATFORM_COOKIE}=tauri; path=/; max-age=31536000; SameSite=Lax`;
 
       // Auto-detect OS language on first launch (no cookie yet)
       if (!hasLocaleCookie()) {

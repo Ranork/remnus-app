@@ -3,8 +3,12 @@ import { getPages } from '@/lib/actions/page';
 import { getWorkspaceMembers } from '@/lib/actions/auth';
 import DatabaseView from '@/components/features/DatabaseView';
 import NotFoundRedirect from '@/components/features/NotFoundRedirect';
+import { isTauriRequest } from '@/lib/server/platform';
 
 export default async function DatabasePage(props: { params: Promise<{ id: string }> }) {
+  // In Tauri the client TabHost renders this content (keep-alive tabs).
+  if (await isTauriRequest()) return null;
+
   const params = await props.params;
   const [db, pages] = await Promise.all([
     getDatabase(params.id),

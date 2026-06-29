@@ -64,7 +64,7 @@ export const ImageBlock = Node.create({
     return ReactNodeViewRenderer(ImageBlockView, { stopEvent: mediaStopEvent });
   },
 
-  // @ts-ignore — renderMarkdown is a @tiptap/markdown extension field, not in Tiptap core types
+  // renderMarkdown is a @tiptap/markdown extension field, not in Tiptap core types
   renderMarkdown(node: any) {
     const indent = (node.attrs?.indent as number) ?? 0;
     const indentAttr = indent ? ` data-indent="${indent}"` : '';
