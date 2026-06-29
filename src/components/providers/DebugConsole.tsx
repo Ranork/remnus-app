@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+import { isNextControlFlow } from '@/lib/reportClientError';
 
 /**
  * In-app debug console + global error reporting.
@@ -45,6 +46,10 @@ function readDebugFlag(): boolean {
 function reportError(error: unknown, source: string) {
   // Never throw from inside an error handler.
   try {
+    // Skip Next.js control-flow signals (redirect()/notFound() throw special
+    // errors that can surface here as unhandledrejection) — same guard the
+    // error boundaries use, so window-level reporting stays consistent.
+    if (isNextControlFlow(error)) return;
     void import('posthog-js')
       .then(({ default: posthog }) => {
         // posthog is only initialized under the locale layout; guard for safety.

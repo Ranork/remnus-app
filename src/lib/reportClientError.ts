@@ -13,13 +13,36 @@
  * Mirrors `DebugConsole`'s reportError guards: never throw from the error path,
  * call `captureException` as a method (it reads `this.exceptions`).
  */
+/**
+ * Next.js control-flow "errors" are not crashes — `redirect()` and `notFound()`
+ * work by throwing a special error the framework catches. When they fire inside
+ * a boundary-wrapped tree (or bubble out of a server action as an
+ * unhandledrejection), they'd otherwise be reported as crashes, spamming
+ * Error Tracking with NEXT_REDIRECT / NEXT_HTTP_ERROR_FALLBACK;404 noise.
+ * Returns true for any such control-flow signal so callers can skip reporting.
+ */
+export function isNextControlFlow(error: unknown): boolean {
+  const digest = (error as { digest?: string } | null)?.digest;
+  const message = error instanceof Error ? error.message : undefined;
+  const signal = digest ?? message ?? '';
+  return (
+    typeof signal === 'string' &&
+    (signal.startsWith('NEXT_REDIRECT') ||
+      signal.startsWith('NEXT_HTTP_ERROR_FALLBACK') ||
+      signal === 'NEXT_NOT_FOUND')
+  );
+}
+
 export function reportClientError(
   error: unknown,
   extra?: Record<string, unknown>,
 ) {
   try {
+    if (isNextControlFlow(error)) return;
+
     const err = error instanceof Error ? error : new Error(String(error));
     const digest = (error as { digest?: string } | null)?.digest;
+
     const props: Record<string, unknown> = {
       source: 'error-boundary',
       digest,
