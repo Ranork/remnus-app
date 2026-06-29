@@ -1,17 +1,18 @@
 'use client';
-import { useActionState, useEffect, useRef, useState } from 'react';
+import { useActionState, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { signIn } from 'next-auth/react';
 import { loginAsDemo } from '@/lib/actions/demo';
 import { useTranslations } from 'next-intl';
 import LanguageSwitcher from '@/components/features/LanguageSwitcher';
 import Link from 'next/link';
 import { ArrowLeft } from 'lucide-react';
+import { getDesktopLoginUrl } from '@/lib/authDesktopLogin';
 
 type TauriState = 'idle' | 'waiting' | 'activating' | 'error';
 
 export default function LoginPage() {
   const t = useTranslations('Auth');
-  const [isTauri, setIsTauri] = useState(false);
+  const isTauri = useIsTauri();
   const [tauriState, setTauriState] = useState<TauriState>('idle');
   const [openUrlError, setOpenUrlError] = useState<string | null>(null);
   const deviceIdRef = useRef<string | null>(null);
@@ -19,7 +20,6 @@ export default function LoginPage() {
   const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
-    setIsTauri('__TAURI_INTERNALS__' in window || '__TAURI__' in window);
     return () => {
       if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
@@ -43,10 +43,7 @@ export default function LoginPage() {
     if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
     if (timeoutRef.current) clearTimeout(timeoutRef.current);
 
-    const base = window.location.hostname === 'localhost'
-      ? window.location.origin
-      : 'https://remnus.com';
-    const loginUrl = `${base}/client-login?device_id=${encodeURIComponent(deviceId)}`;
+    const loginUrl = getDesktopLoginUrl(deviceId, window.location.origin);
 
     try {
       const { openUrl } = await import('@tauri-apps/plugin-opener');
@@ -238,6 +235,14 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+function useIsTauri() {
+  return useSyncExternalStore(
+    () => () => {},
+    () => '__TAURI_INTERNALS__' in window || '__TAURI__' in window,
+    () => false,
   );
 }
 
