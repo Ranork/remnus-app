@@ -1233,6 +1233,12 @@
   },
   "Updater": {
     "availableTitle": "Mise à jour disponible",
+    "checkSection": "Mises à jour",
+    "checkHint": "Recherchez une nouvelle version sans redémarrer l’application.",
+    "checkButton": "Rechercher des mises à jour",
+    "checking": "Recherche…",
+    "upToDate": "Vous avez la dernière version.",
+    "checkError": "Impossible de rechercher des mises à jour.",
     "availableDesc": "La version {version} est prête à télécharger.",
     "downloadingDesc": "Téléchargement en cours... {progress}%",
     "readyTitle": "Mise à jour installée",

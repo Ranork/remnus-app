@@ -1233,6 +1233,12 @@
   },
   "Updater": {
     "availableTitle": "अपडेट उपलब्ध है",
+    "checkSection": "अपडेट",
+    "checkHint": "ऐप को पुनः आरंभ किए बिना नए संस्करण की जांच करें।",
+    "checkButton": "अपडेट जांचें",
+    "checking": "जांच हो रही है…",
+    "upToDate": "आप नवीनतम संस्करण पर हैं।",
+    "checkError": "अपडेट जांचे नहीं जा सके।",
     "availableDesc": "संस्करण {version} डाउनलोड के लिए तैयार है।",
     "downloadingDesc": "डाउनलोड हो रहा है... {progress}%",
     "readyTitle": "अपडेट इंस्टॉल हो गया",

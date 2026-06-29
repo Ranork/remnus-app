@@ -1233,6 +1233,12 @@
   },
   "Updater": {
     "availableTitle": "Actualización disponible",
+    "checkSection": "Actualizaciones",
+    "checkHint": "Busca una nueva versión sin reiniciar la aplicación.",
+    "checkButton": "Buscar actualizaciones",
+    "checking": "Buscando…",
+    "upToDate": "Tienes la última versión.",
+    "checkError": "No se pudieron buscar actualizaciones.",
     "availableDesc": "La versión {version} está lista para descargar.",
     "downloadingDesc": "Descargando... {progress}%",
     "readyTitle": "Actualización instalada",

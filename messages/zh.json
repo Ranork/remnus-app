@@ -1229,6 +1229,12 @@
   },
   "Updater": {
     "availableTitle": "有可用更新",
+    "checkSection": "更新",
+    "checkHint": "无需重启应用即可检查新版本。",
+    "checkButton": "检查更新",
+    "checking": "正在检查…",
+    "upToDate": "您使用的是最新版本。",
+    "checkError": "无法检查更新。",
     "availableDesc": "版本 {version} 已可下载。",
     "downloadingDesc": "正在下载... {progress}%",
     "readyTitle": "更新已安装",

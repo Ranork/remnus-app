@@ -1233,6 +1233,12 @@
   },
   "Updater": {
     "availableTitle": "Update verfügbar",
+    "checkSection": "Updates",
+    "checkHint": "Nach einer neuen Version suchen, ohne die App neu zu starten.",
+    "checkButton": "Nach Updates suchen",
+    "checking": "Wird gesucht…",
+    "upToDate": "Sie verwenden die neueste Version.",
+    "checkError": "Nach Updates konnte nicht gesucht werden.",
     "availableDesc": "Version {version} ist zum Download bereit.",
     "downloadingDesc": "Wird heruntergeladen... {progress}%",
     "readyTitle": "Update installiert",

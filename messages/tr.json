@@ -1233,6 +1233,12 @@
   },
   "Updater": {
     "availableTitle": "Güncelleme Mevcut",
+    "checkSection": "Güncellemeler",
+    "checkHint": "Uygulamayı yeniden başlatmadan yeni sürüm olup olmadığını denetleyin.",
+    "checkButton": "Güncellemeleri denetle",
+    "checking": "Denetleniyor…",
+    "upToDate": "En güncel sürümü kullanıyorsunuz.",
+    "checkError": "Güncellemeler denetlenemedi.",
     "availableDesc": "{version} sürümü indirilmeye hazır.",
     "downloadingDesc": "İndiriliyor... %{progress}",
     "readyTitle": "Güncelleme Yüklendi",

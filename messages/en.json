@@ -1233,6 +1233,12 @@
   },
   "Updater": {
     "availableTitle": "Update Available",
+    "checkSection": "Updates",
+    "checkHint": "Check for a new version without restarting the app.",
+    "checkButton": "Check for updates",
+    "checking": "Checking…",
+    "upToDate": "You're on the latest version.",
+    "checkError": "Couldn't check for updates.",
     "availableDesc": "Version {version} is ready to download.",
     "downloadingDesc": "Downloading... {progress}%",
     "readyTitle": "Update Installed",
