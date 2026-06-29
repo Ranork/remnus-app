@@ -462,6 +462,7 @@
     "addFilter": "添加筛选器",
     "addSort": "添加排序",
     "groupBy": "分组依据",
+    "noGrouping": "不分组",
     "calendarBy": "日历依据",
     "weekStart": "每周起始",
     "sunday": "星期日",

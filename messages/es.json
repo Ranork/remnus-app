@@ -462,6 +462,7 @@
     "addFilter": "Agregar filtro",
     "addSort": "Agregar ordenación",
     "groupBy": "Agrupar por",
+    "noGrouping": "Sin agrupación",
     "calendarBy": "Propiedad de calendario",
     "weekStart": "Inicio de semana",
     "sunday": "Domingo",

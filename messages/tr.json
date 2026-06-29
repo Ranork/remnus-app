@@ -462,6 +462,7 @@
     "addFilter": "Filtre ekle",
     "addSort": "Sıralama ekle",
     "groupBy": "Grupla",
+    "noGrouping": "Gruplama yok",
     "calendarBy": "Takvim özelliği",
     "weekStart": "Hafta başlangıcı",
     "sunday": "Pazar",

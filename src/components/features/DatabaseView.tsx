@@ -9,6 +9,7 @@ import { updateDatabaseViews } from '@/lib/actions/database';
 import { updateWorkspaceItemIcon, updateWorkspaceItemTitle } from '@/lib/actions/workspace';
 import { Plus, Settings, Columns3, Filter, ArrowUpDown, X, Maximize2, Database, ArrowLeftRight, MoreHorizontal, Trash2, Copy, ChevronLeft, RefreshCw } from 'lucide-react';
 import TableLayout from './TableLayout';
+import GroupedTableLayout from './GroupedTableLayout';
 import { ConfirmDialog } from './ConfirmDialog';
 import KanbanBoard from './KanbanBoard';
 import CalendarView from './CalendarView';
@@ -26,6 +27,7 @@ import type {
   ViewFilter,
   ViewSort,
 } from '@/lib/types/views';
+import { isTableGroupableColumn } from '@/lib/tableGrouping';
 
 function uid() {
   return crypto.randomUUID().slice(0, 8);
@@ -725,7 +727,10 @@ export default function DatabaseView({
   const tableConfig = isTableView ? (config as TableViewConfig) : null;
   const kanbanConfig = config.type === 'kanban' ? (config as KanbanViewConfig) : null;
   const calendarConfig = config.type === 'calendar' ? (config as CalendarViewConfig) : null;
-  const selectColumns = schema.filter((c: any) => c.type === 'select' || c.type === 'status');
+  const tableGroupColumn = tableConfig?.groupByCol
+    ? schema.find((col: any) => col.id === tableConfig.groupByCol)
+    : null;
+  const isGroupedTableView = !!tableConfig?.groupByCol && isTableGroupableColumn(tableGroupColumn);
 
   const handleDateColChange = (dateCol: string) =>
     mutateConfig((cfg) => ({ ...cfg, dateCol }));
@@ -931,31 +936,64 @@ export default function DatabaseView({
       <div className="flex-1 flex gap-4 relative pt-4 pb-8 min-w-0 overflow-hidden">
         <div className="flex-1 min-w-0 overflow-y-auto overflow-x-hidden h-full pr-1">
           {isTableView && tableConfig ? (
-            <TableLayout
-              database={database}
-              pages={processedPages}
-              columnOrder={tableConfig.columnOrder}
-              hiddenColumns={tableConfig.hiddenColumns}
-              columnWidths={tableConfig.columnWidths ?? {}}
-              onColumnWidthsChange={handleColumnWidthsChange}
-              rowColorCol={tableConfig.rowColorCol}
-              onColumnOrderChange={handleColumnOrderChange}
-              onRowClick={handlePageClick}
-              onRowReorder={handleRowReorder}
-              onDeletePage={handleDeletePage}
-              onDuplicatePage={handleDuplicatePage}
-              hasSorts={(config.sorts?.length ?? 0) > 0}
-              onUpdatePageProperties={handleUpdatePageProperties}
-              onCreatePage={handleAddRow}
-              filters={config.filters}
-              sorts={config.sorts}
-              onFiltersChange={handleFiltersChange}
-              onSortsChange={handleSortsChange}
-              onToggleHideColumn={toggleHideColumn}
-              defaultPageIcon={config.defaultPageIcon}
-              defaultPageIconColor={config.defaultPageIconColor}
-              onPageIconChange={handlePageIconChange}
-            />
+            isGroupedTableView ? (
+              <GroupedTableLayout
+                database={database}
+                pages={processedPages}
+                groupByCol={tableConfig.groupByCol!}
+                groupOrder={tableConfig.groupOrder ?? []}
+                hiddenGroups={tableConfig.hiddenGroups ?? []}
+                groupColBg={tableConfig.groupColBg ?? false}
+                onGroupOrderChange={handleGroupOrderChange}
+                columnOrder={tableConfig.columnOrder}
+                hiddenColumns={tableConfig.hiddenColumns}
+                columnWidths={tableConfig.columnWidths ?? {}}
+                onColumnWidthsChange={handleColumnWidthsChange}
+                rowColorCol={tableConfig.rowColorCol}
+                onColumnOrderChange={handleColumnOrderChange}
+                onRowClick={handlePageClick}
+                onRowReorder={handleRowReorder}
+                onDeletePage={handleDeletePage}
+                onDuplicatePage={handleDuplicatePage}
+                hasSorts={(config.sorts?.length ?? 0) > 0}
+                onUpdatePageProperties={handleUpdatePageProperties}
+                onCreatePage={handleAddRow}
+                filters={config.filters}
+                sorts={config.sorts}
+                onFiltersChange={handleFiltersChange}
+                onSortsChange={handleSortsChange}
+                onToggleHideColumn={toggleHideColumn}
+                defaultPageIcon={config.defaultPageIcon}
+                defaultPageIconColor={config.defaultPageIconColor}
+                onPageIconChange={handlePageIconChange}
+              />
+            ) : (
+              <TableLayout
+                database={database}
+                pages={processedPages}
+                columnOrder={tableConfig.columnOrder}
+                hiddenColumns={tableConfig.hiddenColumns}
+                columnWidths={tableConfig.columnWidths ?? {}}
+                onColumnWidthsChange={handleColumnWidthsChange}
+                rowColorCol={tableConfig.rowColorCol}
+                onColumnOrderChange={handleColumnOrderChange}
+                onRowClick={handlePageClick}
+                onRowReorder={handleRowReorder}
+                onDeletePage={handleDeletePage}
+                onDuplicatePage={handleDuplicatePage}
+                hasSorts={(config.sorts?.length ?? 0) > 0}
+                onUpdatePageProperties={handleUpdatePageProperties}
+                onCreatePage={handleAddRow}
+                filters={config.filters}
+                sorts={config.sorts}
+                onFiltersChange={handleFiltersChange}
+                onSortsChange={handleSortsChange}
+                onToggleHideColumn={toggleHideColumn}
+                defaultPageIcon={config.defaultPageIcon}
+                defaultPageIconColor={config.defaultPageIconColor}
+                onPageIconChange={handlePageIconChange}
+              />
+            )
           ) : kanbanConfig ? (
             <KanbanBoard
               database={database}
@@ -1041,7 +1079,7 @@ export default function DatabaseView({
               onOpenBehaviorChange={(behavior) =>
                 mutateConfig((cfg) => ({ ...cfg, openBehavior: behavior }))
               }
-              groupByCol={kanbanConfig?.groupByCol}
+              groupByCol={tableConfig?.groupByCol ?? kanbanConfig?.groupByCol}
               onGroupByColChange={handleGroupByChange}
               cardProperties={kanbanConfig?.cardProperties ?? calendarConfig?.cardProperties}
               onCardPropertiesChange={handleCardPropertiesChange}
@@ -1063,7 +1101,7 @@ export default function DatabaseView({
               onCardBgColChange={handleCardBgColChange}
               rowColorCol={(config as TableViewConfig).rowColorCol}
               onRowColorColChange={handleRowColorColChange}
-              groupColBg={kanbanConfig?.groupColBg ?? false}
+              groupColBg={tableConfig?.groupColBg ?? kanbanConfig?.groupColBg ?? false}
               onGroupColBgChange={handleGroupColBgChange}
               defaultPageIcon={config.defaultPageIcon}
               defaultPageIconColor={config.defaultPageIconColor}
@@ -1079,7 +1117,7 @@ export default function DatabaseView({
                   }))
                 )
               }
-              hiddenGroups={kanbanConfig?.hiddenGroups}
+              hiddenGroups={tableConfig?.hiddenGroups ?? kanbanConfig?.hiddenGroups}
               onHiddenGroupsChange={(hidden) =>
                 mutateConfig((cfg) => ({ ...cfg, hiddenGroups: hidden }))
               }

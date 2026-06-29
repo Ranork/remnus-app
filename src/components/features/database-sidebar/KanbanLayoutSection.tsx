@@ -2,8 +2,8 @@
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { GripVertical, ArrowLeft, ArrowUp, ArrowRight, ArrowDown } from 'lucide-react';
-import { normalizeOption } from '@/lib/types/properties';
 import { getPropertyIcon, Checkbox, selectCls, CollapsibleSection } from './shared';
+import GroupingLayoutSection from './GroupingLayoutSection';
 
 interface KanbanLayoutSectionProps {
   schema: any[];
@@ -50,11 +50,7 @@ export default function KanbanLayoutSection({
 }: KanbanLayoutSectionProps) {
   const t = useTranslations('Database');
 
-  const selectColumns = schema.filter((c: any) => c.type === 'select' || c.type === 'status');
   const colorColumns = schema.filter((c: any) => c.type === 'select' || c.type === 'multi_select' || c.type === 'status');
-  const groupColumn = schema.find((c: any) => c.id === groupByCol);
-  const options = groupColumn?.options ? groupColumn.options.map((o: any) => normalizeOption(o).value) : [];
-
   const availableCardProps = schema.filter((c: any) => c.id !== 'title' && c.id !== groupByCol);
   const effectiveVisible: string[] =
     cardProperties !== undefined
@@ -91,45 +87,15 @@ export default function KanbanLayoutSection({
 
   return (
     <>
-      {/* Grouping */}
-      <CollapsibleSection label={t('sectionGrouping')}>
-        <div className="px-4 pb-3 flex flex-col gap-2">
-          {selectColumns.length > 0 ? (
-            <div>
-              <span className="block text-[10px] text-neutral-500 uppercase tracking-wider mb-1.5">{t('groupBy')}</span>
-              <select value={groupByCol} onChange={(e) => onGroupByColChange?.(e.target.value)} className={`${selectCls} w-full`}>
-                {selectColumns.map((col: any) => <option key={col.id} value={col.id}>{col.name}</option>)}
-              </select>
-            </div>
-          ) : (
-            <span className="text-xs text-amber-500/80">{t('addSelectForGroup')}</span>
-          )}
-          <button onClick={() => onGroupColBgChange?.(!groupColBg)} className="w-full flex items-center justify-between py-1.5 hover:bg-neutral-800/10 transition-colors cursor-pointer rounded">
-            <span className="text-xs text-neutral-300">{t('groupBackground')}</span>
-            <Checkbox checked={!!groupColBg} />
-          </button>
-        </div>
-
-        {groupColumn && (
-          <div className="pb-2">
-            <div className="flex flex-col">
-              {[...options, 'Uncategorized'].map((colName) => {
-                const isHidden = hiddenGroups.includes(colName);
-                return (
-                  <button
-                    key={colName}
-                    onClick={() => onHiddenGroupsChange?.(isHidden ? hiddenGroups.filter((g) => g !== colName) : [...hiddenGroups, colName])}
-                    className="w-full flex items-center justify-between px-4 py-2 border-b border-neutral-800/30 hover:bg-neutral-800/10 transition-colors cursor-pointer text-left"
-                  >
-                    <span className="text-xs text-neutral-300 truncate">{colName === 'Uncategorized' ? t('uncategorized') : colName}</span>
-                    <Checkbox checked={!isHidden} />
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
-      </CollapsibleSection>
+      <GroupingLayoutSection
+        schema={schema}
+        groupByCol={groupByCol}
+        onGroupByColChange={onGroupByColChange}
+        groupColBg={groupColBg}
+        onGroupColBgChange={onGroupColBgChange}
+        hiddenGroups={hiddenGroups}
+        onHiddenGroupsChange={onHiddenGroupsChange}
+      />
 
       {/* Cards */}
       <CollapsibleSection label={t('sectionCards')}>

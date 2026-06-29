@@ -86,6 +86,8 @@ export default function TableLayout({
   defaultPageIcon,
   defaultPageIconColor,
   onPageIconChange,
+  disableRowDrag = false,
+  showToggleColumnsButton = true,
 }: {
   database: any;
   pages: any[];
@@ -110,6 +112,8 @@ export default function TableLayout({
   defaultPageIcon?: string;
   defaultPageIconColor?: string;
   onPageIconChange?: (pageId: string, icon: string | null, iconColor: string | null) => void;
+  disableRowDrag?: boolean;
+  showToggleColumnsButton?: boolean;
 }) {
   const t = useTranslations('Database');
   const tPage = useTranslations('Page');
@@ -352,7 +356,7 @@ export default function TableLayout({
 
   // ── Row drag (initiated only from grip button) ─────────────────────────────
   const handleGripDragStart = (e: React.DragEvent, pageId: string) => {
-    if (hasSorts) { e.preventDefault(); return; }
+    if (hasSorts || disableRowDrag) { e.preventDefault(); return; }
     const rowEl = rowRefs.current.get(pageId);
     if (rowEl) e.dataTransfer.setDragImage(rowEl, 24, rowEl.offsetHeight / 2);
     setDraggedRowId(pageId);
@@ -471,6 +475,7 @@ export default function TableLayout({
     <>
       <div className="flex-1 overflow-x-auto relative">
         {/* Floating Toggle Columns Button */}
+        {showToggleColumnsButton && (
         <div className="absolute right-2 top-1 z-20">
           <button
             onClick={handleToggleMenuClick}
@@ -480,6 +485,7 @@ export default function TableLayout({
             <Plus size={14} />
           </button>
         </div>
+        )}
 
         <table
           className="text-left text-sm border-collapse"
@@ -781,7 +787,7 @@ export default function TableLayout({
           onMouseLeave={handleActionBarMouseLeave}
         >
           <button
-            draggable={!hasSorts}
+            draggable={!hasSorts && !disableRowDrag}
             onDragStart={(e) => {
               e.stopPropagation();
               const pid = hoveredPageId ?? activeMenuRowId;
@@ -793,10 +799,10 @@ export default function TableLayout({
               handleMenuToggle(e);
             }}
             className={`text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/60 transition-colors rounded flex items-center justify-center cursor-pointer ${
-              hasSorts ? 'opacity-50' : 'cursor-grab active:cursor-grabbing'
+              hasSorts || disableRowDrag ? 'opacity-50' : 'cursor-grab active:cursor-grabbing'
             }`}
             style={{ width: 22, height: 24 }}
-            title={hasSorts ? t('dragMove') : t('dragReorder')}
+            title={hasSorts || disableRowDrag ? t('dragMove') : t('dragReorder')}
           >
             <GripVertical size={14} />
           </button>

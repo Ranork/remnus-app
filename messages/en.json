@@ -462,6 +462,7 @@
     "addFilter": "Add filter",
     "addSort": "Add sort",
     "groupBy": "Group by",
+    "noGrouping": "No grouping",
     "calendarBy": "Calendar by",
     "weekStart": "Week start",
     "sunday": "Sunday",
