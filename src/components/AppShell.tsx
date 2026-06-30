@@ -2,7 +2,6 @@
 import { usePathname } from 'next/navigation';
 import { useSyncExternalStore, useRef, useState, type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
-import { PanelLeftOpen } from 'lucide-react';
 import TauriTitlebar from './features/TauriTitlebar';
 import TabHost from './providers/TabHost';
 import ZoomProvider from './providers/ZoomProvider';
@@ -12,7 +11,6 @@ import {
   getSidebarAnimationClasses,
   getSidebarRestoreButtonClassName,
   getSidebarVisibleServerSnapshot,
-  getSidebarVisibilityToggleHost,
   readSidebarVisible,
   subscribeSidebarVisibility,
   writeSidebarVisible,
@@ -45,7 +43,6 @@ export default function AppShell({
   );
   const MARKETING_PATHS = new Set(['/', '/pricing', '/contact', '/download', '/privacy', '/security']);
   const isMarketing = MARKETING_PATHS.has(pathname) || pathname.startsWith('/oauth/');
-  const sidebarToggleHost = getSidebarVisibilityToggleHost(sidebarVisible);
   const hasDemoBanner = Boolean(demoBanner);
 
   const toggleSidebar = () => {
@@ -96,7 +93,12 @@ export default function AppShell({
   return (
     <ZoomProvider>
       <TabsProvider items={items} enabled={isTauri}>
-        {/* `relative` is required so the peek-overlay aside is positioned within this container */}
+        {/*
+          `relative` is required so the overlay aside is positioned within this
+          container. The aside is ALWAYS absolute — it never participates in the
+          flex layout — so the main content always takes full width and doesn't
+          jump when the sidebar opens or closes.
+        */}
         <div className="relative flex h-full overflow-hidden">
           <aside
             className={getSidebarAnimationClasses(sidebarVisible, sidebarPeeking)}
@@ -110,15 +112,22 @@ export default function AppShell({
           </aside>
           {mobileNav}
           <main className="relative flex-1 flex flex-col h-full overflow-hidden bg-neutral-850 pb-14 lg:pb-0">
-            {/* Thin hover zone on the left edge — triggers sidebar peek when hidden */}
+            {/* Hover zone on the left edge — triggers sidebar peek when hidden.
+                w-12 (48px) is wide enough to hit comfortably without being intrusive. */}
             {!sidebarVisible && (
               <div
-                className="hidden lg:block absolute left-0 inset-y-0 w-3 z-10"
+                className="hidden lg:block absolute left-0 inset-y-0 w-12 z-10"
                 onMouseEnter={startPeek}
                 onMouseLeave={schedulePeekClose}
               />
             )}
-            {sidebarToggleHost === 'main' && (
+            {/*
+              Sidebar toggle: Remnus logo button shown in web when sidebar is hidden.
+              In Tauri, TauriTitlebar renders the logo instead so we skip it here to
+              avoid a double icon (TauriTitlebar is invisible before mount → isTauri
+              flips false→true, so we conditionally hide this when running in Tauri).
+            */}
+            {!sidebarVisible && !isTauri && (
               <button
                 type="button"
                 onClick={toggleSidebar}
@@ -126,7 +135,8 @@ export default function AppShell({
                 title={t('showSidebar')}
                 className={getSidebarRestoreButtonClassName(hasDemoBanner)}
               >
-                <PanelLeftOpen size={15} />
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/logo-square-dark.png" alt="Remnus" className="w-5 h-5 opacity-70" />
               </button>
             )}
             {/* TauriTitlebar renders the browser-style TabBar inline in its row (Tauri only). */}

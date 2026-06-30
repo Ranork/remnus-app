@@ -51,20 +51,17 @@ export function getSidebarRestoreButtonClassName(hasDemoBanner: boolean): string
 }
 
 export function getSidebarAnimationClasses(sidebarVisible: boolean, peeking = false): string {
-  if (!sidebarVisible && peeking) {
-    // Peek: absolute overlay — doesn't consume flex space so main content is unaffected
-    return [
-      'hidden lg:flex flex-col',
-      'absolute left-0 inset-y-0 w-72 z-50',
-      'bg-neutral-900 border-r border-neutral-800 shadow-xl',
-    ].join(' ');
-  }
+  // Sidebar is ALWAYS absolute — it never participates in flex layout so the
+  // main content never shifts when opening or closing.
+  const shown = sidebarVisible || peeking;
   return [
-    'hidden lg:flex shrink-0 overflow-hidden bg-neutral-900 border-r border-neutral-800 flex-col',
-    'transition-[width,opacity,transform] duration-200 ease-out',
-    sidebarVisible
-      ? 'w-72 opacity-100 translate-x-0'
-      : 'w-0 opacity-0 -translate-x-2 pointer-events-none border-r-0',
+    'hidden lg:flex flex-col',
+    'absolute left-0 inset-y-0 w-72 z-50',
+    'bg-neutral-900 border-r border-neutral-800',
+    'transition-[transform,opacity] duration-200 ease-out',
+    shown
+      ? 'translate-x-0 opacity-100 shadow-xl'
+      : '-translate-x-full opacity-0 pointer-events-none',
   ].join(' ');
 }
 
