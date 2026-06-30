@@ -92,26 +92,31 @@ fn reset_download_dir(app: tauri::AppHandle, state: State<DownloadConfig>) {
 /// directly with `ShellExecuteW` (what `open_path` uses for directories) has no
 /// COM-apartment restriction and always opens Explorer to that folder.
 ///
+/// On Windows we use `explorer /select,` to select the file in its folder.
 /// On macOS/Linux `reveal_item_in_dir` works correctly; we fall back to opening
 /// the parent folder if it doesn't.
 #[tauri::command]
 fn reveal_download(app: tauri::AppHandle, path: String) -> Result<(), String> {
-    let parent = PathBuf::from(&path)
-        .parent()
-        .map(|p| p.to_path_buf())
-        .filter(|p| !p.as_os_str().is_empty())
-        .unwrap_or_else(|| PathBuf::from(&path));
-
     #[cfg(target_os = "windows")]
     {
-        return app
-            .opener()
-            .open_path(parent.to_string_lossy().to_string(), None::<&str>)
-            .map_err(|e| e.to_string());
+        // Use `explorer /select,` to open the folder and select (highlight) the
+        // file — plain `open_path` on the parent folder opens it but doesn't
+        // select the file, so the user can't find what just downloaded.
+        std::process::Command::new("explorer")
+            .arg(format!("/select,{}", &path))
+            .spawn()
+            .map_err(|e| e.to_string())?;
+        return Ok(());
     }
 
     #[cfg(not(target_os = "windows"))]
     {
+        let parent = PathBuf::from(&path)
+            .parent()
+            .map(|p| p.to_path_buf())
+            .filter(|p| !p.as_os_str().is_empty())
+            .unwrap_or_else(|| PathBuf::from(&path));
+
         if app.opener().reveal_item_in_dir(&path).is_ok() {
             return Ok(());
         }
