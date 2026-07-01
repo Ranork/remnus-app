@@ -31,7 +31,7 @@ export const authConfig: NextAuthConfig = {
       const isApiAuth = cleanPath.startsWith('/api/auth');
       const isPublicAsset = /\.(png|ico|svg|jpg|jpeg|webp|woff2?)$/.test(path);
       const isRootRoute = cleanPath === '/' || cleanPath === '/share';
-      const isPublicMarketingRoute = cleanPath.startsWith('/pricing') || cleanPath.startsWith('/contact') || cleanPath.startsWith('/download') || cleanPath.startsWith('/share/') || cleanPath.startsWith('/security');
+      const isPublicMarketingRoute = cleanPath.startsWith('/pricing') || cleanPath.startsWith('/contact') || cleanPath.startsWith('/download') || cleanPath.startsWith('/share/') || cleanPath.startsWith('/security') || cleanPath.startsWith('/brand');
       const isMcpRoute = cleanPath.startsWith('/api/mcp');
       const isTauriEntry = cleanPath.startsWith('/tauri-app');
       const isClientActivate = cleanPath.startsWith('/api/auth/client-activate');

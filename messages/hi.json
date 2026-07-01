@@ -153,7 +153,23 @@
     "agentsOauthCount": "{count} सक्रिय OAuth कनेक्शन",
     "agentStatusActive": "सक्रिय",
     "agentStatusExpired": "समाप्त",
-    "agentStatusRevoked": "रद्द"
+    "agentStatusRevoked": "रद्द",
+    "acquisitionSources": "अधिग्रहण स्रोत",
+    "acquisitionSourcesHint": "पहला संपर्क",
+    "acquisitionSourcesEmpty": "अभी तक कोई एट्रिब्यूशन डेटा नहीं।",
+    "channelDirect": "प्रत्यक्ष",
+    "activationFunnel": "एजेंट सक्रियण फ़नल",
+    "activationFunnelHint": "साइनअप → कनेक्ट → पहली कॉल",
+    "funnelSignup": "साइन अप किया",
+    "funnelConnected": "एजेंट कनेक्ट किया",
+    "funnelActivated": "पहली एजेंट कॉल की",
+    "demoFeedbackSection": "डेमो प्रतिक्रिया",
+    "demoFeedbackHint": "इन-ऐप डेमो संकेत",
+    "demoFeedbackTotal": "प्रतिक्रियाएँ",
+    "demoFeedbackEmpty": "अभी तक कोई लिखित प्रतिक्रिया नहीं।",
+    "trendTotalLabel": "पिछले 30 दिनों में साइनअप",
+    "trendTooltipSignups": "साइनअप",
+    "funnelOfSignups": "साइनअप में से"
   },
   "Workspace": {
     "planBilling": "प्लान और बिलिंग",
@@ -1082,7 +1098,8 @@
     "bridgePricingTblSsoDesc": "कंपनी-व्यापी एक्सेस प्रबंधित करने के लिए सिंगल साइन-ऑन और SCIM प्रोविज़निंग।",
     "bridgePricingTblSupportDesc": "जब आपको मदद चाहिए तो आप हमसे कैसे संपर्क कर सकते हैं।",
     "bridgeNavDownload": "डाउनलोड",
-    "earlyAccess": "अर्ली एक्सेस"
+    "earlyAccess": "अर्ली एक्सेस",
+    "bridgeFooterCompanyBrand": "ब्रांड किट"
   },
   "Billing": {
     "tab": "बिलिंग",
@@ -1416,5 +1433,38 @@
     "checklist_call": "अपनी पहली एजेंट कॉल चलाएं",
     "checklistDoneTitle": "सब तैयार है! 🎉",
     "checklistDoneHint": "आपका एजेंट कनेक्ट है और काम कर रहा है।"
+  },
+  "DemoFeedback": {
+    "title": "Remnus अब तक कैसा लगा?",
+    "subtitle": "आपकी राय इसे बेहतर बनाने में मदद करती है।",
+    "sentiment_positive": "बहुत पसंद आया",
+    "sentiment_neutral": "ठीक है",
+    "sentiment_negative": "अच्छा नहीं",
+    "commentPlaceholder": "कुछ जोड़ना चाहेंगे? (वैकल्पिक)",
+    "submit": "प्रतिक्रिया भेजें",
+    "sending": "भेजा जा रहा है…",
+    "maybeLater": "शायद बाद में",
+    "dismiss": "बंद करें",
+    "thanksTitle": "प्रतिक्रिया के लिए धन्यवाद! 🙌",
+    "thanksBody": "अपना काम सहेजने और सब कुछ अनलॉक करने के लिए मुफ़्त खाता बनाएँ।",
+    "ctaSignup": "मुफ़्त खाता बनाएँ",
+    "keepExploring": "खोजते रहें"
+  },
+  "Brand": {
+    "eyebrow": "ब्रांड किट",
+    "title": "Remnus का रूप",
+    "intro": "ऐप और इस साइट के पीछे के रंग और टाइपोग्राफी। इसे विज़ुअल, प्रेज़ेंटेशन और प्रेस के संदर्भ के रूप में उपयोग करें।",
+    "colorsTitle": "रंग",
+    "colorsSubtitle": "हर मान ऐप में एक Tailwind थीम टोकन है। डार्क थीम दिखाई गई है।",
+    "groupNeutrals": "न्यूट्रल",
+    "groupAccent": "एक्सेंट",
+    "groupSemantic": "सिमेंटिक",
+    "groupOptions": "प्रॉपर्टी रंग",
+    "typographyTitle": "टाइपोग्राफी",
+    "typographySubtitle": "तीन टाइपफ़ेस इंटरफ़ेस, डिस्प्ले और कोड को कवर करते हैं।",
+    "fontSansRole": "इंटरफ़ेस / बॉडी",
+    "fontSerifRole": "डिस्प्ले / शीर्षक",
+    "fontMonoRole": "कोड / लेबल",
+    "fontSampleHeading": "The quick brown fox jumps over the lazy dog"
   }
 }

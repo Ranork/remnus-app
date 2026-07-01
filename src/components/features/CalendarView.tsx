@@ -45,39 +45,29 @@ const formatYYYYMMDD = (d: Date) => {
 };
 
 const getMonthDays = (date: Date, firstDayOfWeek: 'sunday' | 'monday') => {
-  const year = date.getFullYear();
-  const month = date.getMonth();
-  const firstDayOfMonth = new Date(year, month, 1);
-  
-  let startDayOfWeek = firstDayOfMonth.getDay(); // 0 is Sunday, 1 is Monday, etc.
+  // Rolling 6-week grid anchored on `date`. Instead of always opening on the
+  // 1st of the month (which pushes "today" to the bottom rows and shows several
+  // stale past weeks on top when we're mid-month), the grid starts one week
+  // before the week that contains `date`. So the current week + one prior week
+  // are visible up top and the rest of the window looks ahead — "today" sits on
+  // the 2nd row. Monthly prev/next navigation is preserved (it shifts `date` by
+  // a month, re-anchoring the window), as is the current-month highlighting.
+  const anchorMonth = date.getMonth();
+
+  // Start of the week that contains `date`, honoring firstDayOfWeek.
+  let dow = date.getDay(); // 0 = Sunday
   if (firstDayOfWeek === 'monday') {
-    startDayOfWeek = startDayOfWeek === 0 ? 6 : startDayOfWeek - 1;
+    dow = dow === 0 ? 6 : dow - 1;
   }
-  
+  const gridStart = new Date(date.getFullYear(), date.getMonth(), date.getDate() - dow - 7);
+
   const days = [];
-  // Add days from previous month
-  const prevMonthLastDay = new Date(year, month, 0).getDate();
-  for (let i = startDayOfWeek - 1; i >= 0; i--) {
+  for (let i = 0; i < 42; i++) {
+    const d = new Date(gridStart);
+    d.setDate(gridStart.getDate() + i);
     days.push({
-      date: new Date(year, month - 1, prevMonthLastDay - i),
-      isCurrentMonth: false,
-    });
-  }
-  // Add days of current month
-  const currentMonthLastDay = new Date(year, month + 1, 0).getDate();
-  for (let i = 1; i <= currentMonthLastDay; i++) {
-    days.push({
-      date: new Date(year, month, i),
-      isCurrentMonth: true,
-    });
-  }
-  // Add days of next month to make complete weeks (multiples of 7, standard 6 rows = 42 cells)
-  const totalDays = days.length;
-  const remaining = 42 - totalDays;
-  for (let i = 1; i <= remaining; i++) {
-    days.push({
-      date: new Date(year, month + 1, i),
-      isCurrentMonth: false,
+      date: d,
+      isCurrentMonth: d.getMonth() === anchorMonth,
     });
   }
   return days;

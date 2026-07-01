@@ -153,7 +153,23 @@
     "agentsOauthCount": "{count} connexions OAuth actives",
     "agentStatusActive": "Actif",
     "agentStatusExpired": "Expiré",
-    "agentStatusRevoked": "Révoqué"
+    "agentStatusRevoked": "Révoqué",
+    "acquisitionSources": "Sources d'acquisition",
+    "acquisitionSourcesHint": "premier contact",
+    "acquisitionSourcesEmpty": "Aucune donnée d'attribution pour le moment.",
+    "channelDirect": "Direct",
+    "activationFunnel": "Entonnoir d'activation des agents",
+    "activationFunnelHint": "inscription → connexion → premier appel",
+    "funnelSignup": "Inscrit",
+    "funnelConnected": "A connecté un agent",
+    "funnelActivated": "Premier appel d'agent",
+    "demoFeedbackSection": "Retours de la démo",
+    "demoFeedbackHint": "invite démo intégrée",
+    "demoFeedbackTotal": "réponses",
+    "demoFeedbackEmpty": "Aucun retour écrit pour l'instant.",
+    "trendTotalLabel": "inscriptions sur les 30 derniers jours",
+    "trendTooltipSignups": "inscriptions",
+    "funnelOfSignups": "des inscriptions"
   },
   "Workspace": {
     "planBilling": "Forfait et facturation",
@@ -1082,7 +1098,8 @@
     "bridgePricingTblSsoDesc": "Authentification unique et provisionnement SCIM pour gérer l'accès à l'échelle de l'entreprise.",
     "bridgePricingTblSupportDesc": "Comment nous joindre quand vous avez besoin d'aide.",
     "bridgeNavDownload": "Télécharger",
-    "earlyAccess": "Accès anticipé"
+    "earlyAccess": "Accès anticipé",
+    "bridgeFooterCompanyBrand": "Kit de marque"
   },
   "Billing": {
     "tab": "Facturation",
@@ -1416,5 +1433,38 @@
     "checklist_call": "Lancer votre premier appel d'agent",
     "checklistDoneTitle": "Tout est prêt ! 🎉",
     "checklistDoneHint": "Votre agent est connecté et fonctionne."
+  },
+  "DemoFeedback": {
+    "title": "Remnus, ça vous plaît ?",
+    "subtitle": "Votre avis rapide nous aide à l'améliorer.",
+    "sentiment_positive": "J'adore",
+    "sentiment_neutral": "Ça va",
+    "sentiment_negative": "Pas top",
+    "commentPlaceholder": "Quelque chose à ajouter ? (facultatif)",
+    "submit": "Envoyer l'avis",
+    "sending": "Envoi…",
+    "maybeLater": "Plus tard",
+    "dismiss": "Fermer",
+    "thanksTitle": "Merci pour votre retour ! 🙌",
+    "thanksBody": "Créez un compte gratuit pour garder votre travail et tout débloquer.",
+    "ctaSignup": "Créer un compte gratuit",
+    "keepExploring": "Continuer à explorer"
+  },
+  "Brand": {
+    "eyebrow": "Kit de marque",
+    "title": "Le style Remnus",
+    "intro": "Les couleurs et la typographie de l'app et de ce site. À utiliser comme référence pour vos visuels, présentations et la presse.",
+    "colorsTitle": "Couleurs",
+    "colorsSubtitle": "Chaque valeur est un token de thème Tailwind dans l'app. Thème sombre affiché.",
+    "groupNeutrals": "Neutres",
+    "groupAccent": "Accent",
+    "groupSemantic": "Sémantique",
+    "groupOptions": "Couleurs de propriété",
+    "typographyTitle": "Typographie",
+    "typographySubtitle": "Trois polices couvrent l'interface, les titres et le code.",
+    "fontSansRole": "Interface / corps",
+    "fontSerifRole": "Titres / display",
+    "fontMonoRole": "Code / libellés",
+    "fontSampleHeading": "Portez ce vieux whisky au juge blond qui fume"
   }
 }

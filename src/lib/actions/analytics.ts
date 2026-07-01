@@ -36,11 +36,35 @@ export type EngagementOverview = {
   newThisWeek: number;
   newThisMonth: number;
   signupTrend: { date: string; count: number }[]; // last 30 days, oldest → newest
+  // First-touch acquisition channels across all real users, most users first.
+  // `channel` = the `?ref=` tag, else utm_source, else referrer host, else 'direct'.
+  acquisitionSources: { channel: string; count: number }[];
   perUser: Record<string, PerUserActivity>;
   // Demo is excluded from every metric above. These surface it separately:
   demoActiveSessions: number; // distinct demo users active in the last 15 min
   demoTotal: number;          // current ephemeral demo accounts (≈ last 6h)
 };
+
+/**
+ * Collapse a user's first-touch attribution into a single channel label.
+ * Priority: raw `?ref=` tag → utm_source → referrer host → 'direct'.
+ */
+function acquisitionChannel(a: {
+  signupRef: string | null;
+  signupUtmSource: string | null;
+  signupReferrer: string | null;
+}): string {
+  if (a.signupRef) return a.signupRef;
+  if (a.signupUtmSource) return a.signupUtmSource;
+  if (a.signupReferrer) {
+    try {
+      return new URL(a.signupReferrer).hostname.replace(/^www\./, '');
+    } catch {
+      return 'other';
+    }
+  }
+  return 'direct';
+}
 
 const DAY = 24 * 60 * 60;
 
@@ -169,6 +193,24 @@ export async function getEngagementOverview(): Promise<EngagementOverview> {
   }
   const signupTrend = [...buckets.entries()].map(([date, count]) => ({ date, count }));
 
+  // Acquisition channels — first-touch attribution across all real users.
+  const attributionRows = await db
+    .select({
+      signupRef: users.signupRef,
+      signupUtmSource: users.signupUtmSource,
+      signupReferrer: users.signupReferrer,
+    })
+    .from(users)
+    .where(ne(users.role, 'demo'));
+  const channelCounts = new Map<string, number>();
+  for (const row of attributionRows) {
+    const ch = acquisitionChannel(row);
+    channelCounts.set(ch, (channelCounts.get(ch) ?? 0) + 1);
+  }
+  const acquisitionSources = [...channelCounts.entries()]
+    .map(([channel, count]) => ({ channel, count }))
+    .sort((a, b) => b.count - a.count);
+
   // Demo activity — deliberately kept OUT of every metric above; reported on its own.
   const demoActiveCut = nowSec - 15 * 60; // "active" = a heartbeat in the last 15 min
   const [demoActive] = await db
@@ -194,9 +236,73 @@ export async function getEngagementOverview(): Promise<EngagementOverview> {
     newThisWeek: signups?.week ?? 0,
     newThisMonth: signups?.month ?? 0,
     signupTrend,
+    acquisitionSources,
     perUser,
     demoActiveSessions: demoActive?.count ?? 0,
     demoTotal: demoCount?.count ?? 0,
+  };
+}
+
+/**
+ * The planted seed token prefix (see onboarding.ts / seed.ts). Excluded from the
+ * activation funnel so a freshly-seeded workspace's demo token/activity doesn't
+ * count as a real connection.
+ */
+const SEED_TOKEN_PREFIX = 'rmns-demo';
+
+/**
+ * Activation funnel, reconstructed from DB state (independent of PostHog): how
+ * many real users signed up → connected an agent (minted a real MCP token) →
+ * made a first real agent call. Each stage is a subset of the previous one, so
+ * the conversion rates are monotonic. The granular OAuth/consent sub-steps
+ * (`oauth_authorize_viewed`, …) live only in PostHog; this surfaces the three
+ * DB-observable milestones in the admin panel.
+ *
+ * NOTE: OAuth-path tool calls aren't recorded in `agent_activity` (see the known
+ * gap in onboarding.ts), so `activated` reflects the PAT path. A user who only
+ * ever connected over OAuth counts toward `connected` but not `activated`.
+ */
+export type ActivationFunnel = {
+  signups: number;   // real (non-demo) users
+  connected: number; // created a real MCP token (PAT createdBy or active OAuth)
+  activated: number; // made a real agent tool call (PAT path)
+};
+
+export async function getActivationFunnel(): Promise<ActivationFunnel> {
+  await assertAdmin();
+
+  // Real (non-demo) user id set — every funnel stage is scoped to these.
+  const realUsers = await db.select({ id: users.id }).from(users).where(ne(users.role, 'demo'));
+  const realSet = new Set(realUsers.map((u) => u.id));
+
+  // "Connected" = minted a real PAT (by creator) OR holds an OAuth token.
+  const [patCreators, oauthOwners, callCreators] = await Promise.all([
+    db
+      .select({ userId: agentTokens.createdBy })
+      .from(agentTokens)
+      .where(ne(agentTokens.tokenPrefix, SEED_TOKEN_PREFIX)),
+    db.select({ userId: oauthAccessTokens.userId }).from(oauthAccessTokens),
+    // "Activated" = a real agent call, attributed to the token's creator.
+    db
+      .select({ userId: agentTokens.createdBy })
+      .from(agentActivity)
+      .innerJoin(agentTokens, eq(agentActivity.tokenId, agentTokens.id))
+      .where(ne(agentTokens.tokenPrefix, SEED_TOKEN_PREFIX)),
+  ]);
+
+  const connectedSet = new Set<string>();
+  for (const r of [...patCreators, ...oauthOwners]) {
+    if (r.userId && realSet.has(r.userId)) connectedSet.add(r.userId);
+  }
+  const activatedSet = new Set<string>();
+  for (const r of callCreators) {
+    if (r.userId && realSet.has(r.userId)) activatedSet.add(r.userId);
+  }
+
+  return {
+    signups: realSet.size,
+    connected: connectedSet.size,
+    activated: activatedSet.size,
   };
 }
 

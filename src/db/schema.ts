@@ -82,6 +82,16 @@ export const users = sqliteTable('user', {
   // Effective analytics-capture permission for server-side funnel events
   // (persisted by the client ConsentProvider): 'granted' | 'denied' | null.
   analyticsConsent: text('analytics_consent'),
+  // First-touch acquisition attribution, copied off the `remnus_first_touch`
+  // cookie at signup so the admin dashboard can break new users down by channel
+  // without depending on PostHog. `signup_ref` is the raw `?ref=` param (e.g.
+  // `scoutforge` from a partner link / email / ad); the rest mirror the UTM +
+  // referrer captured client-side. All nullable (direct visits have none).
+  signupRef:      text('signup_ref'),
+  signupUtmSource:   text('signup_utm_source'),
+  signupUtmMedium:   text('signup_utm_medium'),
+  signupUtmCampaign: text('signup_utm_campaign'),
+  signupReferrer:    text('signup_referrer'),
   createdAt:     integer('created_at', { mode: 'timestamp' }).notNull().default(sql`CURRENT_TIMESTAMP`),
 });
 
@@ -318,4 +328,19 @@ export const subscriptions = sqliteTable('subscriptions', {
   updatedAt:            integer('updated_at', { mode: 'timestamp' }).notNull(),
 }, (table) => [
   index('subscriptions_stripe_customer_idx').on(table.stripeCustomerId),
+]);
+
+// In-app feedback left by demo visitors (the "how are you liking it?" prompt that
+// fires a few minutes into a demo session). `userId` is SET NULL on delete so the
+// feedback survives the demo account's periodic cleanup (purgeDemoUser) — the
+// admin dashboard must keep showing it after the ephemeral account is reaped.
+// Migration 0032.
+export const demoFeedback = sqliteTable('demo_feedback', {
+  id:        text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  userId:    text('user_id').references(() => users.id, { onDelete: 'set null' }),
+  sentiment: text('sentiment', { enum: ['positive', 'neutral', 'negative'] }).notNull(),
+  comment:   text('comment'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+}, (table) => [
+  index('demo_feedback_created_at_idx').on(table.createdAt),
 ]);

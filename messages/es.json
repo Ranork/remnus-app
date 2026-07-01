@@ -153,7 +153,23 @@
     "agentsOauthCount": "{count} conexiones OAuth activas",
     "agentStatusActive": "Activo",
     "agentStatusExpired": "Caducado",
-    "agentStatusRevoked": "Revocado"
+    "agentStatusRevoked": "Revocado",
+    "acquisitionSources": "Fuentes de adquisición",
+    "acquisitionSourcesHint": "primer contacto",
+    "acquisitionSourcesEmpty": "Aún no hay datos de atribución.",
+    "channelDirect": "Directo",
+    "activationFunnel": "Embudo de activación de agentes",
+    "activationFunnelHint": "registro → conectar → primera llamada",
+    "funnelSignup": "Se registró",
+    "funnelConnected": "Conectó un agente",
+    "funnelActivated": "Hizo la primera llamada",
+    "demoFeedbackSection": "Opiniones de la demo",
+    "demoFeedbackHint": "encuesta dentro de la app",
+    "demoFeedbackTotal": "respuestas",
+    "demoFeedbackEmpty": "Aún no hay comentarios escritos.",
+    "trendTotalLabel": "registros en los últimos 30 días",
+    "trendTooltipSignups": "registros",
+    "funnelOfSignups": "de los registros"
   },
   "Workspace": {
     "planBilling": "Plan y facturación",
@@ -1082,7 +1098,8 @@
     "bridgePricingTblSsoDesc": "Inicio de sesión único y aprovisionamiento SCIM para gestionar el acceso de toda la empresa.",
     "bridgePricingTblSupportDesc": "Cómo puedes contactarnos cuando necesitas ayuda.",
     "bridgeNavDownload": "Descargar",
-    "earlyAccess": "Acceso anticipado"
+    "earlyAccess": "Acceso anticipado",
+    "bridgeFooterCompanyBrand": "Kit de marca"
   },
   "Billing": {
     "tab": "Facturación",
@@ -1416,5 +1433,38 @@
     "checklist_call": "Ejecutar tu primera llamada de agente",
     "checklistDoneTitle": "¡Todo listo! 🎉",
     "checklistDoneHint": "Tu agente está conectado y funcionando."
+  },
+  "DemoFeedback": {
+    "title": "¿Qué te parece Remnus?",
+    "subtitle": "Tu opinión rápida nos ayuda a mejorarlo.",
+    "sentiment_positive": "Me encanta",
+    "sentiment_neutral": "Está bien",
+    "sentiment_negative": "No mucho",
+    "commentPlaceholder": "¿Algo que quieras añadir? (opcional)",
+    "submit": "Enviar opinión",
+    "sending": "Enviando…",
+    "maybeLater": "Quizás más tarde",
+    "dismiss": "Descartar",
+    "thanksTitle": "¡Gracias por tu opinión! 🙌",
+    "thanksBody": "Crea una cuenta gratis para guardar tu trabajo y desbloquear todo.",
+    "ctaSignup": "Crear cuenta gratis",
+    "keepExploring": "Seguir explorando"
+  },
+  "Brand": {
+    "eyebrow": "Kit de marca",
+    "title": "El estilo de Remnus",
+    "intro": "Los colores y la tipografía detrás de la app y este sitio. Úsalo como referencia para visuales, presentaciones y prensa.",
+    "colorsTitle": "Colores",
+    "colorsSubtitle": "Cada valor es un token de tema de Tailwind en la app. Se muestra el tema oscuro.",
+    "groupNeutrals": "Neutros",
+    "groupAccent": "Acento",
+    "groupSemantic": "Semántico",
+    "groupOptions": "Colores de propiedad",
+    "typographyTitle": "Tipografía",
+    "typographySubtitle": "Tres tipografías cubren interfaz, títulos y código.",
+    "fontSansRole": "Interfaz / cuerpo",
+    "fontSerifRole": "Títulos / display",
+    "fontMonoRole": "Código / etiquetas",
+    "fontSampleHeading": "El veloz murciélago hindú comía feliz cardillo y kiwi"
   }
 }

@@ -166,11 +166,24 @@ export const { handlers, auth, signIn, signOut, unstable_update: update } = Next
           try {
             const ft = JSON.parse(decodeURIComponent(firstTouchRaw));
             setOnce = {
+              initial_ref: ft.ref ?? null,
               initial_utm_source: ft.utm_source ?? null,
               initial_utm_medium: ft.utm_medium ?? null,
               initial_utm_campaign: ft.utm_campaign ?? null,
               initial_referrer: ft.referrer ?? null,
             };
+            // Persist onto the user row too so the admin dashboard can report
+            // acquisition channels without PostHog. Best-effort.
+            await db
+              .update(users)
+              .set({
+                signupRef: ft.ref ?? null,
+                signupUtmSource: ft.utm_source ?? null,
+                signupUtmMedium: ft.utm_medium ?? null,
+                signupUtmCampaign: ft.utm_campaign ?? null,
+                signupReferrer: ft.referrer ?? null,
+              })
+              .where(eq(users.id, user.id));
           } catch {
             // malformed cookie — skip attribution
           }

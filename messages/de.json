@@ -153,7 +153,23 @@
     "agentsOauthCount": "{count} aktive OAuth-Verbindungen",
     "agentStatusActive": "Aktiv",
     "agentStatusExpired": "Abgelaufen",
-    "agentStatusRevoked": "Widerrufen"
+    "agentStatusRevoked": "Widerrufen",
+    "acquisitionSources": "Akquise-Quellen",
+    "acquisitionSourcesHint": "Erstkontakt",
+    "acquisitionSourcesEmpty": "Noch keine Attributionsdaten.",
+    "channelDirect": "Direkt",
+    "activationFunnel": "Agent-Aktivierungs-Funnel",
+    "activationFunnelHint": "Registrierung → Verbindung → erster Aufruf",
+    "funnelSignup": "Registriert",
+    "funnelConnected": "Agent verbunden",
+    "funnelActivated": "Ersten Agent-Aufruf gemacht",
+    "demoFeedbackSection": "Demo-Feedback",
+    "demoFeedbackHint": "In-App-Demo-Abfrage",
+    "demoFeedbackTotal": "Antworten",
+    "demoFeedbackEmpty": "Noch kein schriftliches Feedback.",
+    "trendTotalLabel": "Registrierungen in den letzten 30 Tagen",
+    "trendTooltipSignups": "Registrierungen",
+    "funnelOfSignups": "der Registrierungen"
   },
   "Workspace": {
     "planBilling": "Plan & Abrechnung",
@@ -1082,7 +1098,8 @@
     "bridgePricingTblSsoDesc": "Single Sign-on und SCIM-Bereitstellung zur Verwaltung des unternehmensweiten Zugriffs.",
     "bridgePricingTblSupportDesc": "Wie Sie uns erreichen können, wenn Sie Hilfe benötigen.",
     "bridgeNavDownload": "Download",
-    "earlyAccess": "Früher Zugang"
+    "earlyAccess": "Früher Zugang",
+    "bridgeFooterCompanyBrand": "Brand-Kit"
   },
   "Billing": {
     "tab": "Abrechnung",
@@ -1416,5 +1433,38 @@
     "checklist_call": "Ersten Agenten-Aufruf ausführen",
     "checklistDoneTitle": "Alles bereit! 🎉",
     "checklistDoneHint": "Dein Agent ist verbunden und arbeitet."
+  },
+  "DemoFeedback": {
+    "title": "Wie gefällt dir Remnus?",
+    "subtitle": "Deine kurze Einschätzung hilft uns, es zu verbessern.",
+    "sentiment_positive": "Begeistert",
+    "sentiment_neutral": "Geht so",
+    "sentiment_negative": "Eher nicht",
+    "commentPlaceholder": "Möchtest du etwas ergänzen? (optional)",
+    "submit": "Feedback senden",
+    "sending": "Wird gesendet…",
+    "maybeLater": "Vielleicht später",
+    "dismiss": "Schließen",
+    "thanksTitle": "Danke für dein Feedback! 🙌",
+    "thanksBody": "Erstelle ein kostenloses Konto, um deine Arbeit zu behalten und alles freizuschalten.",
+    "ctaSignup": "Kostenloses Konto erstellen",
+    "keepExploring": "Weiter erkunden"
+  },
+  "Brand": {
+    "eyebrow": "Brand-Kit",
+    "title": "Der Remnus-Look",
+    "intro": "Die Farben und Schriften hinter der App und dieser Website. Als Referenz für Visuals, Präsentationen und Presse.",
+    "colorsTitle": "Farben",
+    "colorsSubtitle": "Jeder Wert ist ein Tailwind-Theme-Token in der App. Dunkles Theme gezeigt.",
+    "groupNeutrals": "Neutrale",
+    "groupAccent": "Akzent",
+    "groupSemantic": "Semantisch",
+    "groupOptions": "Eigenschaftsfarben",
+    "typographyTitle": "Typografie",
+    "typographySubtitle": "Drei Schriften decken Interface, Display und Code ab.",
+    "fontSansRole": "Interface / Fließtext",
+    "fontSerifRole": "Display / Überschriften",
+    "fontMonoRole": "Code / Labels",
+    "fontSampleHeading": "Zwölf Boxkämpfer jagen Viktor quer über den Sylter Deich"
   }
 }

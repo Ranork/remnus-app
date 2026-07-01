@@ -153,7 +153,23 @@
     "agentsOauthCount": "{count} 个活跃的 OAuth 连接",
     "agentStatusActive": "活跃",
     "agentStatusExpired": "已过期",
-    "agentStatusRevoked": "已撤销"
+    "agentStatusRevoked": "已撤销",
+    "acquisitionSources": "获取来源",
+    "acquisitionSourcesHint": "首次接触",
+    "acquisitionSourcesEmpty": "暂无归因数据。",
+    "channelDirect": "直接访问",
+    "activationFunnel": "智能体激活漏斗",
+    "activationFunnelHint": "注册 → 连接 → 首次调用",
+    "funnelSignup": "已注册",
+    "funnelConnected": "已连接智能体",
+    "funnelActivated": "已完成首次调用",
+    "demoFeedbackSection": "演示反馈",
+    "demoFeedbackHint": "应用内演示提示",
+    "demoFeedbackTotal": "条回复",
+    "demoFeedbackEmpty": "暂无文字反馈。",
+    "trendTotalLabel": "过去 30 天的注册",
+    "trendTooltipSignups": "次注册",
+    "funnelOfSignups": "占注册"
   },
   "Workspace": {
     "planBilling": "套餐与计费",
@@ -1078,7 +1094,8 @@
     "bridgePricingTblSsoDesc": "单点登录和 SCIM 配置，以管理全公司范围的访问。",
     "bridgePricingTblSupportDesc": "当你需要帮助时如何联系我们。",
     "bridgeNavDownload": "下载",
-    "earlyAccess": "抢先体验"
+    "earlyAccess": "抢先体验",
+    "bridgeFooterCompanyBrand": "品牌套件"
   },
   "Billing": {
     "tab": "计费",
@@ -1412,5 +1429,38 @@
     "checklist_call": "运行你的第一次智能体调用",
     "checklistDoneTitle": "全部就绪！🎉",
     "checklistDoneHint": "你的智能体已连接并正在工作。"
+  },
+  "DemoFeedback": {
+    "title": "觉得 Remnus 怎么样？",
+    "subtitle": "你的简短反馈能帮助我们做得更好。",
+    "sentiment_positive": "很喜欢",
+    "sentiment_neutral": "还行",
+    "sentiment_negative": "不太好",
+    "commentPlaceholder": "还有什么想补充的吗？（可选）",
+    "submit": "发送反馈",
+    "sending": "发送中…",
+    "maybeLater": "以后再说",
+    "dismiss": "关闭",
+    "thanksTitle": "感谢你的反馈！🙌",
+    "thanksBody": "创建免费账户以保存你的工作并解锁全部功能。",
+    "ctaSignup": "创建免费账户",
+    "keepExploring": "继续探索"
+  },
+  "Brand": {
+    "eyebrow": "品牌套件",
+    "title": "Remnus 的视觉风格",
+    "intro": "应用和本站背后的配色与字体。可作为视觉素材、演示和媒体的参考。",
+    "colorsTitle": "配色",
+    "colorsSubtitle": "每个值都是应用中的 Tailwind 主题令牌。此处显示深色主题。",
+    "groupNeutrals": "中性色",
+    "groupAccent": "强调色",
+    "groupSemantic": "语义色",
+    "groupOptions": "属性颜色",
+    "typographyTitle": "字体排印",
+    "typographySubtitle": "三种字体分别用于界面、标题和代码。",
+    "fontSansRole": "界面 / 正文",
+    "fontSerifRole": "标题 / 展示",
+    "fontMonoRole": "代码 / 标签",
+    "fontSampleHeading": "The quick brown fox jumps over the lazy dog"
   }
 }

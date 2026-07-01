@@ -153,7 +153,23 @@
     "agentsOauthCount": "{count} etkin OAuth bağlantısı",
     "agentStatusActive": "Etkin",
     "agentStatusExpired": "Süresi doldu",
-    "agentStatusRevoked": "İptal edildi"
+    "agentStatusRevoked": "İptal edildi",
+    "acquisitionSources": "Edinim Kaynakları",
+    "acquisitionSourcesHint": "ilk temas",
+    "acquisitionSourcesEmpty": "Henüz kaynak verisi yok.",
+    "channelDirect": "Doğrudan",
+    "activationFunnel": "Agent Aktivasyon Hunisi",
+    "activationFunnelHint": "kayıt → bağlama → ilk çağrı",
+    "funnelSignup": "Kaydoldu",
+    "funnelConnected": "Agent bağladı",
+    "funnelActivated": "İlk agent çağrısı",
+    "demoFeedbackSection": "Demo Geri Bildirimi",
+    "demoFeedbackHint": "uygulama içi demo anketi",
+    "demoFeedbackTotal": "yanıt",
+    "demoFeedbackEmpty": "Henüz yazılı geri bildirim yok.",
+    "trendTotalLabel": "son 30 günde kayıt",
+    "trendTooltipSignups": "kayıt",
+    "funnelOfSignups": "kayıtların"
   },
   "Workspace": {
     "planBilling": "Plan ve Faturalama",
@@ -1082,7 +1098,8 @@
     "bridgePricingTblSsoDesc": "Şirket genelinde erişimi yönetmek için tek oturum açma (SSO) ve SCIM sağlama.",
     "bridgePricingTblSupportDesc": "Yardıma ihtiyacın olduğunda bize nasıl ulaşabileceğin.",
     "bridgeNavDownload": "İndir",
-    "earlyAccess": "Erken erişim"
+    "earlyAccess": "Erken erişim",
+    "bridgeFooterCompanyBrand": "Marka kiti"
   },
   "Billing": {
     "tab": "Faturalama",
@@ -1420,5 +1437,38 @@
     "checklist_call": "İlk agent çağrını çalıştır",
     "checklistDoneTitle": "Her şey hazır! 🎉",
     "checklistDoneHint": "Agent'ın bağlı ve çalışıyor."
+  },
+  "DemoFeedback": {
+    "title": "Remnus nasıl gidiyor?",
+    "subtitle": "Kısa görüşün onu daha iyi yapmamıza yardımcı olur.",
+    "sentiment_positive": "Bayıldım",
+    "sentiment_neutral": "İdare eder",
+    "sentiment_negative": "Pek değil",
+    "commentPlaceholder": "Eklemek istediğin bir şey? (isteğe bağlı)",
+    "submit": "Geri bildirim gönder",
+    "sending": "Gönderiliyor…",
+    "maybeLater": "Belki sonra",
+    "dismiss": "Kapat",
+    "thanksTitle": "Geri bildirim için teşekkürler! 🙌",
+    "thanksBody": "Çalışmanı saklamak ve her şeyi açmak için ücretsiz hesap oluştur.",
+    "ctaSignup": "Ücretsiz hesap oluştur",
+    "keepExploring": "Keşfetmeye devam et"
+  },
+  "Brand": {
+    "eyebrow": "Marka Kiti",
+    "title": "Remnus görünümü",
+    "intro": "Uygulamanın ve bu sitenin arkasındaki renkler ve yazı tipleri. Görseller, sunumlar ve basın için referans olarak kullanın.",
+    "colorsTitle": "Renkler",
+    "colorsSubtitle": "Her değer uygulamada bir Tailwind tema jetonudur. Koyu tema gösteriliyor.",
+    "groupNeutrals": "Nötrler",
+    "groupAccent": "Vurgu",
+    "groupSemantic": "Anlamsal",
+    "groupOptions": "Özellik renkleri",
+    "typographyTitle": "Tipografi",
+    "typographySubtitle": "Üç yazı tipi arayüz, başlık ve kodu kapsar.",
+    "fontSansRole": "Arayüz / metin",
+    "fontSerifRole": "Başlık / vitrin",
+    "fontMonoRole": "Kod / etiket",
+    "fontSampleHeading": "Pijamalı hasta yağız şoföre çabucak güvendi"
   }
 }

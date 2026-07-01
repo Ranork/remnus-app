@@ -44,6 +44,7 @@ export default async function LandingFooter() {
         { label: t('bridgeFooterCompanyContact'),   href: '/contact' },
         { label: t('bridgeFooterCompanyPrivacy'),   href: '/privacy' },
         { label: t('bridgeFooterCompanySecurity'),  href: '/security' },
+        { label: t('bridgeFooterCompanyBrand'),     href: '/brand' },
       ],
     },
   ];

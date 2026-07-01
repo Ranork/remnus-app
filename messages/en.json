@@ -153,7 +153,23 @@
     "agentsOauthCount": "{count} active OAuth connections",
     "agentStatusActive": "Active",
     "agentStatusExpired": "Expired",
-    "agentStatusRevoked": "Revoked"
+    "agentStatusRevoked": "Revoked",
+    "acquisitionSources": "Acquisition Sources",
+    "acquisitionSourcesHint": "first touch",
+    "acquisitionSourcesEmpty": "No attribution data yet.",
+    "channelDirect": "Direct",
+    "activationFunnel": "Agent Activation Funnel",
+    "activationFunnelHint": "signup → connect → first call",
+    "funnelSignup": "Signed up",
+    "funnelConnected": "Connected an agent",
+    "funnelActivated": "Made first agent call",
+    "demoFeedbackSection": "Demo Feedback",
+    "demoFeedbackHint": "in-app demo prompt",
+    "demoFeedbackTotal": "responses",
+    "demoFeedbackEmpty": "No written feedback yet.",
+    "trendTotalLabel": "signups in the last 30 days",
+    "trendTooltipSignups": "signups",
+    "funnelOfSignups": "of signups"
   },
   "Workspace": {
     "planBilling": "Plan & Billing",
@@ -1082,7 +1098,8 @@
     "bridgePricingTblSsoDesc": "Single sign-on and SCIM provisioning to manage company-wide access.",
     "bridgePricingTblSupportDesc": "How you can reach us when you need help.",
     "bridgeNavDownload": "Download",
-    "earlyAccess": "Early access"
+    "earlyAccess": "Early access",
+    "bridgeFooterCompanyBrand": "Brand kit"
   },
   "Billing": {
     "tab": "Billing",
@@ -1420,5 +1437,38 @@
     "checklist_call": "Run your first agent call",
     "checklistDoneTitle": "You're all set! 🎉",
     "checklistDoneHint": "Your agent is connected and working."
+  },
+  "DemoFeedback": {
+    "title": "How's Remnus so far?",
+    "subtitle": "Your quick take helps us make it better.",
+    "sentiment_positive": "Loving it",
+    "sentiment_neutral": "It's okay",
+    "sentiment_negative": "Not great",
+    "commentPlaceholder": "Anything you'd like to add? (optional)",
+    "submit": "Send feedback",
+    "sending": "Sending…",
+    "maybeLater": "Maybe later",
+    "dismiss": "Dismiss",
+    "thanksTitle": "Thanks for the feedback! 🙌",
+    "thanksBody": "Create a free account to keep your work and unlock everything.",
+    "ctaSignup": "Create free account",
+    "keepExploring": "Keep exploring"
+  },
+  "Brand": {
+    "eyebrow": "Brand Kit",
+    "title": "The Remnus look",
+    "intro": "The colors and type behind the app and this site. Use it as a reference for visuals, decks, and press.",
+    "colorsTitle": "Colors",
+    "colorsSubtitle": "Every value is a Tailwind theme token in the app. Dark theme shown.",
+    "groupNeutrals": "Neutrals",
+    "groupAccent": "Accent",
+    "groupSemantic": "Semantic",
+    "groupOptions": "Property colors",
+    "typographyTitle": "Typography",
+    "typographySubtitle": "Three typefaces cover interface, display, and code.",
+    "fontSansRole": "Interface / body",
+    "fontSerifRole": "Display / headings",
+    "fontMonoRole": "Code / labels",
+    "fontSampleHeading": "The quick brown fox jumps over the lazy dog"
   }
 }

@@ -153,7 +153,23 @@
     "agentsOauthCount": "{count} активных OAuth-подключений",
     "agentStatusActive": "Активен",
     "agentStatusExpired": "Истёк",
-    "agentStatusRevoked": "Отозван"
+    "agentStatusRevoked": "Отозван",
+    "acquisitionSources": "Источники привлечения",
+    "acquisitionSourcesHint": "первый контакт",
+    "acquisitionSourcesEmpty": "Пока нет данных атрибуции.",
+    "channelDirect": "Прямой",
+    "activationFunnel": "Воронка активации агента",
+    "activationFunnelHint": "регистрация → подключение → первый вызов",
+    "funnelSignup": "Зарегистрировались",
+    "funnelConnected": "Подключили агента",
+    "funnelActivated": "Первый вызов агента",
+    "demoFeedbackSection": "Отзывы о демо",
+    "demoFeedbackHint": "запрос в демо-режиме",
+    "demoFeedbackTotal": "ответов",
+    "demoFeedbackEmpty": "Пока нет письменных отзывов.",
+    "trendTotalLabel": "регистраций за последние 30 дней",
+    "trendTooltipSignups": "регистраций",
+    "funnelOfSignups": "от регистраций"
   },
   "Workspace": {
     "planBilling": "Тариф и оплата",
@@ -1078,7 +1094,8 @@
     "bridgePricingTblSsoDesc": "Единый вход и SCIM-провижининг для управления доступом в масштабах компании.",
     "bridgePricingTblSupportDesc": "Как вы можете связаться с нами, когда нужна помощь.",
     "bridgeNavDownload": "Скачать",
-    "earlyAccess": "Ранний доступ"
+    "earlyAccess": "Ранний доступ",
+    "bridgeFooterCompanyBrand": "Брендбук"
   },
   "Billing": {
     "tab": "Оплата",
@@ -1412,5 +1429,38 @@
     "checklist_call": "Выполните первый вызов агента",
     "checklistDoneTitle": "Всё готово! 🎉",
     "checklistDoneHint": "Ваш агент подключён и работает."
+  },
+  "DemoFeedback": {
+    "title": "Как вам Remnus?",
+    "subtitle": "Ваш быстрый отзыв помогает нам стать лучше.",
+    "sentiment_positive": "Очень нравится",
+    "sentiment_neutral": "Нормально",
+    "sentiment_negative": "Не очень",
+    "commentPlaceholder": "Хотите что-то добавить? (необязательно)",
+    "submit": "Отправить отзыв",
+    "sending": "Отправка…",
+    "maybeLater": "Может позже",
+    "dismiss": "Закрыть",
+    "thanksTitle": "Спасибо за отзыв! 🙌",
+    "thanksBody": "Создайте бесплатный аккаунт, чтобы сохранить работу и открыть всё.",
+    "ctaSignup": "Создать бесплатный аккаунт",
+    "keepExploring": "Продолжить знакомство"
+  },
+  "Brand": {
+    "eyebrow": "Брендбук",
+    "title": "Стиль Remnus",
+    "intro": "Цвета и шрифты приложения и этого сайта. Используйте как справочник для визуалов, презентаций и прессы.",
+    "colorsTitle": "Цвета",
+    "colorsSubtitle": "Каждое значение — токен темы Tailwind в приложении. Показана тёмная тема.",
+    "groupNeutrals": "Нейтральные",
+    "groupAccent": "Акцент",
+    "groupSemantic": "Семантические",
+    "groupOptions": "Цвета свойств",
+    "typographyTitle": "Типографика",
+    "typographySubtitle": "Три гарнитуры покрывают интерфейс, заголовки и код.",
+    "fontSansRole": "Интерфейс / текст",
+    "fontSerifRole": "Заголовки / дисплей",
+    "fontMonoRole": "Код / подписи",
+    "fontSampleHeading": "Съешь же ещё этих мягких французских булок да выпей чаю"
   }
 }
