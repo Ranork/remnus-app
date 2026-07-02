@@ -1203,9 +1203,9 @@
     "responseNote": "Solemos responder en un día o dos en GitHub."
   },
   "Download": {
-    "eyebrow": "APLICACIÓN DE ESCRITORIO",
+    "eyebrow": "ESCRITORIO Y MÓVIL",
     "title": "Descargar Remnus",
-    "subtitle": "La aplicación de escritorio nativa para Windows, macOS y Linux. Todo tu espacio de trabajo en la nube en su propia ventana.",
+    "subtitle": "La app de escritorio nativa para Windows, macOS y Linux — más una web app instalable para tu teléfono y tablet.",
     "detecting": "Detectando tu sistema…",
     "downloadFor": "Descargar para {os}",
     "yourSystemBadge": "Lo elegimos para tu sistema",
@@ -1240,7 +1240,15 @@
     "installMacTitle": "macOS (.dmg)",
     "installMacBody": "Abre el .dmg y arrastra Remnus a tu carpeta de Aplicaciones. En el primer inicio, haz clic derecho en la app y elige “Abrir” para omitir el aviso de Gatekeeper para apps sin firmar.",
     "installLinuxTitle": "Linux (.AppImage / .deb)",
-    "installLinuxBody": "Para el AppImage, hazlo ejecutable (chmod +x Remnus-*.AppImage) y ejecútalo directamente. Para Debian o Ubuntu, instala el paquete con sudo apt install ./Remnus-linux-amd64.deb."
+    "installLinuxBody": "Para el AppImage, hazlo ejecutable (chmod +x Remnus-*.AppImage) y ejecútalo directamente. Para Debian o Ubuntu, instala el paquete con sudo apt install ./Remnus-linux-amd64.deb.",
+    "pwaHeading": "Teléfono y tablet — web app",
+    "pwaIntro": "Remnus se instala directamente desde el navegador como web app (PWA), sin App Store ni Play Store. Tiene su propio icono en tu pantalla de inicio, se abre a pantalla completa y se actualiza automáticamente.",
+    "pwaInstallCta": "Instalar Remnus",
+    "pwaInstalledBadge": "Ya está instalada — abre Remnus desde tu pantalla de inicio.",
+    "pwaIosTitle": "iPhone y iPad (Safari)",
+    "pwaIosBody": "Abre remnus.com en Safari, toca el botón Compartir y elige “Añadir a pantalla de inicio”.",
+    "pwaAndroidTitle": "Android (Chrome)",
+    "pwaAndroidBody": "Abre remnus.com en Chrome, toca el menú ⋮ y elige “Instalar app” (o “Añadir a pantalla de inicio”)."
   },
   "Privacy": {
     "title": "Política de Privacidad",

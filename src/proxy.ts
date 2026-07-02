@@ -20,6 +20,9 @@ export default authMiddleware(function proxy(req: NextRequest) {
 
 export const config = {
   matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|logo.*|.*\\.(?:png|ico|svg|jpg|jpeg|webp|woff2?)).*)',
+    // manifest.json + sw.js/workbox-* (next-pwa service worker) must bypass the
+    // middleware entirely — the browser fetches them cookie-less, so the auth
+    // check would bounce them to /login and break PWA install/offline.
+    '/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|manifest.json|sw.js|workbox-.*|logo.*|.*\\.(?:png|ico|svg|jpg|jpeg|webp|woff2?)).*)',
   ],
 };

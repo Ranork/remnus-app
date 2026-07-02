@@ -29,7 +29,10 @@ export const authConfig: NextAuthConfig = {
       const isAuthRoute = cleanPath.startsWith('/login');
       const isClientLogin = cleanPath.startsWith('/client-login');
       const isApiAuth = cleanPath.startsWith('/api/auth');
-      const isPublicAsset = /\.(png|ico|svg|jpg|jpeg|webp|woff2?)$/.test(path);
+      const isPublicAsset =
+        /\.(png|ico|svg|jpg|jpeg|webp|woff2?)$/.test(path) ||
+        // PWA files fetched cookie-less by the browser — must never redirect to /login.
+        path === '/manifest.json' || path === '/sw.js' || path.startsWith('/workbox-');
       const isRootRoute = cleanPath === '/' || cleanPath === '/share';
       const isPublicMarketingRoute = cleanPath.startsWith('/pricing') || cleanPath.startsWith('/contact') || cleanPath.startsWith('/download') || cleanPath.startsWith('/share/') || cleanPath.startsWith('/security') || cleanPath.startsWith('/brand');
       const isMcpRoute = cleanPath.startsWith('/api/mcp');

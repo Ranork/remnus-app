@@ -1,14 +1,21 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import { useTranslations } from 'next-intl';
-import { Download, ArrowRight } from 'lucide-react';
+import { Download, ArrowRight, Smartphone } from 'lucide-react';
+import {
+  subscribeInstallPrompt,
+  getInstallPromptStatus,
+  getServerInstallPromptStatus,
+  initInstallPromptCapture,
+  triggerInstallPrompt,
+} from '@/lib/pwa/installPrompt';
 
 const REPO = 'Ranork/remnus-app';
 const RELEASES_URL = `https://github.com/${REPO}/releases`;
 const downloadUrl = (file: string) => `${RELEASES_URL}/latest/download/${file}`;
 
-type DetectedOS = 'windows' | 'mac' | 'linux' | 'unknown';
+type DetectedOS = 'windows' | 'mac' | 'linux' | 'android' | 'ios' | 'unknown';
 
 type Platform = {
   id: string;
@@ -30,14 +37,17 @@ function detectOS(): DetectedOS {
   if (typeof navigator === 'undefined') return 'unknown';
   const ua = navigator.userAgent.toLowerCase();
   const plat = (navigator.platform || '').toLowerCase();
+  // Mobile checks first: Android UAs contain "linux", iPadOS 13+ reports as Mac.
+  if (ua.includes('android')) return 'android';
+  if (/iphone|ipad|ipod/.test(ua) || (plat.includes('mac') && navigator.maxTouchPoints > 1)) return 'ios';
   if (ua.includes('win') || plat.includes('win')) return 'windows';
   if (ua.includes('mac') || plat.includes('mac')) return 'mac';
   if (ua.includes('linux') || ua.includes('x11')) return 'linux';
   return 'unknown';
 }
 
-// The single asset recommended for a detected OS (Apple Silicon / AppImage as sensible defaults).
-const PRIMARY_BY_OS: Record<Exclude<DetectedOS, 'unknown'>, { osKey: string; file: string; logo: string }> = {
+// The single asset recommended for a detected desktop OS (Apple Silicon / AppImage as sensible defaults).
+const PRIMARY_BY_OS: Record<'windows' | 'mac' | 'linux', { osKey: string; file: string; logo: string }> = {
   windows: { osKey: 'osWindows',  file: 'Remnus-windows-x64-setup.exe',  logo: '/os/windows.svg' },
   mac:     { osKey: 'osMac',      file: 'Remnus-macos-aarch64.dmg',      logo: '/os/apple.svg' },
   linux:   { osKey: 'osLinux',    file: 'Remnus-linux-x86_64.AppImage',  logo: '/os/linux.svg' },
@@ -47,13 +57,25 @@ export default function DownloadView() {
   const t = useTranslations('Download');
   const [os, setOs] = useState<DetectedOS>('unknown');
   const [ready, setReady] = useState(false);
+  const installStatus = useSyncExternalStore(
+    subscribeInstallPrompt,
+    getInstallPromptStatus,
+    getServerInstallPromptStatus
+  );
 
   useEffect(() => {
+    // Idempotent — normally already installed by PwaInstallCapture in the layout.
+    initInstallPromptCapture();
     setOs(detectOS());
     setReady(true);
   }, []);
 
-  const primary = os !== 'unknown' ? PRIMARY_BY_OS[os] : null;
+  const primary = os === 'windows' || os === 'mac' || os === 'linux' ? PRIMARY_BY_OS[os] : null;
+  const isMobileOs = os === 'android' || os === 'ios';
+
+  const handleInstall = () => {
+    void triggerInstallPrompt();
+  };
 
   return (
     <section className="relative overflow-hidden px-4 sm:px-8 lg:px-14 pt-16 pb-20 lg:pt-24 lg:pb-28">
@@ -80,6 +102,29 @@ export default function DownloadView() {
         <div className="mt-9 flex flex-col items-center gap-3">
           {!ready ? (
             <span className="font-mono text-[13px] text-dim animate-pulse">{t('detecting')}</span>
+          ) : isMobileOs ? (
+            <>
+              {installStatus === 'installed' ? (
+                <span className="font-mono text-[13px] text-green-400">{t('pwaInstalledBadge')}</span>
+              ) : installStatus === 'available' ? (
+                <button
+                  onClick={handleInstall}
+                  className="inline-flex items-center gap-2.5 bg-blue-500 hover:bg-accent-strong text-white px-7 py-4 rounded-md text-[15px] font-medium transition-colors duration-150"
+                >
+                  <Smartphone size={18} aria-hidden />
+                  {t('pwaInstallCta')}
+                </button>
+              ) : (
+                <a
+                  href="#mobile-install"
+                  className="inline-flex items-center gap-2.5 bg-blue-500 hover:bg-accent-strong text-white px-7 py-4 rounded-md text-[15px] font-medium transition-colors duration-150"
+                >
+                  <Smartphone size={18} aria-hidden />
+                  {t('pwaInstallCta')}
+                </a>
+              )}
+              <span className="font-mono text-[11px] text-dim">{t('yourSystemBadge')}</span>
+            </>
           ) : primary ? (
             <>
               <a
@@ -150,6 +195,48 @@ export default function DownloadView() {
         <p className="mt-6 text-center font-mono text-[11px] text-dimmer leading-relaxed">
           {t('latestNote')}
         </p>
+      </div>
+
+      {/* Phone & tablet — installable web app (PWA) */}
+      <div id="mobile-install" className="relative max-w-3xl mx-auto mt-20 scroll-mt-24 text-left">
+        <div className="flex items-center gap-3 mb-6">
+          <span className="font-mono text-[11px] text-dim uppercase tracking-[0.16em]">
+            {t('pwaHeading')}
+          </span>
+          <span className="flex-1 h-px bg-neutral-800" />
+        </div>
+        <p className="text-[15px] leading-[1.7] text-neutral-50">{t('pwaIntro')}</p>
+
+        {installStatus === 'available' && (
+          <button
+            onClick={handleInstall}
+            className="mt-6 inline-flex items-center gap-2.5 bg-blue-500 hover:bg-accent-strong text-white px-6 py-3.5 rounded-md text-[14px] font-medium transition-colors duration-150"
+          >
+            <Smartphone size={16} aria-hidden />
+            {t('pwaInstallCta')}
+          </button>
+        )}
+        {installStatus === 'installed' && (
+          <p className="mt-6 font-mono text-[12px] text-green-400">{t('pwaInstalledBadge')}</p>
+        )}
+
+        <div className="mt-6 grid gap-px bg-neutral-800 border border-neutral-800 rounded-md overflow-hidden">
+          <div className="flex items-start gap-4 px-5 py-4 bg-neutral-900">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/os/apple.svg" alt="" width={22} height={22} className="shrink-0 opacity-90 mt-0.5" aria-hidden />
+            <div className="flex flex-col min-w-0">
+              <span className="text-[14px] text-neutral-100 font-medium">{t('pwaIosTitle')}</span>
+              <span className="text-[13px] text-neutral-50 leading-[1.6] mt-0.5">{t('pwaIosBody')}</span>
+            </div>
+          </div>
+          <div className="flex items-start gap-4 px-5 py-4 bg-neutral-900">
+            <Smartphone size={22} className="shrink-0 text-neutral-100 opacity-90 mt-0.5" aria-hidden />
+            <div className="flex flex-col min-w-0">
+              <span className="text-[14px] text-neutral-100 font-medium">{t('pwaAndroidTitle')}</span>
+              <span className="text-[13px] text-neutral-50 leading-[1.6] mt-0.5">{t('pwaAndroidBody')}</span>
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* About + requirements + install — helpful content (also gives crawlers real text to index) */}

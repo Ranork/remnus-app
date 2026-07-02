@@ -5,7 +5,7 @@
 - Client components: `useTranslations('Namespace')`
 - Server components/layouts: `await getTranslations('Namespace')`
 - Server actions: `getTranslations('Errors')` for error messages
-- Add keys to ALL 6 files (en/tr/hi/es/fr/de) — missing keys cause runtime warnings
+- Add keys to ALL 8 files (en/tr/hi/es/fr/de/zh/ru) — missing keys fall back to English via the deep-merge in request.ts, then to the key name
 - 29 namespaces: Layout, Home, Auth, Workspace, WorkspaceSettings, Templates, Database, Editor, Page, IconPicker, Admin, Errors, LanguageSwitcher, MobileNav, Landing, Billing, Pricing, Contact, Download, Privacy, Updater, Sharing, UserSettings, OAuthAuthorize, Security, Consent, Onboarding, DemoFeedback (demo in-app feedback prompt), Brand (public /brand brand-kit page)
 - `Layout` namespace also has browser-tab strings (Tauri-only TabBar): `tabNewTooltip`, `tabClose`, `tabCloseOthers`, `tabCloseAll`, `tabUntitled` (besides demoMode/demoChangesNote/createFreeAccount)
 - `Consent` namespace: drives `CookieConsentBanner` (geo-aware cookie consent) — title/descriptionRequired/descriptionInformational/learnMore/accept/reject/gotIt keys
@@ -16,7 +16,7 @@
 - `Landing` namespace: drives `MarketingHeader`, `MarketingFooter`, `HeroSection`, `FeaturesSection` (navHome/navPricing/navContact/navSignIn/navGetStarted/hero*/feature*Title/Desc/footer* keys)
 - `Pricing` namespace: drives `PricingSection` (free/pro tier content)
 - `Contact` namespace: drives `ContactSection` (github/email/community channel cards)
-- `Download` namespace: drives `DownloadView` (/download page) — title/subtitle/detecting/downloadFor/os*/file* keys for the desktop installer download grid
+- `Download` namespace: drives `DownloadView` (/download page) — title/subtitle/detecting/downloadFor/os*/file* keys for the desktop installer download grid + `pwa*` keys (pwaHeading/pwaIntro/pwaInstallCta/pwaInstalledBadge/pwaIosTitle/pwaIosBody/pwaAndroidTitle/pwaAndroidBody) for the PWA mobile-install section
 
 ## Auth
 - NEVER call `auth()` directly in server actions/components — use `getCurrentUser()` from `src/lib/auth/session.ts` (React.cache wrapped)

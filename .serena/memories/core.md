@@ -29,12 +29,20 @@ src/
     api/auth/[...nextauth]/ # Auth.js HTTP handler
   auth.config.ts            # Edge-compatible Auth.js config (no DB)
   auth.ts                   # Full Auth.js config (DrizzleAdapter + callbacks)
-  proxy.ts                  # Route protection + intl middleware (Next.js 16 proxy — REPLACES middleware.ts). Whitelists /login, /client-login, /tauri-app, /api/auth/*, /api/mcp, /api/oauth/*, /.well-known/*, /share/, marketing paths; excludes sitemap.xml/robots.txt
+  proxy.ts                  # Route protection + intl middleware (Next.js 16 proxy — REPLACES middleware.ts). Whitelists /login, /client-login, /tauri-app, /api/auth/*, /api/mcp, /api/oauth/*, /.well-known/*, /share/, marketing paths; matcher excludes sitemap.xml/robots.txt/manifest.json/sw.js/workbox-* (PWA files fetched cookie-less)
   components/marketing/     # Marketing/landing page components (public, no auth)
     # Theme: data-theme on <html> (remnus dark default / catppuccin light + dracula/tokyo-night/nord), cookie remnus_theme via setTheme (lib/actions/preferences). LandingNav has LandingThemeToggle (client, Sun/Moon, useSyncExternalStore+MutationObserver on data-theme, no local state). Light-mode landing CSS fixes in globals.css: .pricing-card-featured (theme-aware gradient base), .hero-hover-dim (light wash on catppuccin), hero-ai-tile-light keyframes (softened glow). i18n key Landing.navThemeToggle (all 6 files).
     # MarketingShell (auth-aware wrapper), MarketingHeader (client, sticky nav),
     # MarketingFooter, HeroSection, FeaturesSection, PricingSection, ContactSection
-    # DownloadView (client, OS detection + static releases/latest/download links; stable asset names from tauri-release.yml)
+    # DownloadView (client, OS detection + static releases/latest/download links; stable asset names from tauri-release.yml.
+    #   MOBILE: detects android (before linux — Android UA contains "linux") + ios (incl. iPadOS-as-Mac via maxTouchPoints);
+    #   mobile primary CTA = PWA install (beforeinstallprompt when available, else anchor to #mobile-install section with
+    #   iOS/Android add-to-home-screen instructions). i18n Download.pwa* keys, 8 locales.)
+    # PWA: manifest.json has real icons (public/icons/icon-{192,512}.png + maskable variants, logo at 70% on #1d1f23 bg)
+    #   + apple-touch-icon.png (180x180). PwaInstallCapture (components/providers, mounted in [locale]/layout.tsx) stashes the
+    #   one-shot beforeinstallprompt into src/lib/pwa/installPrompt.ts store (useSyncExternalStore + triggerInstallPrompt).
+    #   GOTCHA: manifest.json/sw.js/workbox-* are excluded in BOTH proxy.ts matcher AND auth.config.ts isPublicAsset —
+    #   browser fetches them cookie-less; without the exclusions they bounced to /login and PWA install was broken.
   components/features/      # All feature React components (see mem:conventions)
     # Key components: ContextMenu (shared Notion-style right-click menu primitive — useContextMenu(onClose?)→{open(e,items),close,node} + MenuItem type {action|separator|label}; portal, viewport flip/clamp, Esc/outside/scroll close; wired on sidebar items + table/kanban/calendar rows/cards; i18n open/copyLink in Workspace+Database ns), WorkspaceSidebar, DatabaseView, MobileNavWrapper, ViewsBar,
     # StandalonePageEditor, PageEditor, TemplatePickerModal, WorkspaceSettingsModal,

@@ -1203,9 +1203,9 @@
     "responseNote": "GitHub'da genellikle bir iki gün içinde geri dönüyoruz."
   },
   "Download": {
-    "eyebrow": "MASAÜSTÜ UYGULAMASI",
+    "eyebrow": "MASAÜSTÜ VE MOBİL",
     "title": "Remnus'u İndir",
-    "subtitle": "Windows, macOS ve Linux için yerel masaüstü uygulaması. Bulut çalışma alanının tamamı kendi penceresinde.",
+    "subtitle": "Windows, macOS ve Linux için yerel masaüstü uygulaması — artı telefon ve tablet için kurulabilir web uygulaması.",
     "detecting": "Sistemin algılanıyor…",
     "downloadFor": "{os} için indir",
     "yourSystemBadge": "Sistemine göre bunu seçtik",
@@ -1240,7 +1240,15 @@
     "installMacTitle": "macOS (.dmg)",
     "installMacBody": ".dmg dosyasını açın ve Remnus'u Uygulamalar klasörünüze sürükleyin. İlk açılışta, imzasız uygulama uyarısını aşmak için uygulamaya sağ tıklayıp “Aç” seçeneğini seçin.",
     "installLinuxTitle": "Linux (.AppImage / .deb)",
-    "installLinuxBody": "AppImage için çalıştırılabilir yapın (chmod +x Remnus-*.AppImage) ve doğrudan çalıştırın. Debian veya Ubuntu için paketi sudo apt install ./Remnus-linux-amd64.deb ile kurun."
+    "installLinuxBody": "AppImage için çalıştırılabilir yapın (chmod +x Remnus-*.AppImage) ve doğrudan çalıştırın. Debian veya Ubuntu için paketi sudo apt install ./Remnus-linux-amd64.deb ile kurun.",
+    "pwaHeading": "Telefon ve tablet — web uygulaması",
+    "pwaIntro": "Remnus, App Store veya Play Store'a gerek kalmadan doğrudan tarayıcıdan web uygulaması (PWA) olarak kurulur. Ana ekranınızda kendi simgesiyle yer alır, tam ekran açılır ve otomatik güncellenir.",
+    "pwaInstallCta": "Remnus'u Kur",
+    "pwaInstalledBadge": "Zaten kurulu — Remnus'u ana ekranınızdan açın.",
+    "pwaIosTitle": "iPhone ve iPad (Safari)",
+    "pwaIosBody": "remnus.com'u Safari'de açın, Paylaş düğmesine dokunun, ardından “Ana Ekrana Ekle”yi seçin.",
+    "pwaAndroidTitle": "Android (Chrome)",
+    "pwaAndroidBody": "remnus.com'u Chrome'da açın, ⋮ menüsüne dokunun, ardından “Uygulamayı yükle”yi (veya “Ana ekrana ekle”) seçin."
   },
   "Privacy": {
     "title": "Gizlilik Politikası",

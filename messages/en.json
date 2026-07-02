@@ -1203,9 +1203,9 @@
     "responseNote": "We usually get back within a day or two on GitHub."
   },
   "Download": {
-    "eyebrow": "DESKTOP APP",
+    "eyebrow": "DESKTOP & MOBILE",
     "title": "Download Remnus",
-    "subtitle": "The native desktop app for Windows, macOS, and Linux. Your whole cloud workspace in its own window.",
+    "subtitle": "The native desktop app for Windows, macOS, and Linux — plus an installable web app for your phone and tablet.",
     "detecting": "Detecting your system…",
     "downloadFor": "Download for {os}",
     "yourSystemBadge": "We picked this for your system",
@@ -1240,7 +1240,15 @@
     "installMacTitle": "macOS (.dmg)",
     "installMacBody": "Open the .dmg and drag Remnus into your Applications folder. On first launch, right-click the app and choose “Open” to bypass the Gatekeeper warning for unsigned apps.",
     "installLinuxTitle": "Linux (.AppImage / .deb)",
-    "installLinuxBody": "For the AppImage, make it executable (chmod +x Remnus-*.AppImage) and run it directly. For Debian or Ubuntu, install the package with sudo apt install ./Remnus-linux-amd64.deb."
+    "installLinuxBody": "For the AppImage, make it executable (chmod +x Remnus-*.AppImage) and run it directly. For Debian or Ubuntu, install the package with sudo apt install ./Remnus-linux-amd64.deb.",
+    "pwaHeading": "Phone & tablet — web app",
+    "pwaIntro": "Remnus installs straight from the browser as a web app (PWA) — no App Store or Play Store needed. It gets its own icon on your home screen, opens full-screen, and updates automatically.",
+    "pwaInstallCta": "Install Remnus",
+    "pwaInstalledBadge": "Already installed — open Remnus from your home screen.",
+    "pwaIosTitle": "iPhone & iPad (Safari)",
+    "pwaIosBody": "Open remnus.com in Safari, tap the Share button, then choose “Add to Home Screen”.",
+    "pwaAndroidTitle": "Android (Chrome)",
+    "pwaAndroidBody": "Open remnus.com in Chrome, tap the ⋮ menu, then choose “Install app” (or “Add to Home screen”)."
   },
   "Privacy": {
     "title": "Privacy Policy",

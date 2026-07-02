@@ -1203,9 +1203,9 @@
     "responseNote": "On répond généralement en un jour ou deux sur GitHub."
   },
   "Download": {
-    "eyebrow": "APPLICATION DE BUREAU",
+    "eyebrow": "BUREAU ET MOBILE",
     "title": "Télécharger Remnus",
-    "subtitle": "L'application de bureau native pour Windows, macOS et Linux. Tout votre espace de travail cloud dans sa propre fenêtre.",
+    "subtitle": "L'application de bureau native pour Windows, macOS et Linux — plus une web app installable pour votre téléphone et tablette.",
     "detecting": "Détection de votre système…",
     "downloadFor": "Télécharger pour {os}",
     "yourSystemBadge": "Nous l'avons choisi pour votre système",
@@ -1240,7 +1240,15 @@
     "installMacTitle": "macOS (.dmg)",
     "installMacBody": "Ouvrez le .dmg et faites glisser Remnus dans votre dossier Applications. Au premier lancement, faites un clic droit sur l'app et choisissez « Ouvrir » pour contourner l'avertissement Gatekeeper des apps non signées.",
     "installLinuxTitle": "Linux (.AppImage / .deb)",
-    "installLinuxBody": "Pour l'AppImage, rendez-le exécutable (chmod +x Remnus-*.AppImage) et lancez-le directement. Pour Debian ou Ubuntu, installez le paquet avec sudo apt install ./Remnus-linux-amd64.deb."
+    "installLinuxBody": "Pour l'AppImage, rendez-le exécutable (chmod +x Remnus-*.AppImage) et lancez-le directement. Pour Debian ou Ubuntu, installez le paquet avec sudo apt install ./Remnus-linux-amd64.deb.",
+    "pwaHeading": "Téléphone et tablette — web app",
+    "pwaIntro": "Remnus s'installe directement depuis le navigateur comme web app (PWA) — sans App Store ni Play Store. Elle a sa propre icône sur votre écran d'accueil, s'ouvre en plein écran et se met à jour automatiquement.",
+    "pwaInstallCta": "Installer Remnus",
+    "pwaInstalledBadge": "Déjà installée — ouvrez Remnus depuis votre écran d'accueil.",
+    "pwaIosTitle": "iPhone et iPad (Safari)",
+    "pwaIosBody": "Ouvrez remnus.com dans Safari, touchez le bouton Partager, puis choisissez « Sur l'écran d'accueil ».",
+    "pwaAndroidTitle": "Android (Chrome)",
+    "pwaAndroidBody": "Ouvrez remnus.com dans Chrome, touchez le menu ⋮, puis choisissez « Installer l'application » (ou « Ajouter à l'écran d'accueil »)."
   },
   "Privacy": {
     "title": "Politique de Confidentialité",

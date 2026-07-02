@@ -1203,9 +1203,9 @@
     "responseNote": "GitHub पर हम आमतौर पर एक-दो दिन में जवाब देते हैं।"
   },
   "Download": {
-    "eyebrow": "डेस्कटॉप ऐप",
+    "eyebrow": "डेस्कटॉप और मोबाइल",
     "title": "Remnus डाउनलोड करें",
-    "subtitle": "Windows, macOS और Linux के लिए नेटिव डेस्कटॉप ऐप. आपका पूरा क्लाउड वर्कस्पेस अपनी अलग विंडो में।",
+    "subtitle": "Windows, macOS और Linux के लिए नेटिव डेस्कटॉप ऐप — साथ ही फ़ोन और टैबलेट के लिए इंस्टॉल होने वाला वेब ऐप।",
     "detecting": "आपका सिस्टम पहचाना जा रहा है…",
     "downloadFor": "{os} के लिए डाउनलोड करें",
     "yourSystemBadge": "हमने यह आपके सिस्टम के लिए चुना",
@@ -1240,7 +1240,15 @@
     "installMacTitle": "macOS (.dmg)",
     "installMacBody": ".dmg खोलें और Remnus को अपने Applications फ़ोल्डर में खींचें। पहली बार खोलने पर, बिना साइन वाले ऐप्स के लिए Gatekeeper चेतावनी को बायपास करने हेतु ऐप पर राइट-क्लिक करें और “Open” चुनें।",
     "installLinuxTitle": "Linux (.AppImage / .deb)",
-    "installLinuxBody": "AppImage के लिए, इसे निष्पादन योग्य बनाएँ (chmod +x Remnus-*.AppImage) और सीधे चलाएँ। Debian या Ubuntu के लिए, पैकेज को sudo apt install ./Remnus-linux-amd64.deb से इंस्टॉल करें।"
+    "installLinuxBody": "AppImage के लिए, इसे निष्पादन योग्य बनाएँ (chmod +x Remnus-*.AppImage) और सीधे चलाएँ। Debian या Ubuntu के लिए, पैकेज को sudo apt install ./Remnus-linux-amd64.deb से इंस्टॉल करें।",
+    "pwaHeading": "फ़ोन और टैबलेट — वेब ऐप",
+    "pwaIntro": "Remnus बिना App Store या Play Store के सीधे ब्राउज़र से वेब ऐप (PWA) के रूप में इंस्टॉल होता है। यह आपकी होम स्क्रीन पर अपने आइकन के साथ रहता है, फ़ुल-स्क्रीन खुलता है और अपने आप अपडेट होता है।",
+    "pwaInstallCta": "Remnus इंस्टॉल करें",
+    "pwaInstalledBadge": "पहले से इंस्टॉल है — Remnus को होम स्क्रीन से खोलें।",
+    "pwaIosTitle": "iPhone और iPad (Safari)",
+    "pwaIosBody": "Safari में remnus.com खोलें, शेयर बटन पर टैप करें, फिर “होम स्क्रीन में जोड़ें” चुनें।",
+    "pwaAndroidTitle": "Android (Chrome)",
+    "pwaAndroidBody": "Chrome में remnus.com खोलें, ⋮ मेनू पर टैप करें, फिर “ऐप इंस्टॉल करें” (या “होम स्क्रीन में जोड़ें”) चुनें।"
   },
   "Privacy": {
     "title": "गोपनीयता नीति",

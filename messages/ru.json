@@ -1199,9 +1199,9 @@
     "responseNote": "Обычно отвечаем в течение одного-двух дней на GitHub."
   },
   "Download": {
-    "eyebrow": "ДЕСКТОПНОЕ ПРИЛОЖЕНИЕ",
+    "eyebrow": "ДЕСКТОП И МОБИЛЬНЫЕ",
     "title": "Скачать Remnus",
-    "subtitle": "Нативное десктопное приложение для Windows, macOS и Linux. Всё ваше облачное пространство в отдельном окне.",
+    "subtitle": "Нативное десктоп-приложение для Windows, macOS и Linux — плюс устанавливаемое веб-приложение для телефона и планшета.",
     "detecting": "Определяем вашу систему…",
     "downloadFor": "Скачать для {os}",
     "yourSystemBadge": "Мы выбрали это для вашей системы",
@@ -1236,7 +1236,15 @@
     "installMacTitle": "macOS (.dmg)",
     "installMacBody": "Откройте .dmg и перетащите Remnus в папку «Программы». При первом запуске щёлкните приложение правой кнопкой и выберите «Открыть», чтобы обойти предупреждение Gatekeeper для неподписанных приложений.",
     "installLinuxTitle": "Linux (.AppImage / .deb)",
-    "installLinuxBody": "Для AppImage сделайте файл исполняемым (chmod +x Remnus-*.AppImage) и запустите напрямую. Для Debian или Ubuntu установите пакет командой sudo apt install ./Remnus-linux-amd64.deb."
+    "installLinuxBody": "Для AppImage сделайте файл исполняемым (chmod +x Remnus-*.AppImage) и запустите напрямую. Для Debian или Ubuntu установите пакет командой sudo apt install ./Remnus-linux-amd64.deb.",
+    "pwaHeading": "Телефон и планшет — веб-приложение",
+    "pwaIntro": "Remnus устанавливается прямо из браузера как веб-приложение (PWA) — без App Store и Play Маркета. У него собственная иконка на главном экране, оно открывается в полноэкранном режиме и обновляется автоматически.",
+    "pwaInstallCta": "Установить Remnus",
+    "pwaInstalledBadge": "Уже установлено — откройте Remnus с главного экрана.",
+    "pwaIosTitle": "iPhone и iPad (Safari)",
+    "pwaIosBody": "Откройте remnus.com в Safari, нажмите кнопку «Поделиться», затем выберите «На экран “Домой”».",
+    "pwaAndroidTitle": "Android (Chrome)",
+    "pwaAndroidBody": "Откройте remnus.com в Chrome, нажмите меню ⋮, затем выберите «Установить приложение» (или «Добавить на главный экран»)."
   },
   "Privacy": {
     "title": "Политика конфиденциальности",

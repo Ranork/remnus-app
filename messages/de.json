@@ -1203,9 +1203,9 @@
     "responseNote": "Wir melden uns in der Regel innerhalb von ein bis zwei Tagen auf GitHub."
   },
   "Download": {
-    "eyebrow": "DESKTOP-APP",
+    "eyebrow": "DESKTOP & MOBIL",
     "title": "Remnus herunterladen",
-    "subtitle": "Die native Desktop-App für Windows, macOS und Linux. Dein gesamter Cloud-Workspace in einem eigenen Fenster.",
+    "subtitle": "Die native Desktop-App für Windows, macOS und Linux — plus eine installierbare Web-App für Handy und Tablet.",
     "detecting": "Dein System wird erkannt…",
     "downloadFor": "Für {os} herunterladen",
     "yourSystemBadge": "Das haben wir für dein System ausgewählt",
@@ -1240,7 +1240,15 @@
     "installMacTitle": "macOS (.dmg)",
     "installMacBody": "Öffne die .dmg und ziehe Remnus in deinen Programme-Ordner. Klicke beim ersten Start mit der rechten Maustaste auf die App und wähle „Öffnen“, um die Gatekeeper-Warnung für unsignierte Apps zu umgehen.",
     "installLinuxTitle": "Linux (.AppImage / .deb)",
-    "installLinuxBody": "Mache das AppImage ausführbar (chmod +x Remnus-*.AppImage) und starte es direkt. Installiere das Paket unter Debian oder Ubuntu mit sudo apt install ./Remnus-linux-amd64.deb."
+    "installLinuxBody": "Mache das AppImage ausführbar (chmod +x Remnus-*.AppImage) und starte es direkt. Installiere das Paket unter Debian oder Ubuntu mit sudo apt install ./Remnus-linux-amd64.deb.",
+    "pwaHeading": "Handy & Tablet — Web-App",
+    "pwaIntro": "Remnus wird direkt aus dem Browser als Web-App (PWA) installiert — ganz ohne App Store oder Play Store. Sie bekommt ein eigenes Symbol auf dem Startbildschirm, öffnet im Vollbild und aktualisiert sich automatisch.",
+    "pwaInstallCta": "Remnus installieren",
+    "pwaInstalledBadge": "Öffne Remnus über deinen Startbildschirm — bereits installiert.",
+    "pwaIosTitle": "iPhone & iPad (Safari)",
+    "pwaIosBody": "Öffne remnus.com in Safari, tippe auf Teilen und wähle „Zum Home-Bildschirm“.",
+    "pwaAndroidTitle": "Android (Chrome)",
+    "pwaAndroidBody": "Öffne remnus.com in Chrome, tippe auf das ⋮-Menü und wähle „App installieren“ (oder „Zum Startbildschirm hinzufügen“)."
   },
   "Privacy": {
     "title": "Datenschutzerklärung",

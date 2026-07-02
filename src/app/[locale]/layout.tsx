@@ -12,6 +12,7 @@ import PostHogIdentify from '@/components/providers/PostHogIdentify';
 import AttributionCapture from '@/components/providers/AttributionCapture';
 import { ConsentProvider } from '@/components/providers/ConsentContext';
 import CookieConsentBanner from '@/components/features/CookieConsentBanner';
+import PwaInstallCapture from '@/components/providers/PwaInstallCapture';
 import { CONSENT_COOKIE, isConsentRequired, parseConsent } from '@/lib/consent';
 import { METADATA_BASE_URL, DEFAULT_OG_IMAGE, DEFAULT_TWITTER_IMAGE } from '@/lib/metadata';
 
@@ -31,7 +32,7 @@ export const metadata: Metadata = {
   icons: {
     icon: '/logo-square-dark.ico',
     shortcut: '/logo-square-dark.ico',
-    apple: '/logo-square-dark.png',
+    apple: '/apple-touch-icon.png',
   },
   openGraph: {
     title: 'Remnus | MCP-Native workspace for vibe coders',
@@ -108,6 +109,7 @@ export default async function LocaleLayout({
           </ConsentProvider>
         </NextIntlClientProvider>
       </PostHogProvider>
+      <PwaInstallCapture />
       <Analytics />
     </>
   );

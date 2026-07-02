@@ -1199,9 +1199,9 @@
     "responseNote": "我们通常会在一两天内通过 GitHub 回复。"
   },
   "Download": {
-    "eyebrow": "桌面应用",
+    "eyebrow": "桌面与移动端",
     "title": "下载 Remnus",
-    "subtitle": "适用于 Windows、macOS 和 Linux 的原生桌面应用。你的整个云端工作区，独立成窗。",
+    "subtitle": "适用于 Windows、macOS 和 Linux 的原生桌面应用 — 以及可安装到手机和平板的 Web 应用。",
     "detecting": "正在检测你的系统…",
     "downloadFor": "下载 {os} 版",
     "yourSystemBadge": "我们为你的系统选好了这个",
@@ -1236,7 +1236,15 @@
     "installMacTitle": "macOS（.dmg）",
     "installMacBody": "打开 .dmg 并将 Remnus 拖入「应用程序」文件夹。首次启动时，右键点击应用并选择「打开」，以绕过 Gatekeeper 对未签名应用的警告。",
     "installLinuxTitle": "Linux（.AppImage / .deb）",
-    "installLinuxBody": "对于 AppImage，将其设为可执行（chmod +x Remnus-*.AppImage）并直接运行。对于 Debian 或 Ubuntu，使用 sudo apt install ./Remnus-linux-amd64.deb 安装该包。"
+    "installLinuxBody": "对于 AppImage，将其设为可执行（chmod +x Remnus-*.AppImage）并直接运行。对于 Debian 或 Ubuntu，使用 sudo apt install ./Remnus-linux-amd64.deb 安装该包。",
+    "pwaHeading": "手机与平板 — Web 应用",
+    "pwaIntro": "Remnus 可直接从浏览器安装为 Web 应用（PWA），无需 App Store 或 Play 商店。它会在主屏幕上拥有自己的图标，以全屏方式打开，并自动更新。",
+    "pwaInstallCta": "安装 Remnus",
+    "pwaInstalledBadge": "已安装 — 请从主屏幕打开 Remnus。",
+    "pwaIosTitle": "iPhone 和 iPad（Safari）",
+    "pwaIosBody": "在 Safari 中打开 remnus.com，点按分享按钮，然后选择“添加到主屏幕”。",
+    "pwaAndroidTitle": "Android（Chrome）",
+    "pwaAndroidBody": "在 Chrome 中打开 remnus.com，点按 ⋮ 菜单，然后选择“安装应用”（或“添加到主屏幕”）。"
   },
   "Privacy": {
     "title": "隐私政策",
