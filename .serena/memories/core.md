@@ -39,8 +39,17 @@ src/
     #   mobile primary CTA = PWA install (beforeinstallprompt when available, else anchor to #mobile-install section with
     #   iOS/Android add-to-home-screen instructions). i18n Download.pwa* keys, 8 locales.)
     # PWA: manifest.json has real icons (public/icons/icon-{192,512}.png + maskable variants, logo at 70% on #1d1f23 bg)
-    #   + apple-touch-icon.png (180x180). PwaInstallCapture (components/providers, mounted in [locale]/layout.tsx) stashes the
-    #   one-shot beforeinstallprompt into src/lib/pwa/installPrompt.ts store (useSyncExternalStore + triggerInstallPrompt).
+    #   + apple-touch-icon.png (180x180) + screenshots (public/screenshots/: 2 narrow 390x844 + 1 wide 1280x800, demo
+    #   workspace captures — Chrome rich install UI). PwaInstallCapture (components/providers, mounted in [locale]/layout.tsx)
+    #   stashes the one-shot beforeinstallprompt into src/lib/pwa/installPrompt.ts store (useSyncExternalStore +
+    #   triggerInstallPrompt + detectInstallPlatform ios/android/desktop).
+    # PWA install discovery — all surfaces open the shared PwaInstallModal (features/PwaInstallModal.tsx: benefits row,
+    #   one-click native prompt when captured, else platform-tabbed iOS/Android/desktop steps, /download pointer):
+    #   - PwaInstallButton (features/): sidebar bottom "Install app" row, web only (null in Tauri / standalone)
+    #   - PwaNavButton (marketing/): landing nav button, icon-only below lg
+    #   - LandingFooter Company col "Mobile app" link -> /download#mobile-install (Landing.bridgeFooterCompanyMobileApp)
+    #   - PwaInstallNudge (features/, mounted in (app)/layout.tsx for non-demo): one-time toast for mobile-browser users
+    #     ~30s into session, coarse-pointer only, flag localStorage['remnus_pwa_nudge_done']; native prompt or modal.
     #   GOTCHA: manifest.json/sw.js/workbox-* are excluded in BOTH proxy.ts matcher AND auth.config.ts isPublicAsset —
     #   browser fetches them cookie-less; without the exclusions they bounced to /login and PWA install was broken.
   components/features/      # All feature React components (see mem:conventions)

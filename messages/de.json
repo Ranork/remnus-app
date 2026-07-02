@@ -1105,7 +1105,8 @@
     "bridgePricingTblSupportDesc": "Wie Sie uns erreichen können, wenn Sie Hilfe benötigen.",
     "bridgeNavDownload": "Download",
     "earlyAccess": "Früher Zugang",
-    "bridgeFooterCompanyBrand": "Brand-Kit"
+    "bridgeFooterCompanyBrand": "Brand-Kit",
+    "bridgeFooterCompanyMobileApp": "Mobile App"
   },
   "Billing": {
     "tab": "Abrechnung",
@@ -1248,7 +1249,26 @@
     "pwaIosTitle": "iPhone & iPad (Safari)",
     "pwaIosBody": "Öffne remnus.com in Safari, tippe auf Teilen und wähle „Zum Home-Bildschirm“.",
     "pwaAndroidTitle": "Android (Chrome)",
-    "pwaAndroidBody": "Öffne remnus.com in Chrome, tippe auf das ⋮-Menü und wähle „App installieren“ (oder „Zum Startbildschirm hinzufügen“)."
+    "pwaAndroidBody": "Öffne remnus.com in Chrome, tippe auf das ⋮-Menü und wähle „App installieren“ (oder „Zum Startbildschirm hinzufügen“).",
+    "pwaShortLabel": "App installieren",
+    "pwaModalTagline": "Dein Workspace auf dem Startbildschirm — Vollbild, schnell und immer aktuell.",
+    "pwaBenefit1": "Eigenes Symbol & Fenster",
+    "pwaBenefit2": "Aktualisiert sich automatisch",
+    "pwaBenefit3": "Kein App Store nötig",
+    "pwaHowTitle": "So wird installiert",
+    "pwaTabIos": "iPhone / iPad",
+    "pwaTabAndroid": "Android",
+    "pwaTabDesktop": "Desktop",
+    "pwaIosStep1": "Öffne remnus.com in Safari",
+    "pwaIosStep2": "Tippe auf Teilen",
+    "pwaIosStep3": "Wähle „Zum Home-Bildschirm“",
+    "pwaAndroidStep1": "Öffne remnus.com in Chrome",
+    "pwaAndroidStep2": "Tippe auf das ⋮-Menü",
+    "pwaAndroidStep3": "Wähle „App installieren“",
+    "pwaDesktopHint": "Klicke in Chrome oder Edge auf das Installations-Symbol am rechten Ende der Adressleiste.",
+    "pwaModalDesktopLink": "Lieber die native Desktop-App? Für Windows, macOS und Linux verfügbar",
+    "pwaNudgeText": "Füge Remnus deinem Startbildschirm hinzu — Vollbild und immer aktuell.",
+    "pwaNudgeLater": "Nicht jetzt"
   },
   "Privacy": {
     "title": "Datenschutzerklärung",

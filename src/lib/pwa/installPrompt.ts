@@ -60,6 +60,20 @@ export function getServerInstallPromptStatus(): InstallPromptStatus {
   return 'unavailable';
 }
 
+export type InstallPlatform = 'ios' | 'android' | 'desktop';
+
+// Which install instructions apply here. Android UAs contain "linux" and
+// iPadOS 13+ reports as Mac (distinguished via maxTouchPoints) — same caveats
+// as DownloadView's detectOS.
+export function detectInstallPlatform(): InstallPlatform {
+  if (typeof navigator === 'undefined') return 'desktop';
+  const ua = navigator.userAgent.toLowerCase();
+  const plat = (navigator.platform || '').toLowerCase();
+  if (ua.includes('android')) return 'android';
+  if (/iphone|ipad|ipod/.test(ua) || (plat.includes('mac') && navigator.maxTouchPoints > 1)) return 'ios';
+  return 'desktop';
+}
+
 export async function triggerInstallPrompt(): Promise<'accepted' | 'dismissed' | null> {
   if (!deferredPrompt) return null;
   const evt = deferredPrompt;

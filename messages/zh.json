@@ -1101,7 +1101,8 @@
     "bridgePricingTblSupportDesc": "当你需要帮助时如何联系我们。",
     "bridgeNavDownload": "下载",
     "earlyAccess": "抢先体验",
-    "bridgeFooterCompanyBrand": "品牌套件"
+    "bridgeFooterCompanyBrand": "品牌套件",
+    "bridgeFooterCompanyMobileApp": "移动应用"
   },
   "Billing": {
     "tab": "计费",
@@ -1244,7 +1245,26 @@
     "pwaIosTitle": "iPhone 和 iPad（Safari）",
     "pwaIosBody": "在 Safari 中打开 remnus.com，点按分享按钮，然后选择“添加到主屏幕”。",
     "pwaAndroidTitle": "Android（Chrome）",
-    "pwaAndroidBody": "在 Chrome 中打开 remnus.com，点按 ⋮ 菜单，然后选择“安装应用”（或“添加到主屏幕”）。"
+    "pwaAndroidBody": "在 Chrome 中打开 remnus.com，点按 ⋮ 菜单，然后选择“安装应用”（或“添加到主屏幕”）。",
+    "pwaShortLabel": "安装应用",
+    "pwaModalTagline": "把工作区放到主屏幕 — 全屏、快速、始终保持最新。",
+    "pwaBenefit1": "独立图标与窗口",
+    "pwaBenefit2": "自动更新",
+    "pwaBenefit3": "无需应用商店",
+    "pwaHowTitle": "安装方法",
+    "pwaTabIos": "iPhone / iPad",
+    "pwaTabAndroid": "Android",
+    "pwaTabDesktop": "桌面端",
+    "pwaIosStep1": "在 Safari 中打开 remnus.com",
+    "pwaIosStep2": "点按分享按钮",
+    "pwaIosStep3": "选择“添加到主屏幕”",
+    "pwaAndroidStep1": "在 Chrome 中打开 remnus.com",
+    "pwaAndroidStep2": "点按 ⋮ 菜单",
+    "pwaAndroidStep3": "选择“安装应用”",
+    "pwaDesktopHint": "在 Chrome 或 Edge 中，点击地址栏右端的安装图标。",
+    "pwaModalDesktopLink": "想要原生桌面应用？支持 Windows、macOS 和 Linux",
+    "pwaNudgeText": "把 Remnus 添加到主屏幕 — 全屏且始终保持最新。",
+    "pwaNudgeLater": "暂不"
   },
   "Privacy": {
     "title": "隐私政策",

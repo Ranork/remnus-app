@@ -1105,7 +1105,8 @@
     "bridgePricingTblSupportDesc": "Yardıma ihtiyacın olduğunda bize nasıl ulaşabileceğin.",
     "bridgeNavDownload": "İndir",
     "earlyAccess": "Erken erişim",
-    "bridgeFooterCompanyBrand": "Marka kiti"
+    "bridgeFooterCompanyBrand": "Marka kiti",
+    "bridgeFooterCompanyMobileApp": "Mobil uygulama"
   },
   "Billing": {
     "tab": "Faturalama",
@@ -1248,7 +1249,26 @@
     "pwaIosTitle": "iPhone ve iPad (Safari)",
     "pwaIosBody": "remnus.com'u Safari'de açın, Paylaş düğmesine dokunun, ardından “Ana Ekrana Ekle”yi seçin.",
     "pwaAndroidTitle": "Android (Chrome)",
-    "pwaAndroidBody": "remnus.com'u Chrome'da açın, ⋮ menüsüne dokunun, ardından “Uygulamayı yükle”yi (veya “Ana ekrana ekle”) seçin."
+    "pwaAndroidBody": "remnus.com'u Chrome'da açın, ⋮ menüsüne dokunun, ardından “Uygulamayı yükle”yi (veya “Ana ekrana ekle”) seçin.",
+    "pwaShortLabel": "Uygulamayı yükle",
+    "pwaModalTagline": "Çalışma alanın ana ekranında — tam ekran, hızlı ve her zaman güncel.",
+    "pwaBenefit1": "Kendi simgesi ve penceresi",
+    "pwaBenefit2": "Otomatik güncellenir",
+    "pwaBenefit3": "App store gerekmez",
+    "pwaHowTitle": "Nasıl yüklenir",
+    "pwaTabIos": "iPhone / iPad",
+    "pwaTabAndroid": "Android",
+    "pwaTabDesktop": "Masaüstü",
+    "pwaIosStep1": "remnus.com'u Safari'de aç",
+    "pwaIosStep2": "Paylaş düğmesine dokun",
+    "pwaIosStep3": "“Ana Ekrana Ekle”yi seç",
+    "pwaAndroidStep1": "remnus.com'u Chrome'da aç",
+    "pwaAndroidStep2": "⋮ menüsüne dokun",
+    "pwaAndroidStep3": "“Uygulamayı yükle”yi seç",
+    "pwaDesktopHint": "Chrome veya Edge'de adres çubuğunun sağ ucundaki yükleme simgesine tıkla.",
+    "pwaModalDesktopLink": "Yerel masaüstü uygulaması mı istiyorsun? Windows, macOS ve Linux için indir",
+    "pwaNudgeText": "Remnus'u ana ekranına ekle — tam ekran ve her zaman güncel.",
+    "pwaNudgeLater": "Şimdi değil"
   },
   "Privacy": {
     "title": "Gizlilik Politikası",

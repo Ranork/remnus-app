@@ -1101,7 +1101,8 @@
     "bridgePricingTblSupportDesc": "Как вы можете связаться с нами, когда нужна помощь.",
     "bridgeNavDownload": "Скачать",
     "earlyAccess": "Ранний доступ",
-    "bridgeFooterCompanyBrand": "Брендбук"
+    "bridgeFooterCompanyBrand": "Брендбук",
+    "bridgeFooterCompanyMobileApp": "Мобильное приложение"
   },
   "Billing": {
     "tab": "Оплата",
@@ -1244,7 +1245,26 @@
     "pwaIosTitle": "iPhone и iPad (Safari)",
     "pwaIosBody": "Откройте remnus.com в Safari, нажмите кнопку «Поделиться», затем выберите «На экран “Домой”».",
     "pwaAndroidTitle": "Android (Chrome)",
-    "pwaAndroidBody": "Откройте remnus.com в Chrome, нажмите меню ⋮, затем выберите «Установить приложение» (или «Добавить на главный экран»)."
+    "pwaAndroidBody": "Откройте remnus.com в Chrome, нажмите меню ⋮, затем выберите «Установить приложение» (или «Добавить на главный экран»).",
+    "pwaShortLabel": "Установить приложение",
+    "pwaModalTagline": "Ваше рабочее пространство на главном экране — во весь экран, быстро и всегда актуально.",
+    "pwaBenefit1": "Своя иконка и окно",
+    "pwaBenefit2": "Обновляется автоматически",
+    "pwaBenefit3": "Без app store",
+    "pwaHowTitle": "Как установить",
+    "pwaTabIos": "iPhone / iPad",
+    "pwaTabAndroid": "Android",
+    "pwaTabDesktop": "Компьютер",
+    "pwaIosStep1": "Откройте remnus.com в Safari",
+    "pwaIosStep2": "Нажмите кнопку «Поделиться»",
+    "pwaIosStep3": "Выберите «На экран “Домой”»",
+    "pwaAndroidStep1": "Откройте remnus.com в Chrome",
+    "pwaAndroidStep2": "Нажмите меню ⋮",
+    "pwaAndroidStep3": "Выберите «Установить приложение»",
+    "pwaDesktopHint": "В Chrome или Edge нажмите значок установки в правой части адресной строки.",
+    "pwaModalDesktopLink": "Нужно нативное десктоп-приложение? Скачайте для Windows, macOS и Linux",
+    "pwaNudgeText": "Добавьте Remnus на главный экран — во весь экран и всегда актуально.",
+    "pwaNudgeLater": "Не сейчас"
   },
   "Privacy": {
     "title": "Политика конфиденциальности",

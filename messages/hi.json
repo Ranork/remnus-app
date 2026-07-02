@@ -1105,7 +1105,8 @@
     "bridgePricingTblSupportDesc": "जब आपको मदद चाहिए तो आप हमसे कैसे संपर्क कर सकते हैं।",
     "bridgeNavDownload": "डाउनलोड",
     "earlyAccess": "अर्ली एक्सेस",
-    "bridgeFooterCompanyBrand": "ब्रांड किट"
+    "bridgeFooterCompanyBrand": "ब्रांड किट",
+    "bridgeFooterCompanyMobileApp": "मोबाइल ऐप"
   },
   "Billing": {
     "tab": "बिलिंग",
@@ -1248,7 +1249,26 @@
     "pwaIosTitle": "iPhone और iPad (Safari)",
     "pwaIosBody": "Safari में remnus.com खोलें, शेयर बटन पर टैप करें, फिर “होम स्क्रीन में जोड़ें” चुनें।",
     "pwaAndroidTitle": "Android (Chrome)",
-    "pwaAndroidBody": "Chrome में remnus.com खोलें, ⋮ मेनू पर टैप करें, फिर “ऐप इंस्टॉल करें” (या “होम स्क्रीन में जोड़ें”) चुनें।"
+    "pwaAndroidBody": "Chrome में remnus.com खोलें, ⋮ मेनू पर टैप करें, फिर “ऐप इंस्टॉल करें” (या “होम स्क्रीन में जोड़ें”) चुनें।",
+    "pwaShortLabel": "ऐप इंस्टॉल करें",
+    "pwaModalTagline": "आपका वर्कस्पेस होम स्क्रीन पर — फ़ुल-स्क्रीन, तेज़ और हमेशा अप-टू-डेट।",
+    "pwaBenefit1": "अपना आइकन और विंडो",
+    "pwaBenefit2": "अपने आप अपडेट होता है",
+    "pwaBenefit3": "ऐप स्टोर की ज़रूरत नहीं",
+    "pwaHowTitle": "कैसे इंस्टॉल करें",
+    "pwaTabIos": "iPhone / iPad",
+    "pwaTabAndroid": "Android",
+    "pwaTabDesktop": "डेस्कटॉप",
+    "pwaIosStep1": "Safari में remnus.com खोलें",
+    "pwaIosStep2": "शेयर बटन पर टैप करें",
+    "pwaIosStep3": "“होम स्क्रीन में जोड़ें” चुनें",
+    "pwaAndroidStep1": "Chrome में remnus.com खोलें",
+    "pwaAndroidStep2": "⋮ मेनू पर टैप करें",
+    "pwaAndroidStep3": "“ऐप इंस्टॉल करें” चुनें",
+    "pwaDesktopHint": "Chrome या Edge में, एड्रेस बार के दाएँ छोर पर इंस्टॉल आइकन पर क्लिक करें।",
+    "pwaModalDesktopLink": "नेटिव डेस्कटॉप ऐप चाहिए? Windows, macOS और Linux के लिए पाएँ",
+    "pwaNudgeText": "Remnus को होम स्क्रीन में जोड़ें — फ़ुल-स्क्रीन और हमेशा अप-टू-डेट।",
+    "pwaNudgeLater": "अभी नहीं"
   },
   "Privacy": {
     "title": "गोपनीयता नीति",

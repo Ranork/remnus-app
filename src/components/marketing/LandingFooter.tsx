@@ -40,6 +40,7 @@ export default async function LandingFooter() {
     {
       head: t('bridgeFooterColCompany'),
       links: [
+        { label: t('bridgeFooterCompanyMobileApp'), href: '/download#mobile-install' },
         { label: t('bridgeFooterCompanyPricing'),   href: '/pricing' },
         { label: t('bridgeFooterCompanyContact'),   href: '/contact' },
         { label: t('bridgeFooterCompanyPrivacy'),   href: '/privacy' },

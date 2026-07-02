@@ -37,6 +37,29 @@
       "purpose": "maskable"
     }
   ],
+  "screenshots": [
+    {
+      "src": "/screenshots/mobile-board.png",
+      "sizes": "390x844",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Kanban board on mobile"
+    },
+    {
+      "src": "/screenshots/mobile-page.png",
+      "sizes": "390x844",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Markdown page editor on mobile"
+    },
+    {
+      "src": "/screenshots/desktop-board.png",
+      "sizes": "1280x800",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Workspace with kanban board"
+    }
+  ],
   "shortcuts": [
     {
       "name": "New Page",

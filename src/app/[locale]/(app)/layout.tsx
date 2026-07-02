@@ -13,6 +13,7 @@ import BillingSuccessModal from '@/components/features/BillingSuccessModal';
 import UpdateBanner from '@/components/features/UpdateBanner';
 import DownloadToast from '@/components/features/DownloadToast';
 import DemoFeedbackPrompt from '@/components/features/DemoFeedbackPrompt';
+import PwaInstallNudge from '@/components/features/PwaInstallNudge';
 
 // Layout for the authenticated in-app routes (app / db / page / admin). Lives in the
 // (app) route group so it is NOT shared with public routes (share, marketing, auth) —
@@ -74,6 +75,7 @@ export default async function AppGroupLayout({
       <ActivityTracker />
       <LastPathTracker />
       {session.user.role === 'demo' && <DemoFeedbackPrompt />}
+      {session.user.role !== 'demo' && <PwaInstallNudge />}
       <BillingSuccessModal />
       <UpdateBanner />
       <DownloadToast />

@@ -4,6 +4,7 @@ import { getTranslations } from 'next-intl/server';
 import { auth } from '@/auth';
 import LanguageSwitcher from '@/components/features/LanguageSwitcher';
 import LandingThemeToggle from './LandingThemeToggle';
+import PwaNavButton from './PwaNavButton';
 
 export default async function LandingNav() {
   const t = await getTranslations('Landing');
@@ -47,6 +48,8 @@ export default async function LandingNav() {
           </nav>
 
           <div className="flex items-center gap-1 sm:gap-2">
+            <PwaNavButton />
+
             <LandingThemeToggle label={t('navThemeToggle')} />
 
             <LanguageSwitcher variant="header" />

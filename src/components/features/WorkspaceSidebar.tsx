@@ -55,6 +55,7 @@ import WorkspaceSettingsModal from './WorkspaceSettingsModal';
 import { initDesktopZoom } from '@/lib/desktop/zoom';
 import AgentsModal from './AgentsModal';
 import OnboardingGuide from './onboarding/OnboardingGuide';
+import PwaInstallButton from './PwaInstallButton';
 import BillingModal from './BillingModal';
 import UserSettingsModal from './UserSettingsModal';
 import { getUserAgentTokenCount } from '@/lib/actions/agentToken';
@@ -1565,6 +1566,9 @@ export default function WorkspaceSidebar({
           )}
         </button>
       </div>
+
+      {/* Install app (PWA) button — web only, hidden in Tauri / when installed */}
+      <PwaInstallButton />
 
       {/* Settings button */}
       <div className="shrink-0 px-2 pb-1">
