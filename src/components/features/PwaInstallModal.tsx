@@ -41,10 +41,11 @@ const STEP_ICONS: Record<Exclude<InstallPlatform, 'desktop'>, LucideIcon[]> = {
   android: [Globe, MoreVertical, MonitorDown],
 };
 
-const TAB_KEYS: Record<InstallPlatform, 'pwaTabIos' | 'pwaTabAndroid' | 'pwaTabDesktop'> = {
+type TabPlatform = Exclude<InstallPlatform, 'desktop'>;
+
+const TAB_KEYS: Record<TabPlatform, 'pwaTabIos' | 'pwaTabAndroid'> = {
   ios: 'pwaTabIos',
   android: 'pwaTabAndroid',
-  desktop: 'pwaTabDesktop',
 };
 
 const STEP_KEY_PREFIX: Record<Exclude<InstallPlatform, 'desktop'>, 'pwaIos' | 'pwaAndroid'> = {
@@ -65,12 +66,14 @@ export default function PwaInstallModal({ open, onClose }: Props) {
     getInstallPromptStatus,
     getServerInstallPromptStatus
   );
-  const [platform, setPlatform] = useState<InstallPlatform>('desktop');
+  const [platform, setPlatform] = useState<TabPlatform>('ios');
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
     initInstallPromptCapture();
-    setPlatform(detectInstallPlatform());
+    // Desktop visitors default to the iOS tab — the tabs only cover mobile;
+    // desktop users get the one-click prompt (Chrome/Edge) or the /download link.
+    if (detectInstallPlatform() === 'android') setPlatform('android');
     setMounted(true);
   }, []);
 
@@ -166,7 +169,7 @@ export default function PwaInstallModal({ open, onClose }: Props) {
 
               {/* Platform tabs */}
               <div className="flex gap-1 p-1 bg-neutral-900 border border-neutral-800 rounded-lg">
-                {(['ios', 'android', 'desktop'] as const).map((p) => (
+                {(['ios', 'android'] as const).map((p) => (
                   <button
                     key={p}
                     onClick={() => setPlatform(p)}
@@ -181,32 +184,21 @@ export default function PwaInstallModal({ open, onClose }: Props) {
                 ))}
               </div>
 
-              {platform === 'desktop' ? (
-                <div className="flex items-start gap-3 px-1">
-                  <span className="w-7 h-7 shrink-0 rounded-lg bg-neutral-900 border border-neutral-800 flex items-center justify-center">
-                    <MonitorDown size={14} className="text-neutral-300" />
-                  </span>
-                  <p className="text-[13px] text-neutral-300 leading-relaxed">
-                    {t('pwaDesktopHint')}
-                  </p>
-                </div>
-              ) : (
-                <ol className="space-y-2.5">
-                  {STEP_ICONS[platform].map((Icon, i) => (
-                    <li key={i} className="flex items-center gap-3 px-1">
-                      <span className="w-7 h-7 shrink-0 rounded-lg bg-neutral-900 border border-neutral-800 flex items-center justify-center">
-                        <Icon size={14} className="text-neutral-300" />
+              <ol className="space-y-2.5">
+                {STEP_ICONS[platform].map((Icon, i) => (
+                  <li key={i} className="flex items-center gap-3 px-1">
+                    <span className="w-7 h-7 shrink-0 rounded-lg bg-neutral-900 border border-neutral-800 flex items-center justify-center">
+                      <Icon size={14} className="text-neutral-300" />
+                    </span>
+                    <span className="text-[13px] text-neutral-200 leading-snug">
+                      <span className="font-mono text-[11px] text-neutral-500 mr-1.5">
+                        {i + 1}.
                       </span>
-                      <span className="text-[13px] text-neutral-200 leading-snug">
-                        <span className="font-mono text-[11px] text-neutral-500 mr-1.5">
-                          {i + 1}.
-                        </span>
-                        {t(`${STEP_KEY_PREFIX[platform]}Step${i + 1}` as Parameters<typeof t>[0])}
-                      </span>
-                    </li>
-                  ))}
-                </ol>
-              )}
+                      {t(`${STEP_KEY_PREFIX[platform]}Step${i + 1}` as Parameters<typeof t>[0])}
+                    </span>
+                  </li>
+                ))}
+              </ol>
             </div>
           )}
         </div>
