@@ -46,7 +46,14 @@ export const authConfig: NextAuthConfig = {
       const isStripeWebhook = cleanPath.startsWith('/api/webhooks/stripe');
       const isInvite = cleanPath.startsWith('/invite/');
       const isHealthCheck = cleanPath.startsWith('/api/health');
-      if (isApiAuth || isMcpRoute || isPublicAsset || isTauriEntry || isClientActivate || isOAuthApi || isWellKnown || isOAuthPage || isStripeWebhook || isInvite || isHealthCheck) return true;
+      // Mailing: unsubscribe links arrive cookie-less from email clients; the
+      // cron + SES/SNS webhook authenticate via their own secrets/signatures.
+      const isMailingPublic =
+        cleanPath.startsWith('/unsubscribe') ||
+        cleanPath.startsWith('/api/unsubscribe') ||
+        cleanPath.startsWith('/api/cron') ||
+        cleanPath.startsWith('/api/webhooks/ses');
+      if (isApiAuth || isMcpRoute || isPublicAsset || isTauriEntry || isClientActivate || isOAuthApi || isWellKnown || isOAuthPage || isStripeWebhook || isInvite || isHealthCheck || isMailingPublic) return true;
 
       // Public marketing pages (pricing, contact) are always accessible
       if (isPublicMarketingRoute) return true;

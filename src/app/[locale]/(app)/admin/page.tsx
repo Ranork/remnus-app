@@ -3,7 +3,8 @@ import { auth } from '@/auth';
 import { getAllUsers } from '@/lib/actions/auth';
 import { getEngagementOverview, getActivationFunnel } from '@/lib/actions/analytics';
 import { getDemoFeedback } from '@/lib/actions/demoFeedback';
-import { Shield, Users, TrendingUp, Clock, Activity, Timer, MonitorPlay, Share2, Workflow, MessageCircle, UserPlus, CalendarPlus } from 'lucide-react';
+import Link from 'next/link';
+import { Shield, Users, TrendingUp, Clock, Activity, Timer, MonitorPlay, Share2, Workflow, MessageCircle, UserPlus, CalendarPlus, Mail } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import AdminUsersTable from '@/components/features/AdminUsersTable';
 import { SignupTrendChart, ActivationFunnelChart } from '@/components/features/admin/AdminCharts';
@@ -142,7 +143,7 @@ export default async function AdminPage() {
   const session = await auth();
   if (!session?.user || session.user.role !== 'admin') redirect('/login');
 
-  const [t, locale] = await Promise.all([getTranslations('Admin'), getLocale()]);
+  const [t, tMailing, locale] = await Promise.all([getTranslations('Admin'), getTranslations('Mailing'), getLocale()]);
 
   const [usersResult, engagement, funnel, demoFeedback] = await Promise.all([
     getAllUsers(),
@@ -171,6 +172,13 @@ export default async function AdminPage() {
             <h1 className="text-lg font-semibold text-neutral-100">{t('panelTitle')}</h1>
             <p className="mt-0.5 text-xs text-neutral-500">{t('panelSubtitle')}</p>
           </div>
+          <Link
+            href="/admin/mailing"
+            className="ml-auto flex items-center gap-2 rounded-lg border border-neutral-800 px-3.5 py-2 text-xs font-medium text-neutral-300 transition-colors hover:border-neutral-700 hover:bg-neutral-800/40"
+          >
+            <Mail size={14} className="text-blue-400" />
+            {tMailing('title')}
+          </Link>
         </div>
       </div>
 

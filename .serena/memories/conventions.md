@@ -6,7 +6,8 @@
 - Server components/layouts: `await getTranslations('Namespace')`
 - Server actions: `getTranslations('Errors')` for error messages
 - Add keys to ALL 8 files (en/tr/hi/es/fr/de/zh/ru) — missing keys fall back to English via the deep-merge in request.ts, then to the key name
-- 29 namespaces: Layout, Home, Auth, Workspace, WorkspaceSettings, Templates, Database, Editor, Page, IconPicker, Admin, Errors, LanguageSwitcher, MobileNav, Landing, Billing, Pricing, Contact, Download, Privacy, Updater, Sharing, UserSettings, OAuthAuthorize, Security, Consent, Onboarding, DemoFeedback (demo in-app feedback prompt), Brand (public /brand brand-kit page)
+- 30 namespaces: Layout, Home, Auth, Workspace, WorkspaceSettings, Templates, Database, Editor, Page, IconPicker, Admin, Errors, LanguageSwitcher, MobileNav, Landing, Billing, Pricing, Contact, Download, Privacy, Updater, Sharing, UserSettings, OAuthAuthorize, Security, Consent, Onboarding, DemoFeedback (demo in-app feedback prompt), Brand (public /brand brand-kit page), Mailing (admin /admin/mailing UI + public /unsubscribe page)
+- EMAIL COPY IS NOT i18n: the SES email templates (src/lib/email/templates.ts) are English-only by design (recipient locale isn't stored) — do NOT move email strings into messages/*.json
 - `Layout` namespace also has browser-tab strings (Tauri-only TabBar): `tabNewTooltip`, `tabClose`, `tabCloseOthers`, `tabCloseAll`, `tabUntitled` (besides demoMode/demoChangesNote/createFreeAccount)
 - `Consent` namespace: drives `CookieConsentBanner` (geo-aware cookie consent) — title/descriptionRequired/descriptionInformational/learnMore/accept/reject/gotIt keys
 - `Billing` namespace: drives BillingModal + WorkspaceSettings Billing tab + MembersTab seat meter (tier_*/status_*/seats/agents/storage/unlimited/upgradeTo/manageBilling/seatsUsage/seatLimitHint etc). Billing limit error keys live in `Errors` (seatLimitReached/agentLimitReached/storageLimitReached/workspaceLimitReached/billingUnavailable/billingInvalidTier/billingNoCustomer)
@@ -53,8 +54,8 @@
 - `export const runtime = 'nodejs'` required on MCP route (bcryptjs not Edge-compatible)
 - Write tools must check `ctx.scope !== 'write'` and return an error — never execute the mutation
 - Audit logs in `agent_activity` are best-effort (`.catch(() => {})` — tool response must not depend on audit success)
-- New migrations: `when` value must be greater than all existing — next migration `when > 1781600000000` (0031_signup_attribution = user signup_* cols; 0032_demo_feedback = demo_feedback table)
-- Many recent migrations (0017–0032) are NOT in `_journal.json` — applied manually via `src/db/apply-00xx-*.ts` scripts (libsql `batch()` silently no-ops DDL). Apply each to BOTH local (`DATABASE_URL="file:local.db" npx tsx ...`) and Turso (plain `npx tsx ...` reads `.env`)
+- New migrations: `when` value must be greater than all existing — next migration `when > 1781700000000` (0031_signup_attribution = user signup_* cols; 0032_demo_feedback = demo_feedback table; 0033_mailing = email_campaigns + email_log + user email_unsubscribed_at/email_suppressed)
+- Many recent migrations (0017–0033) are NOT in `_journal.json` — applied manually via `src/db/apply-00xx-*.ts` scripts (libsql `batch()` silently no-ops DDL). Apply each to BOTH local (`DATABASE_URL="file:local.db" npx tsx ...`) and Turso (plain `npx tsx ...` reads `.env`)
 
 ## Performance
 - `Promise.all` for independent fetches (no waterfalls in layouts)

@@ -6,6 +6,7 @@ import { getCurrentUser } from '@/lib/auth/session';
 import { getTranslations } from 'next-intl/server';
 import { checkCanAddAgent } from '@/lib/services/billing';
 import { captureServer, isCaptureAllowedFromRequest } from '@/lib/analytics/server';
+import { maybeSendAgentConnectedEmail } from '@/lib/email/lifecycle';
 import bcrypt from 'bcryptjs';
 import { randomBytes } from 'crypto';
 
@@ -95,6 +96,9 @@ export async function mintAgentToken(
   } catch {
     // best-effort
   }
+
+  // First-agent celebration email (once per user, ever). No-throw.
+  await maybeSendAgentConnectedEmail(userId);
 
   return { token: fullToken };
 }

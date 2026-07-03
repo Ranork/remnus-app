@@ -92,6 +92,12 @@ export const users = sqliteTable('user', {
   signupUtmMedium:   text('signup_utm_medium'),
   signupUtmCampaign: text('signup_utm_campaign'),
   signupReferrer:    text('signup_referrer'),
+  // Mailing suppression (migration 0033): `emailUnsubscribedAt` = the user
+  // clicked unsubscribe (mutes everything except the transactional welcome);
+  // `emailSuppressed` = SES reported a hard bounce / spam complaint via the
+  // SNS webhook (mutes ALL sends — protects the shared SES reputation).
+  emailUnsubscribedAt: integer('email_unsubscribed_at', { mode: 'timestamp' }),
+  emailSuppressed:     text('email_suppressed'), // 'bounced' | 'complained' | null
   createdAt:     integer('created_at', { mode: 'timestamp' }).notNull().default(sql`CURRENT_TIMESTAMP`),
 });
 
@@ -343,4 +349,43 @@ export const demoFeedback = sqliteTable('demo_feedback', {
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
 }, (table) => [
   index('demo_feedback_created_at_idx').on(table.createdAt),
+]);
+
+// ── Mailing (AWS SES) ─────────────────────────────────────────────────────────
+// Migration 0033. Manually composed newsletters written by an admin in the
+// /admin/mailing UI (markdown body rendered into the branded email layout).
+// Lifecycle emails (welcome / agent_nudge / agent_connected / inactivity) don't
+// need a campaign row — they only log into `email_log`.
+
+export const emailCampaigns = sqliteTable('email_campaigns', {
+  id:             text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  subject:        text('subject').notNull(),
+  preheader:      text('preheader'),
+  bodyMd:         text('body_md').notNull(),
+  status:         text('status', { enum: ['draft', 'sending', 'sent'] }).notNull().default('draft'),
+  recipientCount: integer('recipient_count').notNull().default(0),
+  sentCount:      integer('sent_count').notNull().default(0),
+  failedCount:    integer('failed_count').notNull().default(0),
+  createdBy:      text('created_by').references(() => users.id, { onDelete: 'set null' }),
+  createdAt:      integer('created_at', { mode: 'timestamp' }).notNull(),
+  sentAt:         integer('sent_at', { mode: 'timestamp' }),
+});
+
+// One row per sent (or failed) email — idempotency guard for the one-shot
+// lifecycle emails + the admin dashboard's send history. `userId` is SET NULL
+// on delete so the log survives user/demo cleanup.
+export const emailLog = sqliteTable('email_log', {
+  id:         text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  userId:     text('user_id').references(() => users.id, { onDelete: 'set null' }),
+  email:      text('email').notNull(),
+  kind:       text('kind', { enum: ['welcome', 'inactivity', 'agent_nudge', 'agent_connected', 'newsletter', 'test'] }).notNull(),
+  campaignId: text('campaign_id').references(() => emailCampaigns.id, { onDelete: 'set null' }),
+  subject:    text('subject').notNull(),
+  status:     text('status', { enum: ['sent', 'failed'] }).notNull(),
+  error:      text('error'),
+  createdAt:  integer('created_at', { mode: 'timestamp' }).notNull(),
+}, (table) => [
+  index('email_log_user_kind_idx').on(table.userId, table.kind),
+  index('email_log_created_at_idx').on(table.createdAt),
+  index('email_log_campaign_id_idx').on(table.campaignId),
 ]);

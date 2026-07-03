@@ -79,3 +79,5 @@ next-env.d.ts
 
 # MCP registry publisher CLI binary (downloaded tool, not part of the app)
 /mcp-publisher.exe
+# rendered email template previews (scripts/test-emails.ts fallback)
+email-previews/

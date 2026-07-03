@@ -7,6 +7,7 @@ import bcrypt from 'bcryptjs';
 import { randomBytes, createHash, randomUUID } from 'crypto';
 import { checkCanAddAgent } from '@/lib/services/billing';
 import { captureServer, isCaptureAllowedForUser, captureForUser, captureAnonymous } from '@/lib/analytics/server';
+import { maybeSendAgentConnectedEmail } from '@/lib/email/lifecycle';
 
 const ACCESS_TOKEN_TTL_MS  = 60 * 60 * 1000;          // 1 hour
 const REFRESH_TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
@@ -157,6 +158,9 @@ async function handleAuthorizationCode(params: URLSearchParams): Promise<Respons
   } catch {
     // best-effort
   }
+
+  // First-agent celebration email (once per user, ever). No-throw.
+  await maybeSendAgentConnectedEmail(row.userId);
 
   return tokenResponse({
     access_token:  tokens.accessToken,

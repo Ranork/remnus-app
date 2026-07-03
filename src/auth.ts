@@ -11,6 +11,7 @@ import { authConfig } from './auth.config';
 import { createSeedWorkspace } from '@/lib/seed';
 import { cookies } from 'next/headers';
 import { captureServer, isCaptureAllowedFromRequest } from '@/lib/analytics/server';
+import { sendWelcomeEmailTo } from '@/lib/email/lifecycle';
 
 // ── Type augmentation ─────────────────────────────────────────────────────────
 
@@ -200,6 +201,10 @@ export const { handlers, auth, signIn, signOut, unstable_update: update } = Next
       } catch {
         // analytics is best-effort — never block account creation
       }
+
+      // Welcome email (transactional). Awaited so the serverless invocation
+      // doesn't freeze before SES accepts it; sendWelcomeEmailTo never throws.
+      await sendWelcomeEmailTo(user.id);
 
       if (!isFirstUser) return;
 
