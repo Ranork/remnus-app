@@ -829,7 +829,6 @@
     "footerLinks": "Links",
     "footerApp": "App öffnen",
     "footerCopyright": "© {year} Remnus. Open Source.",
-    "bridgeNavWhyRemnus": "Warum Remnus",
     "bridgeNavIntegrations": "Integrationen",
     "bridgeNavMcp": "MCP",
     "bridgeNavPricing": "Preise",
@@ -859,9 +858,9 @@
     "bridgeBadgeGlamaSub": "MCP-Verzeichnis",
     "bridgeBadgeMcpsoSub": "Server-Verzeichnis",
     "bridgeWhySnum": "02 / Warum",
-    "bridgeWhyPart1": "Kein weiterer Chatbot.",
-    "bridgeWhyAccent": "Die KI, der du bereits vertraust",
-    "bridgeWhyPart2": ", arbeitet im selben Workspace wie dein Team.",
+    "bridgeWhyPart1": "Deine KI-Agenten haben endlich",
+    "bridgeWhyAccent": "einen Workspace, in dem sie arbeiten können.",
+    "bridgeWhyPart2": "",
     "bridgeWhyUnderline": "Deine Berechtigungen, nicht ihre.",
     "bridgeWhySig": "remnus.com / warum",
     "bridgeInsideSnum": "04 / Was drin ist",
@@ -1117,7 +1116,11 @@
     "bridgeDownloadDesktopTag": "DESKTOP-APP",
     "bridgeDownloadDesktopTitle": "Auf deinem Computer",
     "bridgeDownloadDesktopDesc": "Die native App für Windows, macOS und Linux — dein ganzer Workspace im eigenen Fenster, mit Tray und Shortcuts.",
-    "bridgeDownloadDesktopCta": "Für Desktop herunterladen"
+    "bridgeDownloadDesktopCta": "Für Desktop herunterladen",
+    "bridgeNavWiki": "Wiki",
+    "bridgeNavResources": "Ressourcen",
+    "bridgeNavResourcesWikiDesc": "MCP-Referenzdokumentation und API-Leitfäden",
+    "bridgeNavResourcesDocsDesc": "Artikel über die öffentliche Entwicklung von Remnus"
   },
   "Billing": {
     "tab": "Abrechnung",
@@ -1509,5 +1512,20 @@
     "fontSerifRole": "Display / Überschriften",
     "fontMonoRole": "Code / Labels",
     "fontSampleHeading": "Zwölf Boxkämpfer jagen Viktor quer über den Sylter Deich"
+  },
+  "Docs": {
+    "wikiNavHeading": "Dokumentation",
+    "menu": "Menü",
+    "onThisPage": "Auf dieser Seite",
+    "docsEyebrow": "Blog",
+    "docsTitle": "Der Remnus-Blog",
+    "docsIntro": "Gedanken über Open Source, AI-native Tools und das Entwickeln in der Öffentlichkeit.",
+    "readingTime": "{min} Min. Lesezeit",
+    "backToDocs": "Zurück zum Blog",
+    "previous": "Zurück",
+    "next": "Weiter",
+    "breadcrumbHome": "Startseite",
+    "breadcrumbWiki": "Wiki",
+    "breadcrumbDocs": "Docs"
   }
 }

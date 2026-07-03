@@ -825,7 +825,6 @@
     "footerLinks": "Ссылки",
     "footerApp": "Открыть приложение",
     "footerCopyright": "© {year} Remnus. С открытым кодом.",
-    "bridgeNavWhyRemnus": "Почему Remnus",
     "bridgeNavIntegrations": "Интеграции",
     "bridgeNavMcp": "MCP",
     "bridgeNavPricing": "Цены",
@@ -855,9 +854,9 @@
     "bridgeBadgeGlamaSub": "Каталог MCP",
     "bridgeBadgeMcpsoSub": "Каталог серверов",
     "bridgeWhySnum": "02 / Почему",
-    "bridgeWhyPart1": "Не очередной чат-бот.",
-    "bridgeWhyAccent": "ИИ, которому вы уже доверяете",
-    "bridgeWhyPart2": ", работающий в том же пространстве, что и ваша команда.",
+    "bridgeWhyPart1": "У ваших ИИ-агентов наконец есть",
+    "bridgeWhyAccent": "рабочее пространство для работы.",
+    "bridgeWhyPart2": "",
     "bridgeWhyUnderline": "С вашими правами, а не своими.",
     "bridgeWhySig": "remnus.com / why",
     "bridgeInsideSnum": "04 / Что внутри",
@@ -1113,7 +1112,11 @@
     "bridgeDownloadDesktopTag": "ДЕСКТОП-ПРИЛОЖЕНИЕ",
     "bridgeDownloadDesktopTitle": "На компьютере",
     "bridgeDownloadDesktopDesc": "Нативное приложение для Windows, macOS и Linux — всё рабочее пространство в отдельном окне, с треем и горячими клавишами.",
-    "bridgeDownloadDesktopCta": "Скачать для компьютера"
+    "bridgeDownloadDesktopCta": "Скачать для компьютера",
+    "bridgeNavWiki": "Wiki",
+    "bridgeNavResources": "Ресурсы",
+    "bridgeNavResourcesWikiDesc": "Справочная документация MCP и руководства по API",
+    "bridgeNavResourcesDocsDesc": "Статьи об открытой разработке Remnus"
   },
   "Billing": {
     "tab": "Оплата",
@@ -1505,5 +1508,20 @@
     "fontSerifRole": "Заголовки / дисплей",
     "fontMonoRole": "Код / подписи",
     "fontSampleHeading": "Съешь же ещё этих мягких французских булок да выпей чаю"
+  },
+  "Docs": {
+    "wikiNavHeading": "Документация",
+    "menu": "Меню",
+    "onThisPage": "На этой странице",
+    "docsEyebrow": "Блог",
+    "docsTitle": "Блог Remnus",
+    "docsIntro": "Мысли об открытом коде, AI-native инструментах и разработке на публике.",
+    "readingTime": "{min} мин чтения",
+    "backToDocs": "Назад к блогу",
+    "previous": "Назад",
+    "next": "Далее",
+    "breadcrumbHome": "Главная",
+    "breadcrumbWiki": "Wiki",
+    "breadcrumbDocs": "Документация"
   }
 }

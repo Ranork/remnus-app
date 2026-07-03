@@ -5,6 +5,7 @@ import { auth } from '@/auth';
 import LanguageSwitcher from '@/components/features/LanguageSwitcher';
 import LandingThemeToggle from './LandingThemeToggle';
 import PwaNavButton from './PwaNavButton';
+import ResourcesNavDropdown from './ResourcesNavDropdown';
 
 export default async function LandingNav() {
   const t = await getTranslations('Landing');
@@ -28,14 +29,20 @@ export default async function LandingNav() {
 
           <span className="flex-1" />
 
-          <nav className="hidden lg:flex items-center gap-6.5 text-[13.5px] text-neutral-50">
+          <nav className="hidden lg:flex items-center gap-5 xl:gap-6.5 text-[13.5px] text-neutral-50">
+            <Link href="/#integrations" className="transition-colors duration-150 hover:text-neutral-100">
+              {t('bridgeNavIntegrations')}
+            </Link>
+            <ResourcesNavDropdown
+              label={t('bridgeNavResources')}
+              wikiTitle={t('bridgeNavWiki')}
+              wikiDesc={t('bridgeNavResourcesWikiDesc')}
+              docsTitle={t('bridgeNavDocs')}
+              docsDesc={t('bridgeNavResourcesDocsDesc')}
+            />
             {[
-              { key: 'bridgeNavWhyRemnus',    href: '/#why'          },
-              { key: 'bridgeNavIntegrations', href: '/#integrations' },
-              { key: 'bridgeNavMcp',          href: '/#tools'        },
-              { key: 'bridgeNavPricing',      href: '/pricing'       },
-              { key: 'bridgeNavDownload',     href: '/download'      },
-              // { key: 'bridgeNavDocs',         href: '#'              },
+              { key: 'bridgeNavPricing',  href: '/pricing'  },
+              { key: 'bridgeNavDownload', href: '/download' },
             ].map(({ key, href }) => (
               <Link
                 key={key}

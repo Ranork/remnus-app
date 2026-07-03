@@ -829,7 +829,6 @@
     "footerLinks": "Enlaces",
     "footerApp": "Abrir app",
     "footerCopyright": "© {year} Remnus. Código abierto.",
-    "bridgeNavWhyRemnus": "Por qué Remnus",
     "bridgeNavIntegrations": "Integraciones",
     "bridgeNavMcp": "MCP",
     "bridgeNavPricing": "Precios",
@@ -859,9 +858,9 @@
     "bridgeBadgeGlamaSub": "Directorio MCP",
     "bridgeBadgeMcpsoSub": "Directorio de servidores",
     "bridgeWhySnum": "02 / Por qué",
-    "bridgeWhyPart1": "No es otro chatbot.",
-    "bridgeWhyAccent": "La IA en la que ya confías",
-    "bridgeWhyPart2": ", trabajando en el mismo workspace que tu equipo.",
+    "bridgeWhyPart1": "Tus agentes de IA por fin tienen",
+    "bridgeWhyAccent": "un workspace en el que trabajar.",
+    "bridgeWhyPart2": "",
     "bridgeWhyUnderline": "Tus permisos, no los suyos.",
     "bridgeWhySig": "remnus.com / por-qué",
     "bridgeInsideSnum": "04 / Qué hay dentro",
@@ -1117,7 +1116,11 @@
     "bridgeDownloadDesktopTag": "APP DE ESCRITORIO",
     "bridgeDownloadDesktopTitle": "En tu ordenador",
     "bridgeDownloadDesktopDesc": "La app nativa para Windows, macOS y Linux — todo tu espacio de trabajo en su propia ventana, con bandeja y atajos.",
-    "bridgeDownloadDesktopCta": "Descargar para escritorio"
+    "bridgeDownloadDesktopCta": "Descargar para escritorio",
+    "bridgeNavWiki": "Wiki",
+    "bridgeNavResources": "Recursos",
+    "bridgeNavResourcesWikiDesc": "Documentación de referencia MCP y guías de API",
+    "bridgeNavResourcesDocsDesc": "Artículos sobre construir Remnus en público"
   },
   "Billing": {
     "tab": "Facturación",
@@ -1509,5 +1512,20 @@
     "fontSerifRole": "Títulos / display",
     "fontMonoRole": "Código / etiquetas",
     "fontSampleHeading": "El veloz murciélago hindú comía feliz cardillo y kiwi"
+  },
+  "Docs": {
+    "wikiNavHeading": "Documentación",
+    "menu": "Menú",
+    "onThisPage": "En esta página",
+    "docsEyebrow": "Blog",
+    "docsTitle": "El blog de Remnus",
+    "docsIntro": "Reflexiones sobre el código abierto, las herramientas nativas de IA y construir en público.",
+    "readingTime": "{min} min de lectura",
+    "backToDocs": "Volver al blog",
+    "previous": "Anterior",
+    "next": "Siguiente",
+    "breadcrumbHome": "Inicio",
+    "breadcrumbWiki": "Wiki",
+    "breadcrumbDocs": "Docs"
   }
 }

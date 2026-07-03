@@ -9,23 +9,23 @@ export default async function LandingFooter() {
   const cols: { head: string; headHref?: string; links: { label: string; href: string }[] }[] = [
     {
       head: t('bridgeFooterColProtocol'),
+      headHref: '/wiki',
       links: [
-        { label: t('bridgeFooterProtocolMcp'),      href: '/share/docs/mcp' },
-        { label: t('bridgeFooterProtocolSdk'),       href: '/share/docs/mcp/getting-started' },
-        { label: t('bridgeFooterProtocolConnect'),   href: '/share/docs/mcp/connect-editors' },
-        { label: t('bridgeFooterProtocolTools'),     href: '/share/docs/mcp/read-tools' },
-        { label: t('bridgeFooterProtocolResources'), href: '/share/docs/mcp/resources' },
+        { label: t('bridgeFooterProtocolMcp'),      href: '/wiki' },
+        { label: t('bridgeFooterProtocolSdk'),       href: '/wiki/getting-started' },
+        { label: t('bridgeFooterProtocolConnect'),   href: '/wiki/connect-editors' },
+        { label: t('bridgeFooterProtocolTools'),     href: '/wiki/read-tools' },
+        { label: t('bridgeFooterProtocolResources'), href: '/wiki/resources' },
       ],
     },
     {
       head: t('bridgeFooterCompanyBlog'),
-      headHref: '/share/blog',
+      headHref: '/docs',
       links: [
-        { label: 'Why AGPL-3.0',              href: '/share/blog/why-agpl-3' },
-        { label: 'MCP-Native vs Integrated',  href: '/share/blog/mcp-native-vs-integrated' },
-        { label: 'Claude Fable 5 + Remnus',   href: '/share/blog/claude-fable-5' },
-        { label: 'How I Built Remnus',        href: '/share/blog/how-i-built-mcp-native' },
-        { label: 'Remnus vs Notion MCP',      href: '/share/blog/remnus-vs-notion-mcp' },
+        { label: 'How I Built Remnus',        href: '/docs/how-i-built-mcp-native' },
+        { label: 'Remnus vs Notion MCP',      href: '/docs/remnus-vs-notion-mcp' },
+        { label: 'MCP-Native vs Integrated',  href: '/docs/mcp-native-vs-integrated' },
+        { label: 'Why AGPL-3.0',              href: '/docs/why-agpl-3' },
       ],
     },
     {

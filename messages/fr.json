@@ -829,7 +829,6 @@
     "footerLinks": "Liens",
     "footerApp": "Ouvrir l'app",
     "footerCopyright": "© {year} Remnus. Open source.",
-    "bridgeNavWhyRemnus": "Pourquoi Remnus",
     "bridgeNavIntegrations": "Intégrations",
     "bridgeNavMcp": "MCP",
     "bridgeNavPricing": "Tarifs",
@@ -859,9 +858,9 @@
     "bridgeBadgeGlamaSub": "Annuaire MCP",
     "bridgeBadgeMcpsoSub": "Annuaire de serveurs",
     "bridgeWhySnum": "02 / Pourquoi",
-    "bridgeWhyPart1": "Pas un autre chatbot.",
-    "bridgeWhyAccent": "L'IA en qui tu as déjà confiance",
-    "bridgeWhyPart2": ", travaillant sur le même espace que ton équipe.",
+    "bridgeWhyPart1": "Tes agents IA ont enfin",
+    "bridgeWhyAccent": "un espace où travailler.",
+    "bridgeWhyPart2": "",
     "bridgeWhyUnderline": "Tes permissions, pas les siennes.",
     "bridgeWhySig": "remnus.com / pourquoi",
     "bridgeInsideSnum": "04 / Ce qu'il y a dedans",
@@ -1117,7 +1116,11 @@
     "bridgeDownloadDesktopTag": "APP DE BUREAU",
     "bridgeDownloadDesktopTitle": "Sur votre ordinateur",
     "bridgeDownloadDesktopDesc": "L'application native pour Windows, macOS et Linux — tout votre espace de travail dans sa propre fenêtre, avec barre système et raccourcis.",
-    "bridgeDownloadDesktopCta": "Télécharger pour le bureau"
+    "bridgeDownloadDesktopCta": "Télécharger pour le bureau",
+    "bridgeNavWiki": "Wiki",
+    "bridgeNavResources": "Ressources",
+    "bridgeNavResourcesWikiDesc": "Documentation de référence MCP et guides d'API",
+    "bridgeNavResourcesDocsDesc": "Articles sur le développement de Remnus en public"
   },
   "Billing": {
     "tab": "Facturation",
@@ -1509,5 +1512,20 @@
     "fontSerifRole": "Titres / display",
     "fontMonoRole": "Code / libellés",
     "fontSampleHeading": "Portez ce vieux whisky au juge blond qui fume"
+  },
+  "Docs": {
+    "wikiNavHeading": "Documentation",
+    "menu": "Menu",
+    "onThisPage": "Sur cette page",
+    "docsEyebrow": "Blog",
+    "docsTitle": "Le blog Remnus",
+    "docsIntro": "Réflexions sur l'open source, les outils AI-native et le développement en public.",
+    "readingTime": "{min} min de lecture",
+    "backToDocs": "Retour au blog",
+    "previous": "Précédent",
+    "next": "Suivant",
+    "breadcrumbHome": "Accueil",
+    "breadcrumbWiki": "Wiki",
+    "breadcrumbDocs": "Docs"
   }
 }

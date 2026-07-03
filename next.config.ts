@@ -14,6 +14,25 @@ const nextConfig: NextConfig = {
   experimental: {
     proxyClientMaxBodySize: '30mb',
   },
+  // The MCP reference docs + blog moved off the shared-page system onto the
+  // dedicated, SEO-first /wiki and /docs routes. Permanently redirect the old
+  // /share/* URLs so external links + indexed pages keep resolving. (redirects
+  // run before the intl/auth middleware.)
+  async redirects() {
+    return [
+      { source: '/share/docs/mcp', destination: '/wiki', permanent: true },
+      { source: '/share/docs/mcp/:slug*', destination: '/wiki/:slug*', permanent: true },
+      { source: '/share/blog', destination: '/docs', permanent: true },
+      { source: '/share/blog/:slug*', destination: '/docs/:slug*', permanent: true },
+    ];
+  },
+  // /llms.txt (llmstxt.org) — a plain-markdown site map for LLMs/AI agents.
+  // Served by src/app/api/llms/route.ts; rewritten here so the public URL has
+  // no /api prefix. Whitelisted (bypasses the intl/auth proxy) in proxy.ts's
+  // matcher + auth.config.ts's isPublicAsset, same as robots.txt/sitemap.xml.
+  async rewrites() {
+    return [{ source: '/llms.txt', destination: '/api/llms' }];
+  },
 };
 
 const intlConfig = withNextIntl(nextConfig);

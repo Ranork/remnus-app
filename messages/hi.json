@@ -829,7 +829,6 @@
     "footerLinks": "लिंक",
     "footerApp": "ऐप खोलें",
     "footerCopyright": "© {year} Remnus. ओपन सोर्स।",
-    "bridgeNavWhyRemnus": "Remnus क्यों",
     "bridgeNavIntegrations": "इंटीग्रेशन",
     "bridgeNavMcp": "MCP",
     "bridgeNavPricing": "मूल्य",
@@ -859,9 +858,9 @@
     "bridgeBadgeGlamaSub": "MCP डायरेक्टरी",
     "bridgeBadgeMcpsoSub": "सर्वर डायरेक्टरी",
     "bridgeWhySnum": "02 / क्यों",
-    "bridgeWhyPart1": "कोई और चैटबॉट नहीं।",
-    "bridgeWhyAccent": "वह AI जिस पर तुम पहले से भरोसा करते हो",
-    "bridgeWhyPart2": ", तुम्हारी टीम के साथ उसी workspace पर काम कर रहा है।",
+    "bridgeWhyPart1": "तुम्हारे AI एजेंट्स के पास आखिरकार",
+    "bridgeWhyAccent": "काम करने के लिए एक workspace है।",
+    "bridgeWhyPart2": "",
     "bridgeWhyUnderline": "तुम्हारी अनुमतियाँ, उसकी नहीं।",
     "bridgeWhySig": "remnus.com / क्यों",
     "bridgeInsideSnum": "04 / अंदर क्या है",
@@ -1117,7 +1116,11 @@
     "bridgeDownloadDesktopTag": "डेस्कटॉप ऐप",
     "bridgeDownloadDesktopTitle": "आपके कंप्यूटर पर",
     "bridgeDownloadDesktopDesc": "Windows, macOS और Linux के लिए नेटिव ऐप — पूरा वर्कस्पेस अपनी विंडो में, ट्रे और शॉर्टकट्स के साथ।",
-    "bridgeDownloadDesktopCta": "डेस्कटॉप के लिए डाउनलोड करें"
+    "bridgeDownloadDesktopCta": "डेस्कटॉप के लिए डाउनलोड करें",
+    "bridgeNavWiki": "Wiki",
+    "bridgeNavResources": "संसाधन",
+    "bridgeNavResourcesWikiDesc": "MCP संदर्भ दस्तावेज़ और API गाइड",
+    "bridgeNavResourcesDocsDesc": "Remnus को सार्वजनिक रूप से बनाने पर लेख"
   },
   "Billing": {
     "tab": "बिलिंग",
@@ -1509,5 +1512,20 @@
     "fontSerifRole": "डिस्प्ले / शीर्षक",
     "fontMonoRole": "कोड / लेबल",
     "fontSampleHeading": "The quick brown fox jumps over the lazy dog"
+  },
+  "Docs": {
+    "wikiNavHeading": "दस्तावेज़",
+    "menu": "मेन्यू",
+    "onThisPage": "इस पृष्ठ पर",
+    "docsEyebrow": "ब्लॉग",
+    "docsTitle": "Remnus ब्लॉग",
+    "docsIntro": "ओपन सोर्स, AI-नेटिव टूलिंग और सार्वजनिक रूप से निर्माण पर विचार।",
+    "readingTime": "{min} मिनट पढ़ें",
+    "backToDocs": "ब्लॉग पर वापस",
+    "previous": "पिछला",
+    "next": "अगला",
+    "breadcrumbHome": "होम",
+    "breadcrumbWiki": "विकी",
+    "breadcrumbDocs": "डॉक्स"
   }
 }

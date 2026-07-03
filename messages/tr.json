@@ -829,7 +829,6 @@
     "footerLinks": "Bağlantılar",
     "footerApp": "Uygulamayı aç",
     "footerCopyright": "© {year} Remnus. Açık kaynak.",
-    "bridgeNavWhyRemnus": "Neden Remnus",
     "bridgeNavIntegrations": "Entegrasyonlar",
     "bridgeNavMcp": "MCP",
     "bridgeNavPricing": "Fiyatlandırma",
@@ -859,9 +858,9 @@
     "bridgeBadgeGlamaSub": "MCP dizini",
     "bridgeBadgeMcpsoSub": "Sunucu dizini",
     "bridgeWhySnum": "02 / Neden",
-    "bridgeWhyPart1": "Başka bir chatbot değil.",
-    "bridgeWhyAccent": "Zaten güvendiğin yapay zeka",
-    "bridgeWhyPart2": ", ekibinle aynı çalışma alanında çalışıyor.",
+    "bridgeWhyPart1": "Yapay zeka ajanların artık",
+    "bridgeWhyAccent": "içinde çalışabilecekleri bir çalışma alanına sahip.",
+    "bridgeWhyPart2": "",
     "bridgeWhyUnderline": "Senin izinlerin, onun değil.",
     "bridgeWhySig": "remnus.com / neden",
     "bridgeInsideSnum": "04 / İçerisinde ne var",
@@ -1117,7 +1116,11 @@
     "bridgeDownloadDesktopTag": "MASAÜSTÜ UYGULAMASI",
     "bridgeDownloadDesktopTitle": "Bilgisayarında",
     "bridgeDownloadDesktopDesc": "Windows, macOS ve Linux için yerel uygulama — tüm çalışma alanın kendi penceresinde, tepsi simgesi ve kısayollarla.",
-    "bridgeDownloadDesktopCta": "Masaüstü için indir"
+    "bridgeDownloadDesktopCta": "Masaüstü için indir",
+    "bridgeNavWiki": "Wiki",
+    "bridgeNavResources": "Kaynaklar",
+    "bridgeNavResourcesWikiDesc": "MCP referans dokümanları ve API rehberleri",
+    "bridgeNavResourcesDocsDesc": "Remnus'u açık şekilde geliştirme üzerine yazılar"
   },
   "Billing": {
     "tab": "Faturalama",
@@ -1513,5 +1516,20 @@
     "fontSerifRole": "Başlık / vitrin",
     "fontMonoRole": "Kod / etiket",
     "fontSampleHeading": "Pijamalı hasta yağız şoföre çabucak güvendi"
+  },
+  "Docs": {
+    "wikiNavHeading": "Dokümantasyon",
+    "menu": "Menü",
+    "onThisPage": "Bu sayfada",
+    "docsEyebrow": "Blog",
+    "docsTitle": "Remnus Blog",
+    "docsIntro": "Açık kaynak, AI-native araçlar ve halka açık geliştirme üzerine düşünceler.",
+    "readingTime": "{min} dk okuma",
+    "backToDocs": "Bloga dön",
+    "previous": "Önceki",
+    "next": "Sonraki",
+    "breadcrumbHome": "Ana Sayfa",
+    "breadcrumbWiki": "Wiki",
+    "breadcrumbDocs": "Docs"
   }
 }

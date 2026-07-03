@@ -825,7 +825,6 @@
     "footerLinks": "链接",
     "footerApp": "打开应用",
     "footerCopyright": "© {year} Remnus。开源。",
-    "bridgeNavWhyRemnus": "为何选择 Remnus",
     "bridgeNavIntegrations": "集成",
     "bridgeNavMcp": "MCP",
     "bridgeNavPricing": "价格",
@@ -855,9 +854,9 @@
     "bridgeBadgeGlamaSub": "MCP 目录",
     "bridgeBadgeMcpsoSub": "服务器目录",
     "bridgeWhySnum": "02 / 为什么",
-    "bridgeWhyPart1": "不是又一个聊天机器人。",
-    "bridgeWhyAccent": "你已经信任的 AI",
-    "bridgeWhyPart2": "，与你的团队在同一个工作区中工作。",
+    "bridgeWhyPart1": "你的 AI 智能体终于有了",
+    "bridgeWhyAccent": "可以工作的工作区。",
+    "bridgeWhyPart2": "",
     "bridgeWhyUnderline": "用你的权限，而非它自己的。",
     "bridgeWhySig": "remnus.com / why",
     "bridgeInsideSnum": "04 / 内含什么",
@@ -1113,7 +1112,11 @@
     "bridgeDownloadDesktopTag": "桌面应用",
     "bridgeDownloadDesktopTitle": "在电脑上",
     "bridgeDownloadDesktopDesc": "适用于 Windows、macOS 和 Linux 的原生应用 — 整个工作区在独立窗口中运行，支持托盘和快捷键。",
-    "bridgeDownloadDesktopCta": "下载桌面版"
+    "bridgeDownloadDesktopCta": "下载桌面版",
+    "bridgeNavWiki": "Wiki",
+    "bridgeNavResources": "资源",
+    "bridgeNavResourcesWikiDesc": "MCP 参考文档和 API 指南",
+    "bridgeNavResourcesDocsDesc": "关于公开构建 Remnus 的文章"
   },
   "Billing": {
     "tab": "计费",
@@ -1505,5 +1508,20 @@
     "fontSerifRole": "标题 / 展示",
     "fontMonoRole": "代码 / 标签",
     "fontSampleHeading": "The quick brown fox jumps over the lazy dog"
+  },
+  "Docs": {
+    "wikiNavHeading": "文档",
+    "menu": "菜单",
+    "onThisPage": "本页内容",
+    "docsEyebrow": "博客",
+    "docsTitle": "Remnus 博客",
+    "docsIntro": "关于开源、AI 原生工具以及公开构建的思考。",
+    "readingTime": "阅读 {min} 分钟",
+    "backToDocs": "返回博客",
+    "previous": "上一篇",
+    "next": "下一篇",
+    "breadcrumbHome": "首页",
+    "breadcrumbWiki": "Wiki",
+    "breadcrumbDocs": "文档"
   }
 }

@@ -22,7 +22,9 @@ export const config = {
   matcher: [
     // manifest.json + sw.js/workbox-* (next-pwa service worker) must bypass the
     // middleware entirely — the browser fetches them cookie-less, so the auth
-    // check would bounce them to /login and break PWA install/offline.
-    '/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|manifest.json|sw.js|workbox-.*|logo.*|.*\\.(?:png|ico|svg|jpg|jpeg|webp|woff2?)).*)',
+    // check would bounce them to /login and break PWA install/offline. Same
+    // reasoning for llms.txt — AI crawlers fetch it cookie-less, and it's
+    // rewritten (afterFiles, i.e. after this middleware decision) to /api/llms.
+    '/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|llms.txt|manifest.json|sw.js|workbox-.*|logo.*|.*\\.(?:png|ico|svg|jpg|jpeg|webp|woff2?)).*)',
   ],
 };

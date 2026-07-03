@@ -829,7 +829,6 @@
     "footerLinks": "Links",
     "footerApp": "Open app",
     "footerCopyright": "© {year} Remnus. Open source.",
-    "bridgeNavWhyRemnus": "Why Remnus",
     "bridgeNavIntegrations": "Integrations",
     "bridgeNavMcp": "MCP",
     "bridgeNavPricing": "Pricing",
@@ -859,9 +858,9 @@
     "bridgeBadgeGlamaSub": "MCP directory",
     "bridgeBadgeMcpsoSub": "Server directory",
     "bridgeWhySnum": "02 / Why",
-    "bridgeWhyPart1": "Not another chatbot.",
-    "bridgeWhyAccent": "The AI you already trust",
-    "bridgeWhyPart2": ", working the same workspace as your team.",
+    "bridgeWhyPart1": "Your AI agents finally have",
+    "bridgeWhyAccent": "a workspace to work in.",
+    "bridgeWhyPart2": "",
     "bridgeWhyUnderline": "Your permissions, not its own.",
     "bridgeWhySig": "remnus.com / why",
     "bridgeInsideSnum": "04 / What’s inside",
@@ -1117,7 +1116,11 @@
     "bridgeDownloadDesktopTag": "DESKTOP APP",
     "bridgeDownloadDesktopTitle": "On your desktop",
     "bridgeDownloadDesktopDesc": "The native app for Windows, macOS, and Linux — your whole workspace in its own window, with tray and shortcuts.",
-    "bridgeDownloadDesktopCta": "Download for desktop"
+    "bridgeDownloadDesktopCta": "Download for desktop",
+    "bridgeNavWiki": "Wiki",
+    "bridgeNavResources": "Resources",
+    "bridgeNavResourcesWikiDesc": "MCP reference docs and API guides",
+    "bridgeNavResourcesDocsDesc": "Articles on building Remnus in public"
   },
   "Billing": {
     "tab": "Billing",
@@ -1513,5 +1516,20 @@
     "fontSerifRole": "Display / headings",
     "fontMonoRole": "Code / labels",
     "fontSampleHeading": "The quick brown fox jumps over the lazy dog"
+  },
+  "Docs": {
+    "wikiNavHeading": "Documentation",
+    "menu": "Menu",
+    "onThisPage": "On this page",
+    "docsEyebrow": "Blog",
+    "docsTitle": "The Remnus Blog",
+    "docsIntro": "Thoughts on open source, AI-native tooling, and building in public.",
+    "readingTime": "{min} min read",
+    "backToDocs": "Back to blog",
+    "previous": "Previous",
+    "next": "Next",
+    "breadcrumbHome": "Home",
+    "breadcrumbWiki": "Wiki",
+    "breadcrumbDocs": "Docs"
   }
 }

@@ -32,9 +32,11 @@ export const authConfig: NextAuthConfig = {
       const isPublicAsset =
         /\.(png|ico|svg|jpg|jpeg|webp|woff2?)$/.test(path) ||
         // PWA files fetched cookie-less by the browser — must never redirect to /login.
-        path === '/manifest.json' || path === '/sw.js' || path.startsWith('/workbox-');
+        path === '/manifest.json' || path === '/sw.js' || path.startsWith('/workbox-') ||
+        // llms.txt — fetched cookie-less by AI crawlers/agents (rewritten to /api/llms).
+        path === '/llms.txt';
       const isRootRoute = cleanPath === '/' || cleanPath === '/share';
-      const isPublicMarketingRoute = cleanPath.startsWith('/pricing') || cleanPath.startsWith('/contact') || cleanPath.startsWith('/download') || cleanPath.startsWith('/share/') || cleanPath.startsWith('/security') || cleanPath.startsWith('/brand');
+      const isPublicMarketingRoute = cleanPath.startsWith('/pricing') || cleanPath.startsWith('/contact') || cleanPath.startsWith('/download') || cleanPath.startsWith('/share/') || cleanPath.startsWith('/security') || cleanPath.startsWith('/brand') || cleanPath.startsWith('/wiki') || cleanPath.startsWith('/docs');
       const isMcpRoute = cleanPath.startsWith('/api/mcp');
       const isTauriEntry = cleanPath.startsWith('/tauri-app');
       const isClientActivate = cleanPath.startsWith('/api/auth/client-activate');
