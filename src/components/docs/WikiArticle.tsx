@@ -25,7 +25,7 @@ export default function WikiArticle({
 }) {
   return (
     <div className="flex gap-12">
-      <article className="min-w-0 flex-1 max-w-3xl">
+      <article className="min-w-0 flex-1 max-w-4xl">
         <header className="mb-8">
           <BreadcrumbTrail items={breadcrumb} />
           <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-500/10 text-blue-500 mb-4">

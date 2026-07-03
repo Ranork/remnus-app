@@ -51,7 +51,7 @@ export default async function BlogPostPage({ params }: Props) {
         />
       )}
       <article className="px-4 sm:px-8 lg:px-14 py-14 lg:py-20">
-        <div className="max-w-3xl mx-auto">
+        <div className="max-w-4xl mx-auto">
           <BreadcrumbTrail
             items={[
               { name: t('breadcrumbHome'), href: '/' },
