@@ -299,7 +299,7 @@ const SEED_TOKEN_PREFIX = 'rmns-demo';
 export type ActivationFunnel = {
   signups: number;   // real (non-demo) users
   connected: number; // created a real MCP token (PAT createdBy or active OAuth)
-  activated: number; // made a real agent tool call (PAT path)
+  activated: number; // made a real agent tool call (PAT or OAuth path; migration 0034)
 };
 
 export async function getActivationFunnel(): Promise<ActivationFunnel> {
@@ -310,7 +310,7 @@ export async function getActivationFunnel(): Promise<ActivationFunnel> {
   const realSet = new Set(realUsers.map((u) => u.id));
 
   // "Connected" = minted a real PAT (by creator) OR holds an OAuth token.
-  const [patCreators, oauthOwners, callCreators] = await Promise.all([
+  const [patCreators, oauthOwners, callCreators, callOwners] = await Promise.all([
     db
       .select({ userId: agentTokens.createdBy })
       .from(agentTokens)
@@ -322,6 +322,12 @@ export async function getActivationFunnel(): Promise<ActivationFunnel> {
       .from(agentActivity)
       .innerJoin(agentTokens, eq(agentActivity.tokenId, agentTokens.id))
       .where(ne(agentTokens.tokenPrefix, SEED_TOKEN_PREFIX)),
+    // OAuth-path calls attribute via owner_user_id (migration 0034; null on
+    // seed/legacy rows, so no seed filter needed here).
+    db
+      .selectDistinct({ userId: agentActivity.ownerUserId })
+      .from(agentActivity)
+      .where(sql`${agentActivity.ownerUserId} IS NOT NULL`),
   ]);
 
   const connectedSet = new Set<string>();
@@ -329,7 +335,7 @@ export async function getActivationFunnel(): Promise<ActivationFunnel> {
     if (r.userId && realSet.has(r.userId)) connectedSet.add(r.userId);
   }
   const activatedSet = new Set<string>();
-  for (const r of callCreators) {
+  for (const r of [...callCreators, ...callOwners]) {
     if (r.userId && realSet.has(r.userId)) activatedSet.add(r.userId);
   }
 
@@ -378,6 +384,7 @@ export type UserAgents = {
   oauthActive: number;       // active (non-revoked) OAuth connections
   calls: number;             // MCP tool calls logged across the user's workspaces
   lastCall: number | null;   // epoch ms of the most recent call
+  responseBytes: number;     // total serialized response payload bytes (~tokens = /4); migration 0034
   tokens: AgentTokenSummary[]; // long-lived PAT tokens, newest first
 };
 
@@ -591,16 +598,18 @@ export async function getUserDetail(userId: string): Promise<UserDetail> {
         .select({
           c: sql<number>`cast(count(*) as int)`,
           last: sql<number>`max(${agentActivity.createdAt})`,
+          bytes: sql<number>`coalesce(sum(${agentActivity.responseBytes}), 0)`,
         })
         .from(agentActivity)
         .where(inArray(agentActivity.workspaceId, wsIds))
-    : [{ c: 0, last: null }];
+    : [{ c: 0, last: null, bytes: 0 }];
 
   const agents: UserAgents = {
     active: patActive + oauthActive,
     oauthActive,
     calls: Number(callAgg?.c ?? 0),
     lastCall: toEpochMs(callAgg?.last),
+    responseBytes: Number(callAgg?.bytes ?? 0),
     tokens: patTokens,
   };
 

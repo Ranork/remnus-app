@@ -4,6 +4,8 @@ import { captureAgentCall } from '@/lib/analytics/server';
 
 export type TokenContext = {
   tokenId: string;
+  /** Which table tokenId points at — routes the audit-log FK columns (migration 0034). */
+  tokenKind: 'pat' | 'oauth';
   workspaceId: string;
   scope: 'read' | 'write';
   agentName: string | null;
@@ -17,15 +19,19 @@ export async function logActivity(
   status: 'success' | 'error',
   targetType?: string,
   targetId?: string,
+  responseText?: string,
 ) {
   db.insert(agentActivity)
     .values({
-      tokenId: ctx.tokenId,
+      tokenId: ctx.tokenKind === 'pat' ? ctx.tokenId : null,
+      oauthTokenId: ctx.tokenKind === 'oauth' ? ctx.tokenId : null,
+      ownerUserId: ctx.ownerUserId,
       workspaceId: ctx.workspaceId,
       tool,
       targetType: targetType ?? null,
       targetId: targetId ?? null,
       status,
+      responseBytes: responseText != null ? Buffer.byteLength(responseText, 'utf8') : null,
       createdAt: new Date(),
     })
     .catch(() => {});

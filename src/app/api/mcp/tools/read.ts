@@ -37,8 +37,9 @@ export function registerReadTools(server: McpServer, ctx: TokenContext) {
     async ({ query, limit }) => {
       try {
         const results = await searchWorkspace(ctx.workspaceId, query, limit ?? 10);
-        await logActivity(ctx, 'search_workspace', 'success');
-        return { content: [{ type: 'text' as const, text: JSON.stringify(results, null, 2) }], structuredContent: { results } };
+        const text = JSON.stringify(results, null, 2);
+        await logActivity(ctx, 'search_workspace', 'success', undefined, undefined, text);
+        return { content: [{ type: 'text' as const, text }], structuredContent: { results } };
       } catch (err) {
         await logActivity(ctx, 'search_workspace', 'error');
         return { content: [{ type: 'text' as const, text: `Error: ${String(err)}` }], isError: true };
@@ -72,8 +73,9 @@ export function registerReadTools(server: McpServer, ctx: TokenContext) {
     async ({ parentId, limit, cursor }) => {
       try {
         const result = await listWorkspaceItems(ctx.workspaceId, parentId, limit ?? 100, cursor);
-        await logActivity(ctx, 'list_workspace', 'success');
-        return { content: [{ type: 'text' as const, text: JSON.stringify(result, null, 2) }], structuredContent: result };
+        const text = JSON.stringify(result, null, 2);
+        await logActivity(ctx, 'list_workspace', 'success', undefined, undefined, text);
+        return { content: [{ type: 'text' as const, text }], structuredContent: result };
       } catch (err) {
         await logActivity(ctx, 'list_workspace', 'error');
         return { content: [{ type: 'text' as const, text: `Error: ${String(err)}` }], isError: true };
@@ -102,8 +104,9 @@ export function registerReadTools(server: McpServer, ctx: TokenContext) {
     async ({ pageId }) => {
       try {
         const page = await getAnyPageById(ctx.workspaceId, pageId);
-        await logActivity(ctx, 'get_page', 'success', 'page', pageId);
-        return { content: [{ type: 'text' as const, text: JSON.stringify(page, null, 2) }], structuredContent: page };
+        const text = JSON.stringify(page, null, 2);
+        await logActivity(ctx, 'get_page', 'success', 'page', pageId, text);
+        return { content: [{ type: 'text' as const, text }], structuredContent: page };
       } catch (err) {
         await logActivity(ctx, 'get_page', 'error', 'page', pageId);
         return { content: [{ type: 'text' as const, text: `Error: ${String(err)}` }], isError: true };
@@ -127,8 +130,9 @@ export function registerReadTools(server: McpServer, ctx: TokenContext) {
     async ({ databaseId }) => {
       try {
         const result = await getDatabaseSchema(ctx.workspaceId, databaseId);
-        await logActivity(ctx, 'get_database_schema', 'success', 'database', databaseId);
-        return { content: [{ type: 'text' as const, text: JSON.stringify(result, null, 2) }], structuredContent: result };
+        const text = JSON.stringify(result, null, 2);
+        await logActivity(ctx, 'get_database_schema', 'success', 'database', databaseId, text);
+        return { content: [{ type: 'text' as const, text }], structuredContent: result };
       } catch (err) {
         await logActivity(ctx, 'get_database_schema', 'error', 'database', databaseId);
         return { content: [{ type: 'text' as const, text: `Error: ${String(err)}` }], isError: true };
@@ -164,8 +168,9 @@ export function registerReadTools(server: McpServer, ctx: TokenContext) {
     async ({ tool, status, from, to, limit }) => {
       try {
         const rows = await queryAuditLog(ctx.workspaceId, { tool, status, from, to }, limit ?? 50);
-        await logActivity(ctx, 'query_audit_log', 'success');
-        return { content: [{ type: 'text' as const, text: JSON.stringify(rows, null, 2) }], structuredContent: { entries: rows } };
+        const text = JSON.stringify(rows, null, 2);
+        await logActivity(ctx, 'query_audit_log', 'success', undefined, undefined, text);
+        return { content: [{ type: 'text' as const, text }], structuredContent: { entries: rows } };
       } catch (err) {
         await logActivity(ctx, 'query_audit_log', 'error');
         return { content: [{ type: 'text' as const, text: `Error: ${String(err)}` }], isError: true };
@@ -192,8 +197,9 @@ export function registerReadTools(server: McpServer, ctx: TokenContext) {
     async () => {
       try {
         const members = await listWorkspaceMembers(ctx.workspaceId);
-        await logActivity(ctx, 'list_members', 'success');
-        return { content: [{ type: 'text' as const, text: JSON.stringify(members, null, 2) }], structuredContent: { members } };
+        const text = JSON.stringify(members, null, 2);
+        await logActivity(ctx, 'list_members', 'success', undefined, undefined, text);
+        return { content: [{ type: 'text' as const, text }], structuredContent: { members } };
       } catch (err) {
         await logActivity(ctx, 'list_members', 'error');
         return { content: [{ type: 'text' as const, text: `Error: ${String(err)}` }], isError: true };
@@ -222,8 +228,9 @@ export function registerReadTools(server: McpServer, ctx: TokenContext) {
     async ({ databaseId, limit, filters, cursor }) => {
       try {
         const result = await queryDatabaseRows(ctx.workspaceId, databaseId, limit ?? 50, filters, cursor);
-        await logActivity(ctx, 'query_database', 'success', 'database', databaseId);
-        return { content: [{ type: 'text' as const, text: JSON.stringify(result, null, 2) }], structuredContent: result };
+        const text = JSON.stringify(result, null, 2);
+        await logActivity(ctx, 'query_database', 'success', 'database', databaseId, text);
+        return { content: [{ type: 'text' as const, text }], structuredContent: result };
       } catch (err) {
         await logActivity(ctx, 'query_database', 'error', 'database', databaseId);
         return { content: [{ type: 'text' as const, text: `Error: ${String(err)}` }], isError: true };

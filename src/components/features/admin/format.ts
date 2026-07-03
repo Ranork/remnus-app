@@ -40,6 +40,14 @@ export function formatBytes(bytes: number | null | undefined): string {
   return `${v >= 10 ? v.toFixed(0) : v.toFixed(1)} ${units[i]}`;
 }
 
+/** Rough token estimate from response payload bytes (≈4 bytes/token), compact: "412", "1.2K", "3.4M". */
+export function formatTokens(bytes: number | null | undefined): string {
+  const tokens = Math.round(Math.max(0, bytes ?? 0) / 4);
+  if (tokens < 1_000) return String(tokens);
+  if (tokens < 1_000_000) return `${(tokens / 1_000).toFixed(1).replace(/\.0$/, '')}K`;
+  return `${(tokens / 1_000_000).toFixed(1).replace(/\.0$/, '')}M`;
+}
+
 /** Relative "last active" label, e.g. "5m ago", "2d ago", or "—". */
 export function formatRelative(
   ms: number | null | undefined,

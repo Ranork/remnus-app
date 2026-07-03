@@ -13,6 +13,7 @@ import {
   users,
   agentActivity,
   agentTokens,
+  oauthAccessTokens,
   sharedPages,
 } from '@/db/schema';
 import { eq, and, or, like, asc, desc, gte, lte, sql } from 'drizzle-orm';
@@ -112,6 +113,8 @@ export async function queryAuditLog(
   if (filters?.from) conditions.push(gte(agentActivity.createdAt, new Date(filters.from)));
   if (filters?.to) conditions.push(lte(agentActivity.createdAt, new Date(filters.to)));
 
+  // PAT rows resolve names via agent_tokens; OAuth rows (token_id null since
+  // migration 0034) via oauth_access_tokens.
   const rows = await db
     .select({
       id: agentActivity.id,
@@ -120,11 +123,12 @@ export async function queryAuditLog(
       targetType: agentActivity.targetType,
       targetId: agentActivity.targetId,
       createdAt: agentActivity.createdAt,
-      agentName: agentTokens.agentName,
-      tokenName: agentTokens.name,
+      agentName: sql<string | null>`coalesce(${agentTokens.agentName}, ${oauthAccessTokens.agentName})`,
+      tokenName: sql<string | null>`coalesce(${agentTokens.name}, ${oauthAccessTokens.displayName})`,
     })
     .from(agentActivity)
     .leftJoin(agentTokens, eq(agentTokens.id, agentActivity.tokenId))
+    .leftJoin(oauthAccessTokens, eq(oauthAccessTokens.id, agentActivity.oauthTokenId))
     .where(and(...conditions))
     .orderBy(desc(agentActivity.createdAt))
     .limit(limit);

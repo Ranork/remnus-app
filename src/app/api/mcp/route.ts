@@ -95,7 +95,7 @@ async function verifyBearerToken(authHeader: string | null): Promise<TokenContex
     }
 
     console.log('[mcp/auth] oauth_token_ok', { prefix: prefix8, scope: row.scope });
-    return { tokenId: row.id, workspaceId: row.workspaceId, scope: row.scope as 'read' | 'write', agentName: row.agentName ?? null, ownerUserId: row.userId ?? null };
+    return { tokenId: row.id, tokenKind: 'oauth', workspaceId: row.workspaceId, scope: row.scope as 'read' | 'write', agentName: row.agentName ?? null, ownerUserId: row.userId ?? null };
   }
 
   // Personal access token (rmns_ prefix)
@@ -116,7 +116,7 @@ async function verifyBearerToken(authHeader: string | null): Promise<TokenContex
 
   db.update(agentTokens).set({ lastUsedAt: new Date() }).where(eq(agentTokens.id, row.id)).catch(() => {});
 
-  return { tokenId: row.id, workspaceId: row.workspaceId, scope: row.scope as 'read' | 'write', agentName: row.agentName ?? null, ownerUserId: row.createdBy ?? null };
+  return { tokenId: row.id, tokenKind: 'pat', workspaceId: row.workspaceId, scope: row.scope as 'read' | 'write', agentName: row.agentName ?? null, ownerUserId: row.createdBy ?? null };
 }
 
 // ── Rate limiting (60 req/min per token, in-memory token bucket) ──────────────

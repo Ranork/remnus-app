@@ -54,7 +54,7 @@
 - `export const runtime = 'nodejs'` required on MCP route (bcryptjs not Edge-compatible)
 - Write tools must check `ctx.scope !== 'write'` and return an error — never execute the mutation
 - Audit logs in `agent_activity` are best-effort (`.catch(() => {})` — tool response must not depend on audit success)
-- New migrations: `when` value must be greater than all existing — next migration `when > 1781700000000` (0031_signup_attribution = user signup_* cols; 0032_demo_feedback = demo_feedback table; 0033_mailing = email_campaigns + email_log + user email_unsubscribed_at/email_suppressed)
+- New migrations: `when` value must be greater than all existing — next migration `when > 1781700000000` (0031_signup_attribution = user signup_* cols; 0032_demo_feedback = demo_feedback table; 0033_mailing = email_campaigns + email_log + user email_unsubscribed_at/email_suppressed; 0034_agent_usage = agent_activity REBUILD: token_id nullable + oauth_token_id + owner_user_id + response_bytes — fixes silent OAuth audit drop, powers usage meters)
 - Many recent migrations (0017–0033) are NOT in `_journal.json` — applied manually via `src/db/apply-00xx-*.ts` scripts (libsql `batch()` silently no-ops DDL). Apply each to BOTH local (`DATABASE_URL="file:local.db" npx tsx ...`) and Turso (plain `npx tsx ...` reads `.env`)
 
 ## Performance

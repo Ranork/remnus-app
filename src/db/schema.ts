@@ -303,17 +303,24 @@ export const oauthAccessTokens = sqliteTable('oauth_access_tokens', {
 ]);
 
 export const agentActivity = sqliteTable('agent_activity', {
-  id:          text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
-  tokenId:     text('token_id').notNull().references(() => agentTokens.id, { onDelete: 'cascade' }),
-  workspaceId: text('workspace_id').notNull(),
-  tool:        text('tool').notNull(),
-  targetType:  text('target_type'),
-  targetId:    text('target_id'),
-  status:      text('status', { enum: ['success', 'error'] }).notNull(),
-  createdAt:   integer('created_at', { mode: 'timestamp' }).notNull(),
+  id:           text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  // Exactly one of tokenId (PAT call) / oauthTokenId (OAuth call) is set. Migration 0034.
+  tokenId:      text('token_id').references(() => agentTokens.id, { onDelete: 'cascade' }),
+  oauthTokenId: text('oauth_token_id').references(() => oauthAccessTokens.id, { onDelete: 'set null' }),
+  // Token owner (PAT creator / OAuth grantee) — denormalized for per-user usage sums. Migration 0034.
+  ownerUserId:  text('owner_user_id').references(() => users.id, { onDelete: 'set null' }),
+  workspaceId:  text('workspace_id').notNull(),
+  tool:         text('tool').notNull(),
+  targetType:   text('target_type'),
+  targetId:     text('target_id'),
+  status:       text('status', { enum: ['success', 'error'] }).notNull(),
+  // Serialized response payload size in bytes (token estimate ≈ bytes/4). Migration 0034.
+  responseBytes: integer('response_bytes'),
+  createdAt:    integer('created_at', { mode: 'timestamp' }).notNull(),
 }, (table) => [
   index('agent_activity_workspace_id_idx').on(table.workspaceId),
   index('agent_activity_token_id_idx').on(table.tokenId),
+  index('agent_activity_owner_created_idx').on(table.ownerUserId, table.createdAt),
 ]);
 
 // Subscription — bound to the paying user (billing owner), NOT a workspace.

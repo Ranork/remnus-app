@@ -10,7 +10,7 @@ import { getUserDetail, type UserDetail } from '@/lib/actions/analytics';
 import { setUserRole } from '@/lib/actions/auth';
 import { adminSetUserPlan } from '@/lib/actions/billing';
 import type { PlanTier } from '@/lib/billing/plans';
-import { formatDate, formatDuration, formatRelative, formatBytes } from './format';
+import { formatDate, formatDuration, formatRelative, formatBytes, formatTokens } from './format';
 
 const PLAN_TIERS: PlanTier[] = ['free', 'startup', 'professional', 'enterprise'];
 
@@ -209,10 +209,11 @@ export default function AdminUserDetailModal({
               {/* AI agents (MCP) */}
               <section>
                 <h3 className="text-xs font-medium text-neutral-400 uppercase tracking-wider mb-3">{t('agentsSection')}</h3>
-                <div className="grid grid-cols-3 gap-3 mb-3">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
                   <Stat icon={<Bot size={13} />} label={t('agentsConnected')} value={String(detail.agents.active)} />
                   <Stat icon={<Zap size={13} />} label={t('agentsCalls')} value={detail.agents.calls.toLocaleString(locale)} />
                   <Stat icon={<Activity size={13} />} label={t('agentsLastCall')} value={formatRelative(detail.agents.lastCall, relLabels)} />
+                  <Stat icon={<Sparkles size={13} />} label={t('agentsTokensServed')} value={`~${formatTokens(detail.agents.responseBytes)}`} />
                 </div>
                 {detail.agents.tokens.length === 0 && detail.agents.oauthActive === 0 ? (
                   <p className="text-xs text-neutral-600 italic">{t('agentsNone')}</p>

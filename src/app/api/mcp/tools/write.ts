@@ -44,10 +44,11 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
       }
       try {
         const result = await createPageInWorkspace(ctx.workspaceId, { title, content, parentId, databaseId, properties }, { tokenId: ctx.tokenId });
-        await logActivity(ctx, 'create_page', 'success', result.type, result.id);
-        publish({ scope: databaseId ? 'database' : 'sidebar', workspaceId: ctx.workspaceId, resourceId: databaseId, actorId: actorId(ctx) });
         const out = { id: result.id, type: result.type };
-        return { content: [{ type: 'text' as const, text: JSON.stringify(out) }], structuredContent: out };
+        const text = JSON.stringify(out);
+        await logActivity(ctx, 'create_page', 'success', result.type, result.id, text);
+        publish({ scope: databaseId ? 'database' : 'sidebar', workspaceId: ctx.workspaceId, resourceId: databaseId, actorId: actorId(ctx) });
+        return { content: [{ type: 'text' as const, text }], structuredContent: out };
       } catch (err) {
         await logActivity(ctx, 'create_page', 'error');
         return { content: [{ type: 'text' as const, text: `Error: ${String(err)}` }], isError: true };
@@ -78,10 +79,11 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
       }
       try {
         await updatePageById(ctx.workspaceId, pageId, { title, content, properties }, { tokenId: ctx.tokenId });
-        await logActivity(ctx, 'update_page', 'success', 'page', pageId);
-        publish({ scope: 'page', workspaceId: ctx.workspaceId, resourceId: pageId, actorId: actorId(ctx) });
         const out = { updated: true, id: pageId };
-        return { content: [{ type: 'text' as const, text: JSON.stringify(out) }], structuredContent: out };
+        const text = JSON.stringify(out);
+        await logActivity(ctx, 'update_page', 'success', 'page', pageId, text);
+        publish({ scope: 'page', workspaceId: ctx.workspaceId, resourceId: pageId, actorId: actorId(ctx) });
+        return { content: [{ type: 'text' as const, text }], structuredContent: out };
       } catch (err) {
         await logActivity(ctx, 'update_page', 'error', 'page', pageId);
         return { content: [{ type: 'text' as const, text: `Error: ${String(err)}` }], isError: true };
@@ -116,9 +118,10 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
       }
       try {
         const results = await bulkUpdatePages(ctx.workspaceId, updates, { tokenId: ctx.tokenId });
-        await logActivity(ctx, 'bulk_update_pages', 'success');
+        const text = JSON.stringify(results);
+        await logActivity(ctx, 'bulk_update_pages', 'success', undefined, undefined, text);
         publish({ scope: 'database', workspaceId: ctx.workspaceId, actorId: actorId(ctx) });
-        return { content: [{ type: 'text' as const, text: JSON.stringify(results) }], structuredContent: { results } };
+        return { content: [{ type: 'text' as const, text }], structuredContent: { results } };
       } catch (err) {
         await logActivity(ctx, 'bulk_update_pages', 'error');
         return { content: [{ type: 'text' as const, text: `Error: ${String(err)}` }], isError: true };
@@ -153,10 +156,11 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
           return { content: [{ type: 'text' as const, text: preview }], structuredContent: { deleted: false, id: pageId, preview } };
         }
         const result = await deleteItemFromWorkspace(ctx.workspaceId, pageId);
-        await logActivity(ctx, 'delete_page', 'success', result.type, pageId);
-        publish({ scope: result.type === 'db-row' ? 'database' : 'sidebar', workspaceId: ctx.workspaceId, actorId: actorId(ctx) });
         const out = { deleted: true, id: pageId };
-        return { content: [{ type: 'text' as const, text: JSON.stringify(out) }], structuredContent: out };
+        const text = JSON.stringify(out);
+        await logActivity(ctx, 'delete_page', 'success', result.type, pageId, text);
+        publish({ scope: result.type === 'db-row' ? 'database' : 'sidebar', workspaceId: ctx.workspaceId, actorId: actorId(ctx) });
+        return { content: [{ type: 'text' as const, text }], structuredContent: out };
       } catch (err) {
         await logActivity(ctx, 'delete_page', 'error', 'page', pageId);
         return { content: [{ type: 'text' as const, text: `Error: ${String(err)}` }], isError: true };
@@ -184,9 +188,10 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
       }
       try {
         const result = await moveItemInWorkspace(ctx.workspaceId, itemId, newParentId ?? null);
-        await logActivity(ctx, 'move_item', 'success', 'item', itemId);
+        const text = JSON.stringify(result);
+        await logActivity(ctx, 'move_item', 'success', 'item', itemId, text);
         publish({ scope: 'sidebar', workspaceId: ctx.workspaceId, actorId: actorId(ctx) });
-        return { content: [{ type: 'text' as const, text: JSON.stringify(result) }], structuredContent: result };
+        return { content: [{ type: 'text' as const, text }], structuredContent: result };
       } catch (err) {
         await logActivity(ctx, 'move_item', 'error', 'item', itemId);
         return { content: [{ type: 'text' as const, text: `Error: ${String(err)}` }], isError: true };
@@ -220,10 +225,11 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
       }
       try {
         const result = await createDatabaseInWorkspace(ctx.workspaceId, { name, schema, parentId });
-        await logActivity(ctx, 'create_database', 'success', 'database', result.databaseId);
-        publish({ scope: 'sidebar', workspaceId: ctx.workspaceId, actorId: actorId(ctx) });
         const out = { id: result.id, databaseId: result.databaseId };
-        return { content: [{ type: 'text' as const, text: JSON.stringify(out) }], structuredContent: out };
+        const text = JSON.stringify(out);
+        await logActivity(ctx, 'create_database', 'success', 'database', result.databaseId, text);
+        publish({ scope: 'sidebar', workspaceId: ctx.workspaceId, actorId: actorId(ctx) });
+        return { content: [{ type: 'text' as const, text }], structuredContent: out };
       } catch (err) {
         await logActivity(ctx, 'create_database', 'error');
         return { content: [{ type: 'text' as const, text: `Error: ${String(err)}` }], isError: true };
@@ -258,9 +264,10 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
       }
       try {
         const result = await updateDatabaseSchemaById(ctx.workspaceId, databaseId, { addColumns, removeColumnIds }, confirm ?? false);
-        await logActivity(ctx, 'update_database_schema', 'success', 'database', databaseId);
+        const text = JSON.stringify(result);
+        await logActivity(ctx, 'update_database_schema', 'success', 'database', databaseId, text);
         publish({ scope: 'database', workspaceId: ctx.workspaceId, resourceId: databaseId, actorId: actorId(ctx) });
-        return { content: [{ type: 'text' as const, text: JSON.stringify(result) }], structuredContent: result };
+        return { content: [{ type: 'text' as const, text }], structuredContent: result };
       } catch (err) {
         await logActivity(ctx, 'update_database_schema', 'error', 'database', databaseId);
         return { content: [{ type: 'text' as const, text: `Error: ${String(err)}` }], isError: true };

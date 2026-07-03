@@ -1,7 +1,7 @@
 'use server';
 import { db } from '@/db';
 import { agentTokens, agentActivity, oauthAccessTokens, workspaces, workspaceMembers } from '@/db/schema';
-import { and, eq, isNull, ne, inArray } from 'drizzle-orm';
+import { and, eq, isNull, ne, or, inArray } from 'drizzle-orm';
 import { getCurrentUser } from '@/lib/auth/session';
 
 /**
@@ -26,10 +26,8 @@ export interface OnboardingProgress {
  * Derives new-user onboarding progress entirely from real DB state — no separate
  * "completed" flag/column. The client persists only a local "dismissed" bit.
  *
- * NOTE (known gap): OAuth-path tool calls are NOT recorded in `agent_activity`
- * (its `token_id` FKs to `agent_tokens`, so the OAuth token id silently fails the
- * insert). So `hasAgentCall` reflects the PAT path reliably; OAuth first-calls are
- * not yet server-detectable. Tracked as a follow-up — see the Work Plan task.
+ * Since migration 0034 OAuth tool calls land in `agent_activity` too (nullable
+ * `token_id` + `oauth_token_id`), so `hasAgentCall` covers both token paths.
  */
 export async function getOnboardingProgress(): Promise<OnboardingProgress> {
   const user = await getCurrentUser();
@@ -74,13 +72,17 @@ export async function getOnboardingProgress(): Promise<OnboardingProgress> {
         isNull(oauthAccessTokens.revokedAt),
       ))
       .limit(1),
-    // A real tool call: audit-log row tied to a non-seed token.
+    // A real tool call: OAuth rows have token_id null (migration 0034); PAT rows
+    // must not be the planted seed token.
     db.select({ id: agentActivity.id })
       .from(agentActivity)
-      .innerJoin(agentTokens, eq(agentActivity.tokenId, agentTokens.id))
+      .leftJoin(agentTokens, eq(agentActivity.tokenId, agentTokens.id))
       .where(and(
         inArray(agentActivity.workspaceId, wsIds),
-        ne(agentTokens.tokenPrefix, SEED_TOKEN_PREFIX),
+        or(
+          isNull(agentActivity.tokenId),
+          ne(agentTokens.tokenPrefix, SEED_TOKEN_PREFIX),
+        ),
       ))
       .limit(1),
   ]);
