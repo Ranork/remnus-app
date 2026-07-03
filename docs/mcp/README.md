@@ -12,23 +12,23 @@ Remnus MCP is a [Model Context Protocol](https://modelcontextprotocol.io) server
 ## Endpoint
 
 ```
-https://remnus.com/api/mcp
+https://www.remnus.com/api/mcp
 ```
 
-Supports both **Streamable HTTP** (stateless, one request per call) and **SSE** (stateful, persistent connection).
+Always use the `www` host — the apex `remnus.com` redirects to `www.remnus.com`, and some OAuth clients reject the resulting resource-indicator mismatch. Supports both **Streamable HTTP** (stateless, one request per call) and **SSE** (stateful, persistent connection).
 
 ## Quick start
 
-1. Open your workspace → **⋯ menu** → **Settings** → **Tokens** tab
-2. Click **New Token**, choose a name and scope
-3. Copy the token and configure your AI client — see [Getting Started](https://remnus.com/share/docs/mcp/getting-started)
+1. Open your workspace → sidebar **AI Agents** button → **Connect editor**
+2. Pick your editor. Most connect with **OAuth** — no token to copy, just approve the consent screen in your browser on first connect. Prefer a token? Expand **Advanced** to mint one.
+3. Ask your agent to list your workspace — see [Getting Started](getting-started.md) for the full walkthrough
 
 ## Documentation
 
 | | |
 |---|---|
-| [Getting Started](getting-started.md) | Token setup, Claude Desktop config, first call |
-| [Connect Your Editor](connect-editors.md) | Windsurf, Cline, Zed & more — ready configs + OAuth |
+| [Getting Started](getting-started.md) | OAuth connect, PAT fallback, first call |
+| [Connect Your Editor](connect-editors.md) | Windsurf, Continue, Antigravity, Cline, Zed & more — ready configs + OAuth |
 | [Authentication](authentication.md) | Bearer tokens, scopes, rate limits |
 | [Read Tools](read-tools.md) | 7 read-only tools |
 | [Write Tools](write-tools.md) | 7 write tools |

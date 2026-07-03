@@ -8,8 +8,8 @@ https://www.remnus.com/api/mcp
 
 There are two ways to authenticate:
 
-- **OAuth (recommended, token-less)** — point the editor at the URL and approve the consent screen in your browser on first connect. Nothing to copy or paste. Works in editors that run the MCP OAuth 2.1 flow on a `401` (Claude, Cursor, VS Code, Zed, Codex).
-- **Personal access token (PAT)** — mint a scoped token in **AI Agents → Connect editor → Advanced**, then send it as an `Authorization: Bearer …` header. Works everywhere, including editors that do not yet run the OAuth flow.
+- **OAuth (recommended, token-less)** — point the editor at the URL and approve the consent screen in your browser on first connect. Nothing to copy or paste. Works in editors that run the MCP OAuth 2.1 flow on a `401` (Claude Code, Cursor, VS Code, Zed, Codex, and most other MCP-compatible clients — including Claude Desktop via the `mcp-remote` bridge, see [Getting Started](getting-started.md)).
+- **Personal access token (PAT)** — mint a scoped token in **AI Agents → Connect editor → Advanced** (workspace owners only), then send it as an `Authorization: Bearer …` header. Works everywhere, including editors that do not yet run the OAuth flow.
 
 > **Always use the `www` host for OAuth.** The apex `remnus.com` redirects to `www.remnus.com`, and some clients reject the resulting resource-indicator mismatch. PAT (header-based) connections follow the redirect fine either way.
 
@@ -17,17 +17,20 @@ There are two ways to authenticate:
 
 | Editor | Config location | Auth | One-click |
 |---|---|---|---|
-| Claude Code / Desktop | `claude mcp add` command / `.mcpb` bundle | OAuth | ✓ |
+| Claude Code | `claude mcp add` command | OAuth · PAT | ✓ |
+| Claude Desktop | `claude_desktop_config.json` (via `mcp-remote`) | OAuth · PAT | — |
 | Cursor | `~/.cursor/mcp.json` | OAuth · PAT | ✓ deeplink |
 | VS Code (Copilot) | MCP settings | OAuth · PAT | ✓ deeplink |
 | Codex | `~/.codex/config.toml` | OAuth (`codex mcp login`) · PAT | — |
 | **Windsurf** | `~/.codeium/windsurf/mcp_config.json` | PAT | — |
+| **Continue** | `~/.continue/config.json` | PAT | — |
+| **Antigravity** | `~/.gemini/config/mcp_config.json` | PAT | — |
 | **Cline** | `cline_mcp_settings.json` | PAT | — |
 | **Zed** | `settings.json` → `context_servers` | OAuth · PAT | — |
 
-Claude, Cursor, VS Code, and Codex are walked through step-by-step in the in-app **AI Agents → Connect editor** flow (and produce one-click deeplinks or ready commands). This page covers the file-configured editors: **Windsurf**, **Cline**, and **Zed**.
+Claude Code, Cursor, VS Code, Codex, Windsurf, Continue, and Antigravity are all walked through step-by-step in the in-app **AI Agents → Connect editor** flow — the first four produce one-click deeplinks or ready commands (OAuth by default); the last three are JSON-config editors, so the flow hands you a ready-to-paste snippet with a PAT already embedded (they don't yet support OAuth). This page additionally covers three editors not built into that flow: **Cline** and **Zed** (file-configured), and **Claude Desktop** (via the `mcp-remote` bridge — see [Getting Started](getting-started.md)).
 
-To mint a token for any of the PAT snippets below: open the sidebar **AI Agents** panel → **Connect editor** → expand **Advanced**, pick a workspace and scope (read or write), and copy the generated token. It is shown only once.
+To mint a token for any of the PAT snippets below: open the sidebar **AI Agents** panel → **Connect editor** → expand **Advanced**, pick a workspace and scope (read or write), and copy the generated token. It is shown only once. Only workspace **owners** can mint tokens.
 
 ---
 
@@ -58,6 +61,84 @@ Add Remnus under `mcpServers` using `serverUrl` and your token:
 3. Ask Cascade: *"List all pages and databases in my Remnus workspace."*
 
 > Windsurf accepts both `serverUrl` and `url` for remote HTTP servers; `serverUrl` is the documented field. You can keep the token out of the file with variable interpolation — e.g. `"Authorization": "Bearer ${env:REMNUS_TOKEN}"`.
+
+---
+
+## Continue
+
+Config file:
+
+- macOS / Linux: `~/.continue/config.json`
+- Windows: `%USERPROFILE%\.continue\config.json`
+
+Add Remnus under `mcpServers`:
+
+```json
+{
+  "mcpServers": {
+    "remnus": {
+      "url": "https://www.remnus.com/api/mcp",
+      "headers": {
+        "Authorization": "Bearer YOUR_TOKEN_HERE"
+      }
+    }
+  }
+}
+```
+
+1. Mint a token in **AI Agents → Connect editor → Advanced** and paste it in place of `YOUR_TOKEN_HERE`.
+2. Reload the config from Continue's settings, or restart your editor.
+3. Ask Continue: *"List all pages and databases in my Remnus workspace."*
+
+---
+
+## Antigravity
+
+Config file:
+
+- macOS / Linux: `~/.gemini/config/mcp_config.json`
+- Windows: `%USERPROFILE%\.gemini\config\mcp_config.json`
+
+Antigravity uses `serverUrl` instead of `url` for remote HTTP servers:
+
+```json
+{
+  "mcpServers": {
+    "remnus": {
+      "serverUrl": "https://www.remnus.com/api/mcp",
+      "headers": {
+        "Authorization": "Bearer YOUR_TOKEN_HERE"
+      }
+    }
+  }
+}
+```
+
+1. Mint a token in **AI Agents → Connect editor → Advanced** and paste it in place of `YOUR_TOKEN_HERE`.
+2. Reload MCP servers from Antigravity's settings.
+3. Ask the agent: *"List all pages and databases in my Remnus workspace."*
+
+---
+
+## Claude Desktop
+
+Claude Desktop doesn't (yet) appear in the in-app **Connect editor** picker, but it connects the same way as any desktop app that reads a `claude_desktop_config.json`-style `mcpServers` config: bridge through [`mcp-remote`](https://www.npmjs.com/package/mcp-remote), which runs the OAuth 2.1 browser flow on first connect.
+
+- macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
+- Windows: `%APPDATA%\Claude\claude_desktop_config.json`
+
+```json
+{
+  "mcpServers": {
+    "remnus": {
+      "command": "npx",
+      "args": ["-y", "mcp-remote", "https://www.remnus.com/api/mcp"]
+    }
+  }
+}
+```
+
+Restart Claude Desktop. On the first tool call it opens your browser to approve the consent screen — no token to paste. See [Getting Started](getting-started.md) for the PAT-based variant.
 
 ---
 

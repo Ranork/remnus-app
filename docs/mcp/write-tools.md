@@ -113,7 +113,10 @@ Create a new database with a custom schema. A `Title` text column is always prep
 }
 ```
 
-Column types: `text`, `number`, `select`, `multi_select`, `date`, `datetime`
+Column types: `text`, `number`, `select`, `multi_select`, `status`, `user`, `multi_user`, `date`, `datetime`, `checkbox`, `url`, `email`, `phone`
+
+- `status` — like `select`, but each option may include a `group`: `"todo"` | `"in_progress"` | `"complete"` (renders as a progress-ring glyph).
+- `user` / `multi_user` — store workspace member user ids (no `options` needed); resolved to member name + avatar in the UI.
 
 **Returns** — `{ id, databaseId }`
 

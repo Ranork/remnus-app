@@ -6,16 +6,27 @@ All 7 read tools are available to every token regardless of scope.
 
 ## search_workspace
 
-Search pages and databases in the workspace by title.
+Search the workspace by title **and content**. Matches standalone pages, databases, and database rows (each row is a page) on their title or body text.
 
 **Parameters**
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `query` | string | ✓ | | Search query |
+| `query` | string | ✓ | | Text to match against item titles and content (case-insensitive substring) |
 | `limit` | number | | `10` | Maximum results |
 
-**Returns** — array of `{ id, type, title }` objects.
+**Returns** — `{ results: [...] }`, where each result has:
+
+| Field | Type | Description |
+|---|---|---|
+| `id` | string | Item ID (pass to `get_page`) |
+| `type` | string | `page` \| `database` \| `database_row` |
+| `title` | string | Item title |
+| `breadcrumb` | string[] | Location path from the workspace root to the item (for a `database_row`, ends with its parent database name) |
+| `matchedOn` | string | Where the query matched: `title` \| `content` |
+| `snippet` | string | Matching content snippet (empty when the match was on the title) |
+| `databaseId` | string? | Parent database ID, present for `database_row` results (pass to `query_database`) |
+| `parentId` | string? | Parent item ID for nested sidebar items |
 
 ---
 
@@ -31,7 +42,7 @@ List workspace items (pages and databases). Supports cursor-based pagination and
 | `limit` | number | | `100` | Items per page |
 | `cursor` | string | | | Pagination cursor from a previous `nextCursor` |
 
-**Returns** — `{ items: [...], hasMore: boolean, nextCursor?: string }`
+**Returns** — `{ items: [...], hasMore: boolean, nextCursor?: string }`, where each item has `{ id, type, title, parentId, icon, databaseId? }`.
 
 ---
 
@@ -59,7 +70,7 @@ Get only the column schema of a database, without fetching rows. Use this before
 |---|---|---|---|
 | `databaseId` | string | ✓ | Database ID (from `list_workspace` or `search_workspace`) |
 
-**Returns** — `{ schema: [{ id, name, type, options? }] }`
+**Returns** — `{ name, schema: [{ id, name, type, options? }] }`
 
 ---
 
@@ -119,4 +130,4 @@ Query the MCP agent activity audit log for the current workspace.
 | `to` | string | | | End of date range — ISO 8601 |
 | `limit` | number | | `50` | Maximum results |
 
-**Returns** — array of audit log entries with `tool`, `status`, `targetType`, `targetId`, and `createdAt`.
+**Returns** — array of audit log entries with `tool`, `status`, `targetType`, `targetId`, `createdAt`, `agentName` (the agent's brand id, if set), and `tokenName` (the token's label).
