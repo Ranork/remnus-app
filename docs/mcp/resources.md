@@ -1,6 +1,6 @@
 # Resources
 
-MCP resources provide structured, addressable data that clients can subscribe to or read on demand. Remnus exposes four resource templates.
+MCP resources provide structured, addressable data that clients can subscribe to or read on demand. Remnus exposes five resource templates.
 
 ---
 
@@ -32,6 +32,31 @@ Get the full JSON schema of a workspace — all databases with their column defi
   ]
 }
 ```
+
+---
+
+## remnus://workspace/{id}/digest
+
+Get a compact, one-line-per-item map of the whole workspace — the cheapest way for an agent to orient before making targeted reads.
+
+**URI** — `remnus://workspace/{workspaceId}/digest`
+
+**Mime type** — `text/markdown`
+
+**Returns** — an indented markdown tree, one line per item, carrying titles, ids, database row counts, and last-updated dates:
+
+```markdown
+# Workspace digest
+
+4 items (3 pages, 1 databases). Dates are last-updated (YYYY-MM-DD).
+Read a page with get_page(id) — use mode:"outline" for a cheap skim — and rows with query_database(databaseId, fields:[…]).
+
+- [page] Start Here (id: a09c…, updated: 2026-06-28)
+  - [page] How This Was Built (id: 6e02…, updated: 2026-06-28)
+- [database] Sprint Board (id: f1c6…, databaseId: f0e6…, rows: 16, updated: 2026-07-01)
+```
+
+**Token tip** — a whole workspace fits in a few hundred tokens here, versus paginating `list_workspace` and probing pages one by one. Read the digest first, then fetch only what you need.
 
 ---
 

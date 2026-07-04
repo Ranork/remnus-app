@@ -407,6 +407,7 @@ export async function queryDatabaseRows(
   limit = 50,
   filters?: Record<string, unknown>,
   cursor?: string,
+  fields?: string[],
 ) {
   const resolvedId = await assertDatabaseInWorkspace(databaseId, workspaceId);
 
@@ -417,6 +418,27 @@ export async function queryDatabaseRows(
     .limit(1);
 
   if (!dbRecord) throw new Error('Database not found');
+
+  // Optional field projection — trims each row's properties (and the returned
+  // schema) to the requested columns. Entries match column ids OR names
+  // (case-insensitive); row markdown content is included only when 'content'
+  // is explicitly requested. Cuts response payload dramatically on wide tables.
+  let allowedColIds: Set<string> | null = null;
+  let includeContent = true;
+  let projectedSchema: typeof dbRecord.schema = dbRecord.schema;
+  if (fields && fields.length > 0) {
+    const schemaCols = (Array.isArray(dbRecord.schema) ? dbRecord.schema : []) as { id?: string; name?: string }[];
+    const wanted = new Set(fields.map(f => f.toLowerCase()));
+    includeContent = wanted.has('content');
+    allowedColIds = new Set(
+      schemaCols
+        .filter(c =>
+          (c.id != null && wanted.has(String(c.id).toLowerCase())) ||
+          (c.name != null && wanted.has(String(c.name).toLowerCase())))
+        .map(c => String(c.id)),
+    );
+    projectedSchema = schemaCols.filter(c => allowedColIds!.has(String(c.id)));
+  }
 
   // Push property filters into SQL using json_extract so limit is applied after filtering.
   // Handles both scalar fields (select, text, number) and array fields (multi_select)
@@ -462,11 +484,121 @@ export async function queryDatabaseRows(
   const last = page[page.length - 1];
 
   return {
-    schema: dbRecord.schema,
-    rows: page.map(({ sortOrder: _so, ...r }) => r),
+    schema: projectedSchema,
+    rows: page.map(({ sortOrder: _so, ...r }) => {
+      if (!allowedColIds) return r;
+      const source = (r.properties ?? {}) as Record<string, unknown>;
+      const properties: Record<string, unknown> = {};
+      for (const key of Object.keys(source)) {
+        if (allowedColIds.has(key)) properties[key] = source[key];
+      }
+      return { id: r.id, title: r.title, properties, ...(includeContent ? { content: r.content } : {}) };
+    }),
     hasMore,
     nextCursor: hasMore && last ? encodeCursor(last.sortOrder, last.id) : undefined,
   };
+}
+
+/**
+ * Collapses markdown to an outline: headings plus the first line of each
+ * section (fenced code skipped), for token-cheap page skims. Headingless
+ * content falls back to its first few lines.
+ */
+export function buildContentOutline(markdown: string, snippetLength = 150): string {
+  const truncate = (s: string) => (s.length > snippetLength ? s.slice(0, snippetLength - 1).trimEnd() + '…' : s);
+  const out: string[] = [];
+  let awaitingSnippet = true; // capture the leading paragraph before any heading too
+  let inCode = false;
+
+  for (const line of markdown.split('\n')) {
+    const trimmed = line.trim();
+    if (trimmed.startsWith('```')) { inCode = !inCode; continue; }
+    if (inCode) continue;
+    if (/^#{1,6}\s/.test(trimmed)) {
+      out.push(trimmed);
+      awaitingSnippet = true;
+      continue;
+    }
+    if (awaitingSnippet && trimmed) {
+      out.push(truncate(trimmed));
+      awaitingSnippet = false;
+    }
+  }
+
+  if (out.length === 0) {
+    return markdown
+      .split('\n')
+      .map(l => l.trim())
+      .filter(Boolean)
+      .slice(0, 3)
+      .map(truncate)
+      .join('\n');
+  }
+  return out.join('\n');
+}
+
+/**
+ * Compact one-line-per-item map of the whole workspace (title · type · ids ·
+ * row counts · last-updated), indented by nesting. One cheap read orients an
+ * agent without paginating list_workspace or fetching page bodies.
+ */
+export async function getWorkspaceDigest(workspaceId: string): Promise<string> {
+  const [items, rowCounts] = await Promise.all([
+    db
+      .select({
+        id: workspaceItems.id,
+        type: workspaceItems.type,
+        title: workspaceItems.title,
+        parentId: workspaceItems.parentId,
+        updatedAt: workspaceItems.updatedAt,
+        sortOrder: workspaceItems.sortOrder,
+        databaseId: databases.id,
+      })
+      .from(workspaceItems)
+      .leftJoin(databases, eq(databases.itemId, workspaceItems.id))
+      .where(eq(workspaceItems.workspaceId, workspaceId))
+      .orderBy(asc(workspaceItems.sortOrder), asc(workspaceItems.id)),
+    db
+      .select({ databaseId: pages.databaseId, c: sql<number>`cast(count(*) as int)` })
+      .from(pages)
+      .innerJoin(databases, eq(pages.databaseId, databases.id))
+      .innerJoin(workspaceItems, eq(databases.itemId, workspaceItems.id))
+      .where(eq(workspaceItems.workspaceId, workspaceId))
+      .groupBy(pages.databaseId),
+  ]);
+
+  const counts = new Map(rowCounts.map(r => [r.databaseId, Number(r.c ?? 0)]));
+  const byParent = new Map<string | null, typeof items>();
+  for (const item of items) {
+    const key = item.parentId ?? null;
+    const bucket = byParent.get(key);
+    if (bucket) bucket.push(item);
+    else byParent.set(key, [item]);
+  }
+
+  const lines: string[] = [];
+  const walk = (parentId: string | null, depth: number) => {
+    for (const item of byParent.get(parentId) ?? []) {
+      // Legacy rows can carry CURRENT_TIMESTAMP-as-text → Invalid Date (see the
+      // createdAt gotcha in AGENTS.md); omit the date segment for those.
+      const validDate = item.updatedAt instanceof Date && !Number.isNaN(item.updatedAt.getTime());
+      const updated = validDate ? `, updated: ${item.updatedAt.toISOString().slice(0, 10)}` : '';
+      const extra = item.type === 'database'
+        ? `, databaseId: ${item.databaseId}, rows: ${counts.get(item.databaseId!) ?? 0}`
+        : '';
+      lines.push(`${'  '.repeat(depth)}- [${item.type}] ${item.title || 'Untitled'} (id: ${item.id}${extra}${updated})`);
+      walk(item.id, depth + 1);
+    }
+  };
+  walk(null, 0);
+
+  const pageCount = items.filter(i => i.type === 'page').length;
+  return (
+    `# Workspace digest\n\n` +
+    `${items.length} items (${pageCount} pages, ${items.length - pageCount} databases). Dates are last-updated (YYYY-MM-DD).\n` +
+    `Read a page with get_page(id) — use mode:"outline" for a cheap skim — and rows with query_database(databaseId, fields:[…]).\n\n` +
+    lines.join('\n')
+  );
 }
 
 export async function getAnyPageById(workspaceId: string, pageId: string) {

@@ -8,6 +8,7 @@ import {
   getAnyPageById,
   getDatabaseSchema,
   queryDatabaseRows,
+  buildContentOutline,
 } from '@/lib/services/workspace';
 import { logActivity, type TokenContext } from '../context';
 
@@ -86,27 +87,33 @@ export function registerReadTools(server: McpServer, ctx: TokenContext) {
   server.registerTool(
     'get_page',
     {
-      description: 'Get full content of a workspace page or database row by its ID. Auto-detects the type — no flags needed.',
+      description: 'Get content of a workspace page or database row by its ID. Auto-detects the type — no flags needed. Pass mode: "outline" for a token-cheap skim (headings + first line of each section) before deciding whether to fetch the full content.',
       inputSchema: {
         pageId: z.string().describe('The workspace item ID or database row ID'),
+        mode: z.enum(['full', 'outline']).optional().default('full').describe('"full" (default) returns the whole markdown body; "outline" returns only headings + the first line of each section — use it to skim long pages cheaply, then re-fetch with "full" if needed'),
       },
       outputSchema: z.object({
         id: z.string().describe('Page ID'),
         type: z.string().describe('Resolved type (page | database)'),
         title: z.string().optional().describe('Page title'),
-        content: z.string().optional().describe('Markdown content'),
+        content: z.string().optional().describe('Markdown content (collapsed to headings + first lines when mode is "outline")'),
         icon: z.string().nullable().optional().describe('Page icon'),
         properties: z.any().optional().describe('Database-row properties (database rows only)'),
         databaseId: z.string().nullable().optional().describe('Associated database ID (database items only)'),
+        mode: z.string().optional().describe('Present ("outline") when the content was collapsed'),
+        fullContentChars: z.number().optional().describe('Size of the full content in characters (outline mode only) — gauge whether a "full" fetch is worth it'),
       }).passthrough(),
       annotations: { title: 'Get page', readOnlyHint: true, openWorldHint: false },
     },
-    async ({ pageId }) => {
+    async ({ pageId, mode }) => {
       try {
         const page = await getAnyPageById(ctx.workspaceId, pageId);
-        const text = JSON.stringify(page, null, 2);
+        const payload = mode === 'outline' && page.content
+          ? { ...page, content: buildContentOutline(page.content), mode: 'outline', fullContentChars: page.content.length }
+          : page;
+        const text = JSON.stringify(payload, null, 2);
         await logActivity(ctx, 'get_page', 'success', 'page', pageId, text);
-        return { content: [{ type: 'text' as const, text }], structuredContent: page };
+        return { content: [{ type: 'text' as const, text }], structuredContent: payload };
       } catch (err) {
         await logActivity(ctx, 'get_page', 'error', 'page', pageId);
         return { content: [{ type: 'text' as const, text: `Error: ${String(err)}` }], isError: true };
@@ -210,24 +217,25 @@ export function registerReadTools(server: McpServer, ctx: TokenContext) {
   server.registerTool(
     'query_database',
     {
-      description: 'Get schema and rows of a database. Optionally filter rows by property values. Supports cursor-based pagination.',
+      description: 'Get schema and rows of a database. Optionally filter rows by property values, and project with fields to fetch only the columns you need (much cheaper on wide tables). Supports cursor-based pagination.',
       inputSchema: {
         databaseId: z.string().describe('Database ID (from list_workspace or search)'),
         limit: z.number().optional().default(50).describe('Maximum rows per page (default 50)'),
         filters: z.record(z.string(), z.any()).optional().describe('Filter rows by property value, e.g. {"status": "Done"} or {"col_xxx": ["Tag1"]}'),
+        fields: z.array(z.string()).optional().describe('Only return these columns (match by column id or name, case-insensitive); row title is always included. Add "content" to include row markdown bodies — otherwise they are omitted. Omit fields entirely for full rows.'),
         cursor: z.string().optional().describe('Pagination cursor from a previous response\'s nextCursor field'),
       },
       outputSchema: z.object({
-        schema: z.any().optional().describe('Database column schema'),
+        schema: z.any().optional().describe('Database column schema (trimmed to the requested fields when projecting)'),
         rows: z.array(z.any()).describe('Matching rows on this page'),
         hasMore: z.boolean().optional().describe('Whether more rows exist beyond this page'),
         nextCursor: z.string().optional().describe('Cursor for the next page (present when hasMore)'),
       }).passthrough(),
       annotations: { title: 'Query database', readOnlyHint: true, openWorldHint: false },
     },
-    async ({ databaseId, limit, filters, cursor }) => {
+    async ({ databaseId, limit, filters, fields, cursor }) => {
       try {
-        const result = await queryDatabaseRows(ctx.workspaceId, databaseId, limit ?? 50, filters, cursor);
+        const result = await queryDatabaseRows(ctx.workspaceId, databaseId, limit ?? 50, filters, cursor, fields);
         const text = JSON.stringify(result, null, 2);
         await logActivity(ctx, 'query_database', 'success', 'database', databaseId, text);
         return { content: [{ type: 'text' as const, text }], structuredContent: result };
