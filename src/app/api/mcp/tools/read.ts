@@ -9,6 +9,8 @@ import {
   getDatabaseSchema,
   queryDatabaseRows,
   buildContentOutline,
+  getChangesSince,
+  getRelatedPages,
 } from '@/lib/services/workspace';
 import { logActivity, type TokenContext } from '../context';
 
@@ -241,6 +243,90 @@ export function registerReadTools(server: McpServer, ctx: TokenContext) {
         return { content: [{ type: 'text' as const, text }], structuredContent: result };
       } catch (err) {
         await logActivity(ctx, 'query_database', 'error', 'database', databaseId);
+        return { content: [{ type: 'text' as const, text: `Error: ${String(err)}` }], isError: true };
+      }
+    },
+  );
+
+  server.registerTool(
+    'get_changes_since',
+    {
+      description: 'Get a compact list of everything that changed in the workspace since a given time or a previous call\'s cursor — pages/databases edited, database rows edited, and items deleted. Built for recurring agents (daily report, standup, memory refresh) so they can sync incrementally instead of re-reading the whole workspace every run. Omit both `since` and `cursor` to bootstrap a full crawl, saving the returned `nextCursor` (or the latest `updatedAt`) for the next call.',
+      inputSchema: {
+        since: z.string().optional().describe('ISO 8601 timestamp — only return changes after this time (e.g. "2026-07-01T00:00:00Z"). Ignored when cursor is provided. Omit both for a full crawl.'),
+        cursor: z.string().optional().describe('Pagination cursor from a previous response\'s nextCursor field — takes priority over since for resuming a sync'),
+        limit: z.number().optional().default(100).describe('Maximum changes per page (default 100)'),
+      },
+      outputSchema: z.object({
+        changes: z.array(z.object({
+          id: z.string().describe('Item ID (pass to get_page or query_database)'),
+          type: z.string().describe('page | database | database_row'),
+          title: z.string().describe('Item title (last known title for deleted items)'),
+          changeType: z.string().describe('created | updated | deleted'),
+          updatedAt: z.string().describe('When the change happened (ISO 8601) — for "deleted", when the deletion happened'),
+          databaseId: z.string().optional().describe('Parent database ID, present for database_row entries'),
+        }).passthrough()).describe('Changes in chronological order (oldest first)'),
+        hasMore: z.boolean().describe('Whether more changes exist beyond this page'),
+        nextCursor: z.string().optional().describe('Cursor for the next page (present when hasMore) — also use this to resume a later sync from where this call left off'),
+      }),
+      annotations: { title: 'Get changes since', readOnlyHint: true, openWorldHint: false },
+    },
+    async ({ since, cursor, limit }) => {
+      try {
+        const result = await getChangesSince(ctx.workspaceId, since, cursor, limit ?? 100);
+        const text = JSON.stringify(result, null, 2);
+        await logActivity(ctx, 'get_changes_since', 'success', undefined, undefined, text);
+        return { content: [{ type: 'text' as const, text }], structuredContent: result };
+      } catch (err) {
+        await logActivity(ctx, 'get_changes_since', 'error');
+        return { content: [{ type: 'text' as const, text: `Error: ${String(err)}` }], isError: true };
+      }
+    },
+  );
+
+  const relatedRefSchema = z.object({
+    id: z.string().describe('Item ID (pass to get_page, or query_database for databases)'),
+    title: z.string().describe('Item title'),
+    type: z.string().describe('page | database | database_row'),
+    databaseId: z.string().optional().describe('databases.id, present for database entries (pass to query_database / get_database_schema)'),
+    linkKind: z.string().optional().describe('How the reference was made: page_link (inline @-mention) | child_block (embedded/linked block)'),
+  }).passthrough();
+
+  server.registerTool(
+    'get_related_pages',
+    {
+      description: 'Get a page\'s knowledge-graph neighborhood in one compact call: its parent, child pages, outgoing links (pages its body references via inline @-links or child blocks), backlinks (pages whose bodies reference it), and — for database rows — sibling rows in the same database. Titles and IDs only, no page bodies, so it costs a fraction of re-reading pages; follow up with get_page on the neighbors that matter.',
+      inputSchema: {
+        pageId: z.string().describe('Page ID — a standalone page, database, or database row (same IDs get_page accepts)'),
+      },
+      outputSchema: z.object({
+        page: z.object({
+          id: z.string().describe('Subject page ID'),
+          title: z.string().describe('Subject page title'),
+          type: z.string().describe('page | database | database_row'),
+        }).passthrough().describe('The page whose neighborhood this is'),
+        parent: relatedRefSchema.nullable().describe('Parent item (for a database row, the database it belongs to); null at workspace root'),
+        children: z.array(relatedRefSchema).describe('Items nested under this page in the sidebar tree'),
+        outgoingLinks: z.array(relatedRefSchema).describe('Pages this page\'s body references (children already listed above are excluded)'),
+        backlinks: z.array(relatedRefSchema).describe('Pages whose bodies reference this page (the parent is excluded)'),
+        siblings: z.object({
+          total: z.number().describe('Total number of other rows in the same database'),
+          items: z.array(z.object({
+            id: z.string().describe('Sibling row ID'),
+            title: z.string().describe('Sibling row title'),
+          })).describe('First few sibling rows (up to 10)'),
+        }).nullable().describe('Same-database sibling rows — only for database_row subjects, null otherwise'),
+      }),
+      annotations: { title: 'Get related pages', readOnlyHint: true, openWorldHint: false },
+    },
+    async ({ pageId }) => {
+      try {
+        const result = await getRelatedPages(ctx.workspaceId, pageId);
+        const text = JSON.stringify(result, null, 2);
+        await logActivity(ctx, 'get_related_pages', 'success', 'page', pageId, text);
+        return { content: [{ type: 'text' as const, text }], structuredContent: result };
+      } catch (err) {
+        await logActivity(ctx, 'get_related_pages', 'error', 'page', pageId);
         return { content: [{ type: 'text' as const, text: `Error: ${String(err)}` }], isError: true };
       }
     },

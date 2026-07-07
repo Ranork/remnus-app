@@ -1,5 +1,5 @@
 /**
- * Migration 0035 — user_sessions.platform
+ * Migration 0037 — user_sessions.platform
  *
  * Adds a nullable `platform` TEXT column to `user_sessions` ('web' | 'tauri';
  * null = legacy row predating this column, treated as web). Stamped once at
@@ -10,8 +10,8 @@
  * Idempotent (PRAGMA column check). Simple ALTER TABLE ADD COLUMN — no rebuild
  * needed (unlike 0034), since this is a plain nullable column addition.
  * Apply to BOTH local and Turso:
- *   npx tsx src/db/apply-0035-user-sessions-platform.ts                              (Turso)
- *   DATABASE_URL="file:local.db" npx tsx src/db/apply-0035-user-sessions-platform.ts (local)
+ *   npx tsx src/db/apply-0037-user-sessions-platform.ts                              (Turso)
+ *   DATABASE_URL="file:local.db" npx tsx src/db/apply-0037-user-sessions-platform.ts (local)
  */
 import * as dotenv from 'dotenv';
 dotenv.config();
@@ -36,7 +36,7 @@ async function main() {
     console.log('user_sessions.platform already exists — skipping');
   }
 
-  console.log('Migration 0035 applied successfully.');
+  console.log('Migration 0037 applied successfully.');
 }
 
 main().catch(console.error);

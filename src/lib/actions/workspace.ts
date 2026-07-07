@@ -11,6 +11,8 @@ import { getTranslations } from 'next-intl/server';
 import { publish } from '@/lib/realtime/publish';
 import { isCloudinaryUrl, deleteCloudinaryImage } from '@/lib/cloudinary';
 import { checkCanCreateWorkspace } from '@/lib/services/billing';
+import { recordDeletionTombstone } from '@/lib/services/workspace';
+import { syncPageLinks, removePageLinksFor } from '@/lib/services/pageLinks';
 
 export interface CreateDatabaseOptions {
   schema?: SchemaColumn[];
@@ -364,6 +366,7 @@ export async function createStandalonePage(
 
   const itemId = crypto.randomUUID();
   const pageId = crypto.randomUUID();
+  const now = new Date();
 
   await db.insert(workspaceItems).values({
     id: itemId,
@@ -374,14 +377,19 @@ export async function createStandalonePage(
     sortOrder: 0,
     icon: options?.icon ?? null,
     iconColor: options?.iconColor ?? null,
+    createdAt: now,
+    updatedAt: now,
   });
 
   await db.insert(standalonePages).values({
     id: pageId,
     itemId,
     content: options?.initialContent ?? '',
+    createdAt: now,
+    updatedAt: now,
   });
 
+  if (options?.initialContent) await syncPageLinks(workspaceId, itemId, 'page', options.initialContent);
   if (parentId) autoShareIfParentShared(itemId, parentId, workspaceId, userId);
 
   revalidatePath('/', 'layout');
@@ -398,6 +406,7 @@ export async function createWorkspaceDatabase(
 
   const itemId = crypto.randomUUID();
   const dbId = crypto.randomUUID();
+  const now = new Date();
 
   await db.insert(workspaceItems).values({
     id: itemId,
@@ -408,6 +417,8 @@ export async function createWorkspaceDatabase(
     sortOrder: 0,
     icon: options?.icon ?? null,
     iconColor: options?.iconColor ?? null,
+    createdAt: now,
+    updatedAt: now,
   });
 
   await db.insert(databases).values({
@@ -419,6 +430,8 @@ export async function createWorkspaceDatabase(
       { id: 'status', name: 'Status', type: 'select', options: ['To Do', 'In Progress', 'Done'] },
     ],
     views: options?.views ?? null,
+    createdAt: now,
+    updatedAt: now,
   });
 
   if (options?.parentId) autoShareIfParentShared(itemId, options.parentId, workspaceId, userId);
@@ -445,6 +458,8 @@ export async function updateStandalonePageContent(itemId: string, content: strin
   await db.update(standalonePages)
     .set({ content, updatedAt: new Date() })
     .where(eq(standalonePages.itemId, itemId));
+
+  if (item[0]) await syncPageLinks(item[0].workspaceId, itemId, 'page', content);
 }
 
 export async function updateWorkspaceItemTitle(itemId: string, title: string) {
@@ -496,7 +511,7 @@ export async function deleteWorkspaceItem(itemId: string) {
   const userId = await assertWorkspaceAccess(item[0].workspaceId);
   const { workspaceId } = item[0];
 
-  await deleteWorkspaceItemRecursive(itemId, item[0].type);
+  await deleteWorkspaceItemRecursive(workspaceId, itemId, item[0].type, item[0].title);
   revalidatePath('/', 'layout');
   publish({ scope: 'sidebar', workspaceId, actorId: userId });
 }
@@ -537,14 +552,14 @@ export async function checkItemHasContent(itemId: string): Promise<boolean> {
   }
 }
 
-async function deleteWorkspaceItemRecursive(itemId: string, type: 'page' | 'database') {
+async function deleteWorkspaceItemRecursive(workspaceId: string, itemId: string, type: 'page' | 'database', title: string) {
   // Find all children
-  const children = await db.select({ id: workspaceItems.id, type: workspaceItems.type })
+  const children = await db.select({ id: workspaceItems.id, type: workspaceItems.type, title: workspaceItems.title })
     .from(workspaceItems)
     .where(eq(workspaceItems.parentId, itemId));
 
   for (const child of children) {
-    await deleteWorkspaceItemRecursive(child.id, child.type);
+    await deleteWorkspaceItemRecursive(workspaceId, child.id, child.type, child.title);
   }
 
   if (type === 'database') {
@@ -554,6 +569,8 @@ async function deleteWorkspaceItemRecursive(itemId: string, type: 'page' | 'data
   }
 
   await db.delete(workspaceItems).where(eq(workspaceItems.id, itemId));
+  await recordDeletionTombstone(workspaceId, itemId, type, title);
+  await removePageLinksFor(itemId);
 }
 
 async function getWorkspaceIdForParent(parentId: string): Promise<string | null> {
@@ -613,6 +630,7 @@ export async function duplicateWorkspaceItem(itemId: string) {
   const { workspaceId } = item[0];
 
   const newItemId = crypto.randomUUID();
+  const now = new Date();
   await db.insert(workspaceItems).values({
     id: newItemId,
     workspaceId: item[0].workspaceId,
@@ -622,6 +640,8 @@ export async function duplicateWorkspaceItem(itemId: string) {
     sortOrder: item[0].sortOrder + 1,
     icon: item[0].icon,
     iconColor: item[0].iconColor,
+    createdAt: now,
+    updatedAt: now,
   });
 
   if (item[0].type === 'page') {
@@ -630,7 +650,10 @@ export async function duplicateWorkspaceItem(itemId: string) {
       id: crypto.randomUUID(),
       itemId: newItemId,
       content: sp[0]?.content ?? '',
+      createdAt: now,
+      updatedAt: now,
     });
+    if (sp[0]?.content) await syncPageLinks(workspaceId, newItemId, 'page', sp[0].content);
     revalidatePath('/', 'layout');
     publish({ scope: 'sidebar', workspaceId, actorId: userId });
     return { type: 'page' as const, itemId: newItemId };
@@ -645,12 +668,15 @@ export async function duplicateWorkspaceItem(itemId: string) {
       itemId: newItemId,
       schema: dbRow[0].schema,
       views: dbRow[0].views,
+      createdAt: now,
+      updatedAt: now,
     });
 
     const existingPages = await db.select().from(pages).where(eq(pages.databaseId, dbRow[0].id));
     for (const p of existingPages) {
+      const newRowId = crypto.randomUUID();
       await db.insert(pages).values({
-        id: crypto.randomUUID(),
+        id: newRowId,
         databaseId: newDbId,
         title: p.title,
         content: p.content,
@@ -658,7 +684,10 @@ export async function duplicateWorkspaceItem(itemId: string) {
         sortOrder: p.sortOrder,
         icon: p.icon,
         iconColor: p.iconColor,
+        createdAt: now,
+        updatedAt: now,
       });
+      if (p.content) await syncPageLinks(workspaceId, newRowId, 'database_row', p.content);
     }
 
     revalidatePath('/', 'layout');

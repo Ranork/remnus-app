@@ -207,7 +207,7 @@ export const userSessions = sqliteTable('user_sessions', {
   durationSeconds: integer('duration_seconds').notNull().default(0),
   // 'web' | 'tauri'; null = legacy row predating this column (treat as web).
   // Stamped once at session creation from the `remnus_platform` cookie
-  // (`isTauriRequest()`) — powers the admin desktop-usage stats. Migration 0035.
+  // (`isTauriRequest()`) — powers the admin desktop-usage stats. Migration 0037.
   platform:        text('platform'),
 }, (table) => [
   index('user_sessions_user_id_idx').on(table.userId),
@@ -399,4 +399,44 @@ export const emailLog = sqliteTable('email_log', {
   index('email_log_user_kind_idx').on(table.userId, table.kind),
   index('email_log_created_at_idx').on(table.createdAt),
   index('email_log_campaign_id_idx').on(table.campaignId),
+]);
+
+// Tombstones for hard-deleted pages/databases/rows — powers the MCP
+// get_changes_since delta-sync tool (a "deleted" entry has no surviving row to
+// read updatedAt from). Written best-effort alongside every hard delete path
+// (services/workspace.ts, actions/workspace.ts, actions/page.ts). Migration 0035.
+export const deletedItems = sqliteTable('deleted_items', {
+  id:          text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  workspaceId: text('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  itemId:      text('item_id').notNull(),
+  itemType:    text('item_type', { enum: ['page', 'database', 'database_row'] }).notNull(),
+  title:       text('title'),
+  deletedAt:   integer('deleted_at', { mode: 'timestamp' }).notNull(),
+}, (table) => [
+  index('deleted_items_workspace_deleted_idx').on(table.workspaceId, table.deletedAt),
+]);
+
+// Content-derived link graph: one row per pageLink (<a data-page-link>) or
+// childBlock (<div data-cb-id>) reference found in a page's markdown body.
+// Re-synced (delete + insert per from_id) on every content write — web save
+// actions AND MCP write tools — by syncPageLinks() in
+// src/lib/services/pageLinks.ts; existing content backfilled via
+// src/db/backfill-page-links.ts. Powers the MCP get_related_pages tool
+// (outgoing links + backlinks). Target ids are stored as-written, unresolved:
+// to_type 'page' = workspace item id, 'database' = databases.id (page_link)
+// OR workspace item id (child_block), 'database_row' = pages row id —
+// getRelatedPages resolves both database id forms at read time. Migration 0036.
+export const pageLinks = sqliteTable('page_links', {
+  id:          text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  workspaceId: text('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  fromId:      text('from_id').notNull(),
+  fromType:    text('from_type', { enum: ['page', 'database_row'] }).notNull(),
+  toId:        text('to_id').notNull(),
+  toType:      text('to_type', { enum: ['page', 'database', 'database_row'] }).notNull(),
+  linkKind:    text('link_kind', { enum: ['page_link', 'child_block'] }).notNull(),
+  createdAt:   integer('created_at', { mode: 'timestamp' }).notNull(),
+}, (table) => [
+  index('page_links_from_idx').on(table.fromId),
+  index('page_links_to_idx').on(table.toId),
+  uniqueIndex('page_links_from_to_kind_idx').on(table.fromId, table.toId, table.linkKind),
 ]);

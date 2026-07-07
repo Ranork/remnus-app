@@ -437,6 +437,12 @@ async function createRichWorkspaceData(
     dt.setHours(dt.getHours() + n);
     return dt;
   };
+  // Seed rows must stamp createdAt/updatedAt explicitly — relying on the column's
+  // SQL-level CURRENT_TIMESTAMP default stores a TEXT value that Drizzle's
+  // {mode:'timestamp'} can't parse back into a Date (see the createdAt gotcha
+  // in AGENTS.md), which made every freshly-seeded item invisible to the MCP
+  // get_changes_since delta-sync tool.
+  const now = new Date();
 
   // ── Ids — declared up front so the single batched write at the end can reference them ──
 
@@ -541,6 +547,8 @@ async function createRichWorkspaceData(
       content: t.content,
       properties: { title: t.title, status: t.status, priority: t.priority, category: t.category },
       sortOrder: i,
+      createdAt: now,
+      updatedAt: now,
       ...(includeAgent && t.agentAt ? { agentEditedAt: t.agentAt, agentTokenId: demoTokenId } : {}),
     };
   });
@@ -587,14 +595,14 @@ async function createRichWorkspaceData(
     ...(includeAgent
       ? [db.insert(agentTokens).values({ id: demoTokenId, workspaceId: ws1, name: 'Claude AI Agent', agentName: 'claude-code', tokenPrefix: 'rmns-demo', tokenHash: 'demo-seed-not-valid', scope: 'write', createdBy: userId, createdAt: h(-48), lastUsedAt: h(-1) })]
       : []),
-    db.insert(workspaceItems).values({ id: startHereItem, workspaceId: ws1, type: 'page', title: 'Start Here', sortOrder: 0, icon: '⭐', iconColor: 'default' }),
-    db.insert(standalonePages).values({ id: crypto.randomUUID(), itemId: startHereItem, content: START_HERE_CONTENT.replace('{{HOW_BUILT_CB}}', howBuiltCb) }),
-    db.insert(workspaceItems).values({ id: productSpecItem, workspaceId: ws1, type: 'page', title: 'Product Spec', sortOrder: 1, icon: '🎨', iconColor: 'default' }),
-    db.insert(standalonePages).values({ id: crypto.randomUUID(), itemId: productSpecItem, content: PRODUCT_SPEC_CONTENT }),
-    db.insert(workspaceItems).values({ id: howBuiltItem, workspaceId: ws1, type: 'page', title: 'How This Was Built', parentId: startHereItem, sortOrder: 0, icon: '🛠️', iconColor: 'default' }),
-    db.insert(standalonePages).values({ id: crypto.randomUUID(), itemId: howBuiltItem, content: HOW_THIS_WAS_BUILT_CONTENT }),
-    db.insert(workspaceItems).values({ id: sprintDbItem, workspaceId: ws1, type: 'database', title: 'Sprint Board', sortOrder: 2, icon: '📋', iconColor: 'default' }),
-    db.insert(databases).values({ id: sprintDb, name: 'Sprint Board', itemId: sprintDbItem, schema: sprintSchema, views: sprintViews }),
+    db.insert(workspaceItems).values({ id: startHereItem, workspaceId: ws1, type: 'page', title: 'Start Here', sortOrder: 0, icon: '⭐', iconColor: 'default', createdAt: now, updatedAt: now }),
+    db.insert(standalonePages).values({ id: crypto.randomUUID(), itemId: startHereItem, content: START_HERE_CONTENT.replace('{{HOW_BUILT_CB}}', howBuiltCb), createdAt: now, updatedAt: now }),
+    db.insert(workspaceItems).values({ id: productSpecItem, workspaceId: ws1, type: 'page', title: 'Product Spec', sortOrder: 1, icon: '🎨', iconColor: 'default', createdAt: now, updatedAt: now }),
+    db.insert(standalonePages).values({ id: crypto.randomUUID(), itemId: productSpecItem, content: PRODUCT_SPEC_CONTENT, createdAt: now, updatedAt: now }),
+    db.insert(workspaceItems).values({ id: howBuiltItem, workspaceId: ws1, type: 'page', title: 'How This Was Built', parentId: startHereItem, sortOrder: 0, icon: '🛠️', iconColor: 'default', createdAt: now, updatedAt: now }),
+    db.insert(standalonePages).values({ id: crypto.randomUUID(), itemId: howBuiltItem, content: HOW_THIS_WAS_BUILT_CONTENT, createdAt: now, updatedAt: now }),
+    db.insert(workspaceItems).values({ id: sprintDbItem, workspaceId: ws1, type: 'database', title: 'Sprint Board', sortOrder: 2, icon: '📋', iconColor: 'default', createdAt: now, updatedAt: now }),
+    db.insert(databases).values({ id: sprintDb, name: 'Sprint Board', itemId: sprintDbItem, schema: sprintSchema, views: sprintViews, createdAt: now, updatedAt: now }),
     db.insert(pages).values(taskRows),
     ...(includeAgent ? [db.insert(agentActivity).values(activityRows)] : []),
   ];
