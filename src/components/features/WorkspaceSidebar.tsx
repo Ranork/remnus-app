@@ -55,6 +55,7 @@ import WorkspaceSettingsModal from './WorkspaceSettingsModal';
 import { initDesktopZoom } from '@/lib/desktop/zoom';
 import AgentsModal from './AgentsModal';
 import OnboardingGuide from './onboarding/OnboardingGuide';
+import AgentDetectGuide from './agent-detect/AgentDetectGuide';
 import PwaInstallButton from './PwaInstallButton';
 import BillingModal from './BillingModal';
 import UserSettingsModal from './UserSettingsModal';
@@ -1520,6 +1521,7 @@ export default function WorkspaceSidebar({
       {showOnboarding && (
         <div className="shrink-0">
           <OnboardingGuide userRole={currentUser.role} />
+          <AgentDetectGuide userRole={currentUser.role} />
         </div>
       )}
 

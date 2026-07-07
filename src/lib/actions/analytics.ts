@@ -25,6 +25,7 @@ export type PerUserActivity = {
   lastActive: number | null; // epoch ms
   storageBytes: number;
   mcpCalls: number; // MCP tool calls across the user's workspaces
+  usesDesktop: boolean; // has ever had a session with platform === 'tauri'
 };
 
 export type EngagementOverview = {
@@ -41,6 +42,9 @@ export type EngagementOverview = {
   // Demo is excluded from every metric above. These surface it separately:
   demoActiveSessions: number; // distinct demo users active in the last 15 min
   demoTotal: number;          // current ephemeral demo accounts (≈ last 6h)
+  // Desktop (Tauri) usage — see user_sessions.platform (migration 0035).
+  desktopUsersTotal: number;     // distinct non-demo users with any 'tauri' session, ever
+  desktopUsersActive30d: number; // of those, active in the last 30 days
 };
 
 const DAY = 24 * 60 * 60;
@@ -89,6 +93,8 @@ export async function getEngagementOverview(): Promise<EngagementOverview> {
       dau: sql<number>`count(distinct case when ${userSessions.lastSeenAt} >= ${dayCut} then ${userSessions.userId} end)`,
       wau: sql<number>`count(distinct case when ${userSessions.lastSeenAt} >= ${weekCut} then ${userSessions.userId} end)`,
       mau: sql<number>`count(distinct case when ${userSessions.lastSeenAt} >= ${monthCut} then ${userSessions.userId} end)`,
+      desktopTotal: sql<number>`count(distinct case when ${userSessions.platform} = 'tauri' then ${userSessions.userId} end)`,
+      desktopActive30d: sql<number>`count(distinct case when ${userSessions.platform} = 'tauri' and ${userSessions.lastSeenAt} >= ${monthCut} then ${userSessions.userId} end)`,
     })
     .from(userSessions)
     .innerJoin(users, eq(userSessions.userId, users.id))
@@ -100,6 +106,7 @@ export async function getEngagementOverview(): Promise<EngagementOverview> {
       totalSeconds: sql<number>`coalesce(sum(${userSessions.durationSeconds}), 0)`,
       sessionCount: sql<number>`cast(count(*) as int)`,
       lastSeen: sql<number>`max(${userSessions.lastSeenAt})`,
+      usesDesktop: sql<number>`max(case when ${userSessions.platform} = 'tauri' then 1 else 0 end)`,
     })
     .from(userSessions)
     .innerJoin(users, eq(userSessions.userId, users.id))
@@ -139,13 +146,14 @@ export async function getEngagementOverview(): Promise<EngagementOverview> {
 
   const perUser: Record<string, PerUserActivity> = {};
   const ensure = (userId: string): PerUserActivity =>
-    (perUser[userId] ??= { totalSeconds: 0, sessionCount: 0, lastActive: null, storageBytes: 0, mcpCalls: 0 });
+    (perUser[userId] ??= { totalSeconds: 0, sessionCount: 0, lastActive: null, storageBytes: 0, mcpCalls: 0, usesDesktop: false });
 
   for (const r of perUserRows) {
     const e = ensure(r.userId);
     e.totalSeconds = r.totalSeconds;
     e.sessionCount = r.sessionCount;
     e.lastActive = toEpochMs(r.lastSeen);
+    e.usesDesktop = !!r.usesDesktop;
   }
   // Include users who uploaded / made MCP calls but have no sessions yet.
   for (const [userId, bytes] of Object.entries(storageByUser)) ensure(userId).storageBytes = bytes;
@@ -198,6 +206,8 @@ export async function getEngagementOverview(): Promise<EngagementOverview> {
     perUser,
     demoActiveSessions: demoActive?.count ?? 0,
     demoTotal: demoCount?.count ?? 0,
+    desktopUsersTotal: active?.desktopTotal ?? 0,
+    desktopUsersActive30d: active?.desktopActive30d ?? 0,
   };
 }
 
@@ -275,6 +285,51 @@ export async function getTrafficSources(days = 30): Promise<TrafficSourcesData> 
     .sort((a, b) => b.visitors - a.visitors);
 
   return { channels, domains, days: window, available: true };
+}
+
+export type DesktopDownloadStats = {
+  byOs: { os: string; clicks: number; visitors: number }[];
+  totalClicks: number;
+  totalVisitors: number;
+  days: number;
+  /** False when the PostHog read creds are missing — card shows an "unavailable" state. */
+  available: boolean;
+};
+
+/**
+ * Desktop (Tauri) download-click stats, read from PostHog's `desktop_download_clicked`
+ * event (captured client-side from /download and the landing page — see DownloadView.tsx
+ * / LandingDownload.tsx) — the download itself is a static GitHub release link with no
+ * server round-trip, so a click capture is the only signal we can get for "how many
+ * people downloaded it". Mirrors {@link getTrafficSources}'s shape/fallback contract.
+ */
+export async function getDesktopDownloadStats(days = 30): Promise<DesktopDownloadStats> {
+  await assertAdmin();
+  const window = Math.max(1, Math.min(365, Math.floor(days)));
+  const rows = await runHogQL<[string, number, number]>(`
+    SELECT
+      coalesce(nullIf(properties.os, ''), 'unknown') AS os,
+      count() AS clicks,
+      count(DISTINCT person_id) AS visitors
+    FROM events
+    WHERE event = 'desktop_download_clicked'
+      AND timestamp > now() - INTERVAL ${window} DAY
+    GROUP BY os
+    ORDER BY clicks DESC
+  `);
+  if (rows == null) {
+    return { byOs: [], totalClicks: 0, totalVisitors: 0, days: window, available: false };
+  }
+
+  const byOs = rows.map(([os, clicks, visitors]) => ({
+    os,
+    clicks: Number(clicks) || 0,
+    visitors: Number(visitors) || 0,
+  }));
+  const totalClicks = byOs.reduce((sum, r) => sum + r.clicks, 0);
+  const totalVisitors = byOs.reduce((sum, r) => sum + r.visitors, 0);
+
+  return { byOs, totalClicks, totalVisitors, days: window, available: true };
 }
 
 /**
@@ -447,6 +502,7 @@ export async function getUserDetail(userId: string): Promise<UserDetail> {
       totalSeconds: sql<number>`coalesce(sum(${userSessions.durationSeconds}), 0)`,
       sessionCount: sql<number>`cast(count(*) as int)`,
       lastSeen: sql<number>`max(${userSessions.lastSeenAt})`,
+      usesDesktop: sql<number>`max(case when ${userSessions.platform} = 'tauri' then 1 else 0 end)`,
     })
     .from(userSessions)
     .where(eq(userSessions.userId, userId));
@@ -630,6 +686,7 @@ export async function getUserDetail(userId: string): Promise<UserDetail> {
       lastActive: toEpochMs(act?.lastSeen),
       storageBytes: Number(userStorage?.total ?? 0),
       mcpCalls: agents.calls,
+      usesDesktop: !!act?.usesDesktop,
     },
     storageBytes: Number(userStorage?.total ?? 0),
     content: {

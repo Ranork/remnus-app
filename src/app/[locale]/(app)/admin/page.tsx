@@ -4,11 +4,12 @@ import { getAllUsers } from '@/lib/actions/auth';
 import { getEngagementOverview, getActivationFunnel } from '@/lib/actions/analytics';
 import { getDemoFeedback } from '@/lib/actions/demoFeedback';
 import Link from 'next/link';
-import { Shield, Users, TrendingUp, Clock, Activity, Timer, MonitorPlay, Share2, Workflow, MessageCircle, UserPlus, CalendarPlus, Mail } from 'lucide-react';
+import { Shield, Users, TrendingUp, Clock, Activity, Timer, MonitorPlay, Share2, Workflow, MessageCircle, UserPlus, CalendarPlus, Mail, Laptop, Download } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import AdminUsersTable from '@/components/features/AdminUsersTable';
 import { SignupTrendChart, ActivationFunnelChart } from '@/components/features/admin/AdminCharts';
 import AdminTrafficSources from '@/components/features/admin/AdminTrafficSources';
+import AdminDesktopStats from '@/components/features/admin/AdminDesktopStats';
 import { formatDuration } from '@/components/features/admin/format';
 import { getTranslations, getLocale } from 'next-intl/server';
 
@@ -184,7 +185,7 @@ export default async function AdminPage() {
 
       <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-9 px-8 py-7">
         {/* Stats row */}
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-7">
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-9">
           <StatCard icon={Users} accent="blue" label={t('totalUsers')} value={userList.length} />
           <StatCard icon={UserPlus} accent="blue" label={t('newThisWeek')} value={engagement.newThisWeek} sub={t('last7Days')} />
           <StatCard icon={CalendarPlus} accent="blue" label={t('newThisMonth')} value={engagement.newThisMonth} sub={t('last30Days')} />
@@ -192,6 +193,8 @@ export default async function AdminPage() {
           <StatCard icon={Timer} accent="neutral" label={t('avgSession')} value={formatDuration(engagement.avgSessionSeconds)} sub={t('perSession')} />
           <StatCard icon={Clock} accent="neutral" label={t('totalTime')} value={formatDuration(engagement.totalSeconds)} sub={t('allUsers')} />
           <StatCard icon={MonitorPlay} accent="amber" label={t('activeDemoSessions')} value={engagement.demoActiveSessions} sub={t('demoTotalSub', { count: engagement.demoTotal })} />
+          <StatCard icon={Laptop} accent="blue" label={t('desktopUsersStat')} value={engagement.desktopUsersTotal} />
+          <StatCard icon={Download} accent="green" label={t('desktopActiveStat')} value={engagement.desktopUsersActive30d} sub={t('last30Days')} />
         </div>
 
         {/* Acquisition trend + sources */}
@@ -222,6 +225,14 @@ export default async function AdminPage() {
                 { label: t('funnelActivated'), count: funnel.activated },
               ]}
             />
+          </div>
+        </section>
+
+        {/* Desktop / Tauri */}
+        <section>
+          <SectionHeader icon={Laptop} title={t('desktopSection')} hint={t('desktopSectionHint')} />
+          <div className="rounded-xl border border-neutral-800 bg-neutral-900 px-5 py-4">
+            <AdminDesktopStats />
           </div>
         </section>
 

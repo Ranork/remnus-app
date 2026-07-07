@@ -345,7 +345,7 @@ export default function AgentsModal({ onClose }: Props) {
   // Workspaces the user can mint a PAT in — passed to ConnectFlow's Advanced/token section.
   const mintTargets = workspaces
     .filter(ws => ws.canManage)
-    .map(ws => ({ id: ws.id, name: ws.name }));
+    .map(ws => ({ id: ws.id, name: ws.name, icon: ws.icon, iconColor: ws.iconColor }));
 
   const oauthByWorkspace = oauthTokens.reduce<Record<string, OAuthToken[]>>((acc, tok) => {
     (acc[tok.workspaceId] ??= []).push(tok);

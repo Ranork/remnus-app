@@ -205,6 +205,10 @@ export const userSessions = sqliteTable('user_sessions', {
   startedAt:       integer('started_at', { mode: 'timestamp' }).notNull(),
   lastSeenAt:      integer('last_seen_at', { mode: 'timestamp' }).notNull(),
   durationSeconds: integer('duration_seconds').notNull().default(0),
+  // 'web' | 'tauri'; null = legacy row predating this column (treat as web).
+  // Stamped once at session creation from the `remnus_platform` cookie
+  // (`isTauriRequest()`) — powers the admin desktop-usage stats. Migration 0035.
+  platform:        text('platform'),
 }, (table) => [
   index('user_sessions_user_id_idx').on(table.userId),
   index('user_sessions_last_seen_at_idx').on(table.lastSeenAt),
