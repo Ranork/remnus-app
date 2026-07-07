@@ -19,7 +19,7 @@ export interface OnboardingProgress {
   /** A real agent tool-call was recorded in the audit log. The "first agent call" step. */
   hasAgentCall: boolean;
   /** Workspaces the user can mint a PAT in — fed straight to ConnectFlow. */
-  mintTargets: { id: string; name: string }[];
+  mintTargets: { id: string; name: string; icon: string | null; iconColor: string | null }[];
 }
 
 /**
@@ -38,7 +38,13 @@ export async function getOnboardingProgress(): Promise<OnboardingProgress> {
   }
 
   const wsRows = await db
-    .select({ id: workspaces.id, name: workspaces.name, role: workspaceMembers.role })
+    .select({
+      id: workspaces.id,
+      name: workspaces.name,
+      icon: workspaces.icon,
+      iconColor: workspaces.iconColor,
+      role: workspaceMembers.role,
+    })
     .from(workspaces)
     .innerJoin(workspaceMembers, and(
       eq(workspaceMembers.workspaceId, workspaces.id),
@@ -52,7 +58,7 @@ export async function getOnboardingProgress(): Promise<OnboardingProgress> {
   const wsIds = wsRows.map(w => w.id);
   const mintTargets = wsRows
     .filter(w => w.role === 'owner' || user.role === 'admin')
-    .map(w => ({ id: w.id, name: w.name }));
+    .map(w => ({ id: w.id, name: w.name, icon: w.icon, iconColor: w.iconColor }));
 
   const [patRows, oauthRows, activityRows] = await Promise.all([
     // Real PAT (exclude the planted seed token).

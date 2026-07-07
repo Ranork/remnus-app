@@ -2,19 +2,63 @@
 import { useState, useEffect, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { usePostHog } from 'posthog-js/react';
-import { Check, Copy, ArrowRight, ChevronLeft, ChevronDown, X, KeyRound, Globe, AlertCircle, AlertTriangle, Plug } from 'lucide-react';
+import { Check, Copy, ArrowRight, ChevronLeft, ChevronDown, X, KeyRound, Globe, AlertCircle, AlertTriangle, Plug, Sparkles, Loader2, Wrench, PartyPopper, Send } from 'lucide-react';
 import AIMark from '@/components/marketing/AIMark';
 import { VscodeMark } from '@/components/features/agents/AgentMark';
 import ClaudeConnectAnimation from '@/components/features/agents/ClaudeConnectAnimation';
+import PageIcon from '@/components/features/PageIcon';
 import { mintAgentToken } from '@/lib/actions/agentToken';
+import { useIsTauri } from '@/lib/hooks/useIsTauri';
 import {
-  EDITORS, OAUTH_READY, CONFIG_PATHS, TEST_PROMPT, CODEX_LOGIN_CMD,
+  EDITORS, OAUTH_READY, CONFIG_PATHS, CODEX_LOGIN_CMD,
   buildCursorUrl, buildVscodeUrl, buildClaudeCmd, buildJsonConfig, buildCodexToml,
   type EditorId, type OS,
 } from '@/lib/mcp/deeplinks';
 
 /** Workspaces the user can mint a PAT in (passed down through ConnectModal from AgentsModal). */
-export interface MintTarget { id: string; name: string }
+export interface MintTarget { id: string; name: string; icon?: string | null; iconColor?: string | null }
+
+// ── Workspace picker — icon list (mirrors the OAuth authorize page's picker) ──
+function WorkspacePicker({
+  targets, value, onChange, accent,
+}: {
+  targets: MintTarget[];
+  value: string;
+  onChange: (id: string) => void;
+  accent: 'blue' | 'emerald';
+}) {
+  const activeCls = accent === 'emerald' ? 'bg-emerald-500/10 border-emerald-500/40' : 'bg-blue-500/10 border-blue-500/40';
+  const activeText = accent === 'emerald' ? 'text-emerald-100' : 'text-blue-100';
+  const activeCheck = accent === 'emerald' ? 'text-emerald-400' : 'text-blue-400';
+  return (
+    <div className="space-y-1 max-h-40 overflow-y-auto pr-0.5">
+      {targets.map(w => {
+        const active = value === w.id;
+        return (
+          <button
+            key={w.id}
+            type="button"
+            onClick={() => onChange(w.id)}
+            className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md border text-left transition-all ${
+              active ? activeCls : 'bg-neutral-900 border-neutral-800 hover:border-neutral-700'
+            }`}
+          >
+            {w.icon
+              ? <PageIcon icon={w.icon} iconColor={w.iconColor} size={15} />
+              : <span className="w-4 h-4 rounded bg-neutral-700 flex items-center justify-center text-[9px] font-bold text-neutral-300 shrink-0">
+                  {w.name.charAt(0).toUpperCase()}
+                </span>
+            }
+            <span className={`flex-1 text-xs truncate ${active ? activeText : 'text-neutral-300'}`}>
+              {w.name}
+            </span>
+            {active && <Check size={13} className={`${activeCheck} shrink-0`} />}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
 function EditorMark({ id, size = 14 }: { id: EditorId; size?: number }) {
   const meta = EDITORS.find(e => e.id === id);
@@ -74,11 +118,13 @@ function CodeBlock({
 
 // ── Step 1: choose editor ─────────────────────────────────────────────────────
 function StepChoose({
-  t, onSelect, current,
+  t, onSelect, current, detected,
 }: {
   t: ReturnType<typeof useTranslations>;
   onSelect: (id: EditorId) => void;
   current?: EditorId;
+  /** Editor ids Tauri found on this device (desktop shell only) — shows a "detected" badge. */
+  detected?: Record<string, boolean> | null;
 }) {
   return (
     <div className="space-y-4">
@@ -93,6 +139,7 @@ function StepChoose({
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {EDITORS.map(({ id, label, descKey }) => {
           const selected = current === id;
+          const isDetected = !!detected?.[id];
           return (
             <button
               key={id}
@@ -113,8 +160,15 @@ function StepChoose({
                 <EditorMark id={id} size={22} />
               </span>
               <span className="min-w-0 flex flex-col gap-0.5">
-                <span className={`text-sm font-semibold ${selected ? 'text-blue-100' : 'text-neutral-200 group-hover:text-white'}`}>
-                  {label}
+                <span className="flex items-center gap-1.5">
+                  <span className={`text-sm font-semibold ${selected ? 'text-blue-100' : 'text-neutral-200 group-hover:text-white'}`}>
+                    {label}
+                  </span>
+                  {isDetected && (
+                    <span className="shrink-0 text-[8px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-1 py-0.5 rounded-full leading-none">
+                      {t('connectDetectedBadge')}
+                    </span>
+                  )}
                 </span>
                 <span className="text-[11px] leading-snug text-neutral-400">
                   {t(descKey as Parameters<typeof t>[0])}
@@ -135,7 +189,7 @@ function StepChoose({
 
 // ── Step 2: connect (OAuth primary + advanced PAT) ────────────────────────────
 function StepConnect({
-  t, editor, mcpUrl, onNext, onBack, mintTargets,
+  t, editor, mcpUrl, onNext, onBack, mintTargets, detected, autoConnectReady, onAutoConnected,
 }: {
   t: ReturnType<typeof useTranslations>;
   editor: EditorId;
@@ -143,11 +197,33 @@ function StepConnect({
   onNext: () => void;
   onBack: () => void;
   mintTargets: MintTarget[];
+  /** Whether Tauri found this editor on this device (desktop shell only). */
+  detected?: boolean;
+  /**
+   * Whether the desktop shell's `agent_connect.rs` commands are confirmed
+   * present (a successful `detect_installed_agents` call already landed) — NOT
+   * just whether we're running in Tauri. The frontend ships instantly on every
+   * web deploy, but these Rust commands only exist once the user has actually
+   * updated their installed desktop app, so `isTauri` alone would show the
+   * auto-connect button to users on an older build and fail when clicked.
+   */
+  autoConnectReady?: boolean;
+  /** Called with the editor's label right after a successful auto-connect, before advancing to the test step. */
+  onAutoConnected?: (toolLabel: string) => void;
 }) {
   const [os, setOs] = useState<OS>('mac');
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [showManual, setShowManual] = useState(false);
   const meta = EDITORS.find(e => e.id === editor)!;
   const oauthReady = OAUTH_READY[editor];
+  // Editors Remnus can connect for the user directly from the desktop shell:
+  // json/toml editors get their config file written, Claude Code gets its CLI
+  // run — vs. deeplink editors (cursor/vscode) which are already one click.
+  const autoConnectEligible = meta.kind === 'json' || meta.kind === 'toml' || meta.kind === 'command';
+  // When true, auto-connect is the primary path and everything manual
+  // (walkthrough animation, OAuth/config instructions, advanced token section)
+  // collapses behind a "connect it yourself" toggle instead of always showing.
+  const autoAvailable = !!autoConnectReady && autoConnectEligible;
 
   // ── Inline token minting state ──
   const [selectedWs, setSelectedWs] = useState(mintTargets[0]?.id ?? '');
@@ -172,6 +248,48 @@ function StepConnect({
       setMintError(err instanceof Error ? err.message : 'Failed to create token');
     } finally {
       setMinting(false);
+    }
+  };
+
+  // ── Desktop-only one-click connect: writes the config file / runs the CLI
+  // directly via Tauri, instead of asking the user to copy-paste. Manual
+  // instructions below are never hidden — this is purely additive. ──
+  const [autoConnecting, setAutoConnecting] = useState(false);
+  const [autoResult, setAutoResult] = useState<{ ok: boolean; message: string } | null>(null);
+
+  const handleAutoConnect = async () => {
+    setAutoConnecting(true);
+    setAutoResult(null);
+    try {
+      // Auto-connect always mints a real token instead of pointing at OAuth —
+      // the user is already signed in right here, so there's no reason to make
+      // the external tool go run its own browser OAuth dance on first use when
+      // we can just hand it working credentials directly. (OAuth is still
+      // available as an option in the manual/"connect it yourself" section.)
+      if (!canMint) throw new Error(t('connectTokenNoAccess'));
+      if (!selectedWs) throw new Error(t('connectAutoPickWorkspaceFirst'));
+      const minted = await mintAgentToken(selectedWs, meta.label, scope, editor);
+      setMintedToken(minted.token);
+
+      const { invoke } = await import('@tauri-apps/api/core');
+      if (meta.kind === 'command') {
+        const res = await invoke<{ success: boolean; stdout: string; stderr: string }>('run_claude_connect', {
+          mcpUrl,
+          token: minted.token,
+        });
+        if (!res.success) throw new Error(res.stderr.trim() || res.stdout.trim() || 'unknown error');
+      } else {
+        await invoke('write_agent_config', { editor, mcpUrl, token: minted.token });
+      }
+      setAutoResult({ ok: true, message: t('connectAutoSuccess', { tool: meta.label }) });
+      // Let the success message land for a beat, then advance automatically —
+      // the user already has a working connection, no need to make them click Next.
+      onAutoConnected?.(meta.label);
+      setTimeout(onNext, 900);
+    } catch (err) {
+      setAutoResult({ ok: false, message: t('connectAutoError', { error: err instanceof Error ? err.message : String(err) }) });
+    } finally {
+      setAutoConnecting(false);
     }
   };
 
@@ -337,13 +455,7 @@ function StepConnect({
             <label className="block text-[10px] font-semibold text-neutral-500 uppercase tracking-widest">
               {t('connectTokenWorkspaceLabel')}
             </label>
-            <select
-              value={selectedWs}
-              onChange={e => setSelectedWs(e.target.value)}
-              className="w-full bg-neutral-950 border border-neutral-700 rounded-md text-neutral-100 px-2.5 py-1.5 text-xs outline-none focus:border-blue-500/60 transition-colors"
-            >
-              {mintTargets.map(w => <option key={w.id} value={w.id}>{w.name}</option>)}
-            </select>
+            <WorkspacePicker targets={mintTargets} value={selectedWs} onChange={setSelectedWs} accent="blue" />
           </div>
         )}
 
@@ -391,18 +503,13 @@ function StepConnect({
 
   const needsOs = meta.kind === 'json' || meta.kind === 'toml' || (showAdvanced && editor === 'cursor');
 
-  return (
-    <div className="space-y-4">
-      <div className="space-y-0.5">
-        <p className="text-[10px] font-semibold text-neutral-500 uppercase tracking-widest">
-          {t('connectStep', { current: 2, total: 3 })}
-        </p>
-        <h3 className="text-sm font-semibold text-neutral-100 flex items-center gap-2">
-          {t('connectConnectTitle', { tool: meta.label })}
-          <EditorMark id={editor} size={14} />
-        </h3>
-      </div>
-
+  // Everything manual: OS selector, the Claude Code walkthrough animation, the
+  // OAuth/config instructions, and the advanced token section. Shown directly
+  // when auto-connect isn't available (web, or a deeplink/generic editor);
+  // collapsed behind a toggle when it is, since auto-connect is now the
+  // primary path and most desktop users won't need to look at this.
+  const manualContent = (
+    <>
       {/* OS selector (only when a file path is shown) */}
       {needsOs && (
         <div className="flex items-center gap-1.5">
@@ -463,14 +570,113 @@ function StepConnect({
         {showAdvanced && <div className="px-4 pb-4">{renderToken()}</div>}
       </div>
 
-      {/* Nav */}
+      {/* Manual completion — only needed here: unlike auto-connect, these steps
+          don't self-report success, so the user tells us when they're done.
+          Lives in the main Nav row when auto-connect isn't available (see below). */}
+      {autoAvailable && (
+        <div className="flex justify-end">
+          <button
+            onClick={onNext}
+            className="flex items-center gap-2 text-xs font-semibold text-white bg-blue-500 hover:bg-blue-400 px-4 py-2 rounded-md transition-colors"
+          >
+            {t('connectNext')} <ArrowRight size={13} />
+          </button>
+        </div>
+      )}
+    </>
+  );
+
+  return (
+    <div className="space-y-4">
+      <div className="space-y-0.5">
+        <p className="text-[10px] font-semibold text-neutral-500 uppercase tracking-widest">
+          {t('connectStep', { current: 2, total: 3 })}
+        </p>
+        <h3 className="text-sm font-semibold text-neutral-100 flex items-center gap-2">
+          {t('connectConnectTitle', { tool: meta.label })}
+          <EditorMark id={editor} size={14} />
+        </h3>
+      </div>
+
+      {/* Desktop-only: one-click auto-connect via Tauri. The primary path when
+          available — everything manual moves into the collapse below. */}
+      {autoAvailable && (
+        <div className="border border-emerald-500/25 rounded-xl p-4 bg-emerald-500/5 space-y-3">
+          <div className="flex items-center gap-2">
+            <Sparkles size={13} className="text-emerald-400" />
+            <span className="text-xs font-semibold text-neutral-100">{t('connectAutoHeading')}</span>
+            {detected && (
+              <span className="text-[9px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded-full">
+                {t('connectDetectedBadge')}
+              </span>
+            )}
+          </div>
+          <p className="text-[11px] text-neutral-400 leading-relaxed">{t('connectAutoDesc', { tool: meta.label })}</p>
+
+          {!canMint ? (
+            <p className="text-[11px] text-neutral-500 italic">{t('connectTokenNoAccess')}</p>
+          ) : (
+            <>
+              {mintTargets.length > 1 && (
+                <div className="space-y-1">
+                  <label className="block text-[10px] font-semibold text-neutral-500 uppercase tracking-widest">
+                    {t('connectTokenWorkspaceLabel')}
+                  </label>
+                  <WorkspacePicker targets={mintTargets} value={selectedWs} onChange={setSelectedWs} accent="emerald" />
+                </div>
+              )}
+
+              <button
+                onClick={handleAutoConnect}
+                disabled={autoConnecting || !selectedWs}
+                className="flex items-center gap-1.5 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 px-3 py-1.5 rounded-md transition-colors"
+              >
+                {autoConnecting ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
+                {autoConnecting ? t('connectAutoRunning') : t('connectAutoButton')}
+              </button>
+            </>
+          )}
+
+          {autoResult && (
+            <p className={`text-[11px] flex items-start gap-1.5 ${autoResult.ok ? 'text-emerald-400' : 'text-red-400'}`}>
+              {autoResult.ok ? <Check size={12} className="shrink-0 mt-0.5" /> : <AlertCircle size={12} className="shrink-0 mt-0.5" />}
+              {autoResult.message}
+            </p>
+          )}
+        </div>
+      )}
+
+      {/* Manual path: direct when auto-connect isn't available, collapsed behind
+          a toggle when it is (auto-connect is the primary path in that case). */}
+      {autoAvailable ? (
+        <div className="border border-neutral-800 rounded-xl overflow-hidden">
+          <button
+            onClick={() => setShowManual(v => !v)}
+            className="w-full flex items-center justify-between px-4 py-2.5 group"
+          >
+            <span className="flex items-center gap-2 text-[11px] font-semibold text-neutral-400 group-hover:text-neutral-200 transition-colors">
+              <Wrench size={12} />
+              {t('connectManualToggle')}
+            </span>
+            <ChevronDown size={13} className={`text-neutral-500 transition-transform ${showManual ? 'rotate-180' : ''}`} />
+          </button>
+          {showManual && <div className="px-4 pb-4 space-y-4">{manualContent}</div>}
+        </div>
+      ) : (
+        manualContent
+      )}
+
+      {/* Nav — the primary "Next" moves into the manual collapse above when
+          auto-connect is available (it already advances on its own success). */}
       <div className="flex items-center gap-3 flex-wrap pt-1">
-        <button
-          onClick={onNext}
-          className="flex items-center gap-2 text-xs font-semibold text-white bg-blue-500 hover:bg-blue-400 px-4 py-2 rounded-md transition-colors"
-        >
-          {t('connectNext')} <ArrowRight size={13} />
-        </button>
+        {!autoAvailable && (
+          <button
+            onClick={onNext}
+            className="flex items-center gap-2 text-xs font-semibold text-white bg-blue-500 hover:bg-blue-400 px-4 py-2 rounded-md transition-colors"
+          >
+            {t('connectNext')} <ArrowRight size={13} />
+          </button>
+        )}
         <button
           onClick={onBack}
           className="flex items-center gap-1 text-[11px] text-neutral-500 hover:text-neutral-300 transition-colors"
@@ -484,15 +690,20 @@ function StepConnect({
 
 // ── Step 3: test ───────────────────────────────────────────────────────────────
 function StepTest({
-  t, onDone, onBack,
+  t, onDone, onBack, autoConnectedTool, toolLabel,
 }: {
   t: ReturnType<typeof useTranslations>;
   onDone: () => void;
   onBack: () => void;
+  /** Set when this step was reached via a successful auto-connect — shows a completion banner. */
+  autoConnectedTool?: string | null;
+  /** The chosen editor's display name — used in the "send this to X" action hint. */
+  toolLabel: string;
 }) {
   const [copied, setCopied] = useState(false);
+  const testPrompt = t('connectTestPrompt');
   const copy = () => {
-    navigator.clipboard.writeText(TEST_PROMPT).then(() => {
+    navigator.clipboard.writeText(testPrompt).then(() => {
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
     });
@@ -507,9 +718,21 @@ function StepTest({
         <p className="text-[11px] text-neutral-400">{t('connectTestHint')}</p>
       </div>
 
+      {autoConnectedTool && (
+        <div className="flex items-center gap-3 rounded-xl border border-emerald-500/25 bg-emerald-500/10 px-4 py-3">
+          <span className="w-9 h-9 rounded-lg bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center shrink-0">
+            <PartyPopper size={17} className="text-emerald-400" />
+          </span>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold text-emerald-100">{t('connectAutoCompleteTitle')}</p>
+            <p className="text-[11px] text-emerald-400/80">{t('connectAutoCompleteHint', { tool: autoConnectedTool })}</p>
+          </div>
+        </div>
+      )}
+
       <div className="flex items-stretch gap-2">
         <p className="flex-1 text-[11px] text-neutral-200 italic bg-neutral-950 border border-neutral-700 rounded-lg px-3 py-3 leading-relaxed">
-          &ldquo;{TEST_PROMPT}&rdquo;
+          &ldquo;{testPrompt}&rdquo;
         </p>
         <button
           onClick={copy}
@@ -519,6 +742,11 @@ function StepTest({
           <span>{copied ? t('copied') : t('copyToken')}</span>
         </button>
       </div>
+
+      <p className="text-[11px] text-neutral-500 leading-relaxed flex items-start gap-1.5">
+        <Send size={12} className="text-neutral-600 shrink-0 mt-0.5" />
+        {t('connectTestAction', { tool: toolLabel })}
+      </p>
 
       <div className="flex items-center gap-3 flex-wrap pt-1">
         <button
@@ -553,8 +781,20 @@ interface Props {
 export default function ConnectFlow({ mcpUrl, onClose, mintTargets = [], bare = false, source = 'unknown' }: Props) {
   const t = useTranslations('WorkspaceSettings');
   const posthog = usePostHog();
+  const isTauri = useIsTauri();
   const [step, setStep] = useState<1 | 2 | 3>(1);
   const [editor, setEditor] = useState<EditorId | null>(null);
+  const [detected, setDetected] = useState<Record<string, boolean> | null>(null);
+  // True only once a real `agent_connect.rs` command call has actually
+  // succeeded — NOT just "we're in Tauri". The frontend deploys instantly on
+  // every web push, but these Rust commands only exist in the compiled binary
+  // once the user has updated their installed desktop app; without this check
+  // a user on an older build would see the auto-connect button and have it
+  // fail on click instead of just not seeing it.
+  const [autoConnectReady, setAutoConnectReady] = useState(false);
+  // Set right before auto-advancing from a successful auto-connect — shows a
+  // completion banner on the test step instead of a plain, unexplained jump.
+  const [autoConnectedTool, setAutoConnectedTool] = useState<string | null>(null);
 
   // Funnel (in-app): the connect flow was opened — top of the agent-add funnel.
   // posthog-js honors the user's consent state, so no extra gating is needed here.
@@ -565,9 +805,30 @@ export default function ConnectFlow({ mcpUrl, onClose, mintTargets = [], bare = 
     posthog?.capture('connect_flow_opened', { source });
   }, [posthog, source]);
 
+  // Desktop-only: which AI tools Tauri found on this device, fetched once per
+  // open. Powers the "detected" badges and the auto-connect blocks in StepConnect.
+  useEffect(() => {
+    if (!isTauri) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const { invoke } = await import('@tauri-apps/api/core');
+        const rows = await invoke<{ id: string; detected: boolean }[]>('detect_installed_agents');
+        if (cancelled) return;
+        setDetected(Object.fromEntries(rows.map(r => [r.id, r.detected])));
+        setAutoConnectReady(true); // the call succeeded — this build has agent_connect.rs
+      } catch {
+        // not in the desktop shell, or an older build without agent_connect.rs —
+        // no badges, no auto-connect button, manual flow unaffected
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [isTauri]);
+
   const selectEditor = (id: EditorId) => {
     posthog?.capture('connect_editor_selected', { editor: id, source });
     setEditor(id);
+    setAutoConnectedTool(null);
     setStep(2);
   };
 
@@ -583,7 +844,7 @@ export default function ConnectFlow({ mcpUrl, onClose, mintTargets = [], bare = 
     // key={step} remounts on each transition so the fade/slide-in replays.
     <div key={step} className="animate-step-in">
       {step === 1 && (
-        <StepChoose t={t} current={editor ?? undefined} onSelect={selectEditor} />
+        <StepChoose t={t} current={editor ?? undefined} onSelect={selectEditor} detected={detected} />
       )}
       {step === 2 && editor && (
         <StepConnect
@@ -593,10 +854,19 @@ export default function ConnectFlow({ mcpUrl, onClose, mintTargets = [], bare = 
           onNext={() => setStep(3)}
           onBack={() => setStep(1)}
           mintTargets={mintTargets}
+          detected={!!detected?.[editor]}
+          autoConnectReady={autoConnectReady}
+          onAutoConnected={setAutoConnectedTool}
         />
       )}
-      {step === 3 && (
-        <StepTest t={t} onDone={finish} onBack={() => setStep(2)} />
+      {step === 3 && editor && (
+        <StepTest
+          t={t}
+          onDone={finish}
+          onBack={() => setStep(2)}
+          autoConnectedTool={autoConnectedTool}
+          toolLabel={EDITORS.find(e => e.id === editor)?.label ?? ''}
+        />
       )}
     </div>
   );

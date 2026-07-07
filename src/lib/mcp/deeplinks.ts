@@ -113,5 +113,3 @@ export function buildCodexToml(mcpUrl: string, token?: string): string {
 
 /** Codex OAuth sign-in command — run after the server is in config.toml. */
 export const CODEX_LOGIN_CMD = 'codex mcp login remnus';
-
-export const TEST_PROMPT = 'List all pages and databases in my Remnus workspace';

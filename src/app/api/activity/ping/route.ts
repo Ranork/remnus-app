@@ -10,6 +10,7 @@ import {
   databases,
   pages,
 } from '@/db/schema';
+import { isTauriRequest } from '@/lib/server/platform';
 
 // Heartbeat endpoint. The client pings while the user is active (see
 // ActivityTracker). Each ping extends the most recent open session, or opens a
@@ -105,6 +106,7 @@ export async function POST() {
         startedAt: now,
         lastSeenAt: now,
         durationSeconds: 0,
+        platform: (await isTauriRequest()) ? 'tauri' : 'web',
       });
     }
   } catch {

@@ -1,6 +1,6 @@
 [package]
 name = "remnus-app"
-version = "0.1.12"
+version = "0.1.13"
 description = "Remnus Desktop App"
 authors = ["Emir OĞUZ"]
 edition = "2021"
@@ -24,7 +24,15 @@ tauri-plugin-deep-link = "2"
 tauri-plugin-updater = "2"
 tauri-plugin-dialog = "2"
 tokio = { version = "1", features = ["time"] }
-serde_json = "1"
+serde = { version = "1", features = ["derive"] }
+# `preserve_order`: agent_connect.rs upserts one key into a user's real editor
+# config file — without this, every write would alphabetically reorder the
+# ENTIRE file, not just the new key.
+serde_json = { version = "1", features = ["preserve_order"] }
+# Preserves comments/formatting/key order for anything untouched — needed to
+# safely upsert `[mcp_servers.remnus]` into a user's real config.toml without
+# disturbing the rest of it (the plain `toml` crate can't guarantee that).
+toml_edit = "0.22"
 url = "2"
 
 [profile.release]

@@ -3,7 +3,7 @@ import { useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   Shield, Calendar, ChevronLeft, ChevronRight, ChevronUp, ChevronDown,
-  Mail, Globe, Trash2, Search, Clock, Activity, HardDrive, Bot,
+  Mail, Globe, Trash2, Search, Clock, Activity, HardDrive, Bot, Laptop,
 } from 'lucide-react';
 import { adminDeleteUser } from '@/lib/actions/auth';
 import type { PerUserActivity } from '@/lib/actions/analytics';
@@ -190,6 +190,11 @@ export default function AdminUsersTable({
                           </div>
                         )}
                         <span className="text-neutral-200 font-medium truncate">{u.name ?? <span className="text-neutral-600 italic">—</span>}</span>
+                        {act?.usesDesktop && (
+                          <span title={t('desktopBadgeTooltip')} className="shrink-0 inline-flex">
+                            <Laptop size={11} className="text-blue-400" />
+                          </span>
+                        )}
                       </div>
                     </td>
                     <td className="px-4 py-3">

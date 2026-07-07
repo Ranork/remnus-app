@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { useTranslations } from 'next-intl';
+import { usePostHog } from 'posthog-js/react';
 import { Download, ArrowRight, Smartphone } from 'lucide-react';
 import {
   subscribeInstallPrompt,
@@ -46,6 +47,15 @@ function detectOS(): DetectedOS {
   return 'unknown';
 }
 
+// Coarse OS family for a PLATFORMS grid entry, so download-click analytics
+// group macApple/macIntel and linuxApp/linuxDeb into one 'mac'/'linux' bucket
+// (matching the smart primary button's already-coarse `os` state).
+function coarseOs(platformId: string): 'windows' | 'mac' | 'linux' {
+  if (platformId.startsWith('mac')) return 'mac';
+  if (platformId.startsWith('linux')) return 'linux';
+  return 'windows';
+}
+
 // The single asset recommended for a detected desktop OS (Apple Silicon / AppImage as sensible defaults).
 const PRIMARY_BY_OS: Record<'windows' | 'mac' | 'linux', { osKey: string; file: string; logo: string }> = {
   windows: { osKey: 'osWindows',  file: 'Remnus-windows-x64-setup.exe',  logo: '/os/windows.svg' },
@@ -55,6 +65,7 @@ const PRIMARY_BY_OS: Record<'windows' | 'mac' | 'linux', { osKey: string; file: 
 
 export default function DownloadView() {
   const t = useTranslations('Download');
+  const posthog = usePostHog();
   const [os, setOs] = useState<DetectedOS>('unknown');
   const [ready, setReady] = useState(false);
   const installStatus = useSyncExternalStore(
@@ -129,6 +140,7 @@ export default function DownloadView() {
             <>
               <a
                 href={downloadUrl(primary.file)}
+                onClick={() => posthog?.capture('desktop_download_clicked', { os, file: primary.file, surface: 'download_page_primary' })}
                 className="inline-flex items-center gap-2.5 bg-blue-500 hover:bg-accent-strong text-white px-7 py-4 rounded-md text-[15px] font-medium transition-colors duration-150"
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -158,6 +170,7 @@ export default function DownloadView() {
               <a
                 key={p.id}
                 href={downloadUrl(p.file)}
+                onClick={() => posthog?.capture('desktop_download_clicked', { os: coarseOs(p.id), file: p.file, surface: 'download_page_grid' })}
                 className="flex items-center gap-4 px-5 py-4 bg-neutral-900 hover:bg-neutral-850 transition-colors duration-150 group"
               >
                 {/* eslint-disable-next-line @next/next/no-img-element */}
