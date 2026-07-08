@@ -79,7 +79,7 @@ Get the column schema and saved views of a database, without fetching rows. Use 
 
 ## query_database
 
-Get the schema and rows of a database. Supports property filters, field projection, and cursor-based pagination.
+Get the schema and rows of a database. Row markdown bodies are omitted by default — add `"content"` to `fields` to include them, or `get_page` a single row. Supports property filters, field projection, and cursor-based pagination.
 
 **Parameters**
 
@@ -88,7 +88,7 @@ Get the schema and rows of a database. Supports property filters, field projecti
 | `databaseId` | string | ✓ | | Database ID |
 | `limit` | number | | `50` | Rows per page |
 | `filters` | object | | | Filter rows by property value |
-| `fields` | string[] | | | Only return these columns (matched by column id **or** name, case-insensitive); row titles are always included. Add `"content"` to include row markdown bodies — otherwise they are omitted when projecting |
+| `fields` | string[] | | | Only return these columns (matched by column id **or** name, case-insensitive); row titles are always included. Add `"content"` to include row markdown bodies — they are omitted by default, with or without a projection |
 | `cursor` | string | | | Pagination cursor |
 
 **Filters**
@@ -108,7 +108,7 @@ Use a string for `select` columns and an array for `multi_select` columns.
 
 **Field projection**
 
-When you only need a few columns (e.g. checking statuses on a board), pass `fields` to cut the payload dramatically — row bodies and unrequested properties are dropped, and the returned `schema` is trimmed to match:
+When you only need a few columns (e.g. checking statuses on a board), pass `fields` to cut the payload further — unrequested properties are dropped (row bodies are already omitted by default), and the returned `schema` is trimmed to match:
 
 ```json
 {
