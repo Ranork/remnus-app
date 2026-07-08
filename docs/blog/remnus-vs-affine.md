@@ -10,7 +10,7 @@ Full disclosure up front: we're the team behind Remnus. Wherever AFFiNE is simpl
 
 AFFiNE is a mature open source workspace built by toeverything, combining documents, structured databases, and an infinite whiteboard canvas in one app. It has crossed roughly 70,000 GitHub stars, runs natively on Windows, macOS, Linux, iOS, and Android, and is genuinely offline-first: it was designed from the start to work without a connection and sync when you reconnect, on every platform including mobile.
 
-Remnus takes the opposite starting point. Instead of a mature editor that later grew an AI assistant, it was built so an agent has the same standing as a human from the first commit: a first-party MCP server sits alongside the web app, and 14 tools cover the same pages and database rows a person sees in the UI, not a cut-down subset.
+Remnus takes the opposite starting point. Instead of a mature editor that later grew an AI assistant, it was built so an agent has the same standing as a human from the first commit: a first-party MCP server sits alongside the web app, and 19 tools cover the same pages and database rows a person sees in the UI, not a cut-down subset.
 
 ## The everyday workspace
 
@@ -34,7 +34,7 @@ Here is where the two products stop looking alike.
 | Database view types | 5 (table, kanban, gallery, list, grid) | 3 (table, kanban, calendar) |
 | Cross-database relations/rollups | Not shipped yet, confirmed planned for version 0.28 | Not currently |
 | Native offline mode | Yes, offline-first by architecture, desktop and mobile | Online-first apps, no full offline editing yet |
-| Native MCP server (agent connects in) | No, tracking issues for API/MCP support have been closed or marked duplicate with no shipped first-party server | Yes, first-party, 14 tools |
+| Native MCP server (agent connects in) | No, tracking issues for API/MCP support have been closed or marked duplicate with no shipped first-party server | Yes, first-party, 19 tools |
 | Unofficial/community MCP access | A third-party server (`affine-mcp-server` by an independent developer) wraps AFFiNE's collaboration APIs, not maintained by the core team | Not applicable |
 | Bearer token / PAT auth for agents | Not documented | Yes, scoped `rmns_` personal access tokens, expiry optional, instantly revocable |
 | OAuth 2.1 with PKCE for editors | Not documented | Yes |
@@ -49,7 +49,7 @@ AFFiNE's own community has asked for this directly and repeatedly. A GitHub issu
 
 What exists today is a third-party project, `affine-mcp-server`, built and maintained by an independent developer rather than the AFFiNE team, which wraps AFFiNE's document, database, and comment APIs into an MCP tool surface over stdio or HTTP. It is a real and apparently capable project, but it is not first-party, and its authentication, rate limits, and long-term maintenance are whatever that one maintainer implements and sustains.
 
-Remnus skipped that middle step entirely. There was never a version without an MCP server: it shipped with the product from the start, covering 14 tools (7 read, 7 write) plus 4 resource templates and 5 prompt templates, built and kept in sync by the same team and the same codebase, not handed off to a separate community wrapper.
+Remnus skipped that middle step entirely. There was never a version without an MCP server: it shipped with the product from the start, covering 19 tools (9 read, 10 write) plus 5 resource templates and 7 prompt templates, built and kept in sync by the same team and the same codebase, not handed off to a separate community wrapper.
 
 ### Authentication and headless agents
 

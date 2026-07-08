@@ -22,7 +22,7 @@ Remnus is a Notion-like workspace built around the [Model Context Protocol (MCP)
 
 - **Pages** — Markdown editor with slash commands, nested sub-pages, and icons
 - **Databases** — Customizable columns, Table / Kanban / Calendar views, filters, sorts
-- **MCP Server** — 16 tools + 5 resources + 5 prompts, Streamable HTTP + SSE dual transport
+- **MCP Server** — 19 tools + 5 resources + 7 prompts, Streamable HTTP + SSE dual transport
 - **Agent auth** — One-click OAuth 2.1 + PKCE (RFC 7591 dynamic registration) for editors, or scoped read/write personal access tokens for headless agents
 - **Multi-workspace** — Invite members, role-based access (owner / member / viewer)
 - **Desktop app** — Tauri v2 shell for Windows, macOS, Linux

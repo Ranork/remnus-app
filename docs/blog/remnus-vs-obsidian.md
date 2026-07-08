@@ -35,7 +35,7 @@ None of the plugin-ecosystem gap is something a young project closes overnight, 
 | Native database views | Table, gallery, list, map (via the built-in Bases layer) | Table, kanban, calendar |
 | Kanban / calendar views | Third-party plugins today; both listed as "Planned" on the official roadmap | Native, shipped |
 | Real-time multiplayer editing | Not shipped (listed as "Planned"); Sync merges file-by-file, not keystroke-by-keystroke | Not shipped either; updates arrive via background refresh |
-| Native MCP server (agent connects in) | No official core plugin; a forum request for one exists with no team commitment | Yes, first-party, 14 tools |
+| Native MCP server (agent connects in) | No official core plugin; a forum request for one exists with no team commitment | Yes, first-party, 19 tools |
 | Community MCP options | Several independent plugins/servers (at least five actively maintained ones found) wrap vault file access over MCP | Not applicable |
 | Bearer token / PAT auth for agents | Not standardized; each community plugin defines its own | Yes, scoped `rmns_` personal access tokens, expiry optional, instantly revocable |
 | OAuth 2.1 with PKCE for editors | Not applicable | Yes |
@@ -50,7 +50,7 @@ Search for ways to connect an AI agent to Obsidian and you'll find a genuinely a
 
 What none of them are is official. A forum thread asking Obsidian's team to ship "a core plugin that exposes the 'canonical' MCP server," so agents go through supported commands instead of raw file access, has sat with a handful of likes and no team response since it was posted in December 2025. Until that changes, whichever community server you pick comes with its own authentication approach, its own update cadence, and its own risk if the maintainer moves on.
 
-Remnus didn't leave that gap open. The MCP server ships with the product, built and maintained by the same team, covering 14 tools (7 read, 7 write) plus 4 resource templates and 5 prompt templates against the workspace's real data model, not a file-system shim.
+Remnus didn't leave that gap open. The MCP server ships with the product, built and maintained by the same team, covering 19 tools (9 read, 10 write) plus 5 resource templates and 7 prompt templates against the workspace's real data model, not a file-system shim.
 
 ### Authentication and headless agents
 

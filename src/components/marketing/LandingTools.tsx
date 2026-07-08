@@ -18,6 +18,9 @@ const TOOLS = [
   { scope: 'write', tool: 'move_item',               descKey: 'bridgeToolsDescMoveItem' },
   { scope: 'write', tool: 'create_database',         descKey: 'bridgeToolsDescCreateDatabase' },
   { scope: 'write', tool: 'update_database_schema',  descKey: 'bridgeToolsDescUpdateDatabaseSchema' },
+  { scope: 'write', tool: 'create_database_view',    descKey: 'bridgeToolsDescCreateDatabaseView' },
+  { scope: 'write', tool: 'update_database_view',    descKey: 'bridgeToolsDescUpdateDatabaseView' },
+  { scope: 'write', tool: 'delete_database_view',    descKey: 'bridgeToolsDescDeleteDatabaseView' },
 ] as const;
 
 const RESOURCES = [
@@ -34,6 +37,8 @@ const PROMPTS = [
   { name: 'kanban-triage',        args: 'database_id',           descKey: 'bridgePromptsDescKanbanTriage'  },
   { name: 'extract-tasks',        args: 'page_id',               descKey: 'bridgePromptsDescExtractTasks'  },
   { name: 'search-and-create',    args: 'title, query',          descKey: 'bridgePromptsDescSearchCreate'  },
+  { name: 'save-memory',          args: 'content, memory_type?', descKey: 'bridgePromptsDescSaveMemory'    },
+  { name: 'recall-context',       args: 'topic, limit?',         descKey: 'bridgePromptsDescRecallContext' },
 ] as const;
 
 const SCOPE_COLORS: Record<string, string> = {
@@ -122,7 +127,7 @@ export default async function LandingTools() {
                     <span className="font-mono text-neutral-100 font-medium">{row.tool}</span>
                     <span className="text-dim">{displayDesc}</span>
                     <span className="font-mono text-accent-strong text-[12.5px] text-right">
-                      {row.tool.includes('create') || row.tool.includes('schema') || row.tool.includes('move') ? t('bridgeToolsReturnResult') : t('bridgeToolsReturnPage')}
+                      {row.tool.includes('create') || row.tool.includes('schema') || row.tool.includes('move') || row.tool.includes('view') ? t('bridgeToolsReturnResult') : t('bridgeToolsReturnPage')}
                     </span>
                   </div>
                 );

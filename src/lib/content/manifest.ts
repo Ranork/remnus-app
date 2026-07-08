@@ -23,6 +23,8 @@ import {
   PencilLine,
   Package,
   Lightbulb,
+  Brain,
+  Gauge,
   Wrench,
   Bot,
   Scale,
@@ -55,6 +57,8 @@ export const WIKI_PAGES: WikiPage[] = [
   { slug: 'write-tools',      file: 'write-tools.md',      title: 'Write Tools',        icon: PencilLine,  order: 5 },
   { slug: 'resources',        file: 'resources.md',        title: 'Resources',          icon: Package,     order: 6 },
   { slug: 'prompts',          file: 'prompts.md',          title: 'Prompts',            icon: Lightbulb,   order: 7 },
+  { slug: 'agent-memory',     file: 'agent-memory.md',     title: 'Agent Memory',       icon: Brain,       order: 8 },
+  { slug: 'token-efficient-usage', file: 'token-efficient-usage.md', title: 'Token-Efficient Usage', icon: Gauge, order: 9 },
 ];
 
 // ── Docs (blog, article layout) ────────────────────────────────────────────────
@@ -72,6 +76,15 @@ export type BlogPost = {
 };
 
 export const BLOG_POSTS: BlogPost[] = [
+  {
+    slug: 'agent-token-efficiency',
+    file: 'agent-token-efficiency.md',
+    title: 'How Many Tokens Does Your Agent Burn Reading Your Notes?',
+    description:
+      'A measured look at what an AI agent spends reading a workspace over MCP — and how field projection, outline mode, the digest, and delta sync cut it 80–90%.',
+    date: '2026-07-07',
+    icon: Gauge,
+  },
   {
     slug: 'how-i-built-mcp-native',
     file: 'how-i-built-mcp-native.md',

@@ -34,7 +34,7 @@ This is the actual fork in the road, and it is a bigger one than the workspace f
 | Database view types | 3 (Grid, Board, Calendar) | 3 (table, kanban, calendar) |
 | Cross-database relations/rollups | Yes | Not currently |
 | Native offline mode | Yes, local-first by architecture | Online-first apps, no full offline editing yet |
-| Native MCP server (agent connects in) | No, an open feature request (GitHub issue #8043, opened June 2025) remains unresolved | Yes, first-party, 14 tools |
+| Native MCP server (agent connects in) | No, an open feature request (GitHub issue #8043, opened June 2025) remains unresolved | Yes, first-party, 19 tools |
 | MCP client (workspace connects out to other tools) | Yes, AppFlowy's own AI assistant can call external MCP servers | Not applicable, Remnus is built to be the server agents connect to |
 | Unofficial/community MCP access | Third-party wrappers (e.g. on Zapier, PulseMCP) exist around the AppFlowy Cloud REST API, not maintained by the core team | Not applicable |
 | Works with the offline desktop app | No, community MCP wrappers need AppFlowy Cloud; the local desktop database isn't API accessible | Not applicable, Remnus is cloud native |
@@ -53,7 +53,7 @@ AppFlowy has built AI directly into its editor: an AI chat assistant, writing he
 
 There are community-built MCP servers that wrap the AppFlowy Cloud REST API (listed on directories like PulseMCP and Zapier's MCP catalog), built by individual contributors rather than the AppFlowy team. They also only work against AppFlowy Cloud, since the plain offline desktop app keeps notes in a local binary format that isn't reachable over an API at all.
 
-Remnus was built the opposite way: the MCP server is the first-party interface, live from the start, with 14 tools split 7 read and 7 write, plus 4 resource templates and 5 prompt templates, maintained by the same team that builds the product.
+Remnus was built the opposite way: the MCP server is the first-party interface, live from the start, with 19 tools split 9 read and 10 write, plus 5 resource templates and 7 prompt templates, maintained by the same team that builds the product.
 
 ### Authentication and headless agents
 

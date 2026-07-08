@@ -40,6 +40,7 @@ export default function TemplatePickerModal({
       'Task Tracker': t('taskTracker'),
       'Event Calendar': t('eventCalendar'),
       'Reading List': t('readingList'),
+      'Agent Memory': t('agentMemory'),
     };
     return map[name] ?? name;
   };
@@ -53,6 +54,7 @@ export default function TemplatePickerModal({
       'Task Tracker': t('taskTrackerDesc'),
       'Event Calendar': t('eventCalendarDesc'),
       'Reading List': t('readingListDesc'),
+      'Agent Memory': t('agentMemoryDesc'),
     };
     return map[name] ?? desc;
   };

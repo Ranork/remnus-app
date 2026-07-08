@@ -33,4 +33,6 @@ Always use the `www` host — the apex `remnus.com` redirects to `www.remnus.com
 | [Read Tools](read-tools.md) | 9 read-only tools |
 | [Write Tools](write-tools.md) | 10 write tools |
 | [Resources](resources.md) | 5 MCP resource templates |
-| [Prompts](prompts.md) | 5 built-in prompt templates |
+| [Prompts](prompts.md) | 7 built-in prompt templates |
+| [Agent Memory](agent-memory.md) | Save & recall durable memory over MCP |
+| [Token-Efficient Usage](token-efficient-usage.md) | Cut a typical read 80–90% with projection, outline, digest & delta |
