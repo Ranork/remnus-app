@@ -43,7 +43,7 @@ export function registerResources(server: McpServer, ctx: TokenContext) {
           text: JSON.stringify({
             workspaceId,
             databases: schemas.filter((s): s is Exclude<typeof s, null> => s !== null),
-          }, null, 2),
+          }),
         }],
       };
     },
@@ -153,7 +153,7 @@ export function registerResources(server: McpServer, ctx: TokenContext) {
     { mimeType: 'application/json', description: 'Get JSON schema columns of a database' },
     async (uri, variables) => {
       const schema = await getDatabaseSchema(ctx.workspaceId, variables.id as string);
-      return { contents: [{ uri: uri.href, mimeType: 'application/json', text: JSON.stringify(schema, null, 2) }] };
+      return { contents: [{ uri: uri.href, mimeType: 'application/json', text: JSON.stringify(schema) }] };
     },
   );
 
@@ -172,7 +172,7 @@ export function registerResources(server: McpServer, ctx: TokenContext) {
           : eq(agentActivity.oauthTokenId, ctx.tokenId))
         .orderBy(desc(agentActivity.createdAt))
         .limit(50);
-      return { contents: [{ uri: uri.href, mimeType: 'application/json', text: JSON.stringify(logs, null, 2) }] };
+      return { contents: [{ uri: uri.href, mimeType: 'application/json', text: JSON.stringify(logs) }] };
     },
   );
 }

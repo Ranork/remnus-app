@@ -21,6 +21,8 @@ That's **7.5× more tokens** to move the same sentence. (The block-JSON above is
 
 When an agent queries a database, it usually needs two or three columns — a status, a priority — not every property on every row. `query_database` takes a `fields` projection that drops unrequested columns and row bodies, and trims the returned schema to match.
 
+> **Update (2026-07-08):** row markdown bodies are now **excluded by default** — a plain `query_database` call no longer carries them. The "full query" figure below is what you pay only when you explicitly opt in with `fields: [..., "content"]`; the default call already costs a fraction of it. The cheap path is no longer opt-in — the expensive one is.
+
 On a 16-row Sprint Board:
 
 | Query | Size | ~Tokens | |

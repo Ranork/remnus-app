@@ -20,18 +20,20 @@ async function main() {
 
   const { items } = await listWorkspaceItems(ws.id, undefined, 200);
 
-  // 1) query_database — full vs fields projection
+  // 1) query_database — with bodies (opt-in) vs default (no bodies) vs fields projection
   const dbItem = items.find(i => i.type === 'database' && i.databaseId);
   if (dbItem?.databaseId) {
-    const full = await queryDatabaseRows(ws.id, dbItem.databaseId, 100);
-    // pick two columns to project
-    const cols = (full.schema ?? []).filter(c => c.id !== 'title').slice(0, 2).map(c => c.name);
+    const dflt = await queryDatabaseRows(ws.id, dbItem.databaseId, 100);
+    const allCols = (dflt.schema ?? []).filter(c => c.id !== 'title').map(c => c.name);
+    // bodies are opt-in since 2026-07-08 — the old "full" behavior needs an explicit 'content'
+    const full = await queryDatabaseRows(ws.id, dbItem.databaseId, 100, undefined, undefined, [...allCols, 'content']);
+    const cols = allCols.slice(0, 2);
     const proj = await queryDatabaseRows(ws.id, dbItem.databaseId, 100, undefined, undefined, cols);
-    const f = chars(full), p = chars(proj);
-    console.log(`[1] query_database "${dbItem.title}" (${full.rows?.length ?? 0} rows)`);
-    console.log(`    full           : ${f} chars ≈ ${tok(f)} tok`);
-    console.log(`    fields=${JSON.stringify(cols)} : ${p} chars ≈ ${tok(p)} tok`);
-    console.log(`    reduction      : ${pct(f, p)}%\n`);
+    const f = chars(full), d = chars(dflt), p = chars(proj);
+    console.log(`[1] query_database "${dbItem.title}" (${dflt.rows?.length ?? 0} rows)`);
+    console.log(`    with bodies (fields=[...all,"content"]): ${f} chars ≈ ${tok(f)} tok`);
+    console.log(`    default (no bodies)                    : ${d} chars ≈ ${tok(d)} tok  (−${pct(f, d)}%)`);
+    console.log(`    fields=${JSON.stringify(cols)}         : ${p} chars ≈ ${tok(p)} tok  (−${pct(f, p)}%)\n`);
   }
 
   // 2) get_page — full vs outline (longest page)

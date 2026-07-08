@@ -439,10 +439,11 @@ export async function queryDatabaseRows(
 
   // Optional field projection — trims each row's properties (and the returned
   // schema) to the requested columns. Entries match column ids OR names
-  // (case-insensitive); row markdown content is included only when 'content'
-  // is explicitly requested. Cuts response payload dramatically on wide tables.
+  // (case-insensitive). Row markdown bodies are opt-in: included only when
+  // 'content' is explicitly requested in fields (with or without a projection),
+  // so unprojected queries stay cheap by default (bodies flipped to opt-in 2026-07-08).
   let allowedColIds: Set<string> | null = null;
-  let includeContent = true;
+  let includeContent = false;
   let projectedSchema: typeof dbRecord.schema = dbRecord.schema;
   if (fields && fields.length > 0) {
     const schemaCols = (Array.isArray(dbRecord.schema) ? dbRecord.schema : []) as { id?: string; name?: string }[];
@@ -503,14 +504,16 @@ export async function queryDatabaseRows(
 
   return {
     schema: projectedSchema,
-    rows: page.map(({ sortOrder: _so, ...r }) => {
-      if (!allowedColIds) return r;
-      const source = (r.properties ?? {}) as Record<string, unknown>;
-      const properties: Record<string, unknown> = {};
-      for (const key of Object.keys(source)) {
-        if (allowedColIds.has(key)) properties[key] = source[key];
+    rows: page.map(({ sortOrder: _so, content, ...r }) => {
+      let properties = (r.properties ?? {}) as Record<string, unknown>;
+      if (allowedColIds) {
+        const trimmed: Record<string, unknown> = {};
+        for (const key of Object.keys(properties)) {
+          if (allowedColIds.has(key)) trimmed[key] = properties[key];
+        }
+        properties = trimmed;
       }
-      return { id: r.id, title: r.title, properties, ...(includeContent ? { content: r.content } : {}) };
+      return { id: r.id, title: r.title, properties, ...(includeContent ? { content } : {}) };
     }),
     hasMore,
     nextCursor: hasMore && last ? encodeCursor(last.sortOrder, last.id) : undefined,

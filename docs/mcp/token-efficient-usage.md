@@ -15,7 +15,7 @@ Measured: ~90% smaller than reading every page body to orient.
 
 ## 2. Project database queries with `fields`
 
-`query_database` returns every column and row body by default. When you only need a few columns — statuses on a board, due dates — pass a `fields` array (matched by column id **or** name, case-insensitive). Unrequested properties and row bodies are dropped, and the returned schema is trimmed to match.
+`query_database` returns every column by default, but row markdown bodies are **omitted unless you explicitly add `"content"` to `fields`** — a plain query is already body-free, so the expensive path is opt-in. When you only need a few columns — statuses on a board, due dates — pass a `fields` array (matched by column id **or** name, case-insensitive). Unrequested properties are dropped too, and the returned schema is trimmed to match.
 
 ```json
 { "databaseId": "…", "fields": ["Status", "Priority"] }
