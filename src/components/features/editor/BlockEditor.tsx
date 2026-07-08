@@ -14,6 +14,7 @@ import BlockDragHandle, { getDragSource, getNestTarget, clearNestTarget } from '
 import TableControls from './TableControls';
 import { Slice, Fragment } from '@tiptap/pm/model';
 import { TextSelection } from '@tiptap/pm/state';
+import { CellSelection } from '@tiptap/pm/tables';
 import { dropPoint } from '@tiptap/pm/transform';
 import { joinTextblockForward } from '@tiptap/pm/commands';
 import { SlashCommand } from './SlashCommandMenu';
@@ -22,7 +23,7 @@ import Color from '@tiptap/extension-color';
 import { TextStyle } from '@tiptap/extension-text-style';
 import Highlight from '@tiptap/extension-highlight';
 import { YoutubeEmbed } from './YoutubeEmbedExtension';
-import { fragmentToCleanMarkdown } from './clipboardMarkdown';
+import { fragmentToCleanMarkdown, cellSelectionToCleanMarkdown } from './clipboardMarkdown';
 
 // Markdown has no native syntax for text/highlight colors, so the default
 // serializer drops them (a colored run reverts on reload). These extends emit
@@ -308,6 +309,15 @@ const BlockEditor = forwardRef<BlockEditorHandle, Props>(function BlockEditor({
       clipboardTextSerializer: (slice) => {
         const ed = editorRef.current;
         if (!ed) return slice.content.textBetween(0, slice.content.size, '\n\n', '\n');
+        // A triple-click (or a drag that grazes the cell border) inside a table
+        // cell lands as a single-cell CellSelection, not a plain TextSelection —
+        // serialize it as the cell's own text, not a `| … |` table row (see
+        // cellSelectionToCleanMarkdown for why that matters for paste).
+        const sel = ed.state.selection;
+        if (sel instanceof CellSelection) {
+          const cellMd = cellSelectionToCleanMarkdown(ed, sel);
+          if (cellMd != null) return cellMd;
+        }
         return fragmentToCleanMarkdown(ed, slice.content);
       },
       handleClick: (_view, _pos, event) => {
