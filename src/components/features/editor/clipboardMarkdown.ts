@@ -159,26 +159,6 @@ function wrappingListNode(editor: any): { type: string; attrs: Record<string, an
 }
 
 /**
- * A CellSelection anchored and headed at the exact same cell — what
- * prosemirror-tables produces for a triple-click inside a table cell, or a
- * plain drag that happens to cross the cell's DOM boundary without actually
- * selecting a second cell — should copy like normal cell text, not a markdown
- * table. Left as-is, the fragment carries the cell's own table/row/cell
- * wrapper, which serializes to `| text |` GFM syntax; BlockEditor's paste
- * handler then sees that pipe syntax and re-parses it as a real table.
- * Returns null for a selection spanning more than one cell so the caller
- * falls back to the normal (intentional) table serialization.
- */
-export function cellSelectionToCleanMarkdown(editor: any, cellSelection: any): string | null {
-  const $anchor = cellSelection?.$anchorCell;
-  const $head = cellSelection?.$headCell;
-  if (!$anchor || !$head || $anchor.pos !== $head.pos) return null;
-  const cell = $anchor.nodeAfter;
-  if (!cell) return null;
-  return contentToCleanMarkdown(editor, cell.content.toJSON() ?? []);
-}
-
-/**
  * A copy of exactly one table cell always slices down to this exact shape —
  * one `tableRow` containing one `tableCell`/`tableHeader` — regardless of
  * which Selection subclass produced it (a single-cell CellSelection is the

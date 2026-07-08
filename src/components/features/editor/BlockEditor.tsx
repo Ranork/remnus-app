@@ -14,7 +14,6 @@ import BlockDragHandle, { getDragSource, getNestTarget, clearNestTarget } from '
 import TableControls from './TableControls';
 import { Slice, Fragment } from '@tiptap/pm/model';
 import { TextSelection } from '@tiptap/pm/state';
-import { CellSelection } from '@tiptap/pm/tables';
 import { dropPoint } from '@tiptap/pm/transform';
 import { joinTextblockForward } from '@tiptap/pm/commands';
 import { SlashCommand } from './SlashCommandMenu';
@@ -23,7 +22,7 @@ import Color from '@tiptap/extension-color';
 import { TextStyle } from '@tiptap/extension-text-style';
 import Highlight from '@tiptap/extension-highlight';
 import { YoutubeEmbed } from './YoutubeEmbedExtension';
-import { fragmentToCleanMarkdown, cellSelectionToCleanMarkdown } from './clipboardMarkdown';
+import { fragmentToCleanMarkdown } from './clipboardMarkdown';
 
 // Markdown has no native syntax for text/highlight colors, so the default
 // serializer drops them (a colored run reverts on reload). These extends emit
@@ -301,23 +300,38 @@ const BlockEditor = forwardRef<BlockEditorHandle, Props>(function BlockEditor({
         class: 'prose-editor focus:outline-none min-h-[500px]',
         spellcheck: 'false',
       },
+      // Selecting all the text of a SINGLE table cell (triple-click, or a drag
+      // that grazes the cell border) yields a single-cell CellSelection whose
+      // copied slice is still wrapped in table→row→cell. That wrapper makes the
+      // clipboard carry a whole `<table>` (text/html) and `| … |` GFM syntax
+      // (text/plain) — so pasting anywhere reproduces a table instead of the
+      // plain cell text. `transformCopied` runs BEFORE both the html and text
+      // serializers, so unwrapping the slice to just the cell's own content here
+      // fixes EVERY clipboard format at once. A multi-cell / whole-row / whole-
+      // table copy has >1 cell (or a `table` at the top) and is left untouched.
+      transformCopied: (slice) => {
+        const content = slice.content;
+        if (content.childCount !== 1) return slice;
+        const row = content.firstChild;
+        if (!row || row.type.spec.tableRole !== 'row' || row.childCount !== 1) return slice;
+        const cell = row.firstChild;
+        const role = cell?.type.spec.tableRole;
+        if (!cell || (role !== 'cell' && role !== 'header_cell')) return slice;
+        if (cell.content.size === 0) return Slice.empty;
+        // Keep the cell's block content, opened one level so a single-paragraph
+        // cell pastes inline (matching a normal in-paragraph text copy).
+        return new Slice(cell.content, 1, 1);
+      },
       // Copy/cut a native text selection as clean markdown (not the storage HTML
       // for atom blocks, and with no doubled blank lines) — so a callout pastes
       // as a blockquote and consecutive paragraphs paste tightly. The marquee
       // block selection goes through serializeBlockSelectionMarkdown, which uses
-      // the same cleaner, so both copy paths produce identical output.
+      // the same cleaner, so both copy paths produce identical output. The slice
+      // reaching here is already unwrapped by transformCopied for single-cell
+      // table copies, so cell text serializes as plain text, not a `| … |` row.
       clipboardTextSerializer: (slice) => {
         const ed = editorRef.current;
         if (!ed) return slice.content.textBetween(0, slice.content.size, '\n\n', '\n');
-        // A triple-click (or a drag that grazes the cell border) inside a table
-        // cell lands as a single-cell CellSelection, not a plain TextSelection —
-        // serialize it as the cell's own text, not a `| … |` table row (see
-        // cellSelectionToCleanMarkdown for why that matters for paste).
-        const sel = ed.state.selection;
-        if (sel instanceof CellSelection) {
-          const cellMd = cellSelectionToCleanMarkdown(ed, sel);
-          if (cellMd != null) return cellMd;
-        }
         return fragmentToCleanMarkdown(ed, slice.content);
       },
       handleClick: (_view, _pos, event) => {
