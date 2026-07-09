@@ -585,7 +585,48 @@ export default function DatabaseView({
   };
 
   const handleDuplicatePage = async (pageId: string): Promise<string | undefined> => {
-    return await duplicatePage(pageId, database.id);
+    // Optimistically insert the copy so it shows up immediately in Table/Kanban/Calendar
+    // instead of only appearing after a manual refresh (revalidatePath alone doesn't
+    // update this client component's already-rendered localPages state).
+    const source = localPages.find((p) => p.id === pageId);
+    const tempId = `temp-${uid()}`;
+
+    if (source) {
+      const now = new Date();
+      const copiedProperties = { ...(source.properties || {}) };
+      if (copiedProperties.title) copiedProperties.title = `${copiedProperties.title} (Copy)`;
+      const maxSort = localPages.length > 0
+        ? Math.max(...localPages.map((p) => p.sortOrder ?? 0))
+        : 0;
+
+      setLocalPages((prev) => [
+        ...prev,
+        {
+          ...source,
+          id: tempId,
+          title: `${source.title} (Copy)`,
+          properties: copiedProperties,
+          sortOrder: maxSort + 1,
+          createdAt: now,
+          updatedAt: now,
+        },
+      ]);
+    }
+
+    try {
+      const realId = await duplicatePage(pageId, database.id);
+      if (source) {
+        if (realId) {
+          setLocalPages((prev) => prev.map((p) => (p.id === tempId ? { ...p, id: realId } : p)));
+        } else {
+          setLocalPages((prev) => prev.filter((p) => p.id !== tempId));
+        }
+      }
+      return realId;
+    } catch (err) {
+      if (source) setLocalPages((prev) => prev.filter((p) => p.id !== tempId));
+      throw err;
+    }
   };
 
   const handleRowReorder = async (orderedIds: string[]) => {
