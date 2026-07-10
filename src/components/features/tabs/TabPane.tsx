@@ -75,7 +75,9 @@ function StandalonePagePane({ itemId, isAdmin }: { itemId: string; isAdmin: bool
       <StandalonePageEditor
         item={pageQ.data.item}
         page={pageQ.data.page}
-        subItems={subItemsQ.data ?? []}
+        // undefined (not []) until the fetch succeeds, so a loading/errored
+        // refetch never signals "no children" and wipes the body's child list.
+        subItems={subItemsQ.isSuccess ? subItemsQ.data ?? [] : undefined}
         isAdmin={isAdmin}
       />
     </div>
@@ -136,7 +138,12 @@ function DatabaseRowPane({ dbId, pageId, isAdmin }: { dbId: string; pageId: stri
   return (
     <div className="flex-1 overflow-auto bg-neutral-850">
       <MembersProvider members={membersQ.data ?? []}>
-        <PageEditor database={dbQ.data} initialPage={pageQ.data} subItems={subItemsQ.data ?? []} isAdmin={isAdmin} />
+        <PageEditor
+          database={dbQ.data}
+          initialPage={pageQ.data}
+          subItems={subItemsQ.isSuccess ? subItemsQ.data ?? [] : undefined}
+          isAdmin={isAdmin}
+        />
       </MembersProvider>
     </div>
   );

@@ -839,50 +839,95 @@ const BlockEditor = forwardRef<BlockEditorHandle, Props>(function BlockEditor({
     }
   }, [editor]);
 
-  // Sync child block title/icon/iconColor from initialSubItems.
-  // The markdown stores these attrs at save time; if a sub-page was renamed
-  // after the last save the stale values would show. This patches the editor
-  // state on mount (and whenever initialSubItems changes) so the display is
-  // always up-to-date. The resulting onChange will re-persist the fresh values.
+  // Reconcile the embedded child-block list against initialSubItems, live.
+  //
+  // The child blocks in a page body come from initialSubItems (prepended by
+  // buildInitialContent at mount) + whatever is saved in the markdown. When a
+  // sub-page is added / renamed / deleted elsewhere (the sidebar, another user,
+  // an MCP agent) the refreshed initialSubItems arrives here, and this keeps the
+  // rendered body in sync WITHOUT remounting — so the cursor and any unsaved
+  // edits survive. Three cases:
+  //   • rename / icon change → patch the existing child block's attrs
+  //   • new child            → insert a child block (deleted children were only
+  //                            ever prepended, so a fresh one must be re-added)
+  //   • deleted child        → remove its OWNED (non-link) child block
+  // A link-only block (linkOnly) references some other page and is never touched.
+  //
+  // `initialSubItems === undefined` means "not trustworthy yet" (a still-loading
+  // or errored fetch in the Tauri TabPane) — skip entirely so a transient empty
+  // result can never wipe the whole child list. An empty ARRAY is trusted (the
+  // page genuinely has no children) and does drive removals.
   useEffect(() => {
-    if (!editor || !initialSubItems?.length) return;
+    if (!editor || initialSubItems === undefined) return;
     const map = new Map(initialSubItems.map(i => [i.id, i]));
 
-    // Collect changes first so we can apply them in reverse-position order.
-    // Applying high→low ensures each setNodeMarkup doesn't shift positions
-    // that haven't been processed yet (safe even for non-atom nodes).
-    const changes: Array<{ pos: number; attrs: Record<string, unknown> }> = [];
+    const updates: Array<{ pos: number; attrs: Record<string, unknown> }> = [];
+    const removals: number[] = [];
+    const present = new Set<string>();
 
     editor.view.state.doc.descendants((node: any, pos: number) => {
       if (node.type.name !== 'childBlock') return;
-      const item = map.get(node.attrs.itemId);
-      if (!item) return;
-      const next = {
-        ...node.attrs,
-        title: item.title || node.attrs.title,
-        icon: item.icon ?? null,
-        iconColor: item.iconColor ?? null,
-      };
-      if (next.title !== node.attrs.title || next.icon !== node.attrs.icon || next.iconColor !== node.attrs.iconColor) {
-        changes.push({ pos, attrs: next });
+      const id = node.attrs.itemId as string;
+      const item = map.get(id);
+      if (item) {
+        present.add(id);
+        const next = {
+          ...node.attrs,
+          title: item.title || node.attrs.title,
+          icon: item.icon ?? null,
+          iconColor: item.iconColor ?? null,
+        };
+        if (next.title !== node.attrs.title || next.icon !== node.attrs.icon || next.iconColor !== node.attrs.iconColor) {
+          updates.push({ pos, attrs: next });
+        }
+      } else if (!node.attrs.linkOnly) {
+        // Owned child block whose sub-page no longer exists → drop it.
+        removals.push(pos);
       }
     });
 
-    if (changes.length === 0) return;
+    const additions = initialSubItems.filter(i => !present.has(i.id));
+
+    if (updates.length === 0 && removals.length === 0 && additions.length === 0) return;
 
     try {
       const state = editor.view.state;
       const tr = state.tr;
-      // Descending order: later positions processed first so earlier ones stay valid.
-      for (const { pos, attrs } of changes.sort((a, b) => b.pos - a.pos)) {
-        const mappedPos = tr.mapping.map(pos);
-        if (mappedPos >= 0 && mappedPos < tr.doc.content.size) {
-          tr.setNodeMarkup(mappedPos, undefined, attrs);
-        }
+
+      // Updates + removals on the original positions, high→low so earlier
+      // positions stay valid as later ones shrink/change.
+      const edits: Array<{ pos: number; kind: 'update' | 'remove'; attrs?: Record<string, unknown> }> = [
+        ...updates.map(u => ({ pos: u.pos, kind: 'update' as const, attrs: u.attrs })),
+        ...removals.map(pos => ({ pos, kind: 'remove' as const })),
+      ].sort((a, b) => b.pos - a.pos);
+
+      for (const e of edits) {
+        const mapped = tr.mapping.map(e.pos);
+        const node = tr.doc.nodeAt(mapped);
+        if (!node || node.type.name !== 'childBlock') continue;
+        if (e.kind === 'update') tr.setNodeMarkup(mapped, undefined, e.attrs);
+        else tr.delete(mapped, mapped + node.nodeSize);
       }
-      editor.view.dispatch(tr);
+
+      // New children: prepend at the top of the doc, matching buildInitialContent.
+      if (additions.length) {
+        const nodes = additions.map(item =>
+          state.schema.nodes.childBlock.create({
+            itemId: item.id,
+            databaseId: item.databaseId ?? null,
+            itemType: item.type,
+            title: item.title || 'Untitled',
+            icon: item.icon ?? null,
+            iconColor: item.iconColor ?? null,
+            linkOnly: false,
+          }),
+        );
+        tr.insert(0, Fragment.fromArray(nodes));
+      }
+
+      if (tr.docChanged) editor.view.dispatch(tr);
     } catch {
-      // Position became stale (e.g. concurrent edit) — skip; values update on next save.
+      // Positions went stale (concurrent edit) — skip; the next refresh retries.
     }
   }, [editor, initialSubItems]);
 

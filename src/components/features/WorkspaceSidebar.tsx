@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import ShareModal from '@/components/share/ShareModal';
 import { reportClientError } from '@/lib/reportClientError';
+import { useTabNav } from '@/components/providers/TabsContext';
 import {
   Plus,
   X,
@@ -124,6 +125,12 @@ export default function WorkspaceSidebar({
   const router = useRouter();
   const pathname = usePathname();
   const [isPending, startTransition] = useTransition();
+  // After a structural change (rename/delete/reparent) refresh the open content
+  // pane so its embedded child-block list reflects the change without a manual
+  // reload. On web this is a router.refresh() (redundant with the action's own
+  // revalidatePath, but harmless); in the Tauri keep-alive tabs it invalidates
+  // the active pane's queries, which the server route's revalidatePath cannot.
+  const { refresh: refreshActivePane } = useTabNav();
   const [isSaving, startSaveTransition] = useTransition();
   const [avatarError, setAvatarError] = useState(false);
   const [isTauri, setIsTauri] = useState(false);
@@ -550,6 +557,7 @@ export default function WorkspaceSidebar({
 
       startSaveTransition(async () => {
         await reparentWorkspaceItem(draggedItemId, targetId, targetWorkspaceId, siblings.map(i => i.id));
+        refreshActivePane(); // parent gained a child — refresh the open pane's child list
       });
       return;
     }
@@ -598,6 +606,7 @@ export default function WorkspaceSidebar({
             .filter(i => i.parentId === newParentId)
             .map(i => i.id);
           await reparentWorkspaceItem(draggedItemId, newParentId, targetWorkspaceId, siblingOrder);
+          refreshActivePane(); // parent membership changed — refresh the open pane's child list
         } else {
           await updateWorkspaceItemsOrder(reorderedWsItems.map(i => i.id));
         }
@@ -768,6 +777,7 @@ export default function WorkspaceSidebar({
     setRenamingItemId(null);
     startTransition(async () => {
       await updateWorkspaceItemTitle(item.id, title);
+      refreshActivePane();
     });
   };
 
@@ -809,6 +819,9 @@ export default function WorkspaceSidebar({
         // Navigate away only once the item is really gone; otherwise a failed
         // delete would strand the user on /app with the page still alive.
         if (pathname.startsWith(href)) router.push('/app');
+        // Deleting a CHILD while viewing its parent: refresh the parent pane so
+        // its embedded child-block link to the deleted page disappears.
+        else refreshActivePane();
       } catch (err) {
         // The optimistic removal above already hid the item. Swallowing the
         // error here left the sidebar asserting a deletion that never happened
