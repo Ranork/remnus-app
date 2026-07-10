@@ -99,15 +99,38 @@ fn reset_download_dir(app: tauri::AppHandle, state: State<DownloadConfig>) {
 /// On Windows we use `explorer /select,` to select the file in its folder.
 /// On macOS/Linux `reveal_item_in_dir` works correctly; we fall back to opening
 /// the parent folder if it doesn't.
+///
+/// Most WebView downloads now go straight to the system browser (see the
+/// `on_download` handler), so this only runs for blob:/data: downloads that were
+/// saved in-app.
 #[tauri::command]
+// `app` is only used by the non-Windows reveal path.
+#[cfg_attr(windows, allow(unused_variables))]
 fn reveal_download(app: tauri::AppHandle, path: String) -> Result<(), String> {
+    // `path` arrives from JS, so treat it as untrusted: only reveal something
+    // that actually exists, and never let a quote escape the argument below.
+    let target = PathBuf::from(&path);
+    if !target.is_file() {
+        return Err("file not found".to_string());
+    }
+
     #[cfg(target_os = "windows")]
     {
-        // Use `explorer /select,` to open the folder and select (highlight) the
-        // file — plain `open_path` on the parent folder opens it but doesn't
-        // select the file, so the user can't find what just downloaded.
-        std::process::Command::new("explorer")
-            .arg(format!("/select,{}", &path))
+        use std::os::windows::process::CommandExt;
+        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+
+        if path.contains('"') {
+            return Err("invalid path".to_string());
+        }
+
+        // `.arg()` applies MSVC argument escaping, which turns
+        // `/select,C:\a b\f.txt` into `"/select,C:\a b\f.txt"` — Explorer parses
+        // that as a single malformed switch, opens nothing, and still reports a
+        // successful spawn, so the button silently did nothing. Explorer wants the
+        // path quoted *inside* the switch, so pass the argument through verbatim.
+        std::process::Command::new("explorer.exe")
+            .raw_arg(format!("/select,\"{}\"", &path))
+            .creation_flags(CREATE_NO_WINDOW)
             .spawn()
             .map_err(|e| e.to_string())?;
         return Ok(());
@@ -115,11 +138,11 @@ fn reveal_download(app: tauri::AppHandle, path: String) -> Result<(), String> {
 
     #[cfg(not(target_os = "windows"))]
     {
-        let parent = PathBuf::from(&path)
+        let parent = target
             .parent()
             .map(|p| p.to_path_buf())
             .filter(|p| !p.as_os_str().is_empty())
-            .unwrap_or_else(|| PathBuf::from(&path));
+            .unwrap_or_else(|| target.clone());
 
         if app.opener().reveal_item_in_dir(&path).is_ok() {
             return Ok(());
@@ -241,13 +264,25 @@ pub fn run() {
             .disable_drag_drop_handler()
             .additional_browser_args("--disable-spell-checking --disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection")
             .initialization_script(ZOOM_INIT)
-            // Handle file downloads triggered from the WebView so the user gets a
-            // clear "download finished" toast and downloads honor the configured
-            // download folder. Without this the WebView silently dropped files in
-            // the OS default location with no in-app feedback.
+            // Downloads triggered from the WebView are handed to the system
+            // browser, which has a real download UI (progress, history, "show in
+            // folder") instead of the in-app toast whose "show in folder" cannot
+            // be made reliable — see `reveal_download`.
+            //
+            // Only http(s) can be delegated: a blob:/data: URL is owned by the
+            // WebView process and means nothing to another program, so those keep
+            // the in-app path (save to the configured folder, then toast).
             .on_download(|webview, event| {
                 match event {
-                    DownloadEvent::Requested { destination, .. } => {
+                    DownloadEvent::Requested { url, destination } => {
+                        if matches!(url.scheme(), "http" | "https") {
+                            let app = webview.app_handle();
+                            if app.opener().open_url(url.to_string(), None::<&str>).is_ok() {
+                                return false; // cancel the WebView download
+                            }
+                            // Browser handoff failed — fall through and save in-app.
+                        }
+
                         // Redirect the download into the user-chosen folder, if set,
                         // keeping the original filename the WebView picked.
                         let app = webview.app_handle();
@@ -258,6 +293,7 @@ pub fn run() {
                                 }
                             }
                         }
+                        true
                     }
                     DownloadEvent::Finished { path, success, .. } => {
                         let path_str = path.as_ref().map(|p| p.to_string_lossy().to_string());
@@ -273,11 +309,10 @@ pub fn run() {
                                 "name": name,
                             }),
                         );
+                        true
                     }
-                    _ => {}
+                    _ => true,
                 }
-                // Always allow the download to proceed.
-                true
             })
             .build()?;
 

@@ -747,7 +747,8 @@
     "tableToggleHeaderRow": "हेडर पंक्ति टॉगल करें",
     "tableDelete": "तालिका हटाएं",
     "tableCellColor": "सेल रंग",
-    "tableCellColorNone": "कोई रंग नहीं"
+    "tableCellColorNone": "कोई रंग नहीं",
+    "uploading": "अपलोड हो रहा है…"
   },
   "Page": {
     "untitled": "शीर्षकहीन",

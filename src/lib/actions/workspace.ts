@@ -12,7 +12,7 @@ import { publish } from '@/lib/realtime/publish';
 import { isCloudinaryUrl, deleteCloudinaryImage } from '@/lib/cloudinary';
 import { checkCanCreateWorkspace } from '@/lib/services/billing';
 import { recordDeletionTombstone, getRelatedPages } from '@/lib/services/workspace';
-import { syncPageLinks, removePageLinksFor } from '@/lib/services/pageLinks';
+import { syncPageLinks, removePageLinksFor, purgeReferencesTo } from '@/lib/services/pageLinks';
 
 export type { RelatedPageRef } from '@/lib/services/workspace';
 
@@ -572,7 +572,22 @@ async function deleteWorkspaceItemRecursive(workspaceId: string, itemId: string,
     await deleteWorkspaceItemRecursive(workspaceId, child.id, child.type, child.title);
   }
 
+  // Every id another page could have linked to. A database is reachable both by
+  // its workspace-item id (childBlock) and its databases.id (a /db/<id> href),
+  // and its rows disappear with it — so links to any of them are about to die.
+  const deadIds: string[] = [itemId];
+
   if (type === 'database') {
+    const [dbRow] = await db
+      .select({ id: databases.id })
+      .from(databases)
+      .where(eq(databases.itemId, itemId))
+      .limit(1);
+    if (dbRow) {
+      deadIds.push(dbRow.id);
+      const rows = await db.select({ id: pages.id }).from(pages).where(eq(pages.databaseId, dbRow.id));
+      for (const r of rows) deadIds.push(r.id);
+    }
     await db.delete(databases).where(eq(databases.itemId, itemId));
   } else {
     await db.delete(standalonePages).where(eq(standalonePages.itemId, itemId));
@@ -580,7 +595,11 @@ async function deleteWorkspaceItemRecursive(workspaceId: string, itemId: string,
 
   await db.delete(workspaceItems).where(eq(workspaceItems.id, itemId));
   await recordDeletionTombstone(workspaceId, itemId, type, title);
-  await removePageLinksFor(itemId);
+  // Strip the now-dead child-block buttons / inline links out of the pages that
+  // referenced this item, then drop the graph rows. Order matters: the purge
+  // finds those pages *through* the graph rows.
+  await purgeReferencesTo(deadIds);
+  await removePageLinksFor(deadIds);
 }
 
 async function getWorkspaceIdForParent(parentId: string): Promise<string | null> {

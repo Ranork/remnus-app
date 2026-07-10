@@ -747,7 +747,8 @@
     "tableToggleHeaderRow": "Başlık satırını aç/kapat",
     "tableDelete": "Tabloyu sil",
     "tableCellColor": "Hücre rengi",
-    "tableCellColorNone": "Renk yok"
+    "tableCellColorNone": "Renk yok",
+    "uploading": "Yükleniyor…"
   },
   "Page": {
     "untitled": "Başlıksız",

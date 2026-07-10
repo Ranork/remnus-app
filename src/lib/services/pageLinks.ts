@@ -20,8 +20,8 @@
  * keeping writes lookup-free.
  */
 import { db } from '@/db';
-import { pageLinks } from '@/db/schema';
-import { eq, or } from 'drizzle-orm';
+import { pageLinks, pages, standalonePages } from '@/db/schema';
+import { eq, inArray, or } from 'drizzle-orm';
 
 export type PageRef = {
   toId: string;
@@ -113,11 +113,118 @@ export async function syncPageLinks(
  * Drop every link-graph row touching a hard-deleted item (as source or target).
  * Called best-effort from the same delete paths that write deletion tombstones.
  */
-export async function removePageLinksFor(itemId: string): Promise<void> {
+export async function removePageLinksFor(itemId: string | string[]): Promise<void> {
+  const ids = (Array.isArray(itemId) ? itemId : [itemId]).filter(Boolean);
+  if (ids.length === 0) return;
   try {
     await db
       .delete(pageLinks)
-      .where(or(eq(pageLinks.fromId, itemId), eq(pageLinks.toId, itemId)));
+      .where(or(inArray(pageLinks.fromId, ids), inArray(pageLinks.toId, ids)));
+  } catch {
+    // Swallow — see module doc comment.
+  }
+}
+
+/** True when an internal href points at any of `ids` (page, database, or row). */
+function hrefTargets(href: string, ids: Set<string>): boolean {
+  const page = href.match(PAGE_HREF);
+  if (page) return ids.has(page[1]);
+
+  const dbMatch = href.match(DB_HREF);
+  if (dbMatch) return ids.has(dbMatch[1]) || (!!dbMatch[2] && ids.has(dbMatch[2]));
+
+  return false;
+}
+
+const CHILD_BLOCK_BLOCK = /<div\b[^>]*\bdata-cb-id\s*=\s*"[^"]*"[^>]*><\/div>/gi;
+const PAGE_LINK_ANCHOR = /<a\b[^>]*\bdata-page-link\b[^>]*>([\s\S]*?)<\/a>/gi;
+
+/**
+ * Remove references to now-deleted items from a page body.
+ *
+ * childBlocks (the embedded sub-page "buttons") are dropped outright — the page
+ * they open no longer exists, so the button is dead. Inline pageLinks are
+ * unwrapped to their plain label text instead of being deleted, because they sit
+ * mid-sentence and removing them would silently rewrite the user's prose.
+ */
+export function stripPageRefs(markdown: string, ids: Set<string>): string {
+  if (!markdown || ids.size === 0) return markdown;
+
+  let out = markdown.replace(CHILD_BLOCK_BLOCK, (tag) => {
+    const itemId = attrValue(tag, 'data-cb-id');
+    const dbId = attrValue(tag, 'data-cb-dbid');
+    const dead = (itemId && ids.has(itemId)) || (dbId && ids.has(dbId));
+    return dead ? '' : tag;
+  });
+
+  out = out.replace(PAGE_LINK_ANCHOR, (tag, label: string) => {
+    const href = attrValue(tag, 'href');
+    return href && hrefTargets(href, ids) ? label : tag;
+  });
+
+  // A removed block leaves its surrounding blank lines behind.
+  return out.replace(/\n{3,}/g, '\n\n');
+}
+
+/**
+ * Rewrite every page that references one of `ids`, stripping the dead links.
+ *
+ * Without this, deleting a page left the embedded child-block button sitting in
+ * its parent's body: `removePageLinksFor` only drops the graph rows, which the
+ * backlinks panel reads — it never touches the markdown that actually renders
+ * the button.
+ *
+ * MUST run before `removePageLinksFor` for the same ids: the sources are found
+ * via the very graph rows that call deletes. Best-effort, like the rest of this
+ * module — a failure here leaves a stale button, it must never fail the delete.
+ */
+export async function purgeReferencesTo(ids: string[]): Promise<void> {
+  const targets = new Set(ids.filter(Boolean));
+  if (targets.size === 0) return;
+
+  try {
+    const sources = await db
+      .select({ fromId: pageLinks.fromId, fromType: pageLinks.fromType })
+      .from(pageLinks)
+      .where(inArray(pageLinks.toId, [...targets]));
+
+    // One rewrite per source page, even if it linked to several deleted items.
+    const bySource = new Map<string, string>();
+    for (const s of sources) {
+      // The source is itself being deleted in this same pass — nothing to fix up.
+      if (!targets.has(s.fromId)) bySource.set(s.fromId, s.fromType);
+    }
+
+    const now = new Date();
+    for (const [fromId, fromType] of bySource) {
+      if (fromType === 'page') {
+        const [row] = await db
+          .select({ content: standalonePages.content })
+          .from(standalonePages)
+          .where(eq(standalonePages.itemId, fromId))
+          .limit(1);
+        if (!row) continue;
+        const next = stripPageRefs(row.content, targets);
+        if (next === row.content) continue;
+        await db
+          .update(standalonePages)
+          .set({ content: next, updatedAt: now })
+          .where(eq(standalonePages.itemId, fromId));
+      } else {
+        const [row] = await db
+          .select({ content: pages.content })
+          .from(pages)
+          .where(eq(pages.id, fromId))
+          .limit(1);
+        if (!row) continue;
+        const next = stripPageRefs(row.content, targets);
+        if (next === row.content) continue;
+        await db
+          .update(pages)
+          .set({ content: next, updatedAt: now })
+          .where(eq(pages.id, fromId));
+      }
+    }
   } catch {
     // Swallow — see module doc comment.
   }

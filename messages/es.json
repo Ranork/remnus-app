@@ -747,7 +747,8 @@
     "tableToggleHeaderRow": "Alternar fila de encabezado",
     "tableDelete": "Eliminar tabla",
     "tableCellColor": "Color de celda",
-    "tableCellColorNone": "Sin color"
+    "tableCellColorNone": "Sin color",
+    "uploading": "Subiendo…"
   },
   "Page": {
     "untitled": "Sin título",

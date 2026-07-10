@@ -8,7 +8,7 @@ import { deleteWorkspaceItem } from './workspace';
 import { publish } from '@/lib/realtime/publish';
 import { isCloudinaryUrl, deleteCloudinaryImage } from '@/lib/cloudinary';
 import { recordDeletionTombstone } from '@/lib/services/workspace';
-import { syncPageLinks, removePageLinksFor } from '@/lib/services/pageLinks';
+import { syncPageLinks, removePageLinksFor, purgeReferencesTo } from '@/lib/services/pageLinks';
 
 // Verify user has access to the workspace that owns this database.
 // Returns { userId, workspaceId } so callers can emit realtime events.
@@ -166,6 +166,9 @@ export async function deletePage(id: string, databaseId: string) {
   const [row] = await db.select({ title: pages.title }).from(pages).where(eq(pages.id, id)).limit(1);
   await db.delete(pages).where(eq(pages.id, id));
   await recordDeletionTombstone(workspaceId, id, 'database_row', row?.title ?? '');
+  // Strip dead links to this row out of the pages that referenced it, before
+  // dropping the graph rows the purge needs to find them.
+  await purgeReferencesTo([id]);
   await removePageLinksFor(id);
   revalidatePath(`/db/${databaseId}`);
   publish({ scope: 'database', workspaceId, resourceId: databaseId, actorId: userId });

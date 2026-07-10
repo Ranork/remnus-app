@@ -747,7 +747,8 @@
     "tableToggleHeaderRow": "Basculer la ligne d’en-tête",
     "tableDelete": "Supprimer le tableau",
     "tableCellColor": "Couleur de cellule",
-    "tableCellColorNone": "Aucune couleur"
+    "tableCellColorNone": "Aucune couleur",
+    "uploading": "Téléversement…"
   },
   "Page": {
     "untitled": "Sans titre",

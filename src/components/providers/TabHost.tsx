@@ -116,7 +116,7 @@ function useActivePaneAutoRefresh(activeHref: string | null, enabled: boolean) {
     };
     const onChange = (e: Event) => {
       const v = (e as CustomEvent<number>).detail;
-      if (typeof v !== 'number') return;
+      if (!Number.isFinite(v)) return;
       if (lastVersion === null) { lastVersion = v; return; } // baseline
       if (v > lastVersion) { lastVersion = v; pendingRef.current = true; flush(); }
     };

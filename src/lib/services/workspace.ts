@@ -19,7 +19,7 @@ import {
   pageLinks,
 } from '@/db/schema';
 import { eq, ne, and, or, like, asc, desc, gte, lte, sql, inArray } from 'drizzle-orm';
-import { syncPageLinks, removePageLinksFor } from './pageLinks';
+import { syncPageLinks, removePageLinksFor, purgeReferencesTo } from './pageLinks';
 
 // ── Cursor pagination utilities ───────────────────────────────────────────────
 
@@ -1162,7 +1162,22 @@ async function deleteWorkspaceItemAndDescendants(
     await deleteWorkspaceItemAndDescendants(workspaceId, child.id, child.type, child.title);
   }
 
+  // Every id another page could have linked to: a database is reachable by its
+  // workspace-item id (childBlock) and its databases.id (a /db/<id> href), and
+  // its rows die with it. See purgeReferencesTo.
+  const deadIds: string[] = [itemId];
+
   if (type === 'database') {
+    const [dbRow] = await db
+      .select({ id: databases.id })
+      .from(databases)
+      .where(eq(databases.itemId, itemId))
+      .limit(1);
+    if (dbRow) {
+      deadIds.push(dbRow.id);
+      const rows = await db.select({ id: pages.id }).from(pages).where(eq(pages.databaseId, dbRow.id));
+      for (const r of rows) deadIds.push(r.id);
+    }
     await db.delete(databases).where(eq(databases.itemId, itemId));
   } else {
     await db.delete(standalonePages).where(eq(standalonePages.itemId, itemId));
@@ -1170,7 +1185,10 @@ async function deleteWorkspaceItemAndDescendants(
 
   await db.delete(workspaceItems).where(eq(workspaceItems.id, itemId));
   await recordDeletionTombstone(workspaceId, itemId, type, title);
-  await removePageLinksFor(itemId);
+  // Purge before removing the graph rows — the purge finds referencing pages
+  // through them.
+  await purgeReferencesTo(deadIds);
+  await removePageLinksFor(deadIds);
 }
 
 export async function deleteItemFromWorkspace(workspaceId: string, itemId: string) {
@@ -1196,6 +1214,7 @@ export async function deleteItemFromWorkspace(workspaceId: string, itemId: strin
   await assertDatabaseInWorkspace(page.databaseId, workspaceId);
   await db.delete(pages).where(eq(pages.id, itemId));
   await recordDeletionTombstone(workspaceId, itemId, 'database_row', page.title);
+  await purgeReferencesTo([itemId]);
   await removePageLinksFor(itemId);
   return { deleted: true, type: 'db-row' as const };
 }

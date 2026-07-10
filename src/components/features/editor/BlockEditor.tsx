@@ -1,6 +1,7 @@
 'use client';
 import { useRef, useEffect, useMemo, forwardRef, useImperativeHandle } from 'react';
 import { useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import { Markdown } from '@tiptap/markdown';
@@ -13,7 +14,7 @@ import BubbleMenuBar from './BubbleMenuBar';
 import BlockDragHandle, { getDragSource, getNestTarget, clearNestTarget } from './BlockDragHandle';
 import TableControls from './TableControls';
 import { Slice, Fragment } from '@tiptap/pm/model';
-import { TextSelection } from '@tiptap/pm/state';
+import { Selection, TextSelection } from '@tiptap/pm/state';
 import { dropPoint } from '@tiptap/pm/transform';
 import { joinTextblockForward } from '@tiptap/pm/commands';
 import { SlashCommand } from './SlashCommandMenu';
@@ -22,6 +23,12 @@ import Color from '@tiptap/extension-color';
 import { TextStyle } from '@tiptap/extension-text-style';
 import Highlight from '@tiptap/extension-highlight';
 import { YoutubeEmbed } from './YoutubeEmbedExtension';
+import {
+  UploadPlaceholder,
+  uploadPlaceholderKey,
+  findPlaceholderPos,
+  type UploadKind,
+} from './UploadPlaceholder';
 import { fragmentToCleanMarkdown } from './clipboardMarkdown';
 
 // Markdown has no native syntax for text/highlight colors, so the default
@@ -130,25 +137,78 @@ type Props = {
 // Block-level markdown patterns that HTML clipboard cannot reliably represent.
 const BLOCK_MARKDOWN_RE = /^#{1,6} |^[-*+] |^\d+\. |^> |^```|^\|/m;
 
-// Upload a dropped/pasted image and insert it as an imageBlock at `pos`
-// (or the current selection when pos is omitted).
-async function uploadAndInsertImage(editor: any, file: File, workspaceId: string | null, pos?: number) {
+let uploadSeq = 0;
+
+/**
+ * Upload a dropped/pasted image or file and insert the matching block at `pos`
+ * (or the current selection when pos is omitted).
+ *
+ * A skeleton decoration marks the insert point for the duration of the request
+ * so the user gets immediate feedback. It's a decoration rather than a real
+ * node, so a slow or failed upload never persists anything to the document —
+ * see UploadPlaceholder. The insert position is re-read from the placeholder on
+ * completion, so the block still lands in the right place if the user kept
+ * typing above it while the upload was running.
+ */
+async function uploadAndInsert(
+  editor: any,
+  file: File,
+  workspaceId: string | null,
+  kind: UploadKind,
+  pos?: number,
+) {
+  const view = editor.view;
+  const id = `upload-${Date.now()}-${uploadSeq++}`;
+  const at = typeof pos === 'number' ? pos : view.state.selection.from;
+
+  view.dispatch(
+    view.state.tr.setMeta(uploadPlaceholderKey, {
+      add: { id, pos: at, kind, name: file.name },
+    }),
+  );
+
+  const dropPlaceholder = () => {
+    const v = editor.view;
+    v.dispatch(v.state.tr.setMeta(uploadPlaceholderKey, { remove: { id } }));
+  };
+
   try {
     const fd = new FormData();
     fd.append('file', file);
-    fd.append('kind', 'image');
+    fd.append('kind', kind);
     if (workspaceId) fd.append('workspaceId', workspaceId);
+
     const res = await fetch('/api/upload', { method: 'POST', body: fd });
-    if (!res.ok) return;
-    const { url } = await res.json();
-    const attrs = { src: url, alt: file.name.replace(/\.[^.]+$/, '') };
-    if (typeof pos === 'number') {
-      editor.chain().insertContentAt(pos, { type: 'imageBlock', attrs }).run();
-    } else {
-      editor.chain().focus().insertContent({ type: 'imageBlock', attrs }).run();
+    if (!res.ok) {
+      dropPlaceholder();
+      return;
     }
+    const data = await res.json();
+
+    // Read the (mapped) position before removing the decoration.
+    const insertPos = findPlaceholderPos(editor.view.state, id);
+    dropPlaceholder();
+    if (insertPos == null) return; // the region was deleted while uploading
+
+    const node =
+      kind === 'image'
+        ? { type: 'imageBlock', attrs: { src: data.url, alt: file.name.replace(/\.[^.]+$/, '') } }
+        : {
+            type: 'fileBlock',
+            attrs: { url: data.url, name: data.name ?? file.name, size: data.size ?? file.size },
+          };
+
+    editor.chain().insertContentAt(insertPos, node).run();
   } catch {
-    /* best-effort */
+    dropPlaceholder(); // best-effort
+  }
+}
+
+/** Route each dropped/pasted file to the block type that fits it. */
+function uploadFiles(editor: any, files: File[], workspaceId: string | null, pos?: number) {
+  for (const file of files) {
+    const kind: UploadKind = file.type.startsWith('image/') ? 'image' : 'file';
+    uploadAndInsert(editor, file, workspaceId, kind, pos);
   }
 }
 
@@ -188,6 +248,7 @@ const BlockEditor = forwardRef<BlockEditorHandle, Props>(function BlockEditor({
 }, ref) {
   const editorRef = useRef<any>(null);
   const router = useRouter();
+  const tEditor = useTranslations('Editor');
 
   useImperativeHandle(ref, () => ({
     focusStart: () => {
@@ -288,6 +349,7 @@ const BlockEditor = forwardRef<BlockEditorHandle, Props>(function BlockEditor({
       Color,
       ColorHighlight.configure({ multicolor: true }),
       BlockSelection,
+      UploadPlaceholder.configure({ uploadingLabel: tEditor('uploading') }),
     ],
     content: computedInitial,
     contentType: 'markdown',
@@ -389,7 +451,28 @@ const BlockEditor = forwardRef<BlockEditorHandle, Props>(function BlockEditor({
         if (event.key === 'Delete') {
           const { state } = view;
           const { empty, $from } = state.selection;
-          if (empty && $from.parentOffset === $from.parent.content.size) {
+          if (!empty || !$from.parent.isTextblock) return false;
+
+          // Delete inside an EMPTY top-level block removes that block, rather
+          // than merging the next one into it. joinTextblockForward keeps the
+          // current node and pulls the following textblock's content into it, so
+          // the survivor inherits the *current* node's type — pressing Delete on
+          // an empty heading turned the paragraph below it into a heading (and an
+          // empty paragraph above a heading flattened that heading to a paragraph).
+          // Only depth 1 (a direct doc child): removing the lone paragraph inside a
+          // listItem would leave the item empty, which the schema doesn't allow.
+          if ($from.depth === 1 && $from.parent.content.size === 0) {
+            const from = $from.before(1);
+            const to = $from.after(1);
+            // Nothing follows → nothing to pull up; let Delete be a no-op rather
+            // than emptying the document.
+            if (to >= state.doc.content.size) return false;
+            const tr = state.tr.delete(from, to);
+            view.dispatch(tr.setSelection(Selection.near(tr.doc.resolve(from), 1)).scrollIntoView());
+            return true;
+          }
+
+          if ($from.parentOffset === $from.parent.content.size) {
             return joinTextblockForward(state, view.dispatch, view) ?? false;
           }
           return false;
@@ -413,15 +496,15 @@ const BlockEditor = forwardRef<BlockEditorHandle, Props>(function BlockEditor({
         return true;
       },
       handleDrop: (view, event, _slice, moved) => {
-        // Image file drops
+        // File drops: images become imageBlocks, everything else a fileBlock.
+        // `moved` guards against treating an internal block drag as a file drop.
         const files = Array.from((event as DragEvent).dataTransfer?.files ?? []);
-        const images = files.filter(f => f.type.startsWith('image/'));
-        if (images.length) {
+        if (!moved && files.length) {
           event.preventDefault();
           const coords = { left: (event as DragEvent).clientX, top: (event as DragEvent).clientY };
           const pos = view.posAtCoords(coords)?.pos ?? view.state.selection.from;
           const ed = editorRef.current;
-          if (ed) images.forEach(img => uploadAndInsertImage(ed, img, workspaceId ?? null, pos));
+          if (ed) uploadFiles(ed, files, workspaceId ?? null, pos);
           return true;
         }
 
@@ -576,10 +659,9 @@ const BlockEditor = forwardRef<BlockEditorHandle, Props>(function BlockEditor({
       },
       handlePaste: (_view, event) => {
         const files = Array.from(event.clipboardData?.files ?? []);
-        const images = files.filter(f => f.type.startsWith('image/'));
-        if (images.length) {
+        if (files.length) {
           const ed = editorRef.current;
-          if (ed) images.forEach(img => uploadAndInsertImage(ed, img, workspaceId ?? null));
+          if (ed) uploadFiles(ed, files, workspaceId ?? null);
           return true;
         }
 

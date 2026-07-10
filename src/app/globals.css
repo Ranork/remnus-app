@@ -867,6 +867,57 @@ body.block-marquee-active * {
   cursor: default !important;
 }
 
+/* In-flight upload skeleton (widget decoration — see UploadPlaceholder.ts).
+   Shown at the insert point while an image/file upload is running. */
+.upload-skeleton {
+  display: block;
+  margin: 0.75rem 0;
+  border: 1px solid var(--color-neutral-800);
+  border-radius: 8px;
+  padding: 0.75rem;
+  background-color: color-mix(in srgb, var(--color-neutral-900) 60%, transparent);
+  user-select: none;
+}
+.upload-skeleton__body {
+  border-radius: 6px;
+  background: linear-gradient(
+    90deg,
+    var(--color-neutral-800) 0%,
+    color-mix(in srgb, var(--color-neutral-800) 55%, var(--color-neutral-900)) 50%,
+    var(--color-neutral-800) 100%
+  );
+  background-size: 200% 100%;
+  animation: upload-skeleton-shimmer 1.2s ease-in-out infinite;
+}
+.upload-skeleton--image .upload-skeleton__body { height: 168px; }
+.upload-skeleton--file .upload-skeleton__body { height: 40px; }
+.upload-skeleton__meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+  line-height: 1rem;
+}
+.upload-skeleton__name {
+  color: var(--color-neutral-100);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.upload-skeleton__status {
+  flex-shrink: 0;
+  color: var(--color-neutral-500);
+}
+@keyframes upload-skeleton-shimmer {
+  from { background-position: 200% 0; }
+  to   { background-position: -200% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .upload-skeleton__body { animation: none; }
+}
+
 /* Suppress native text selection while a custom resize-drag (e.g. the side
    peek drawer's width handle) is in progress — a preventDefault() on the
    handle's own mousedown doesn't reliably stop the browser from starting a

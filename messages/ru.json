@@ -747,7 +747,8 @@
     "tableToggleHeaderRow": "Переключить строку заголовка",
     "tableDelete": "Удалить таблицу",
     "tableCellColor": "Цвет ячейки",
-    "tableCellColorNone": "Без цвета"
+    "tableCellColorNone": "Без цвета",
+    "uploading": "Загрузка…"
   },
   "Page": {
     "untitled": "Без названия",

@@ -4,7 +4,7 @@ import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
 import { getTranslations } from 'next-intl/server';
 import Image from 'next/image';
-import { LAST_PATH_COOKIE } from '@/lib/constants/cookies';
+import { LAST_PATH_COOKIE, readOwnedLastPath } from '@/lib/server/lastPath';
 
 // Validate a remembered path still points at an item the user can open, so a
 // deleted/inaccessible page falls through to the default instead of 404ing.
@@ -47,8 +47,13 @@ export default async function AppRedirectPage({
 
   const [allItems, cookieStore] = await Promise.all([getAllWorkspaceItems(), cookies()]);
 
-  // 1) Resume where the user left off — restore the last visited page if it still exists.
-  const restored = resolveLastPath(cookieStore.get(LAST_PATH_COOKIE)?.value, allItems);
+  // 1) Resume where the user left off — restore the last visited page if it was
+  //    remembered by THIS user and still exists. The ownership check matters on
+  //    its own: an admin can open every workspace (and co-members can open each
+  //    other's pages), so a cookie left behind by the previously signed-in user
+  //    would otherwise validate and resume under the new account.
+  const ownPath = readOwnedLastPath(cookieStore.get(LAST_PATH_COOKIE)?.value, session.user.id);
+  const restored = resolveLastPath(ownPath ?? undefined, allItems);
   if (restored) {
     redirect(`${restored}${suffix}`);
   }

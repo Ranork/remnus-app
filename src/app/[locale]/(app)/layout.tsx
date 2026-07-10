@@ -9,6 +9,7 @@ import QueryProvider from '@/components/providers/QueryProvider';
 import AppShell from '@/components/AppShell';
 import ActivityTracker from '@/components/providers/ActivityTracker';
 import LastPathTracker from '@/components/providers/LastPathTracker';
+import { lastPathOwnerTag } from '@/lib/server/lastPath';
 import BillingSuccessModal from '@/components/features/BillingSuccessModal';
 import UpdateBanner from '@/components/features/UpdateBanner';
 import DownloadToast from '@/components/features/DownloadToast';
@@ -73,7 +74,7 @@ export default async function AppGroupLayout({
   return (
     <>
       <ActivityTracker />
-      <LastPathTracker />
+      <LastPathTracker ownerTag={lastPathOwnerTag(session.user.id)} />
       {session.user.role === 'demo' && <DemoFeedbackPrompt />}
       {session.user.role !== 'demo' && <PwaInstallNudge />}
       <BillingSuccessModal />

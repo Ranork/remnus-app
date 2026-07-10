@@ -747,7 +747,8 @@
     "tableToggleHeaderRow": "Kopfzeile umschalten",
     "tableDelete": "Tabelle löschen",
     "tableCellColor": "Zellenfarbe",
-    "tableCellColorNone": "Keine Farbe"
+    "tableCellColorNone": "Keine Farbe",
+    "uploading": "Wird hochgeladen…"
   },
   "Page": {
     "untitled": "Ohne Titel",

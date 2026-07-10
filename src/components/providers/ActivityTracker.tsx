@@ -31,7 +31,10 @@ export default function ActivityTracker() {
         const res = await fetch(PING_URL, { method: 'POST', keepalive: true });
         if (!res.ok) return;
         const data = await res.json().catch(() => null);
-        if (data && typeof data.changeVersion === 'number') {
+        // Number.isFinite, not `typeof === 'number'`: NaN is a number, and a
+        // non-finite version would compare false against every later value,
+        // wedging the refresh loop shut instead of failing loudly.
+        if (data && Number.isFinite(data.changeVersion)) {
           window.dispatchEvent(new CustomEvent(CHANGE_EVENT, { detail: data.changeVersion }));
         }
       } catch {

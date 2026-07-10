@@ -747,7 +747,8 @@
     "tableToggleHeaderRow": "Toggle header row",
     "tableDelete": "Delete table",
     "tableCellColor": "Cell color",
-    "tableCellColorNone": "No color"
+    "tableCellColorNone": "No color",
+    "uploading": "Uploading…"
   },
   "Page": {
     "untitled": "Untitled",

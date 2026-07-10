@@ -83,7 +83,7 @@ export function useWorkspaceEvents(_currentUserId: string, paused: boolean = fal
   useEffect(() => {
     const onChange = (e: Event) => {
       const v = (e as CustomEvent<number>).detail;
-      if (typeof v !== 'number') return;
+      if (!Number.isFinite(v)) return;
       if (lastVersionRef.current === null) {
         lastVersionRef.current = v;
         return;
