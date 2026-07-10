@@ -46,6 +46,13 @@ export const authConfig: NextAuthConfig = {
       const isStripeWebhook = cleanPath.startsWith('/api/webhooks/stripe');
       const isInvite = cleanPath.startsWith('/invite/');
       const isHealthCheck = cleanPath.startsWith('/api/health');
+      // Asset download proxy: the desktop app opens downloads in the system
+      // browser (so its download UI + "show in folder" work), and that browser
+      // doesn't share the WebView's cookie jar — the request arrives cookie-less
+      // carrying a short-lived HMAC signature instead. The route itself requires
+      // that signature (or a session) and still only proxies Cloudinary hosts, so
+      // middleware just has to let it reach the route.
+      const isDownloadProxy = cleanPath.startsWith('/api/upload/download');
       // Mailing: unsubscribe links arrive cookie-less from email clients; the
       // cron + SES/SNS webhook authenticate via their own secrets/signatures.
       const isMailingPublic =
@@ -53,7 +60,7 @@ export const authConfig: NextAuthConfig = {
         cleanPath.startsWith('/api/unsubscribe') ||
         cleanPath.startsWith('/api/cron') ||
         cleanPath.startsWith('/api/webhooks/ses');
-      if (isApiAuth || isMcpRoute || isPublicAsset || isTauriEntry || isClientActivate || isOAuthApi || isWellKnown || isOAuthPage || isStripeWebhook || isInvite || isHealthCheck || isMailingPublic) return true;
+      if (isApiAuth || isMcpRoute || isPublicAsset || isTauriEntry || isClientActivate || isOAuthApi || isWellKnown || isOAuthPage || isStripeWebhook || isInvite || isHealthCheck || isDownloadProxy || isMailingPublic) return true;
 
       // Public marketing pages (pricing, contact) are always accessible
       if (isPublicMarketingRoute) return true;

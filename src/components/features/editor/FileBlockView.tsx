@@ -4,6 +4,8 @@ import { NodeViewWrapper } from '@tiptap/react';
 import { Download, Loader2, Upload } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { deleteUploadedAsset } from './assetClient';
+import { useIsTauri } from '@/lib/hooks/useIsTauri';
+import { createSignedDownloadUrl } from '@/lib/actions/download';
 
 function formatSize(bytes: number): string {
   if (!bytes) return '';
@@ -43,23 +45,36 @@ export default function FileBlockView({
   const [error, setError] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
+  const isTauri = useIsTauri();
 
-  // A plain `<a href download>` is silently swallowed by the Tauri WebView
-  // (WebView2 / WKWebView intercept navigation-based downloads), so the desktop
-  // app's download buttons never fire. Fetching the file ourselves and saving it
-  // via a blob URL works everywhere — web, Tauri, and Capacitor. The session
-  // cookie rides along, so the auth-gated proxy route still authorizes.
   const handleDownload = async () => {
     if (!downloadUrl || downloading) return;
 
-    // NOTE: this deliberately does NOT hand the file to the system browser, even
-    // on desktop. The browser can only be given a public URL, and Cloudinary
-    // cannot name a `raw` asset (.html/.zip/.csv): its fl_attachment flag appends
-    // the delivery *format*, which raw assets don't have, so the file downloads
-    // with no extension at all (and a dot inside the flag makes Cloudinary 400).
-    // Only this proxy knows the real filename, and it needs the session cookie —
-    // which the system browser doesn't share with the WebView. So we fetch it
-    // here and save via a blob, and Rust's `reveal_download` opens the folder.
+    // Desktop: hand the download to the system browser, which has a working
+    // download UI + "show in folder" (the in-app `reveal_download` command is
+    // blocked by the ACL because the webview loads a remote origin). We point the
+    // browser at OUR proxy — not the raw Cloudinary URL — because only the proxy
+    // sends `Content-Disposition: attachment; filename="…"`, so the saved file
+    // keeps its real name and extension. Cloudinary can't do that for a `raw`
+    // asset, which is why the browser download previously arrived with no
+    // extension. The system browser has no session cookie, so the proxy URL is
+    // signed with a short-lived HMAC that authorizes just this one request.
+    if (isTauri && safeUrl) {
+      try {
+        const signedPath = await createSignedDownloadUrl(safeUrl, name || 'download');
+        if (signedPath) {
+          const { openUrl } = await import('@tauri-apps/plugin-opener');
+          await openUrl(new URL(signedPath, window.location.origin).toString());
+          return;
+        }
+      } catch {
+        // Signing or opener unavailable — fall through to the in-app download.
+      }
+    }
+
+    // Web (and desktop fallback): fetch with the session cookie and save via a
+    // blob. A plain `<a href download>` is cross-origin-ignored and is also
+    // swallowed by the Tauri WebView, so we materialize the bytes ourselves.
     setDownloading(true);
     try {
       const res = await fetch(downloadUrl);

@@ -1,21 +1,29 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { auth } from '@/auth';
+import { verifySignedDownload } from '@/lib/server/downloadLink';
 
 // Only allow proxying Cloudinary URLs to prevent SSRF.
 const CLOUDINARY_HOST = 'res.cloudinary.com';
 
 export async function GET(req: NextRequest) {
-  // `auth()`, not `getCurrentUser()`: the latter calls `redirect('/login')` when
-  // there is no session, which is wrong for an API route — it must answer 401.
-  // Middleware protects this path, so that branch was never reached in practice.
-  const session = await auth();
-  if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
   const { searchParams } = req.nextUrl;
   const url = searchParams.get('url');
   const name = searchParams.get('name') || 'download';
 
   if (!url) return NextResponse.json({ error: 'Missing url' }, { status: 400 });
+
+  // Two ways to authorize:
+  //  - a short-lived HMAC signature, so the desktop app can open the download in
+  //    the system browser (which has no session cookie);
+  //  - otherwise a live session (the web download button, same-origin + cookie).
+  // `auth()`, not `getCurrentUser()`: the latter `redirect()`s to /login (a 307
+  // to an HTML page), which is wrong for a fetch-consuming API route — it wants
+  // a 401.
+  const signed = verifySignedDownload(url, name, searchParams.get('exp'), searchParams.get('sig'));
+  if (!signed) {
+    const session = await auth();
+    if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
 
   let parsed: URL;
   try {
