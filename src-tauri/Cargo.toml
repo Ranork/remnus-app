@@ -1,6 +1,6 @@
 [package]
 name = "remnus-app"
-version = "0.1.13"
+version = "0.1.14"
 description = "Remnus Desktop App"
 authors = ["Emir OĞUZ"]
 edition = "2021"
