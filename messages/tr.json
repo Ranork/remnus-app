@@ -221,6 +221,7 @@
     "delete": "Sil",
     "deleteConfirm": "\"{title}\" öğesini silmek istediğinizden emin misiniz? Bu işlem geri alınamaz.",
     "deleteCancel": "İptal",
+    "deleteFailed": "\"{title}\" silinemedi. Geri getirildi — lütfen tekrar deneyin.",
     "adminLink": "Yönetim",
     "signOut": "Çıkış yap",
     "backToHome": "Ana sayfaya dön",

@@ -1,12 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getCurrentUser } from '@/lib/auth/session';
+import { auth } from '@/auth';
 
 // Only allow proxying Cloudinary URLs to prevent SSRF.
 const CLOUDINARY_HOST = 'res.cloudinary.com';
 
 export async function GET(req: NextRequest) {
-  const user = await getCurrentUser();
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  // `auth()`, not `getCurrentUser()`: the latter calls `redirect('/login')` when
+  // there is no session, which is wrong for an API route — it must answer 401.
+  // Middleware protects this path, so that branch was never reached in practice.
+  const session = await auth();
+  if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { searchParams } = req.nextUrl;
   const url = searchParams.get('url');

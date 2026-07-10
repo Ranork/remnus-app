@@ -221,6 +221,7 @@
     "delete": "Löschen",
     "deleteConfirm": "Möchten Sie \"{title}\" wirklich löschen? Dies kann nicht rückgängig gemacht werden.",
     "deleteCancel": "Abbrechen",
+    "deleteFailed": "\"{title}\" konnte nicht gelöscht werden. Wiederhergestellt — bitte erneut versuchen.",
     "adminLink": "Admin",
     "signOut": "Abmelden",
     "backToHome": "Zurück zur Startseite",

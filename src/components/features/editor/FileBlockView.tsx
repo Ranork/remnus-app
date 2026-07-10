@@ -4,8 +4,6 @@ import { NodeViewWrapper } from '@tiptap/react';
 import { Download, Loader2, Upload } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { deleteUploadedAsset } from './assetClient';
-import { useIsTauri } from '@/lib/hooks/useIsTauri';
-import { withAttachment } from '@/lib/cloudinaryUrl';
 
 function formatSize(bytes: number): string {
   if (!bytes) return '';
@@ -45,7 +43,6 @@ export default function FileBlockView({
   const [error, setError] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
-  const isTauri = useIsTauri();
 
   // A plain `<a href download>` is silently swallowed by the Tauri WebView
   // (WebView2 / WKWebView intercept navigation-based downloads), so the desktop
@@ -55,21 +52,14 @@ export default function FileBlockView({
   const handleDownload = async () => {
     if (!downloadUrl || downloading) return;
 
-    // Desktop: hand the file to the system browser, which has a real download UI.
-    // The in-app blob download can't offer a working "show in folder" on Windows.
-    // We open the PUBLIC asset URL rather than the proxy route, because the system
-    // browser doesn't share the WebView's cookie jar and would hit the auth gate;
-    // `withAttachment` makes Cloudinary serve it as a download instead of inline.
-    if (isTauri && safeUrl) {
-      try {
-        const { openUrl } = await import('@tauri-apps/plugin-opener');
-        await openUrl(withAttachment(safeUrl, name));
-        return;
-      } catch {
-        // Opener unavailable — fall through to the in-app download below.
-      }
-    }
-
+    // NOTE: this deliberately does NOT hand the file to the system browser, even
+    // on desktop. The browser can only be given a public URL, and Cloudinary
+    // cannot name a `raw` asset (.html/.zip/.csv): its fl_attachment flag appends
+    // the delivery *format*, which raw assets don't have, so the file downloads
+    // with no extension at all (and a dot inside the flag makes Cloudinary 400).
+    // Only this proxy knows the real filename, and it needs the session cookie —
+    // which the system browser doesn't share with the WebView. So we fetch it
+    // here and save via a blob, and Rust's `reveal_download` opens the folder.
     setDownloading(true);
     try {
       const res = await fetch(downloadUrl);

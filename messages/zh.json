@@ -221,6 +221,7 @@
     "delete": "删除",
     "deleteConfirm": "确定要删除“{title}”吗？此操作无法撤销。",
     "deleteCancel": "取消",
+    "deleteFailed": "无法删除\"{title}\"。已恢复，请重试。",
     "adminLink": "管理",
     "signOut": "退出登录",
     "backToHome": "返回首页",

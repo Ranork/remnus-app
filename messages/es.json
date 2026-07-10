@@ -221,6 +221,7 @@
     "delete": "Eliminar",
     "deleteConfirm": "¿Estás seguro de que deseas eliminar \"{title}\"? Esta acción no se puede deshacer.",
     "deleteCancel": "Cancelar",
+    "deleteFailed": "No se pudo eliminar \"{title}\". Se ha restaurado; inténtalo de nuevo.",
     "adminLink": "Admin",
     "signOut": "Cerrar sesión",
     "backToHome": "Volver al inicio",

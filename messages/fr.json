@@ -221,6 +221,7 @@
     "delete": "Supprimer",
     "deleteConfirm": "Êtes-vous sûr de vouloir supprimer \"{title}\" ? Cette action est irréversible.",
     "deleteCancel": "Annuler",
+    "deleteFailed": "Impossible de supprimer « {title} ». L'élément a été restauré — réessayez.",
     "adminLink": "Admin",
     "signOut": "Se déconnecter",
     "backToHome": "Retour à l'accueil",

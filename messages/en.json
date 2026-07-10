@@ -221,6 +221,7 @@
     "delete": "Delete",
     "deleteConfirm": "Are you sure you want to delete \"{title}\"? This cannot be undone.",
     "deleteCancel": "Cancel",
+    "deleteFailed": "Couldn't delete \"{title}\". It has been restored — please try again.",
     "adminLink": "Admin",
     "signOut": "Sign out",
     "backToHome": "Back to home",

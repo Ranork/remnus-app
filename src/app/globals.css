@@ -732,6 +732,14 @@ pre,
   height: 0;
 }
 
+/* ...but not while an upload skeleton occupies the block: the skeleton is a
+   widget decoration inside an empty paragraph, so the placeholder hint would
+   render straight through it. Class set by the UploadPlaceholder plugin. */
+.prose-editor.has-upload-skeleton p.is-editor-empty:first-child::before,
+.prose-editor.has-upload-skeleton .is-empty::before {
+  content: none;
+}
+
 /* Task list */
 .prose-editor ul[data-type="taskList"] {
   list-style: none;

@@ -5,9 +5,11 @@ import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import ShareModal from '@/components/share/ShareModal';
+import { reportClientError } from '@/lib/reportClientError';
 import {
   Plus,
   X,
+  AlertTriangle,
   ChevronDown,
   ChevronRight,
   Check,
@@ -153,6 +155,8 @@ export default function WorkspaceSidebar({
 
   // Confirm delete state
   const [confirmDeleteItemId, setConfirmDeleteItemId] = useState<string | null>(null);
+  // Title of an item whose delete failed server-side (optimistic removal rolled back).
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   // Inline rename
   const [renamingItemId, setRenamingItemId] = useState<string | null>(null);
@@ -792,15 +796,30 @@ export default function WorkspaceSidebar({
       return [id, ...children.flatMap(c => collectDescendantIds(c.id, allItems))];
     };
     const idsToRemove = new Set(collectDescendantIds(item.id, localItems));
+    const snapshot = localItems;
     setLocalItems(prev => prev.filter(i => !idsToRemove.has(i.id)));
 
     const href = item.type === 'database' && item.databaseId
       ? `/db/${item.databaseId}`
       : `/page/${item.id}`;
-    if (pathname.startsWith(href)) router.push('/app');
 
     startTransition(async () => {
-      await deleteWorkspaceItem(item.id);
+      try {
+        await deleteWorkspaceItem(item.id);
+        // Navigate away only once the item is really gone; otherwise a failed
+        // delete would strand the user on /app with the page still alive.
+        if (pathname.startsWith(href)) router.push('/app');
+      } catch (err) {
+        // The optimistic removal above already hid the item. Swallowing the
+        // error here left the sidebar asserting a deletion that never happened
+        // — the page stayed in the database, kept rendering inside its parent,
+        // and was still openable. Put it back and say so.
+        setLocalItems(snapshot);
+        setDeleteError(item.title);
+        reportClientError(err, { source: 'sidebar-delete', itemId: item.id, itemType: item.type });
+      } finally {
+        setLoadingItem(null);
+      }
     });
   };
 
@@ -1475,6 +1494,26 @@ export default function WorkspaceSidebar({
           setBillingModalOpen(false);
           getMyTier().then(setPlanTier).catch(() => {});
         }} />,
+        sidebarOverlayContainer,
+      )}
+
+      {/* Delete failed server-side — the item was restored to the sidebar. */}
+      {deleteError && sidebarOverlayContainer && createPortal(
+        <div
+          role="alert"
+          className="fixed z-300 bottom-4 left-1/2 -translate-x-1/2 w-[min(24rem,calc(100vw-2rem))] bg-neutral-850 border border-red-400/40 rounded-lg shadow-[0_8px_40px_rgba(0,0,0,0.6)] px-4 py-3 flex items-start gap-3 animate-in fade-in slide-in-from-bottom-2 duration-150"
+        >
+          <AlertTriangle size={15} className="text-red-400 shrink-0 mt-0.5" />
+          <p className="text-xs text-neutral-200 leading-relaxed flex-1">
+            {t('deleteFailed', { title: deleteError })}
+          </p>
+          <button
+            onClick={() => setDeleteError(null)}
+            className="shrink-0 text-neutral-500 hover:text-neutral-300 transition-colors"
+          >
+            <X size={14} />
+          </button>
+        </div>,
         sidebarOverlayContainer,
       )}
 

@@ -92,6 +92,15 @@ export const UploadPlaceholder = Extension.create({
           decorations(state) {
             return uploadPlaceholderKey.getState(state);
           },
+          // The skeleton is a widget inside an (often empty) paragraph, whose
+          // Tiptap placeholder ::before keeps rendering underneath it — the
+          // "type '/' for commands" hint showed through the skeleton. Flag the
+          // editor root so globals.css can suppress the hint while uploading.
+          // ProseMirror merges `class` across every plugin's attributes.
+          attributes(state): Record<string, string> {
+            const set = uploadPlaceholderKey.getState(state);
+            return set && set.find().length > 0 ? { class: 'has-upload-skeleton' } : {};
+          },
         },
       }),
     ];
