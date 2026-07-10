@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import type { Editor } from '@tiptap/core';
+import type { Node as PMNode } from '@tiptap/pm/model';
 import { NodeSelection, TextSelection } from '@tiptap/pm/state';
 import {
   getBlockSelection,
@@ -110,8 +111,24 @@ function mediaAttrsFor(target: MediaType, url: string): Record<string, any> {
   }
 }
 
+// Bounds-safe `doc.nodeAt`. ProseMirror's `nodeAt(pos)` THROWS a RangeError
+// ("Position N outside of fragment") for a position past the document end — it does
+// NOT return null there (null is only for in-range positions that don't land on a
+// node). `handle.pos` is captured on hover and can go stale (larger than the doc)
+// after the user deletes content while the pointer stays put; a later re-render then
+// reads it and would white-screen the editor. Guard every stored-position read so a
+// stale pos degrades to null instead of crashing.
+function safeNodeAt(editor: Editor, pos: number | null | undefined): PMNode | null {
+  if (pos == null || pos < 0 || pos > editor.state.doc.content.size) return null;
+  try {
+    return editor.state.doc.nodeAt(pos);
+  } catch {
+    return null;
+  }
+}
+
 function getNodeType(editor: Editor, pos: number): BlockType | null {
-  const node = editor.state.doc.nodeAt(pos);
+  const node = safeNodeAt(editor, pos);
   if (!node) return null;
   if (node.type.name === 'heading') {
     const lvl = node.attrs.level;
@@ -500,6 +517,15 @@ export default function BlockDragHandle({ editor }: Props) {
 
   if (!handle) return confirmModal;
 
+  // Stale-handle guard: content can shrink under a stationary pointer (delete a
+  // block, then a re-render — e.g. the debounced save flipping save-state — fires
+  // before any mousemove refreshes handle.pos). handle.pos is then past the doc end,
+  // and every render-body read below (hovNode / getNodeType) would call
+  // doc.nodeAt(stalePos) and throw "Position N outside of fragment", white-screening
+  // the whole editor. Bail this frame; the next pointer move / blur resets or clears
+  // the handle. (See safeNodeAt above.)
+  if (handle.pos > editor.state.doc.content.size) return confirmModal;
+
   const onDragStart = (e: React.DragEvent) => {
     const view = editor.view;
     const pos = handleRef.current?.pos;
@@ -694,7 +720,7 @@ export default function BlockDragHandle({ editor }: Props) {
   };
   const cancelCloseSub = () => { if (subTimer.current) { clearTimeout(subTimer.current); subTimer.current = null; } };
 
-  const hovNode = editor.state.doc.nodeAt(handle.pos);
+  const hovNode = safeNodeAt(editor, handle.pos);
   const isMedia = !!hovNode && MEDIA_NODES.has(hovNode.type.name);
   const activeType = getNodeType(editor, handle.pos);
 
