@@ -166,6 +166,7 @@
     "channelOrganicSearch": "ऑर्गेनिक खोज",
     "channelSocial": "सोशल",
     "channelReferral": "रेफ़रल",
+    "trafficCampaignsTitle": "कैंपेन टैग (?ref / utm_source)",
     "desktopUsersStat": "डेस्कटॉप उपयोगकर्ता",
     "desktopActiveStat": "सक्रिय डेस्कटॉप (30 दिन)",
     "desktopSection": "डेस्कटॉप / Tauri",
@@ -186,7 +187,10 @@
     "demoFeedbackTotal": "प्रतिक्रियाएँ",
     "demoFeedbackEmpty": "अभी तक कोई लिखित प्रतिक्रिया नहीं।",
     "trendTotalLabel": "पिछले 30 दिनों में साइनअप",
-    "trendTooltipSignups": "साइनअप"
+    "trendTooltipSignups": "साइनअप",
+    "widthNarrow": "संकीर्ण",
+    "widthWide": "चौड़ा",
+    "widthFull": "पूर्ण"
   },
   "Workspace": {
     "planBilling": "प्लान और बिलिंग",

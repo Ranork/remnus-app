@@ -166,6 +166,7 @@
     "channelOrganicSearch": "Búsqueda orgánica",
     "channelSocial": "Social",
     "channelReferral": "Referencia",
+    "trafficCampaignsTitle": "Etiquetas de campaña (?ref / utm_source)",
     "desktopUsersStat": "Usuarios de escritorio",
     "desktopActiveStat": "Escritorio activo (30d)",
     "desktopSection": "Escritorio / Tauri",
@@ -186,7 +187,10 @@
     "demoFeedbackTotal": "respuestas",
     "demoFeedbackEmpty": "Aún no hay comentarios escritos.",
     "trendTotalLabel": "registros en los últimos 30 días",
-    "trendTooltipSignups": "registros"
+    "trendTooltipSignups": "registros",
+    "widthNarrow": "Estrecho",
+    "widthWide": "Ancho",
+    "widthFull": "Completo"
   },
   "Workspace": {
     "planBilling": "Plan y facturación",

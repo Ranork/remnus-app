@@ -166,6 +166,7 @@
     "channelOrganicSearch": "Organic Search",
     "channelSocial": "Social",
     "channelReferral": "Referral",
+    "trafficCampaignsTitle": "Campaign tags (?ref / utm_source)",
     "desktopUsersStat": "Desktop Users",
     "desktopActiveStat": "Active Desktop (30d)",
     "desktopSection": "Desktop / Tauri",
@@ -186,7 +187,10 @@
     "demoFeedbackTotal": "responses",
     "demoFeedbackEmpty": "No written feedback yet.",
     "trendTotalLabel": "signups in the last 30 days",
-    "trendTooltipSignups": "signups"
+    "trendTooltipSignups": "signups",
+    "widthNarrow": "Narrow",
+    "widthWide": "Wide",
+    "widthFull": "Full"
   },
   "Workspace": {
     "planBilling": "Plan & Billing",

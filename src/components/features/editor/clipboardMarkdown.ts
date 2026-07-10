@@ -130,6 +130,54 @@ function getManager(editor: any): any {
   return editor?.markdown ?? editor?.storage?.markdown?.manager ?? null;
 }
 
+const LIST_TYPE_NAMES = new Set(['bulletList', 'orderedList', 'taskList']);
+const LIST_ITEM_TYPE_NAMES = new Set(['listItem', 'taskItem']);
+
+/**
+ * A plain text selection spanning across list items (e.g. from mid-item-1 to
+ * mid-item-3) slices down to a flat array of `listItem`/`taskItem` nodes, not
+ * wrapped in their `bulletList`/`orderedList`/`taskList` parent — ProseMirror's
+ * `Node.slice` only ever returns the CHILDREN of the shared ancestor, never
+ * the ancestor itself. Serializing those loose items renders each as its own
+ * one-item list, which markdown separates with a blank line, so pasting the
+ * selection back shows an extra blank line between every item instead of one
+ * tight list. Replicates the exact shared-ancestor lookup `Node.slice` used
+ * internally, so we can tell whether the fragment actually came from cutting
+ * through a single list.
+ */
+function wrappingListNode(editor: any): { type: string; attrs: Record<string, any> } | null {
+  try {
+    const sel = editor?.state?.selection;
+    if (!sel?.$from) return null;
+    const depth = sel.$from.sharedDepth(sel.to);
+    const node = sel.$from.node(depth);
+    if (!node || !LIST_TYPE_NAMES.has(node.type.name)) return null;
+    return { type: node.type.name, attrs: node.attrs ?? {} };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * A copy of exactly one table cell always slices down to this exact shape —
+ * one `tableRow` containing one `tableCell`/`tableHeader` — regardless of
+ * which Selection subclass produced it (a single-cell CellSelection is the
+ * common case, via triple-click or a drag that grazed the cell border, but
+ * this is a structural check rather than an `instanceof` one so it also
+ * catches any other path that lands on the same shape). A real multi-cell
+ * copy has more than one cell and/or more than one row, so it's untouched.
+ */
+function unwrapSingleCellTableFragment(json: any[]): any[] | null {
+  if (json.length !== 1) return null;
+  const row = json[0];
+  if (!row || row.type !== 'tableRow') return null;
+  const cells = row.content ?? [];
+  if (cells.length !== 1) return null;
+  const cell = cells[0];
+  if (cell?.type !== 'tableCell' && cell?.type !== 'tableHeader') return null;
+  return cell.content ?? [];
+}
+
 /**
  * Serialize a ProseMirror fragment to clipboard-friendly markdown. Loose inline
  * (text) nodes — e.g. a partial selection inside one paragraph — are wrapped in
@@ -143,6 +191,18 @@ export function fragmentToCleanMarkdown(editor: any, fragment: Fragment): string
 
   let json: any = fragment.toJSON() ?? [];
   if (!Array.isArray(json)) json = [json];
+
+  const singleCellContent = unwrapSingleCellTableFragment(json);
+  if (singleCellContent) {
+    const md = contentToCleanMarkdown(editor, singleCellContent);
+    if (md != null) return md;
+  }
+
+  const listWrap = wrappingListNode(editor);
+  if (listWrap && json.length && json.every((n: any) => LIST_ITEM_TYPE_NAMES.has(n?.type))) {
+    const md = contentToCleanMarkdown(editor, [{ type: listWrap.type, attrs: listWrap.attrs, content: json }]);
+    if (md != null) return md;
+  }
 
   // Group loose inline nodes into paragraphs; pass block nodes through.
   const content: any[] = [];

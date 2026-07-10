@@ -10,6 +10,7 @@ import AdminUsersTable from '@/components/features/AdminUsersTable';
 import { SignupTrendChart } from '@/components/features/admin/AdminCharts';
 import AdminTrafficSources from '@/components/features/admin/AdminTrafficSources';
 import AdminDesktopStats from '@/components/features/admin/AdminDesktopStats';
+import AdminShell from '@/components/features/admin/AdminShell';
 import { formatDuration } from '@/components/features/admin/format';
 import { getTranslations, getLocale } from 'next-intl/server';
 
@@ -204,28 +205,25 @@ export default async function AdminPage() {
   const activePct = userList.length > 0 ? Math.round((engagement.wau / userList.length) * 100) : 0;
 
   return (
-    <div className="flex h-full flex-1 flex-col overflow-auto bg-neutral-850">
-      {/* Header */}
-      <div className="shrink-0 border-b border-neutral-800 px-8 py-6">
-        <div className="flex items-center gap-3">
-          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-500/12 text-blue-400">
-            <Shield size={18} />
-          </div>
-          <div>
-            <h1 className="text-lg font-semibold text-neutral-100">{t('panelTitle')}</h1>
-            <p className="mt-0.5 text-xs text-neutral-500">{t('panelSubtitle')}</p>
-          </div>
-          <Link
-            href="/admin/mailing"
-            className="ml-auto flex items-center gap-2 rounded-lg border border-neutral-800 px-3.5 py-2 text-xs font-medium text-neutral-300 transition-colors hover:border-neutral-700 hover:bg-neutral-800/40"
-          >
-            <Mail size={14} className="text-blue-400" />
-            {tMailing('title')}
-          </Link>
+    <AdminShell
+      icon={
+        <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-blue-500/12 text-blue-400">
+          <Shield size={18} />
         </div>
-      </div>
-
-      <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col gap-9 px-8 py-7">
+      }
+      title={t('panelTitle')}
+      subtitle={t('panelSubtitle')}
+      widthLabels={{ narrow: t('widthNarrow'), wide: t('widthWide'), full: t('widthFull') }}
+      headerActions={
+        <Link
+          href="/admin/mailing"
+          className="flex items-center gap-2 rounded-lg border border-neutral-800 px-3.5 py-2 text-xs font-medium text-neutral-300 transition-colors hover:border-neutral-700 hover:bg-neutral-800/40"
+        >
+          <Mail size={14} className="text-blue-400" />
+          {tMailing('title')}
+        </Link>
+      }
+    >
         {/* Hero KPI cluster */}
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-[1.15fr_1fr_1fr_1.05fr]">
           <HeroTile
@@ -320,7 +318,6 @@ export default async function AdminPage() {
           <SectionHeader icon={Users} title={t('usersSection')} hint={`${userList.length} ${t('total')}`} />
           <AdminUsersTable users={sortedUsers} currentUserId={session.user.id} activity={engagement.perUser} />
         </section>
-      </div>
-    </div>
+    </AdminShell>
   );
 }

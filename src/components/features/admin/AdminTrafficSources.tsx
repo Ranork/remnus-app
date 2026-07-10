@@ -8,8 +8,9 @@ import type { TrafficSourcesData, TrafficChannel } from '@/lib/actions/analytics
 /**
  * Landing-traffic card. Self-fetches from PostHog (via the `getTrafficSources`
  * server action) on mount so a slow/failed PostHog Query API call never blocks
- * the admin page's server render. Shows a channel-type summary (chips) plus a
- * per-referring-domain breakdown (bars).
+ * the admin page's server render. Shows a channel-type summary (chips), a
+ * per-referring-domain breakdown (bars), and — when present — a `?ref=`/
+ * `utm_source` campaign-tag breakdown (bars, hidden when empty).
  */
 export default function AdminTrafficSources() {
   const t = useTranslations('Admin');
@@ -44,6 +45,8 @@ export default function AdminTrafficSources() {
   const topDomains = data.domains.slice(0, 8);
   const domTotal = data.domains.reduce((s, d) => s + d.visitors, 0) || 1;
   const domMax = Math.max(1, ...topDomains.map((d) => d.visitors));
+  const topCampaigns = data.campaigns.slice(0, 8);
+  const campMax = Math.max(1, ...topCampaigns.map((c) => c.visitors));
 
   return (
     <div className="flex flex-col gap-4">
@@ -91,6 +94,29 @@ export default function AdminTrafficSources() {
           );
         })}
       </div>
+
+      {/* Campaign / ref tag detail (?ref=<tag> or ?utm_source=<tag>) */}
+      {topCampaigns.length > 0 && (
+        <div className="flex flex-col gap-2 border-t border-neutral-800 pt-3">
+          <span className="text-xs font-medium text-neutral-400">{t('trafficCampaignsTitle')}</span>
+          {topCampaigns.map((c) => (
+            <div key={c.tag} className="flex items-center gap-3">
+              <span className="w-36 shrink-0 truncate text-xs text-neutral-300" title={c.tag}>
+                {c.tag}
+              </span>
+              <div className="relative h-4 flex-1 overflow-hidden rounded bg-neutral-850">
+                <div
+                  className="h-full rounded bg-green-400/55"
+                  style={{ width: `${Math.max(4, Math.round((c.visitors / campMax) * 100))}%` }}
+                />
+              </div>
+              <span className="w-16 shrink-0 text-right text-xs tabular-nums text-neutral-400">
+                <span className="font-medium text-neutral-200">{c.visitors}</span>
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
 
       <p className="text-[10px] text-neutral-600">{t('trafficVisitors')}</p>
     </div>

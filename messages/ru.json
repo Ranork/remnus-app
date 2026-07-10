@@ -166,6 +166,7 @@
     "channelOrganicSearch": "Органический поиск",
     "channelSocial": "Соцсети",
     "channelReferral": "Переход",
+    "trafficCampaignsTitle": "Метки кампаний (?ref / utm_source)",
     "desktopUsersStat": "Пользователи Desktop",
     "desktopActiveStat": "Активные Desktop (30д)",
     "desktopSection": "Desktop / Tauri",
@@ -186,7 +187,10 @@
     "demoFeedbackTotal": "ответов",
     "demoFeedbackEmpty": "Пока нет письменных отзывов.",
     "trendTotalLabel": "регистраций за последние 30 дней",
-    "trendTooltipSignups": "регистраций"
+    "trendTooltipSignups": "регистраций",
+    "widthNarrow": "Узкая",
+    "widthWide": "Широкая",
+    "widthFull": "Полная"
   },
   "Workspace": {
     "planBilling": "Тариф и оплата",

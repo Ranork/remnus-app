@@ -219,6 +219,16 @@ export type TrafficSourcesData = {
   channels: { channel: TrafficChannel; visitors: number }[];
   /** Per-referring-domain detail. `source === '$direct'` means no referrer. */
   domains: { source: string; visitors: number; views: number }[];
+  /**
+   * Per-campaign-tag detail — `?ref=<tag>` (simple partner/campaign links) falling
+   * back to `?utm_source=<tag>` when no `ref` is present. Referrer-domain breakdown
+   * above can't surface this: a `ref=scoutforge` link clicked from scoutforge.com
+   * shows up there as `scoutforge.com`, and a referrer-less click (email, DM, app)
+   * shows up as `$direct` — the tag itself is only visible by reading the URL's
+   * query string, which this breakdown does directly via HogQL's
+   * `extractURLParameter`. Empty when nobody has landed with a tagged link yet.
+   */
+  campaigns: { tag: string; visitors: number; views: number }[];
   days: number;
   /** False when the PostHog read creds are missing — card shows an "unavailable" state. */
   available: boolean;
@@ -252,22 +262,45 @@ function classifyChannel(domain: string): TrafficChannel {
 export async function getTrafficSources(days = 30): Promise<TrafficSourcesData> {
   await assertAdmin();
   const window = Math.max(1, Math.min(365, Math.floor(days)));
-  const rows = await runHogQL<[string, number, number]>(`
-    SELECT
-      coalesce(nullIf(properties.$referring_domain, ''), '$direct') AS domain,
-      count(DISTINCT person_id) AS visitors,
-      count() AS views
-    FROM events
-    WHERE event = '$pageview'
-      AND timestamp > now() - INTERVAL ${window} DAY
-      AND properties.$pathname = '/'
-      AND coalesce(properties.$referring_domain, '') NOT ILIKE '%remnus%'
-    GROUP BY domain
-    ORDER BY visitors DESC
-    LIMIT 50
-  `);
+  const [rows, campaignRows] = await Promise.all([
+    runHogQL<[string, number, number]>(`
+      SELECT
+        coalesce(nullIf(properties.$referring_domain, ''), '$direct') AS domain,
+        count(DISTINCT person_id) AS visitors,
+        count() AS views
+      FROM events
+      WHERE event = '$pageview'
+        AND timestamp > now() - INTERVAL ${window} DAY
+        AND properties.$pathname = '/'
+        AND coalesce(properties.$referring_domain, '') NOT ILIKE '%remnus%'
+      GROUP BY domain
+      ORDER BY visitors DESC
+      LIMIT 50
+    `),
+    // `?ref=<tag>` (our own simple partner/campaign links) falling back to
+    // `?utm_source=<tag>`. Read straight off $current_url via extractURLParameter
+    // since neither tag is broken out as its own event property today — see
+    // AttributionCapture.tsx, which only ever forwards this to PostHog/DB at
+    // signup time, so anonymous (non-signup) landings had no other way to surface it.
+    runHogQL<[string | null, number, number]>(`
+      SELECT
+        coalesce(
+          nullIf(extractURLParameter(properties.$current_url, 'ref'), ''),
+          nullIf(extractURLParameter(properties.$current_url, 'utm_source'), '')
+        ) AS tag,
+        count(DISTINCT person_id) AS visitors,
+        count() AS views
+      FROM events
+      WHERE event = '$pageview'
+        AND timestamp > now() - INTERVAL ${window} DAY
+        AND properties.$pathname = '/'
+      GROUP BY tag
+      ORDER BY visitors DESC
+      LIMIT 50
+    `),
+  ]);
   if (rows == null) {
-    return { channels: [], domains: [], days: window, available: false };
+    return { channels: [], domains: [], campaigns: [], days: window, available: false };
   }
 
   const channelTotals = new Map<TrafficChannel, number>();
@@ -284,7 +317,15 @@ export async function getTrafficSources(days = 30): Promise<TrafficSourcesData> 
     .filter((c) => c.visitors > 0)
     .sort((a, b) => b.visitors - a.visitors);
 
-  return { channels, domains, days: window, available: true };
+  const campaigns = (campaignRows ?? [])
+    .filter(([tag]) => !!tag)
+    .map(([tag, visitors, views]) => ({
+      tag: tag as string,
+      visitors: Number(visitors) || 0,
+      views: Number(views) || 0,
+    }));
+
+  return { channels, domains, campaigns, days: window, available: true };
 }
 
 export type DesktopDownloadStats = {

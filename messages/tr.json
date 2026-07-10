@@ -166,6 +166,7 @@
     "channelOrganicSearch": "Organik Arama",
     "channelSocial": "Sosyal",
     "channelReferral": "Yönlendirme",
+    "trafficCampaignsTitle": "Kampanya etiketleri (?ref / utm_source)",
     "desktopUsersStat": "Masaüstü Kullanıcıları",
     "desktopActiveStat": "Aktif Masaüstü (30g)",
     "desktopSection": "Masaüstü / Tauri",
@@ -186,7 +187,10 @@
     "demoFeedbackTotal": "yanıt",
     "demoFeedbackEmpty": "Henüz yazılı geri bildirim yok.",
     "trendTotalLabel": "son 30 günde kayıt",
-    "trendTooltipSignups": "kayıt"
+    "trendTooltipSignups": "kayıt",
+    "widthNarrow": "Dar",
+    "widthWide": "Geniş",
+    "widthFull": "Tam"
   },
   "Workspace": {
     "planBilling": "Plan ve Faturalama",
