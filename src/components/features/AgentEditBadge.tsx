@@ -2,10 +2,9 @@
 import { useState, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslations, useLocale } from 'next-intl';
-import AIMark, { type AIMarkName } from '@/components/marketing/AIMark';
-import { AGENT_OPTIONS } from '@/components/features/workspace-settings/types';
+import { MarkIcon, markForId, resolveAgentMark, AGENT_MARKS, type AgentMarkName } from '@/components/features/agents/AgentMark';
 
-const BRAND_COLORS: Record<AIMarkName, string> = {
+const BRAND_COLORS: Record<AgentMarkName, string> = {
   claude:      '#D97757',
   cursor:      '#C8C8C8',
   windsurf:    '#3FC1B8',
@@ -15,12 +14,15 @@ const BRAND_COLORS: Record<AIMarkName, string> = {
   gemini:      '#8AB4F8',
   antigravity: '#3186FF',
   codex:       '#C8C8C8',  // Codex mark is monochrome — silver tint, like Cursor
+  vscode:      '#60A5FA',
 };
 
-function resolveAgent(agentName: string | null): { aiMarkName: AIMarkName; label: string } | null {
-  if (!agentName) return null;
-  const opt = AGENT_OPTIONS.find(a => a.id === agentName);
-  return opt ? { aiMarkName: opt.aiMarkName, label: opt.label } : null;
+// Same resolution order as AgentMark/AgentsModal: explicit canonical id →
+// inferred from the stored agent_name → inferred from the token/client name.
+function resolveAgent(agentName: string | null, tokenName: string | null): { mark: AgentMarkName; label: string } | null {
+  const mark = markForId(agentName) ?? resolveAgentMark(agentName) ?? resolveAgentMark(tokenName);
+  if (!mark) return null;
+  return { mark, label: AGENT_MARKS.find(a => a.mark === mark)?.label ?? mark };
 }
 
 export default function AgentEditBadge({
@@ -44,8 +46,8 @@ export default function AgentEditBadge({
   const date = editedAt instanceof Date ? editedAt : new Date(editedAt);
   const timeStr = date.toLocaleString(locale, { dateStyle: 'medium', timeStyle: 'short' });
 
-  const agent = resolveAgent(agentName);
-  const aiMark = agent?.aiMarkName ?? null;
+  const agent = resolveAgent(agentName, tokenName ?? null);
+  const aiMark = agent?.mark ?? null;
   const color = aiMark ? BRAND_COLORS[aiMark] : '#94a3b8';
 
   const handleEnter = () => {
@@ -69,7 +71,7 @@ export default function AgentEditBadge({
       onClick={(e) => e.stopPropagation()}
     >
       {aiMark ? (
-        <AIMark name={aiMark} size={14} />
+        <MarkIcon mark={aiMark} size={14} />
       ) : (
         // Generic bot icon as fallback
         <svg width={14} height={14} viewBox="0 0 24 24" fill={color} style={{ flexShrink: 0 }}>
@@ -95,7 +97,7 @@ export default function AgentEditBadge({
             }}
           >
             <div className="flex items-center gap-2 mb-1.5">
-              {aiMark && <AIMark name={aiMark} size={13} />}
+              {aiMark && <MarkIcon mark={aiMark} size={13} />}
               <span className="text-[11px] font-semibold" style={{ color }}>
                 {agent?.label ?? agentName ?? t('agentEditedLabel')}
               </span>

@@ -6,7 +6,7 @@ import { AGENT_MARKS, markForId, resolveAgentMark, type AgentMarkName } from './
 /**
  * Agent icon resolution shared by AgentsModal (PAT + OAuth rows) and ConnectFlow.
  *
- * Three id systems exist in the codebase (EDITORS, AGENT_OPTIONS, AIMark names) and OAuth
+ * A couple of id systems exist in the codebase (EDITORS, AIMark names) and OAuth
  * clients self-register with a free-text `client_name`. To render one consistent brand icon
  * we (1) store a canonical agent id (`AGENT_MARKS[].id`) when the user picks one, and
  * (2) best-effort *infer* the mark from any free-text hint (PAT name / OAuth client_name)
