@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { usePostHog } from 'posthog-js/react';
-import { Check, Copy, ArrowRight, ChevronLeft, ChevronDown, X, KeyRound, Globe, AlertCircle, AlertTriangle, Plug, Sparkles, Loader2, Wrench, PartyPopper, Send } from 'lucide-react';
+import { Check, Copy, ArrowRight, ChevronLeft, ChevronDown, X, KeyRound, Globe, AlertCircle, AlertTriangle, Plug, Sparkles, Loader2, Wrench, PartyPopper, Send, BookOpen } from 'lucide-react';
 import AIMark from '@/components/marketing/AIMark';
 import { VscodeMark } from '@/components/features/agents/AgentMark';
 import ClaudeConnectAnimation from '@/components/features/agents/ClaudeConnectAnimation';
@@ -256,6 +256,9 @@ function StepConnect({
   // instructions below are never hidden — this is purely additive. ──
   const [autoConnecting, setAutoConnecting] = useState(false);
   const [autoResult, setAutoResult] = useState<{ ok: boolean; message: string } | null>(null);
+  // Claude Code is currently the only client with an Anthropic Skills concept
+  // (`~/.claude/skills/<name>/SKILL.md`) — offered only there, on by default.
+  const [installSkill, setInstallSkill] = useState(true);
 
   const handleAutoConnect = async () => {
     setAutoConnecting(true);
@@ -281,7 +284,25 @@ function StepConnect({
       } else {
         await invoke('write_agent_config', { editor, mcpUrl, token: minted.token });
       }
-      setAutoResult({ ok: true, message: t('connectAutoSuccess', { tool: meta.label }) });
+
+      // Best-effort companion step — a failed skill install must never mask
+      // the successful (and more important) MCP connection above.
+      let skillInstalled = false;
+      if (editor === 'claude' && installSkill) {
+        try {
+          await invoke('install_remnus_skill');
+          skillInstalled = true;
+        } catch {
+          skillInstalled = false;
+        }
+      }
+
+      setAutoResult({
+        ok: true,
+        message: skillInstalled
+          ? t('connectAutoSuccessWithSkill', { tool: meta.label })
+          : t('connectAutoSuccess', { tool: meta.label }),
+      });
       // Let the success message land for a beat, then advance automatically —
       // the user already has a working connection, no need to make them click Next.
       onAutoConnected?.(meta.label);
@@ -624,6 +645,24 @@ function StepConnect({
                   </label>
                   <WorkspacePicker targets={mintTargets} value={selectedWs} onChange={setSelectedWs} accent="emerald" />
                 </div>
+              )}
+
+              {editor === 'claude' && (
+                <label className="flex items-start gap-2 text-[11px] text-neutral-300 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={installSkill}
+                    onChange={e => setInstallSkill(e.target.checked)}
+                    className="mt-0.5 accent-emerald-500"
+                  />
+                  <span className="flex items-start gap-1.5">
+                    <BookOpen size={12} className="text-emerald-400 shrink-0 mt-0.5" />
+                    <span>
+                      <span className="font-semibold text-neutral-200">{t('connectInstallSkillLabel')}</span>{' '}
+                      <span className="text-neutral-500">{t('connectInstallSkillHint')}</span>
+                    </span>
+                  </span>
+                </label>
               )}
 
               <button

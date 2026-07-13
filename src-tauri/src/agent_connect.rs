@@ -38,6 +38,17 @@ pub struct ClaudeConnectResult {
     pub stderr: String,
 }
 
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct InstallSkillResult {
+    pub path: String,
+}
+
+/// The Remnus Claude Code skill, baked into the binary at compile time so
+/// installing it never needs a network round-trip or app-resource bundling —
+/// it always matches the exact app build the user is running.
+const REMNUS_SKILL_MD: &str = include_str!("../../skills/remnus/SKILL.md");
+
 /// Resolve a binary name on PATH, honoring Windows' PATHEXT (so `claude` finds
 /// `claude.cmd`, the shape npm-global installs actually produce on Windows).
 fn resolve_on_path(bin: &str) -> Option<PathBuf> {
@@ -291,4 +302,30 @@ pub async fn run_claude_connect(mcp_url: String, token: Option<String>) -> Resul
     tauri::async_runtime::spawn_blocking(move || run_claude_connect_blocking(&mcp_url, token.as_deref()))
         .await
         .map_err(|e| format!("connect task panicked: {e}"))?
+}
+
+/// Install the bundled Remnus skill for Claude Code, as a user-level skill
+/// (`~/.claude/skills/remnus/SKILL.md`) so it applies across every project,
+/// not just one repo — Remnus is an external workspace the agent connects to
+/// over MCP, not something scoped to whatever project Claude Code happens to
+/// be running in. Offered as an additive companion step next to the
+/// `run_claude_connect` auto-connect, never on its own. This file is entirely
+/// ours (unlike the merged editor configs above), so a plain overwrite is
+/// correct — still backed up first in case the user hand-edited a prior copy.
+#[tauri::command]
+pub fn install_remnus_skill(app: tauri::AppHandle) -> Result<InstallSkillResult, String> {
+    let home = app.path().home_dir().map_err(|e| e.to_string())?;
+    let path = home.join(".claude").join("skills").join("remnus").join("SKILL.md");
+
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent).map_err(|e| e.to_string())?;
+    }
+    if path.is_file() {
+        let _ = fs::copy(&path, format!("{}.bak", path.display()));
+    }
+
+    fs::write(&path, REMNUS_SKILL_MD).map_err(|e| e.to_string())?;
+    Ok(InstallSkillResult {
+        path: path.to_string_lossy().into_owned(),
+    })
 }

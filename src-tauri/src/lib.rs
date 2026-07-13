@@ -15,7 +15,7 @@ use tauri_plugin_opener::OpenerExt;
 #[cfg(not(debug_assertions))]
 use tauri_plugin_updater::UpdaterExt;
 
-use agent_connect::{detect_installed_agents, run_claude_connect, write_agent_config};
+use agent_connect::{detect_installed_agents, install_remnus_skill, run_claude_connect, write_agent_config};
 
 const ZOOM_INIT: &str = "(function(){try{var z=parseFloat(localStorage.getItem('remnus_desktop_zoom'));if(z&&z>=0.5&&z<=2.0){var el=document.documentElement;el.style.zoom=String(z);if(z<1){var p=(100/z).toFixed(2)+'%';el.style.width=p;el.style.height=p;el.style.overflow='hidden';}}}catch(e){}})();";
 
@@ -387,7 +387,8 @@ pub fn run() {
             reveal_download,
             detect_installed_agents,
             write_agent_config,
-            run_claude_connect
+            run_claude_connect,
+            install_remnus_skill
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application")
