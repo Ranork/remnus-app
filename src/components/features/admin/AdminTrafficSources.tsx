@@ -4,9 +4,11 @@ import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { getTrafficSources, getTrafficTrend } from '@/lib/actions/analytics';
 import type { TrafficSourcesData, TrafficChannel, TrafficTrendData } from '@/lib/actions/analytics';
-import { TrafficTrendChart } from './AdminCharts';
+import { TrafficTrendChart } from './TrafficTrendChart';
 
 type Tab = 'sources' | 'weekly' | 'monthly';
+type TrendViewMode = 'bar' | 'line';
+type TrendSource = 'channel:all' | `channel:${TrafficChannel}` | 'campaign:all' | `campaign:${string}`;
 
 /**
  * Landing-traffic card. Self-fetches from PostHog (via the `getTrafficSources`
@@ -21,6 +23,10 @@ export default function AdminTrafficSources() {
   const [data, setData] = useState<TrafficSourcesData | null>(null);
   const [trend, setTrend] = useState<TrafficTrendData | null>(null);
   const [loading, setLoading] = useState(true);
+  // Lifted up (rather than local to TrafficTrendChart) so the chosen view/source
+  // survives switching away to the Sources tab and back within the same session.
+  const [trendView, setTrendView] = useState<TrendViewMode>('bar');
+  const [trendSource, setTrendSource] = useState<TrendSource>('channel:all');
 
   useEffect(() => {
     let alive = true;
@@ -82,7 +88,15 @@ export default function AdminTrafficSources() {
         {!trend || !trend.available ? (
           <p className="text-xs text-neutral-500">{t('trafficUnavailable')}</p>
         ) : (
-          <TrafficTrendChart data={points ?? []} granularity={tab === 'weekly' ? 'week' : 'month'} />
+          <TrafficTrendChart
+            data={points ?? []}
+            granularity={tab === 'weekly' ? 'week' : 'month'}
+            campaignTags={trend.campaignTags}
+            viewMode={trendView}
+            onViewModeChange={setTrendView}
+            source={trendSource}
+            onSourceChange={setTrendSource}
+          />
         )}
       </div>
     );

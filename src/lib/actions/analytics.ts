@@ -334,6 +334,8 @@ export type TrafficTrendPoint = {
   visitors: number;
   /** Per-channel breakdown for this bucket, same 4 buckets as getTrafficSources's `channels`. */
   channels: Record<TrafficChannel, number>;
+  /** Per-campaign-tag breakdown for this bucket — keyed ONLY by `TrafficTrendData.campaignTags` (a bucket/tag pair with no traffic is simply absent, not zero). */
+  campaigns: Record<string, number>;
 };
 
 export type TrafficTrendData = {
@@ -341,20 +343,32 @@ export type TrafficTrendData = {
   weekly: TrafficTrendPoint[];
   /** Last 12 calendar months (UTC), oldest → newest. `date` = month start. */
   monthly: TrafficTrendPoint[];
+  /**
+   * Fixed series set for the "by campaign" breakdown — the top `?ref=`/
+   * `?utm_source=` tags by total visitors over the last 12 months (cap 6, the
+   * dataviz skill's soft series-count cap). Computed once from the monthly
+   * window (the superset of the weekly one) and reused for both `weekly` and
+   * `monthly` `campaigns` records, so a tag's chart color/identity never
+   * shifts when switching granularity. Empty when nobody has landed with a
+   * tagged link in the window.
+   */
+  campaignTags: string[];
   /** False when the PostHog read creds are missing — card shows an "unavailable" state. */
   available: boolean;
 };
 
 const EMPTY_CHANNELS: Record<TrafficChannel, number> = { direct: 0, organic: 0, social: 0, referral: 0 };
+const MAX_TREND_CAMPAIGN_TAGS = 6;
 
 /**
  * Weekly/monthly landing-visitor trend, read from PostHog ($pageview on '/'),
  * bucketed server-side via HogQL's toStartOfWeek/toStartOfMonth AND grouped by
- * referring domain so each bucket can be broken down by channel — the
- * "how many, over time, from where" companion to getTrafficSources's
- * point-in-time breakdown, tabbed alongside it in the admin traffic card.
- * Buckets with no visitors are filled with 0 (PostHog only returns buckets
- * that have rows) so the chart's x-axis stays evenly spaced.
+ * referring domain (→ channel) and by `?ref=`/`?utm_source=` tag (→ campaign)
+ * so each bucket can be broken down either way — the "how many, over time,
+ * from where" companion to getTrafficSources's point-in-time breakdown,
+ * tabbed alongside it in the admin traffic card. Buckets with no visitors are
+ * filled with 0 (PostHog only returns buckets that have rows) so the chart's
+ * x-axis stays evenly spaced.
  *
  * `visitors` is the SUM of the 4 channel counts, not a separate whole-bucket
  * distinct-visitor query — each channel count is itself a sum of per-domain
@@ -367,7 +381,7 @@ const EMPTY_CHANNELS: Record<TrafficChannel, number> = { direct: 0, organic: 0, 
  */
 export async function getTrafficTrend(): Promise<TrafficTrendData> {
   await assertAdmin();
-  const [weeklyRows, monthlyRows] = await Promise.all([
+  const [weeklyDomainRows, monthlyDomainRows, weeklyTagRows, monthlyTagRows] = await Promise.all([
     runHogQL<[string, string, number]>(`
       SELECT
         toStartOfWeek(timestamp, 1) AS bucket,
@@ -394,14 +408,46 @@ export async function getTrafficTrend(): Promise<TrafficTrendData> {
       ORDER BY bucket ASC
       LIMIT 5000
     `),
+    runHogQL<[string, string | null, number]>(`
+      SELECT
+        toStartOfWeek(timestamp, 1) AS bucket,
+        coalesce(
+          nullIf(extractURLParameter(properties.$current_url, 'ref'), ''),
+          nullIf(extractURLParameter(properties.$current_url, 'utm_source'), '')
+        ) AS tag,
+        count(DISTINCT person_id) AS visitors
+      FROM events
+      WHERE event = '$pageview'
+        AND timestamp > now() - INTERVAL 12 WEEK
+        AND properties.$pathname = '/'
+      GROUP BY bucket, tag
+      ORDER BY bucket ASC
+      LIMIT 5000
+    `),
+    runHogQL<[string, string | null, number]>(`
+      SELECT
+        toStartOfMonth(timestamp) AS bucket,
+        coalesce(
+          nullIf(extractURLParameter(properties.$current_url, 'ref'), ''),
+          nullIf(extractURLParameter(properties.$current_url, 'utm_source'), '')
+        ) AS tag,
+        count(DISTINCT person_id) AS visitors
+      FROM events
+      WHERE event = '$pageview'
+        AND timestamp > now() - INTERVAL 12 MONTH
+        AND properties.$pathname = '/'
+      GROUP BY bucket, tag
+      ORDER BY bucket ASC
+      LIMIT 5000
+    `),
   ]);
-  if (weeklyRows == null || monthlyRows == null) {
-    return { weekly: [], monthly: [], available: false };
+  if (weeklyDomainRows == null || monthlyDomainRows == null || weeklyTagRows == null || monthlyTagRows == null) {
+    return { weekly: [], monthly: [], campaignTags: [], available: false };
   }
 
   // Fold the per-domain rows into per-bucket channel totals via the same
   // classifyChannel() bucketing getTrafficSources uses for its channel chips.
-  function aggregate(rows: [string, string, number][]): Map<string, Record<TrafficChannel, number>> {
+  function aggregateChannels(rows: [string, string, number][]): Map<string, Record<TrafficChannel, number>> {
     const map = new Map<string, Record<TrafficChannel, number>>();
     for (const [bucket, domain, visitors] of rows) {
       const key = String(bucket).slice(0, 10);
@@ -412,9 +458,42 @@ export async function getTrafficTrend(): Promise<TrafficTrendData> {
     return map;
   }
 
-  const weeklyMap = aggregate(weeklyRows);
-  const monthlyMap = aggregate(monthlyRows);
+  // Fold the per-tag rows into per-bucket tag totals, dropping untagged rows.
+  function aggregateTags(rows: [string, string | null, number][]): Map<string, Map<string, number>> {
+    const map = new Map<string, Map<string, number>>();
+    for (const [bucket, tag, visitors] of rows) {
+      if (!tag) continue;
+      const key = String(bucket).slice(0, 10);
+      const entry = map.get(key) ?? new Map<string, number>();
+      entry.set(tag, (entry.get(tag) ?? 0) + (Number(visitors) || 0));
+      map.set(key, entry);
+    }
+    return map;
+  }
+
+  const weeklyChannelMap = aggregateChannels(weeklyDomainRows);
+  const monthlyChannelMap = aggregateChannels(monthlyDomainRows);
+  const weeklyTagMap = aggregateTags(weeklyTagRows);
+  const monthlyTagMap = aggregateTags(monthlyTagRows);
   const totalOf = (c: Record<TrafficChannel, number>) => c.direct + c.organic + c.social + c.referral;
+
+  // Fixed campaign-tag series set: top N by total visitors over the 12-month
+  // window (the superset of the 12-week one), so a tag's identity/color/order
+  // is stable whether the reader is looking at the weekly or monthly tab.
+  const tagTotals = new Map<string, number>();
+  for (const perBucket of monthlyTagMap.values()) {
+    for (const [tag, v] of perBucket) tagTotals.set(tag, (tagTotals.get(tag) ?? 0) + v);
+  }
+  const campaignTags = [...tagTotals.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, MAX_TREND_CAMPAIGN_TAGS)
+    .map(([tag]) => tag);
+
+  function campaignsFor(perBucket: Map<string, number> | undefined): Record<string, number> {
+    const out: Record<string, number> = {};
+    for (const tag of campaignTags) out[tag] = perBucket?.get(tag) ?? 0;
+    return out;
+  }
 
   // Monday of the current week (UTC) — anchor for both fills below.
   const now = new Date();
@@ -427,19 +506,19 @@ export async function getTrafficTrend(): Promise<TrafficTrendData> {
     const d = new Date(thisMonday);
     d.setUTCDate(d.getUTCDate() - i * 7);
     const key = d.toISOString().slice(0, 10);
-    const channels = weeklyMap.get(key) ?? EMPTY_CHANNELS;
-    weekly.push({ date: key, visitors: totalOf(channels), channels });
+    const channels = weeklyChannelMap.get(key) ?? EMPTY_CHANNELS;
+    weekly.push({ date: key, visitors: totalOf(channels), channels, campaigns: campaignsFor(weeklyTagMap.get(key)) });
   }
 
   const monthly: TrafficTrendPoint[] = [];
   for (let i = 11; i >= 0; i--) {
     const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1));
     const key = d.toISOString().slice(0, 10);
-    const channels = monthlyMap.get(key) ?? EMPTY_CHANNELS;
-    monthly.push({ date: key, visitors: totalOf(channels), channels });
+    const channels = monthlyChannelMap.get(key) ?? EMPTY_CHANNELS;
+    monthly.push({ date: key, visitors: totalOf(channels), channels, campaigns: campaignsFor(monthlyTagMap.get(key)) });
   }
 
-  return { weekly, monthly, available: true };
+  return { weekly, monthly, campaignTags, available: true };
 }
 
 export type DesktopDownloadStats = {
