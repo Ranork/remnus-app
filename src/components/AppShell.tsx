@@ -77,11 +77,12 @@ export default function AppShell({
     writeSidebarVisible(!sidebarVisible);
   };
 
-  // Only /db/* and /page/* routes live in tabs. The keep-alive TabHost owns the
-  // content for those in Tauri; other in-app routes (e.g. /admin) keep their
-  // normal server-rendered `{children}`.
-  const isTabbablePath = /^\/(db|page)\//.test(pathname);
-  const showTabHost = isTauri && isTabbablePath;
+  // Only /db/* and /page/* routes get a keep-alive TabHost pane in Tauri — a tab
+  // still exists for /admin (see TabsContext's isTabbable) so it doesn't leave a
+  // stale tab looking "active" in the strip, but its content is NOT kept alive:
+  // it keeps rendering through the normal server-rendered `{children}`.
+  const isKeepAlivePath = /^\/(db|page)\//.test(pathname);
+  const showTabHost = isTauri && isKeepAlivePath;
 
   if (isMarketing) {
     return <>{children}</>;

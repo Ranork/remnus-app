@@ -2,37 +2,106 @@
 
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { getTrafficSources } from '@/lib/actions/analytics';
-import type { TrafficSourcesData, TrafficChannel } from '@/lib/actions/analytics';
+import { getTrafficSources, getTrafficTrend } from '@/lib/actions/analytics';
+import type { TrafficSourcesData, TrafficChannel, TrafficTrendData } from '@/lib/actions/analytics';
+import { TrafficTrendChart } from './AdminCharts';
+
+type Tab = 'sources' | 'weekly' | 'monthly';
 
 /**
  * Landing-traffic card. Self-fetches from PostHog (via the `getTrafficSources`
- * server action) on mount so a slow/failed PostHog Query API call never blocks
- * the admin page's server render. Shows a channel-type summary (chips), a
- * per-referring-domain breakdown (bars), and — when present — a `?ref=`/
- * `utm_source` campaign-tag breakdown (bars, hidden when empty).
+ * + `getTrafficTrend` server actions) on mount so a slow/failed PostHog Query
+ * API call never blocks the admin page's server render. Tabbed: "Sources"
+ * (channel-type summary, per-referring-domain breakdown, campaign tags) plus
+ * "Weekly"/"Monthly" (visitor-count trend bar charts) sharing the same card.
  */
 export default function AdminTrafficSources() {
   const t = useTranslations('Admin');
+  const [tab, setTab] = useState<Tab>('sources');
   const [data, setData] = useState<TrafficSourcesData | null>(null);
+  const [trend, setTrend] = useState<TrafficTrendData | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     let alive = true;
-    getTrafficSources()
-      .then((d) => alive && setData(d))
-      .catch(() => alive && setData(null))
+    Promise.all([getTrafficSources(), getTrafficTrend()])
+      .then(([d, tr]) => {
+        if (!alive) return;
+        setData(d);
+        setTrend(tr);
+      })
+      .catch(() => {
+        if (!alive) return;
+        setData(null);
+        setTrend(null);
+      })
       .finally(() => alive && setLoading(false));
     return () => {
       alive = false;
     };
   }, []);
 
-  if (loading) return <p className="text-xs text-neutral-500">{t('trafficLoading')}</p>;
+  const tabs: { id: Tab; label: string }[] = [
+    { id: 'sources', label: t('trafficTabSources') },
+    { id: 'weekly', label: t('trafficTabWeekly') },
+    { id: 'monthly', label: t('trafficTabMonthly') },
+  ];
+
+  const tabStrip = (
+    <div className="mb-3 flex gap-1 border-b border-neutral-800">
+      {tabs.map((tb) => (
+        <button
+          key={tb.id}
+          type="button"
+          onClick={() => setTab(tb.id)}
+          className={`-mb-px border-b-2 px-2.5 py-1.5 text-xs font-medium transition-colors ${
+            tab === tb.id
+              ? 'border-blue-500 text-neutral-100'
+              : 'border-transparent text-neutral-500 hover:text-neutral-300'
+          }`}
+        >
+          {tb.label}
+        </button>
+      ))}
+    </div>
+  );
+
+  if (loading)
+    return (
+      <div>
+        {tabStrip}
+        <p className="text-xs text-neutral-500">{t('trafficLoading')}</p>
+      </div>
+    );
+
+  if (tab === 'weekly' || tab === 'monthly') {
+    const points = tab === 'weekly' ? trend?.weekly : trend?.monthly;
+    return (
+      <div>
+        {tabStrip}
+        {!trend || !trend.available ? (
+          <p className="text-xs text-neutral-500">{t('trafficUnavailable')}</p>
+        ) : (
+          <TrafficTrendChart data={points ?? []} granularity={tab === 'weekly' ? 'week' : 'month'} />
+        )}
+      </div>
+    );
+  }
+
   if (!data || !data.available)
-    return <p className="text-xs text-neutral-500">{t('trafficUnavailable')}</p>;
+    return (
+      <div>
+        {tabStrip}
+        <p className="text-xs text-neutral-500">{t('trafficUnavailable')}</p>
+      </div>
+    );
   if (data.domains.length === 0)
-    return <p className="text-xs text-neutral-500">{t('trafficEmpty')}</p>;
+    return (
+      <div>
+        {tabStrip}
+        <p className="text-xs text-neutral-500">{t('trafficEmpty')}</p>
+      </div>
+    );
 
   const channelLabel: Record<TrafficChannel, string> = {
     direct: t('channelDirect'),
@@ -50,6 +119,7 @@ export default function AdminTrafficSources() {
 
   return (
     <div className="flex flex-col gap-4">
+      {tabStrip}
       {/* Channel-type summary */}
       <div className="flex flex-wrap gap-2">
         {data.channels.map((c) => {

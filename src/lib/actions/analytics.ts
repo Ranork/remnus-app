@@ -328,6 +328,78 @@ export async function getTrafficSources(days = 30): Promise<TrafficSourcesData> 
   return { channels, domains, campaigns, days: window, available: true };
 }
 
+export type TrafficTrendPoint = { date: string; visitors: number };
+
+export type TrafficTrendData = {
+  /** Last 12 ISO weeks (Mon-start, UTC), oldest → newest. `date` = week start. */
+  weekly: TrafficTrendPoint[];
+  /** Last 12 calendar months (UTC), oldest → newest. `date` = month start. */
+  monthly: TrafficTrendPoint[];
+  /** False when the PostHog read creds are missing — card shows an "unavailable" state. */
+  available: boolean;
+};
+
+/**
+ * Weekly/monthly landing-visitor trend, read from PostHog ($pageview on '/'),
+ * bucketed server-side via HogQL's toStartOfWeek/toStartOfMonth. The
+ * "how many, over time" companion to getTrafficSources's per-source
+ * breakdown — tabbed alongside it in the admin traffic card. Buckets with no
+ * visitors are filled with 0 (PostHog only returns buckets that have rows) so
+ * the chart's x-axis stays evenly spaced.
+ */
+export async function getTrafficTrend(): Promise<TrafficTrendData> {
+  await assertAdmin();
+  const [weeklyRows, monthlyRows] = await Promise.all([
+    runHogQL<[string, number]>(`
+      SELECT toStartOfWeek(timestamp, 1) AS bucket, count(DISTINCT person_id) AS visitors
+      FROM events
+      WHERE event = '$pageview'
+        AND timestamp > now() - INTERVAL 12 WEEK
+        AND properties.$pathname = '/'
+      GROUP BY bucket
+      ORDER BY bucket ASC
+    `),
+    runHogQL<[string, number]>(`
+      SELECT toStartOfMonth(timestamp) AS bucket, count(DISTINCT person_id) AS visitors
+      FROM events
+      WHERE event = '$pageview'
+        AND timestamp > now() - INTERVAL 12 MONTH
+        AND properties.$pathname = '/'
+      GROUP BY bucket
+      ORDER BY bucket ASC
+    `),
+  ]);
+  if (weeklyRows == null || monthlyRows == null) {
+    return { weekly: [], monthly: [], available: false };
+  }
+
+  const weeklyMap = new Map(weeklyRows.map(([d, v]) => [String(d).slice(0, 10), Number(v) || 0]));
+  const monthlyMap = new Map(monthlyRows.map(([d, v]) => [String(d).slice(0, 10), Number(v) || 0]));
+
+  // Monday of the current week (UTC) — anchor for both fills below.
+  const now = new Date();
+  const dow = now.getUTCDay(); // 0=Sun..6=Sat
+  const mondayOffset = dow === 0 ? 6 : dow - 1;
+  const thisMonday = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - mondayOffset));
+
+  const weekly: TrafficTrendPoint[] = [];
+  for (let i = 11; i >= 0; i--) {
+    const d = new Date(thisMonday);
+    d.setUTCDate(d.getUTCDate() - i * 7);
+    const key = d.toISOString().slice(0, 10);
+    weekly.push({ date: key, visitors: weeklyMap.get(key) ?? 0 });
+  }
+
+  const monthly: TrafficTrendPoint[] = [];
+  for (let i = 11; i >= 0; i--) {
+    const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1));
+    const key = d.toISOString().slice(0, 10);
+    monthly.push({ date: key, visitors: monthlyMap.get(key) ?? 0 });
+  }
+
+  return { weekly, monthly, available: true };
+}
+
 export type DesktopDownloadStats = {
   byOs: { os: string; clicks: number; visitors: number }[];
   totalClicks: number;

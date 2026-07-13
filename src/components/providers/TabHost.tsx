@@ -1,7 +1,7 @@
 'use client';
 import { memo, useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
-import { useTabs } from './TabsContext';
+import { useTabs, isKeepAlivePane } from './TabsContext';
 import { CHANGE_EVENT } from './ActivityTracker';
 import TabPane from '@/components/features/tabs/TabPane';
 import { invalidateTabHref } from '@/components/features/tabs/keys';
@@ -52,8 +52,13 @@ export default function TabHost({ isAdmin, currentUserId }: { isAdmin: boolean; 
   if (!tabs) return null;
 
   const { tabs: list, activeId, suspendedIds } = tabs;
+  // Only /db|/page tabs need a keep-alive pane here — other tabbable routes
+  // (e.g. /admin) render through the normal server route (AppShell's
+  // `{children}`, shown whenever they're active) and have no in-memory state
+  // worth keeping hidden while inactive, so TabPane never sees their href.
+  const paneTabs = list.filter((tab) => isKeepAlivePane(tab.href));
 
-  if (list.length === 0) {
+  if (paneTabs.length === 0) {
     return (
       <div className="flex-1 flex items-center justify-center bg-neutral-850">
         <div className="w-5 h-5 rounded-full border-2 border-neutral-800 border-t-neutral-500 animate-spin" />
@@ -63,7 +68,7 @@ export default function TabHost({ isAdmin, currentUserId }: { isAdmin: boolean; 
 
   return (
     <>
-      {list.map((tab) => (
+      {paneTabs.map((tab) => (
         // Lazy on load + suspended after the keep-alive window: the pane isn't
         // mounted at all (frees memory; a later activation re-mounts it fresh).
         // The active tab is never suspended.

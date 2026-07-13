@@ -10,6 +10,7 @@ import {
 } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
+import { useTranslations } from "next-intl";
 import type { WorkspaceItemRow } from "@/lib/actions/workspace";
 import { invalidateTabHref } from "@/components/features/tabs/keys";
 
@@ -76,7 +77,10 @@ export function useTabNav(): {
   const refresh = useCallback(() => {
     if (ctx) {
       const active = ctx.tabs.find((t) => t.id === ctx.activeId);
-      if (active) {
+      // Only keep-alive panes (/page, /db) have queries to invalidate — a
+      // tabbable-but-not-kept-alive tab (e.g. /admin) has no TanStack cache, so
+      // fall through to router.refresh() for it exactly like the no-tab case.
+      if (active && isKeepAlivePane(active.href)) {
         invalidateTabHref(queryClient, active.href);
         return;
       }
@@ -102,9 +106,25 @@ function normalizePath(p: string): string {
   return s;
 }
 
-/** A path that should live in a tab (content routes only). */
+/**
+ * A path that should live in a tab. Content routes (`/page/*`, `/db/*`) plus
+ * `/admin` (and its subpages, e.g. `/admin/mailing`) — the admin dashboard is
+ * NOT a keep-alive pane (see TabHost's pane filter), it just gets a real tab
+ * so opening it doesn't leave the previously-active tab visually "stuck"
+ * highlighted in the strip while unrelated content shows underneath it.
+ */
 function isTabbable(norm: string): boolean {
-  return /^\/(page|db)\//.test(norm);
+  return /^\/(page|db)\//.test(norm) || norm === "/admin" || norm.startsWith("/admin/");
+}
+
+/**
+ * A tab whose content is a TabHost keep-alive pane (`/page/*`, `/db/*`) — as
+ * opposed to a tabbable-but-not-kept-alive route like `/admin`, which renders
+ * through the normal server route and has no TanStack Query cache to
+ * invalidate/mount a pane for. Shared by `useTabNav().refresh()` and `TabHost`.
+ */
+export function isKeepAlivePane(href: string): boolean {
+  return /^\/(page|db)\//.test(normalizePath(href));
 }
 
 function isRowPath(norm: string): boolean {
@@ -233,6 +253,7 @@ export function TabsProvider({
   const router = useRouter();
   const pathname = usePathname();
   const storageKey = TABS_STORAGE_KEY;
+  const tAdminLabel = useTranslations("Workspace")("adminLink");
 
   // Diagnostic: track provider mount/unmount cycles to catch unexpected remounts.
   useEffect(() => {
@@ -267,6 +288,12 @@ export function TabsProvider({
     (href: string): TabMeta | null => {
       const norm = normalizePath(href);
       const parts = norm.split("/").filter(Boolean); // e.g. ['db','id','pageId']
+      // /admin (and subpages, e.g. /admin/mailing) are a fixed system tab, not
+      // content — same title/icon regardless of subpath, matching the sidebar's
+      // "Admin" badge (Shield icon).
+      if (parts[0] === "admin") {
+        return { title: tAdminLabel, icon: "lucide:Shield", iconColor: "blue" };
+      }
       if (parts[0] === "page" && parts[1]) {
         const item = items.find((i) => i.id === parts[1]);
         if (item)
@@ -287,7 +314,7 @@ export function TabsProvider({
       // DB row pages (/db/x/y) have no workspace item — caller falls back to the tab snapshot.
       return null;
     },
-    [items],
+    [items, tAdminLabel],
   );
 
   // Effective active id: the explicit state when it still points at a live tab,

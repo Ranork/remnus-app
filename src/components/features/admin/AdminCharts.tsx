@@ -69,3 +69,66 @@ export function SignupTrendChart({ data }: { data: { date: string; count: number
     </div>
   );
 }
+
+// ── Traffic trend: weekly/monthly visitor bar chart ─────────────────────────
+export function TrafficTrendChart({
+  data,
+  granularity,
+}: {
+  data: { date: string; visitors: number }[];
+  granularity: 'week' | 'month';
+}) {
+  const t = useTranslations('Admin');
+  const locale = useLocale();
+  const [hover, setHover] = useState<number | null>(null);
+  const max = Math.max(1, ...data.map((d) => d.visitors));
+  const total = data.reduce((s, d) => s + d.visitors, 0);
+  const fmt = new Intl.DateTimeFormat(
+    locale,
+    granularity === 'week' ? { month: 'short', day: 'numeric' } : { month: 'short', year: 'numeric' },
+  );
+
+  return (
+    <div>
+      <div className="mb-4 flex items-baseline gap-2">
+        <span className="text-2xl font-semibold text-neutral-100 tabular-nums">{total}</span>
+        <span className="text-xs text-neutral-500">
+          {granularity === 'week' ? t('trafficTrendWeeklyTotalLabel') : t('trafficTrendMonthlyTotalLabel')}
+        </span>
+      </div>
+      <div className="relative flex h-28 items-end gap-1">
+        {data.map((d, i) => {
+          const h = d.visitors === 0 ? 3 : Math.round((d.visitors / max) * 92) + 8;
+          const active = hover === i;
+          return (
+            <div
+              key={d.date}
+              className="group relative flex h-full flex-1 items-end"
+              onMouseEnter={() => setHover(i)}
+              onMouseLeave={() => setHover(null)}
+            >
+              <div
+                className={`w-full rounded-sm transition-colors duration-100 ${
+                  d.visitors === 0
+                    ? 'bg-neutral-800'
+                    : active
+                      ? 'bg-green-400'
+                      : 'bg-green-400/45'
+                }`}
+                style={{ height: `${h}px` }}
+              />
+              {active && (
+                <Tooltip>
+                  <div className="text-[11px] font-semibold text-neutral-100 tabular-nums">
+                    {d.visitors} {t('trendTooltipVisitors')}
+                  </div>
+                  <div className="text-[10px] text-neutral-400">{fmt.format(new Date(d.date))}</div>
+                </Tooltip>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
