@@ -328,7 +328,13 @@ export async function getTrafficSources(days = 30): Promise<TrafficSourcesData> 
   return { channels, domains, campaigns, days: window, available: true };
 }
 
-export type TrafficTrendPoint = { date: string; visitors: number };
+export type TrafficTrendPoint = {
+  date: string;
+  /** Sum of `channels` below — the per-domain-distinct approximation described below. */
+  visitors: number;
+  /** Per-channel breakdown for this bucket, same 4 buckets as getTrafficSources's `channels`. */
+  channels: Record<TrafficChannel, number>;
+};
 
 export type TrafficTrendData = {
   /** Last 12 ISO weeks (Mon-start, UTC), oldest → newest. `date` = week start. */
@@ -339,42 +345,76 @@ export type TrafficTrendData = {
   available: boolean;
 };
 
+const EMPTY_CHANNELS: Record<TrafficChannel, number> = { direct: 0, organic: 0, social: 0, referral: 0 };
+
 /**
  * Weekly/monthly landing-visitor trend, read from PostHog ($pageview on '/'),
- * bucketed server-side via HogQL's toStartOfWeek/toStartOfMonth. The
- * "how many, over time" companion to getTrafficSources's per-source
- * breakdown — tabbed alongside it in the admin traffic card. Buckets with no
- * visitors are filled with 0 (PostHog only returns buckets that have rows) so
- * the chart's x-axis stays evenly spaced.
+ * bucketed server-side via HogQL's toStartOfWeek/toStartOfMonth AND grouped by
+ * referring domain so each bucket can be broken down by channel — the
+ * "how many, over time, from where" companion to getTrafficSources's
+ * point-in-time breakdown, tabbed alongside it in the admin traffic card.
+ * Buckets with no visitors are filled with 0 (PostHog only returns buckets
+ * that have rows) so the chart's x-axis stays evenly spaced.
+ *
+ * `visitors` is the SUM of the 4 channel counts, not a separate whole-bucket
+ * distinct-visitor query — each channel count is itself a sum of per-domain
+ * `count(DISTINCT person_id)` (same approximation getTrafficSources's channel
+ * chips use), so a visitor referred by two different domains in the same
+ * bucket is counted once per domain. This keeps the stacked chart internally
+ * consistent (segments always sum to exactly the bar's total height) at the
+ * cost of that same known approximation, rather than a separate total that
+ * could disagree with the segments' sum.
  */
 export async function getTrafficTrend(): Promise<TrafficTrendData> {
   await assertAdmin();
   const [weeklyRows, monthlyRows] = await Promise.all([
-    runHogQL<[string, number]>(`
-      SELECT toStartOfWeek(timestamp, 1) AS bucket, count(DISTINCT person_id) AS visitors
+    runHogQL<[string, string, number]>(`
+      SELECT
+        toStartOfWeek(timestamp, 1) AS bucket,
+        coalesce(nullIf(properties.$referring_domain, ''), '$direct') AS domain,
+        count(DISTINCT person_id) AS visitors
       FROM events
       WHERE event = '$pageview'
         AND timestamp > now() - INTERVAL 12 WEEK
         AND properties.$pathname = '/'
-      GROUP BY bucket
+      GROUP BY bucket, domain
       ORDER BY bucket ASC
+      LIMIT 5000
     `),
-    runHogQL<[string, number]>(`
-      SELECT toStartOfMonth(timestamp) AS bucket, count(DISTINCT person_id) AS visitors
+    runHogQL<[string, string, number]>(`
+      SELECT
+        toStartOfMonth(timestamp) AS bucket,
+        coalesce(nullIf(properties.$referring_domain, ''), '$direct') AS domain,
+        count(DISTINCT person_id) AS visitors
       FROM events
       WHERE event = '$pageview'
         AND timestamp > now() - INTERVAL 12 MONTH
         AND properties.$pathname = '/'
-      GROUP BY bucket
+      GROUP BY bucket, domain
       ORDER BY bucket ASC
+      LIMIT 5000
     `),
   ]);
   if (weeklyRows == null || monthlyRows == null) {
     return { weekly: [], monthly: [], available: false };
   }
 
-  const weeklyMap = new Map(weeklyRows.map(([d, v]) => [String(d).slice(0, 10), Number(v) || 0]));
-  const monthlyMap = new Map(monthlyRows.map(([d, v]) => [String(d).slice(0, 10), Number(v) || 0]));
+  // Fold the per-domain rows into per-bucket channel totals via the same
+  // classifyChannel() bucketing getTrafficSources uses for its channel chips.
+  function aggregate(rows: [string, string, number][]): Map<string, Record<TrafficChannel, number>> {
+    const map = new Map<string, Record<TrafficChannel, number>>();
+    for (const [bucket, domain, visitors] of rows) {
+      const key = String(bucket).slice(0, 10);
+      const entry = map.get(key) ?? { ...EMPTY_CHANNELS };
+      entry[classifyChannel(domain)] += Number(visitors) || 0;
+      map.set(key, entry);
+    }
+    return map;
+  }
+
+  const weeklyMap = aggregate(weeklyRows);
+  const monthlyMap = aggregate(monthlyRows);
+  const totalOf = (c: Record<TrafficChannel, number>) => c.direct + c.organic + c.social + c.referral;
 
   // Monday of the current week (UTC) — anchor for both fills below.
   const now = new Date();
@@ -387,14 +427,16 @@ export async function getTrafficTrend(): Promise<TrafficTrendData> {
     const d = new Date(thisMonday);
     d.setUTCDate(d.getUTCDate() - i * 7);
     const key = d.toISOString().slice(0, 10);
-    weekly.push({ date: key, visitors: weeklyMap.get(key) ?? 0 });
+    const channels = weeklyMap.get(key) ?? EMPTY_CHANNELS;
+    weekly.push({ date: key, visitors: totalOf(channels), channels });
   }
 
   const monthly: TrafficTrendPoint[] = [];
   for (let i = 11; i >= 0; i--) {
     const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1));
     const key = d.toISOString().slice(0, 10);
-    monthly.push({ date: key, visitors: monthlyMap.get(key) ?? 0 });
+    const channels = monthlyMap.get(key) ?? EMPTY_CHANNELS;
+    monthly.push({ date: key, visitors: totalOf(channels), channels });
   }
 
   return { weekly, monthly, available: true };
