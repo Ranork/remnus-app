@@ -14,7 +14,7 @@ services:
       - remnus-data:/app/data
     environment:
       - DATABASE_URL=file:/app/data/local.db
-      - AUTH_SECRET=GDjlewq5nSmwJkLmOVI2dZv3zyWWsGYYRb9bbwOkaKg= # Değiştirilmesi zorunludur (örn: openssl rand -base64 33)
+      - AUTH_SECRET=${AUTH_SECRET:?AUTH_SECRET must be set}
       - AUTH_TRUST_HOST=true
       - MCP_TOKEN_PREFIX=rmns
       - CLOUDINARY_CLOUD_NAME=your_cloud_name

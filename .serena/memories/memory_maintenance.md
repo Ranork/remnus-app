@@ -1,5 +1,8 @@
 # Memory Maintenance
 
+Last verified: 2026-07-14
+Primary sources: `AI.md`, `AGENTS.md`, `.serena/memories/`
+
 ## Discovery Model
 
 - Core principle: progressive discovery through references, building a graph of memories.
@@ -26,6 +29,7 @@ Keep guidance durable and generalizable, not task-local.
 
 Add or update memories only with stable, non-obvious project conventions that avoid complex rediscovery in the future.
 Do not add: quick-read facts; generic language/framework knowledge; one-off task notes; volatile line-level details; behavior likely to change soon.
+- Never create a `current-task` Serena memory. Active/partial work belongs in `.ai/CURRENT_TASK.md`; mechanical Git state belongs in the ignored `.ai/HANDOFF.generated.md`.
 
 ## Maintenance Actions
 

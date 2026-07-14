@@ -140,7 +140,7 @@ Swap `--client` for `cursor`, `vscode`, `codex`, `windsurf`, etc. Either way, th
 
 ## Tech Stack
 
-- **Framework:** Next.js 15 (App Router)
+- **Framework:** Next.js 16.2.6 (App Router)
 - **Database:** SQLite via Drizzle ORM + `@libsql/client` (Turso-compatible)
 - **Auth:** Auth.js v5 — Google & GitHub OAuth
 - **Styling:** Tailwind CSS + Lucide icons

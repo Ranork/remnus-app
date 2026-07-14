@@ -1,26 +1,16 @@
 # Task Completion Checklist
 
-Run these after any coding task:
+Last verified: 2026-07-14
+Primary sources: `AI.md`, `AGENTS.md`, `package.json`
 
-1. **Type check** — TypeScript strict mode; check for `@ts-ignore` added (only acceptable for Tiptap's `renderMarkdown` field)
-   ```powershell
-   npx tsc --noEmit
-   ```
+Use the narrowest checks that match the change:
 
-2. **Lint**
-   ```powershell
-   npm run lint
-   ```
-
-3. **i18n keys** — if any new user-facing string was added:
-   - Verify key exists in all 6 `messages/*.json` files
-   - No hardcoded strings remain in components
-
-4. **Migration** — if `src/db/schema.ts` was changed:
-   ```powershell
-   npx drizzle-kit generate
-   npx tsx src/db/migrate.ts
-   ```
-   Ensure new migration `when` value is greater than all existing (next: > `1781500000000`). NOTE: libsql `batch()` no-ops DDL, so recent migrations use manual `src/db/apply-00xx-*.ts` scripts — apply to BOTH local + Turso (see mem:conventions)
-
-5. **AGENTS.md update** — if structural changes were made (new routes, tables, components, server actions, architectural patterns): update `AGENTS.md` before finishing
+1. **Lint/type shape** — run targeted lint first; add `npx tsc --noEmit` when TypeScript interfaces, imports, routes, or config shapes changed.
+2. **Relevant tests** — run only an existing related test. The repository currently has no general test runner/script; `scripts/test-emails.ts` is a targeted email-template check, not a suite.
+3. **Runtime/UI** — use the dev server only when runtime behavior needs proof; use Playwright or visual inspection for UI work.
+4. **Build** — last resort: build behavior changed, release preparation, or explicit user request. Never use a full build for documentation-only onboarding.
+5. **i18n** — new user-facing text must use next-intl and exist in all 8 `messages/*.json` files (en/tr/hi/es/fr/de/zh/ru).
+6. **Database** — schema changes require the documented migration flow; confirm the latest threshold (`> 1782000000000`) and target database before any apply command.
+7. **Documentation/memory** — structural changes update `AGENTS.md` plus relevant Serena memories. Shared workflow changes update `AI.md`.
+8. **Handoff** — update `.ai/CURRENT_TASK.md` accurately and run `scripts/ai/update-handoff.ps1`.
+9. **Work Plan** — when a matching task exists and `remnus-mcp` is available, write the file/test summary and set it to `Done`.
