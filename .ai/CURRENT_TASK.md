@@ -2,43 +2,55 @@
 
 ## Status
 
-Idle
+Done
 
 ## Active agent
 
-None
+Codex
 
 ## Branch
 
-Not set
+master
 
 ## Base commit
 
-Not set
+Working tree at task start
 
 ## Goal
 
-No active task.
+Add the English blog article "How to Give Claude Code Persistent Memory and a Shared Workspace" to the file-driven public Docs blog.
 
 ## Scope
 
-Not set.
+Create the markdown article, register its blog metadata, update the blog source README, and verify content links and the narrow documentation checks. No route migration.
 
 ## Completed
 
-- None.
+- Read AI.md, AGENTS.md, current Git state, and relevant Serena memories.
+- Inspected the file-driven `/docs` blog and `/wiki` MCP documentation architecture.
+- Verified current Claude Code memory/MCP documentation and official MCP architecture/authorization sources.
 
 ## Changed files
 
-- None.
+- `docs/blog/claude-code-persistent-memory-workspace.md`
+- `docs/blog/README.md`
+- `src/lib/content/manifest.ts`
+- `.ai/CURRENT_TASK.md`
 
 ## Decisions
 
-- None.
+- Use the existing `/docs/<slug>` blog pipeline, not a new `/blog` route.
+- Keep article content English-only, consistent with the existing public docs content policy.
+- Link only to verified live Remnus setup/security pages and official Anthropic/MCP documentation; omit the unpublished memory-vs-RAG article.
 
 ## Verification
 
-- Not run.
+- Article body is 2,419 words; SEO metadata is included at the top.
+- `npm run lint -- src/lib/content/manifest.ts` passed.
+- `npx tsc --noEmit` passed.
+- `git diff --check` passed.
+- `getBlogPost('claude-code-persistent-memory-workspace')` rendered successfully with 16 headings and 13-minute reading time.
+- All article URLs returned HTTP 200.
 
 ## Remaining work
 
@@ -46,8 +58,8 @@ Not set.
 
 ## Known issues
 
-- None.
+- `remnus-mcp` Work Plan tools were not available in the callable tool inventory for this session, so task status/output cannot be synchronized there.
 
 ## Next exact step
 
-Start a task by replacing this template with the active task state.
+Task complete; no commit or push requested.

@@ -77,6 +77,15 @@ export type BlogPost = {
 
 export const BLOG_POSTS: BlogPost[] = [
   {
+    slug: 'claude-code-persistent-memory-workspace',
+    file: 'claude-code-persistent-memory-workspace.md',
+    title: 'How to Give Claude Code Persistent Memory and a Shared Workspace',
+    description:
+      'A practical architecture for combining Claude Code memory, project instructions, active tasks, and a human-readable MCP workspace.',
+    date: '2026-07-14',
+    icon: Brain,
+  },
+  {
     slug: 'agent-token-efficiency',
     file: 'agent-token-efficiency.md',
     title: 'How Many Tokens Does Your Agent Burn Reading Your Notes?',

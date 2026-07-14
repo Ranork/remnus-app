@@ -4,6 +4,7 @@ Thoughts on open source, AI-native tooling, and building in public.
 
 ## Posts
 
+- [How to Give Claude Code Persistent Memory and a Shared Workspace](/docs/claude-code-persistent-memory-workspace) — A practical architecture for combining Claude Code memory, project instructions, active tasks, and a human-readable MCP workspace.
 - [Why We Chose AGPL-3.0 for Remnus](/share/blog/why-agpl-3) — Licensing philosophy: why not MIT, why not BSL, and what AGPL actually protects.
 - [MCP-Native vs MCP-Integrated](/share/blog/mcp-native-vs-integrated) — Two architectural approaches to AI agent access and why the distinction matters.
 - [How I Built an MCP-Native Open-Source Notion Alternative](/share/blog/how-i-built-mcp-native): The build story, from the headless agent that Notion's MCP could not run to the token contract that made Remnus.
