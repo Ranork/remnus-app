@@ -1,14 +1,3 @@
-## SEO Metadata
-
-- **Title tag:** How to Give Claude Code Persistent Memory and a Shared Workspace
-- **Meta description:** Learn how to combine Claude Code memory, CLAUDE.md, project tasks, and an MCP workspace for reliable long-running software work.
-- **Slug:** `claude-code-persistent-memory-workspace`
-- **Primary keyword:** Claude Code persistent memory
-- **Secondary keywords:** Claude Code memory, Claude Code MCP workspace, persistent context for Claude Code, Claude Code project memory
-- **Search intent:** Informational and practical: developers want to preserve project context and coordinate Claude Code across sessions.
-- **Featured image concept:** A dark software workspace showing a code repository, a persistent memory ledger, and a connected MCP graph between project tasks and an AI coding agent.
-- **Alt text:** Diagram of Claude Code connected through MCP to persistent project memory, documentation, and task tracking.
-
 # How to Give Claude Code Persistent Memory and a Shared Workspace
 
 A coding agent can understand a project remarkably well during one session and still need to rediscover the same decisions tomorrow. The missing pieces are usually not source files. They are the reasons behind a design, the bug that already defeated three approaches, the deployment convention nobody wrote down, and the task that was almost finished when the session ended.

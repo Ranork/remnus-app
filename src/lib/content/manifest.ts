@@ -81,7 +81,7 @@ export const BLOG_POSTS: BlogPost[] = [
     file: 'claude-code-persistent-memory-workspace.md',
     title: 'How to Give Claude Code Persistent Memory and a Shared Workspace',
     description:
-      'A practical architecture for combining Claude Code memory, project instructions, active tasks, and a human-readable MCP workspace.',
+      'Learn how to combine Claude Code memory, CLAUDE.md, project tasks, and an MCP workspace for reliable long-running software work.',
     date: '2026-07-14',
     icon: Brain,
   },
