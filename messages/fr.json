@@ -190,6 +190,8 @@
     "funnelSignup": "Inscrit",
     "funnelConnected": "A connecté un agent",
     "funnelActivated": "Premier appel d'agent",
+    "funnelFilterAllTime": "Toute la période",
+    "funnelFilterSince": "Inscrits depuis",
     "demoFeedbackSection": "Retours de la démo",
     "demoFeedbackHint": "invite démo intégrée",
     "demoFeedbackTotal": "réponses",

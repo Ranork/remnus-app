@@ -190,6 +190,8 @@
     "funnelSignup": "已注册",
     "funnelConnected": "已连接智能体",
     "funnelActivated": "已完成首次调用",
+    "funnelFilterAllTime": "全部时间",
+    "funnelFilterSince": "自此日期起注册",
     "demoFeedbackSection": "演示反馈",
     "demoFeedbackHint": "应用内演示提示",
     "demoFeedbackTotal": "条回复",

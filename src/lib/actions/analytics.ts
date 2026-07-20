@@ -591,11 +591,29 @@ export type ActivationFunnel = {
   activated: number; // made a real agent tool call (PAT or OAuth path; migration 0034)
 };
 
-export async function getActivationFunnel(): Promise<ActivationFunnel> {
+/**
+ * @param sinceMs When set (epoch ms), scopes the whole funnel to users whose
+ * signup (`users.createdAt`) falls on/after this instant — e.g. to compare
+ * activation before/after an onboarding change. Omit for the all-time funnel.
+ */
+export async function getActivationFunnel(sinceMs?: number): Promise<ActivationFunnel> {
   await assertAdmin();
 
-  // Real (non-demo) user id set — every funnel stage is scoped to these.
-  const realUsers = await db.select({ id: users.id }).from(users).where(ne(users.role, 'demo'));
+  // Real (non-demo) user id set — every funnel stage is scoped to these,
+  // optionally narrowed to signups on/after `sinceMs`. Filtered in JS (not
+  // SQL) via toEpochMs so the legacy CURRENT_TIMESTAMP text rows (see the
+  // createdAt gotcha above) are normalized the same way as everywhere else.
+  const realUsersRaw = await db
+    .select({ id: users.id, createdAt: users.createdAt })
+    .from(users)
+    .where(ne(users.role, 'demo'));
+  const realUsers =
+    sinceMs == null
+      ? realUsersRaw
+      : realUsersRaw.filter((u) => {
+          const ms = toEpochMs(u.createdAt);
+          return ms != null && ms >= sinceMs;
+        });
   const realSet = new Set(realUsers.map((u) => u.id));
 
   // "Connected" = minted a real PAT (by creator) OR holds an OAuth token.

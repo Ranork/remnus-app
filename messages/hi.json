@@ -190,6 +190,8 @@
     "funnelSignup": "साइन अप किया",
     "funnelConnected": "एजेंट कनेक्ट किया",
     "funnelActivated": "पहली एजेंट कॉल की",
+    "funnelFilterAllTime": "सभी समय",
+    "funnelFilterSince": "इस तारीख़ से साइन अप",
     "demoFeedbackSection": "डेमो प्रतिक्रिया",
     "demoFeedbackHint": "इन-ऐप डेमो संकेत",
     "demoFeedbackTotal": "प्रतिक्रियाएँ",

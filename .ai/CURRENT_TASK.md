@@ -6,7 +6,7 @@ Done
 
 ## Active agent
 
-Codex
+Claude
 
 ## Branch
 
@@ -14,52 +14,53 @@ master
 
 ## Base commit
 
-Working tree at task start
+3aa7141 (Working tree at task start)
 
 ## Goal
 
-Add the English blog article "How to Give Claude Code Persistent Memory and a Shared Workspace" to the file-driven public Docs blog.
+Make the admin panel's Agent Activation Funnel filterable by signup date, so post-onboarding-change conversion can be viewed separately from the all-time funnel (with all-time remaining the default view).
 
 ## Scope
 
-Create the markdown article, register its blog metadata, update the blog source README, and verify content links and the narrow documentation checks. No route migration.
+Add an optional `sinceMs` cutoff to the `getActivationFunnel` server action and a client-side date filter UI on the admin dashboard. No new DB migration; no change to the underlying funnel definition (signup → connected → activated).
 
 ## Completed
 
-- Read AI.md, AGENTS.md, current Git state, and relevant Serena memories.
-- Inspected the file-driven `/docs` blog and `/wiki` MCP documentation architecture.
-- Verified current Claude Code memory/MCP documentation and official MCP architecture/authorization sources.
+- Read AI.md, current Git state; no prior `.ai/CURRENT_TASK.md` context existed for this request (previous entry was an unrelated, already-Done blog task).
+- Located the funnel in `src/lib/actions/analytics.ts` (`getActivationFunnel`) and its render in `src/app/[locale]/(app)/admin/page.tsx`.
+- Added `sinceMs?: number` param to `getActivationFunnel`; filters the real-user cohort by `users.createdAt >= sinceMs` (normalized via the existing `toEpochMs` helper to handle legacy `CURRENT_TIMESTAMP` text rows) before deriving connected/activated subsets.
+- Extracted the funnel list UI into a new client component, `AdminActivationFunnel.tsx`, which renders the server-computed all-time funnel by default and re-fetches via the server action when the admin picks a "since" date; an "All time" pill resets it.
+- Added `funnelFilterAllTime` / `funnelFilterSince` keys to all 8 locale files (`en`, `tr`, `hi`, `es`, `fr`, `de`, `zh`, `ru`).
 
 ## Changed files
 
-- `docs/blog/claude-code-persistent-memory-workspace.md`
-- `docs/blog/README.md`
-- `src/lib/content/manifest.ts`
+- `src/lib/actions/analytics.ts`
+- `src/app/[locale]/(app)/admin/page.tsx`
+- `src/components/features/admin/AdminActivationFunnel.tsx` (new)
+- `messages/{en,tr,hi,es,fr,de,zh,ru}.json`
 - `.ai/CURRENT_TASK.md`
 
 ## Decisions
 
-- Use the existing `/docs/<slug>` blog pipeline, not a new `/blog` route.
-- Keep article content English-only, consistent with the existing public docs content policy.
-- Link only to verified live Remnus setup/security pages and official Anthropic/MCP documentation; omit the unpublished memory-vs-RAG article.
+- No specific "onboarding update" date was hardcoded as a default filter — the exact cutoff the admin has in mind wasn't specified in this session, so the filter is a free date picker (defaulting to all time) rather than a guessed preset. The admin can point it at whichever date they consider the onboarding change.
+- Filtering is done in JS against `toEpochMs(users.createdAt)`, matching the file's existing convention for handling the createdAt gotcha, rather than a raw SQL `>=` comparison.
+- Connected/activated stages stay defined as "ever did X", scoped to the (now date-filtered) signup cohort — not further time-boxed by when the connect/activate event happened.
 
 ## Verification
 
-- Article body is 2,419 words; SEO metadata is included at the top.
-- `npm run lint -- src/lib/content/manifest.ts` passed.
-- `npx tsc --noEmit` passed.
-- `git diff --check` passed.
-- `getBlogPost('claude-code-persistent-memory-workspace')` rendered successfully with 16 headings and 13-minute reading time.
-- All article URLs returned HTTP 200.
+- `npm run lint -- src/lib/actions/analytics.ts "src/app/[locale]/(app)/admin/page.tsx" src/components/features/admin/AdminActivationFunnel.tsx` passed.
+- `npx tsc --noEmit` passed (whole project).
+- All 8 `messages/*.json` files parse as valid JSON and have equal key counts (153) under `Admin`.
+- Not yet visually verified in a browser (admin panel requires an authenticated admin session).
 
 ## Remaining work
 
-- None.
+- Optional: manually click through the new date filter in the running admin panel to confirm the refetch/loading state looks right.
 
 ## Known issues
 
-- `remnus-mcp` Work Plan tools were not available in the callable tool inventory for this session, so task status/output cannot be synchronized there.
+- None.
 
 ## Next exact step
 
-Task complete; no commit or push requested.
+Task complete; no commit or push requested. If desired, visually verify the new filter in `npm run dev` under `/admin` while logged in as an admin.

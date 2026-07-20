@@ -10,6 +10,7 @@ import AdminUsersTable from '@/components/features/AdminUsersTable';
 import { SignupTrendChart } from '@/components/features/admin/AdminCharts';
 import AdminTrafficSources from '@/components/features/admin/AdminTrafficSources';
 import AdminDesktopStats from '@/components/features/admin/AdminDesktopStats';
+import AdminActivationFunnel from '@/components/features/admin/AdminActivationFunnel';
 import AdminShell from '@/components/features/admin/AdminShell';
 import { formatDuration } from '@/components/features/admin/format';
 import { getTranslations, getLocale } from 'next-intl/server';
@@ -69,45 +70,6 @@ function SignalRow({ icon: Icon, label, value, meta }: { icon: LucideIcon; label
         {value}
         {meta && <span className="ml-1.5 text-[10.5px] font-medium text-neutral-600">{meta}</span>}
       </span>
-    </div>
-  );
-}
-
-// ── Activation funnel — compact 3-row list (stacked under User Acquisition) ─
-function ActivationFunnelList({ stages }: { stages: { label: string; count: number }[] }) {
-  const base = Math.max(1, stages[0]?.count ?? 0);
-  return (
-    <div className="flex flex-col">
-      {stages.map((s, i) => {
-        const prev = i === 0 ? null : stages[i - 1].count;
-        const conv = prev == null ? null : prev === 0 ? 0 : Math.round((s.count / prev) * 100);
-        const widthPct = Math.max(4, Math.round((s.count / base) * 100));
-        return (
-          <div
-            key={s.label}
-            className={`flex flex-col gap-1.5 py-2.5 ${i < stages.length - 1 ? 'border-b border-neutral-800/70' : 'pb-0.5'} ${i === 0 ? 'pt-0.5' : ''}`}
-          >
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-xs text-neutral-300">{s.label}</span>
-              <span className="flex items-center gap-2">
-                <span className="text-sm font-semibold tabular-nums text-neutral-100">{s.count}</span>
-                {conv != null && (
-                  <span
-                    className={`rounded-full px-1.5 py-0.5 text-[10px] font-bold tabular-nums ${
-                      conv >= 50 ? 'bg-green-500/12 text-green-400' : conv >= 25 ? 'bg-amber-500/12 text-amber-400' : 'bg-red-500/12 text-red-400'
-                    }`}
-                  >
-                    {conv}%
-                  </span>
-                )}
-              </span>
-            </div>
-            <div className="h-1 overflow-hidden rounded-full bg-neutral-850">
-              <div className="h-full rounded-full bg-blue-500" style={{ width: `${widthPct}%` }} />
-            </div>
-          </div>
-        );
-      })}
     </div>
   );
 }
@@ -274,13 +236,7 @@ export default async function AdminPage() {
             <section className="flex flex-1 flex-col">
               <SectionHeader icon={Workflow} title={t('activationFunnel')} hint={t('activationFunnelHint')} />
               <div className="flex flex-1 flex-col rounded-xl border border-neutral-800 bg-neutral-900 px-5 py-4">
-                <ActivationFunnelList
-                  stages={[
-                    { label: t('funnelSignup'), count: funnel.signups },
-                    { label: t('funnelConnected'), count: funnel.connected },
-                    { label: t('funnelActivated'), count: funnel.activated },
-                  ]}
-                />
+                <AdminActivationFunnel initialFunnel={funnel} />
               </div>
             </section>
           </div>

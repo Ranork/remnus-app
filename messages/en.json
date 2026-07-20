@@ -190,6 +190,8 @@
     "funnelSignup": "Signed up",
     "funnelConnected": "Connected an agent",
     "funnelActivated": "Made first agent call",
+    "funnelFilterAllTime": "All time",
+    "funnelFilterSince": "Signed up since",
     "demoFeedbackSection": "Demo Feedback",
     "demoFeedbackHint": "in-app demo prompt",
     "demoFeedbackTotal": "responses",

@@ -190,6 +190,8 @@
     "funnelSignup": "Se registró",
     "funnelConnected": "Conectó un agente",
     "funnelActivated": "Hizo la primera llamada",
+    "funnelFilterAllTime": "Todo el tiempo",
+    "funnelFilterSince": "Registrados desde",
     "demoFeedbackSection": "Opiniones de la demo",
     "demoFeedbackHint": "encuesta dentro de la app",
     "demoFeedbackTotal": "respuestas",

@@ -190,6 +190,8 @@
     "funnelSignup": "Зарегистрировались",
     "funnelConnected": "Подключили агента",
     "funnelActivated": "Первый вызов агента",
+    "funnelFilterAllTime": "За всё время",
+    "funnelFilterSince": "Зарегистрированы с",
     "demoFeedbackSection": "Отзывы о демо",
     "demoFeedbackHint": "запрос в демо-режиме",
     "demoFeedbackTotal": "ответов",

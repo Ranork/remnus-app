@@ -190,6 +190,8 @@
     "funnelSignup": "Kaydoldu",
     "funnelConnected": "Agent bağladı",
     "funnelActivated": "İlk agent çağrısı",
+    "funnelFilterAllTime": "Tüm zamanlar",
+    "funnelFilterSince": "Şu tarihten sonra kaydolanlar",
     "demoFeedbackSection": "Demo Geri Bildirimi",
     "demoFeedbackHint": "uygulama içi demo anketi",
     "demoFeedbackTotal": "yanıt",
