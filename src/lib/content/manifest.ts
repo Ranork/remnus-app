@@ -77,6 +77,15 @@ export type BlogPost = {
 
 export const BLOG_POSTS: BlogPost[] = [
   {
+    slug: 'connect-claude-code-to-remnus-mcp',
+    file: 'connect-claude-code-to-remnus-mcp.md',
+    title: 'How to Connect Claude Code to Remnus with MCP',
+    description:
+      'A verified, step-by-step guide to connecting Claude Code to a Remnus workspace over MCP — OAuth vs personal access tokens, scopes, first workflows, and troubleshooting.',
+    date: '2026-07-20',
+    icon: Plug,
+  },
+  {
     slug: 'claude-code-persistent-memory-workspace',
     file: 'claude-code-persistent-memory-workspace.md',
     title: 'How to Give Claude Code Persistent Memory and a Shared Workspace',

@@ -6,7 +6,7 @@ Done
 
 ## Active agent
 
-Claude
+Claude Code
 
 ## Branch
 
@@ -14,53 +14,55 @@ master
 
 ## Base commit
 
-3aa7141 (Working tree at task start)
+ba36a77
 
 ## Goal
 
-Make the admin panel's Agent Activation Funnel filterable by signup date, so post-onboarding-change conversion can be viewed separately from the all-time funnel (with all-time remaining the default view).
+Add the English blog article "How to Connect Claude Code to Remnus with MCP" to the file-driven public Docs blog.
 
 ## Scope
 
-Add an optional `sinceMs` cutoff to the `getActivationFunnel` server action and a client-side date filter UI on the admin dashboard. No new DB migration; no change to the underlying funnel definition (signup → connected → activated).
+Create the markdown article, register its blog metadata, update the blog source README, verify every command/endpoint/link against live sources, and commit + push. No route or pipeline changes.
 
 ## Completed
 
-- Read AI.md, current Git state; no prior `.ai/CURRENT_TASK.md` context existed for this request (previous entry was an unrelated, already-Done blog task).
-- Located the funnel in `src/lib/actions/analytics.ts` (`getActivationFunnel`) and its render in `src/app/[locale]/(app)/admin/page.tsx`.
-- Added `sinceMs?: number` param to `getActivationFunnel`; filters the real-user cohort by `users.createdAt >= sinceMs` (normalized via the existing `toEpochMs` helper to handle legacy `CURRENT_TIMESTAMP` text rows) before deriving connected/activated subsets.
-- Extracted the funnel list UI into a new client component, `AdminActivationFunnel.tsx`, which renders the server-computed all-time funnel by default and re-fetches via the server action when the admin picks a "since" date; an "All time" pill resets it.
-- Added `funnelFilterAllTime` / `funnelFilterSince` keys to all 8 locale files (`en`, `tr`, `hi`, `es`, `fr`, `de`, `zh`, `ru`).
+- Read AI.md, CLAUDE.md, current Git state, and the existing blog/wiki content architecture.
+- Verified the Remnus MCP surface directly from source: endpoint, OAuth routes, and the authoritative tool list (9 read + 10 write) in `src/app/api/mcp/tools/`.
+- Verified the live OAuth discovery chain: `401` + `WWW-Authenticate` -> `/.well-known/oauth-protected-resource` -> authorization-server metadata (PKCE `S256`, dynamic registration, `read`/`write` scopes).
+- Verified the Claude Code CLI surface against the current official docs and the locally installed v2.1.197.
+- Wrote the article, registered it in the manifest, and updated `docs/blog/README.md`.
 
 ## Changed files
 
-- `src/lib/actions/analytics.ts`
-- `src/app/[locale]/(app)/admin/page.tsx`
-- `src/components/features/admin/AdminActivationFunnel.tsx` (new)
-- `messages/{en,tr,hi,es,fr,de,zh,ru}.json`
+- `docs/blog/connect-claude-code-to-remnus-mcp.md`
+- `docs/blog/README.md`
+- `src/lib/content/manifest.ts`
 - `.ai/CURRENT_TASK.md`
 
 ## Decisions
 
-- No specific "onboarding update" date was hardcoded as a default filter — the exact cutoff the admin has in mind wasn't specified in this session, so the filter is a free date picker (defaulting to all time) rather than a guessed preset. The admin can point it at whichever date they consider the onboarding change.
-- Filtering is done in JS against `toEpochMs(users.createdAt)`, matching the file's existing convention for handling the createdAt gotcha, rather than a raw SQL `>=` comparison.
-- Connected/activated stages stay defined as "ever did X", scoped to the (now date-filtered) signup cohort — not further time-boxed by when the connect/activate event happened.
+- Kept the SEO brief out of the article body and folded the meta description into the manifest entry, matching commit `3aa7141` ("Hide blog SEO brief from article body"). The brief was delivered in chat instead.
+- Reused the existing `/docs/<slug>` pipeline and the already-imported `Plug` icon.
+- Documented the write scope as 10 tools (including the three `*_database_view` tools) per source, rather than the 7 listed in `docs/mcp/authentication.md`.
+- Rebased onto `ba36a77` (admin activation-funnel work by another agent). Both entries in this single-slot file were already `Done`; the prior entry is preserved in that commit.
 
 ## Verification
 
-- `npm run lint -- src/lib/actions/analytics.ts "src/app/[locale]/(app)/admin/page.tsx" src/components/features/admin/AdminActivationFunnel.tsx` passed.
-- `npx tsc --noEmit` passed (whole project).
-- All 8 `messages/*.json` files parse as valid JSON and have equal key counts (153) under `Admin`.
-- Not yet visually verified in a browser (admin panel requires an authenticated admin session).
+- `npx tsc --noEmit` passed.
+- `npm run lint -- src/lib/content/manifest.ts` passed.
+- `getBlogPost('connect-claude-code-to-remnus-mcp')` rendered: 20,216 chars of HTML, 10 `<h2>` sections.
+- All 12 outbound links returned HTTP 200; `/api/mcp` correctly returned 401 unauthenticated.
+- Article prose is ~2,120 words (target 1,500-2,100).
 
 ## Remaining work
 
-- Optional: manually click through the new date filter in the running admin panel to confirm the refetch/loading state looks right.
+- None for this article.
 
 ## Known issues
 
-- None.
+- `docs/mcp/authentication.md` scope table omits `create_database_view`, `update_database_view`, and `delete_database_view` from the `write` row. Not fixed here (out of scope).
+- The OAuth authorization-server metadata advertises `service_documentation: https://www.remnus.com/docs/mcp`, which returns 404. The live docs are at `/wiki`. Not fixed here (out of scope).
 
 ## Next exact step
 
-Task complete; no commit or push requested. If desired, visually verify the new filter in `npm run dev` under `/admin` while logged in as an admin.
+Task complete; article committed and pushed to master.
