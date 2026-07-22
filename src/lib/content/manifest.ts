@@ -77,6 +77,15 @@ export type BlogPost = {
 
 export const BLOG_POSTS: BlogPost[] = [
   {
+    slug: 'connect-cursor-to-remnus-mcp',
+    file: 'connect-cursor-to-remnus-mcp.md',
+    title: 'How to Connect Cursor to Remnus with MCP',
+    description:
+      'Connect Cursor to a Remnus workspace over MCP: verified mcp.json setup, OAuth vs personal access tokens, global vs project config, five workflows, and troubleshooting.',
+    date: '2026-07-22',
+    icon: Plug,
+  },
+  {
     slug: 'what-is-an-mcp-native-workspace',
     file: 'what-is-an-mcp-native-workspace.md',
     title: 'What Is an MCP-Native Workspace? A Complete Guide',

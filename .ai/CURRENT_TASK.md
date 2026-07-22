@@ -14,44 +14,48 @@ master
 
 ## Base commit
 
-c89d045
+59bfce3
 
 ## Goal
 
-Fix two verified inconsistencies surfaced while writing the MCP-native workspace article.
+Add the English blog article "How to Connect Cursor to Remnus with MCP" to the file-driven public Docs blog.
 
 ## Scope
 
-Two small corrections, no behavior change beyond the metadata value:
-1. OAuth authorization-server metadata pointed `service_documentation` at `/docs/mcp`, which 404s. The live MCP docs root is `/wiki`.
-2. `skills/remnus/SKILL.md` still described "five prompt templates"; the server actually ships seven (`save-memory` and `recall-context` were added later).
+Create the markdown article, register its blog metadata, update the blog source README, verify every Cursor + Remnus detail against live sources, and commit + push. No route or pipeline changes.
 
 ## Completed
 
-- Repointed `service_documentation` to `${base}/wiki` in `src/app/.well-known/oauth-authorization-server/route.ts`.
-- Updated the SKILL.md Prompts section to "seven prompt templates" and added accurate `save-memory` and `recall-context` entries (params taken from `src/app/api/mcp/prompts.ts`).
-- Swept the repo for other stale "five prompts" copy. The only other hit — `src/lib/email/templates.ts` preheader "Five prompts…" — correctly counts the five example prompts in that email body, not the MCP prompt-template count, so it was left unchanged.
+- Read AI.md, current Git state, and the existing connect-editor article for voice.
+- Verified Cursor MCP specifics against the current official docs (`https://cursor.com/docs/mcp`, after the docs.cursor.com -> cursor.com/docs migration): global `~/.cursor/mcp.json` vs project `.cursor/mcp.json`, remote HTTP server uses `url` + optional `headers` (no `type`), OAuth supported for remote servers, per-tool approval on by default, toggle without restart.
+- Verified Remnus connection details from `docs/mcp/*` and `src/lib/mcp/deeplinks.ts` (Cursor deeplink builder, `~/.cursor/mcp.json` path), plus the endpoint, scopes, and token model from prior verification.
+- Wrote the article, registered it in the manifest (icon `Plug`, date 2026-07-22), and updated `docs/blog/README.md`.
 
 ## Changed files
 
-- `src/app/.well-known/oauth-authorization-server/route.ts`
-- `skills/remnus/SKILL.md`
+- `docs/blog/connect-cursor-to-remnus-mcp.md`
+- `docs/blog/README.md`
+- `src/lib/content/manifest.ts`
 - `.ai/CURRENT_TASK.md`
 
 ## Decisions
 
-- Chose `/wiki` (the in-app MCP docs overview, verified HTTP 200) as the `service_documentation` target rather than `/docs/mcp` (404) or a deep page.
+- Kept the SEO brief out of the article body (repo convention, commit `3aa7141`); delivered it in chat and folded the meta description into the manifest entry.
+- No dedicated "multi-agent workspace" article exists; linked `/docs/what-is-an-mcp-native-workspace` (which contains the Multi-agent collaboration section) as the closest live cross-link, rather than guessing a URL.
+- Did not hand-fabricate the base64 Cursor deeplink; directed readers to the in-app "Add to Cursor" button that generates it.
+- Flagged version-dependent UI labels (Tools & Integrations / MCP & Integrations) as a limitation rather than asserting one exact menu path.
 
 ## Verification
 
 - `npx tsc --noEmit` passed.
-- `npm run lint -- src/app/.well-known/oauth-authorization-server/route.ts` passed.
-- `/wiki` confirmed HTTP 200 (live); `/docs/mcp` confirmed 404.
-- Prompt names/params in SKILL.md cross-checked against `prompts.ts` (7 prompts total).
+- `npm run lint -- src/lib/content/manifest.ts` passed.
+- `getBlogPost('connect-cursor-to-remnus-mcp')` rendered: ~17.9k chars HTML, 12 `<h2>` + 8 `<h3>`, reading time 11 min.
+- All hyperlink targets returned HTTP 200; `/api/mcp` correctly returned 401 unauthenticated.
+- Article prose ~1,920 words (target 1,500-2,100).
 
 ## Remaining work
 
-- None.
+- None for this article.
 
 ## Known issues
 
@@ -59,4 +63,4 @@ Two small corrections, no behavior change beyond the metadata value:
 
 ## Next exact step
 
-Task complete; changes committed and pushed to master.
+Task complete; article committed and pushed to master.
