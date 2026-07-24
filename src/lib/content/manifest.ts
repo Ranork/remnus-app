@@ -77,6 +77,33 @@ export type BlogPost = {
 
 export const BLOG_POSTS: BlogPost[] = [
   {
+    slug: 'connect-cursor-to-remnus-mcp',
+    file: 'connect-cursor-to-remnus-mcp.md',
+    title: 'How to Connect Cursor to Remnus with MCP',
+    description:
+      'Connect Cursor to a Remnus workspace over MCP: verified mcp.json setup, OAuth vs personal access tokens, global vs project config, five workflows, and troubleshooting.',
+    date: '2026-07-22',
+    icon: Plug,
+  },
+  {
+    slug: 'what-is-an-mcp-native-workspace',
+    file: 'what-is-an-mcp-native-workspace.md',
+    title: 'What Is an MCP-Native Workspace? A Complete Guide',
+    description:
+      'An MCP-native workspace is built for AI agents from the start: readable, writable, scoped, and audited over the Model Context Protocol. Here is how the model works and where it fits.',
+    date: '2026-07-21',
+    icon: BookOpen,
+  },
+  {
+    slug: 'connect-claude-code-to-remnus-mcp',
+    file: 'connect-claude-code-to-remnus-mcp.md',
+    title: 'How to Connect Claude Code to Remnus with MCP',
+    description:
+      'A verified, step-by-step guide to connecting Claude Code to a Remnus workspace over MCP — OAuth vs personal access tokens, scopes, first workflows, and troubleshooting.',
+    date: '2026-07-20',
+    icon: Plug,
+  },
+  {
     slug: 'claude-code-persistent-memory-workspace',
     file: 'claude-code-persistent-memory-workspace.md',
     title: 'How to Give Claude Code Persistent Memory and a Shared Workspace',

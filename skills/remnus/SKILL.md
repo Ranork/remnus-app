@@ -61,13 +61,15 @@ Rule of thumb: if the user just wants you to **read/understand**, prefer attachi
 
 ## Prompts — structured task starters
 
-The server ships five prompt templates that pre-fetch the relevant Remnus data and hand you a ready-to-run instruction. When the client surfaces prompts, **prefer them** over assembling the same context by hand:
+The server ships seven prompt templates that pre-fetch the relevant Remnus data and hand you a ready-to-run instruction. When the client surfaces prompts, **prefer them** over assembling the same context by hand:
 
 - `summarize-page` — `page_id`, optional `style` (`bullet` | `paragraph` | `tldr`).
 - `weekly-status-report` — `database_id`, optional `period` (e.g. "last week"). Groups by status, flags blockers/wins.
 - `kanban-triage` — `database_id`. What needs attention, what's blocked, what to deprioritize, next 3 actions.
 - `extract-tasks` — `page_id`. Pulls actionable items into a markdown checklist (action / owner / deadline / priority).
 - `search-and-create` — `title` + `query`. Finds similar existing pages so a new one complements rather than duplicates.
+- `save-memory` — `content`, optional `memory_type` (`decision` | `preference` | `gotcha` | `fact`) and `tags`. Persists a durable memory into your Agent Memory database as a structured, human-readable record.
+- `recall-context` — `topic`, optional `limit`. Reloads the top matching pages as token-cheap outlines plus the link-graph neighborhood of the best match — use it to reload prior context instead of many search + get_page round-trips.
 
 These only *fetch and format* — the actual writing/analysis is yours. If a client doesn't expose prompts, reproduce them: query the data with the read tools, then do the summary/triage yourself.
 

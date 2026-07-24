@@ -6,7 +6,7 @@ Done
 
 ## Active agent
 
-Claude
+Claude Code
 
 ## Branch
 
@@ -14,7 +14,7 @@ master
 
 ## Base commit
 
-ba36a77 (Working tree at task start; previous CURRENT_TASK.md entry was an unrelated, already-Done admin activation-funnel task)
+ba36a77 (Working tree at task start; previous CURRENT_TASK.md entry — merged in from origin/master commit db5b7da, "Add Cursor MCP connection guide" — was an unrelated, already-Done blog article task)
 
 ## Goal
 
@@ -35,6 +35,7 @@ Editor-only UI addition in `BlockDragHandle.tsx` (the hover-grip component). No 
   - Wired the popup's arrow-key/Enter navigation by forwarding `keydown` to `SlashCommandList`'s existing imperative `onKeyDown` ref (same keyboard behavior as the real "/" menu, since it's the same component).
   - Gated the mousemove/touch hover-tracking and blur-hide effects with `addMenuOpen` (in addition to the pre-existing `menuOpen` guard) so the hovered block's `handle` state — which the popup's position and target block are keyed off — doesn't get cleared out from under it while it's open.
   - Right-click context menu and the grip's own "⋮" action-menu toggle now also close `addMenuOpen`, and vice versa, so only one popup is ever open at a time.
+  - Tightened the "+" button's offset from the grip (26px → 20px) per follow-up feedback so the two sit closer together without crowding the heading collapse chevron.
 - Added the `blockAddBelowTooltip` i18n key (button `title`) to all 8 locale files under the `Editor` namespace.
 
 ## Changed files
@@ -59,6 +60,7 @@ Editor-only UI addition in `BlockDragHandle.tsx` (the hover-grip component). No 
   - Clicking "+" opens the popup with zero document change; pressing Escape closes it with zero document change (confirmed via accessibility-tree diff).
   - Arrow-key navigation + Enter selects an item (tested selecting Heading 3 by keyboard) and inserts exactly that block type, cursor placed inside it, no stray characters.
   - Mouse-click selection tested on both a regular block target and a `listItem` target (bullet list); both matched real "/" behavior exactly, including the pre-existing (not introduced by this change) quirk where toggling a list type on an already-list-item block unwraps it out of the list — identical to what typing "/bullet" there would do, since it's literally the same `SLASH_COMMANDS` command function.
+  - Confirmed the tightened "+"/grip spacing visually after the follow-up adjustment.
 - Test artifacts (screenshots, Playwright snapshot/console logs) and the temporary dev server used for this verification were cleaned up / stopped afterward.
 
 ## Remaining work
@@ -71,4 +73,4 @@ Editor-only UI addition in `BlockDragHandle.tsx` (the hover-grip component). No 
 
 ## Next exact step
 
-Task complete; no commit or push requested.
+Merge conflict with origin/master (bringing in the unrelated Cursor MCP blog-article commit `db5b7da` and 2 other upstream commits) resolved in this file by keeping this task's content, since `CURRENT_TASK.md` tracks only the single active task and the blog-article entry was already Done on the other side. Merge commit created and pushed to origin/master.
