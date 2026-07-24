@@ -693,6 +693,7 @@
     "bubbleTurnInto": "में बदलें",
     "blockSelectionCount": "{count, plural, one {# ब्लॉक चुना गया} other {# ब्लॉक चुने गए}}",
     "blockHandleTooltip": "ले जाने के लिए खींचें, क्रियाओं के लिए क्लिक करें",
+    "blockAddBelowTooltip": "नीचे ब्लॉक जोड़ें",
     "blockNestInside": "अंदर रखें",
     "blockDuplicate": "डुप्लिकेट करें",
     "blockCopy": "कॉपी करें",

@@ -693,6 +693,7 @@
     "bubbleTurnInto": "Umwandeln in",
     "blockSelectionCount": "{count, plural, one {# Block ausgewählt} other {# Blöcke ausgewählt}}",
     "blockHandleTooltip": "Ziehen zum Verschieben, klicken für Aktionen",
+    "blockAddBelowTooltip": "Block darunter hinzufügen",
     "blockNestInside": "Darin einbetten",
     "blockDuplicate": "Duplizieren",
     "blockCopy": "Kopieren",

@@ -693,6 +693,7 @@
     "bubbleTurnInto": "转换为",
     "blockSelectionCount": "{count, plural, other {已选择 # 个块}}",
     "blockHandleTooltip": "拖动以移动，点击查看操作",
+    "blockAddBelowTooltip": "在下方添加块",
     "blockNestInside": "嵌套到内部",
     "blockDuplicate": "复制",
     "blockCopy": "复制",

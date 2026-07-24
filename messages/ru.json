@@ -693,6 +693,7 @@
     "bubbleTurnInto": "Преобразовать в",
     "blockSelectionCount": "{count, plural, one {Выбран # блок} few {Выбрано # блока} many {Выбрано # блоков} other {Выбрано # блоков}}",
     "blockHandleTooltip": "Перетащите для перемещения, нажмите для действий",
+    "blockAddBelowTooltip": "Добавить блок ниже",
     "blockNestInside": "Вложить внутрь",
     "blockDuplicate": "Дублировать",
     "blockCopy": "Копировать",

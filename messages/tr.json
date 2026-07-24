@@ -693,6 +693,7 @@
     "bubbleTurnInto": "Dönüştür",
     "blockSelectionCount": "{count, plural, one {# blok seçildi} other {# blok seçildi}}",
     "blockHandleTooltip": "Taşımak için sürükle, işlemler için tıkla",
+    "blockAddBelowTooltip": "Altına blok ekle",
     "blockNestInside": "İçine taşı",
     "blockDuplicate": "Çoğalt",
     "blockCopy": "Kopyala",

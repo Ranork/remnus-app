@@ -11,7 +11,7 @@ import {
 } from './BlockSelectionExtension';
 import { nodesToCleanMarkdown } from './clipboardMarkdown';
 import {
-  GripVertical, MoreVertical, ArrowUp, ArrowDown, ChevronsDownUp, Trash2, Copy, CopyPlus, Scissors, Check, ChevronRight,
+  GripVertical, MoreVertical, Plus, ArrowUp, ArrowDown, ChevronsDownUp, Trash2, Copy, CopyPlus, Scissors, Check, ChevronRight,
   Pilcrow, Heading1, Heading2, Heading3, List, ListOrdered, Quote, Code2,
   Link2, Image as ImageIcon, SquarePlay, File as FileIcon,
 } from 'lucide-react';
@@ -20,6 +20,7 @@ import { useTranslations } from 'next-intl';
 import { useZoom } from '@/components/providers/ZoomProvider';
 import { extractYouTubeId } from './YoutubeEmbedExtension';
 import { deleteWorkspaceItem, checkItemHasContent } from '@/lib/actions/workspace';
+import SlashCommandList, { SLASH_COMMANDS, buildChildCommands, type SlashCommandItem } from './SlashCommandList';
 
 // ── Coarse-pointer (touch) detection via useSyncExternalStore ───────────────────
 // On touch there is no hover and HTML5 drag-and-drop doesn't fire, so the handle
@@ -223,6 +224,12 @@ export default function BlockDragHandle({ editor }: Props) {
   const [confirmChild, setConfirmChild] = useState<{ pos: number; itemId: string } | null>(null);
   // Custom drop indicator (replaces ProseMirror's dropcursor for all our drags)
   const [dropIndicator, setDropIndicator] = useState<DropIndicator | null>(null);
+  // "+" button popup: the same block-type list the "/" trigger shows. No document
+  // change happens until an item is actually picked (see applyAddCommand) — closing
+  // without choosing leaves the doc untouched.
+  const [addMenuOpen, setAddMenuOpen] = useState(false);
+  const addMenuRef = useRef<HTMLDivElement>(null);
+  const addMenuListRef = useRef<{ onKeyDown: (props: { event: KeyboardEvent }) => boolean }>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const subTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -247,7 +254,7 @@ export default function BlockDragHandle({ editor }: Props) {
   useEffect(() => {
     if (isCoarse) return;
     const onMove = (e: MouseEvent) => {
-      if (menuOpen) return;
+      if (menuOpen || addMenuOpen) return;
       if (rafRef.current) return;
       const { clientX: x, clientY: y } = e;
       rafRef.current = requestAnimationFrame(() => {
@@ -310,7 +317,7 @@ export default function BlockDragHandle({ editor }: Props) {
       if (hideTimer.current) clearTimeout(hideTimer.current);
       if (subTimer.current) clearTimeout(subTimer.current);
     };
-  }, [editor, menuOpen, isCoarse]);
+  }, [editor, menuOpen, addMenuOpen, isCoarse]);
 
   // Touch: anchor the "⋮" handle to the block holding the caret (no hover to
   // track). Re-runs on every selection/focus change; the menuOpen guard keeps it
@@ -318,7 +325,7 @@ export default function BlockDragHandle({ editor }: Props) {
   useEffect(() => {
     if (!isCoarse) return;
     const place = () => {
-      if (menuOpen) return;
+      if (menuOpen || addMenuOpen) return;
       const { selection } = editor.state;
       if (!editor.isFocused && selection.empty) { setHandle(null); return; }
       const $from = selection.$from;
@@ -344,7 +351,7 @@ export default function BlockDragHandle({ editor }: Props) {
       editor.off('focus', place);
       window.removeEventListener('scroll', place, true);
     };
-  }, [editor, isCoarse, menuOpen]);
+  }, [editor, isCoarse, menuOpen, addMenuOpen]);
 
   // Track dragover: show our own indicator for all three zones.
   // Only activates when our own drag handle initiated the drag (_activeDragSource set).
@@ -431,6 +438,7 @@ export default function BlockDragHandle({ editor }: Props) {
       }
       e.preventDefault();
       const z = zoomRef.current;
+      setAddMenuOpen(false);
       setTarget(tgt);
       setHandle({ pos, top: e.clientY / z, left: e.clientX / z });
       setMenuAnchor({ x: e.clientX / z, y: e.clientY / z });
@@ -456,15 +464,36 @@ export default function BlockDragHandle({ editor }: Props) {
     };
   }, [menuOpen]);
 
+  // Close the "+" block-type popup on outside click, Escape, or a selected item
+  // (forwarded to SlashCommandList's own arrow-key/Enter handling so it behaves
+  // exactly like the real "/" menu). No document change on close-without-choosing.
+  useEffect(() => {
+    if (!addMenuOpen) return;
+    const close = () => { setAddMenuOpen(false); setHandle(null); };
+    const onDown = (e: MouseEvent) => {
+      if (addMenuRef.current && !addMenuRef.current.contains(e.target as Node)) close();
+    };
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') { close(); return; }
+      if (addMenuListRef.current?.onKeyDown({ event: e })) e.preventDefault();
+    };
+    document.addEventListener('mousedown', onDown);
+    document.addEventListener('keydown', onKey);
+    return () => {
+      document.removeEventListener('mousedown', onDown);
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [addMenuOpen]);
+
   // Hide the handle while the user is typing/selecting (fine pointer only — on
   // touch the handle is selection-anchored and tapping it blurs the editor, which
   // would otherwise dismiss it before the menu opens).
   useEffect(() => {
     if (isCoarse) return;
-    const hide = () => { if (!menuOpen) setHandle(null); };
+    const hide = () => { if (!menuOpen && !addMenuOpen) setHandle(null); };
     editor.on('blur', hide);
     return () => { editor.off('blur', hide); };
-  }, [editor, menuOpen, isCoarse]);
+  }, [editor, menuOpen, addMenuOpen, isCoarse]);
 
    
   useEffect(() => { if (!menuOpen) { setSubOpen(false); setMenuAnchor(null); setTarget(null); } }, [menuOpen]);
@@ -564,6 +593,44 @@ export default function BlockDragHandle({ editor }: Props) {
     } else {
       editor.chain().focus().setNodeSelection(pos).run();
     }
+  };
+
+  // Opens the "+" popup — the exact block-type list the "/" trigger shows (base
+  // commands plus child-page/database ones, read live off the SlashCommand
+  // extension's own options). Purely visual: nothing is inserted yet.
+  const openAddMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setMenuOpen(false);
+    setMenuAnchor(null);
+    setAddMenuOpen(true);
+  };
+
+  // Runs when an item is actually picked from the "+" popup. Only now does the
+  // document change: first make room for the new block (a real sibling list item
+  // via the list extension's own split command for listItem/taskItem — mirrors
+  // what Enter does at the end of the item's text, keeping the schema valid — or
+  // a sibling empty paragraph for every other top-level block), then hand off to
+  // the picked command exactly like the real "/" menu does (its `deleteRange` is a
+  // no-op on our already-empty target, since we pass a zero-length range there).
+  const applyAddCommand = (item: SlashCommandItem) => {
+    const pos = handle.pos;
+    const node = editor.state.doc.nodeAt(pos);
+    setAddMenuOpen(false);
+    setHandle(null);
+    if (!node) return;
+
+    if (node.type.name === 'listItem' || node.type.name === 'taskItem') {
+      const firstChild = node.firstChild;
+      const textEnd = firstChild ? pos + 1 + firstChild.nodeSize - 1 : pos + 1;
+      editor.chain().focus().setTextSelection(textEnd).splitListItem(node.type.name).run();
+    } else {
+      const after = pos + node.nodeSize;
+      editor.chain().focus().insertContentAt(after, { type: 'paragraph' }).setTextSelection(after + 1).run();
+    }
+
+    const at = editor.state.selection.from;
+    item.command({ editor, range: { from: at, to: at } });
   };
 
   const deleteChild = async (pos: number, node: any) => {
@@ -756,8 +823,44 @@ export default function BlockDragHandle({ editor }: Props) {
   const menuTop = Math.min(menuAnchor ? menuAnchor.y : handle.top + 26, vh - 200);
   const menuLeft = Math.min(Math.max(4, menuAnchor ? menuAnchor.x : handle.left), vw - 210);
 
+  // Same items the "/" trigger shows — read workspaceId/parentId live off the
+  // SlashCommand extension's own options so child-page/database entries match.
+  const slashExt = editor.extensionManager.extensions.find((e: any) => e.name === 'slashCommand');
+  const addMenuItems: SlashCommandItem[] = [
+    ...SLASH_COMMANDS,
+    ...(slashExt?.options?.workspaceId && slashExt?.options?.parentId
+      ? buildChildCommands(slashExt.options.workspaceId, slashExt.options.parentId)
+      : []),
+  ];
+
   return (
     <>
+      {/* "+" sits just left of the grip (fine pointer only — the touch gutter is
+          too narrow for a second icon). Hidden together with the grip on
+          right-click, same as the grip itself. */}
+      {!menuAnchor && !isCoarse && (
+      <button
+        onClick={openAddMenu}
+        onMouseEnter={() => { if (hideTimer.current) { clearTimeout(hideTimer.current); hideTimer.current = null; } }}
+        style={{ position: 'fixed', top: handle.top, left: handle.left - 20, zIndex: 100 }}
+        className={`flex items-center justify-center p-1 rounded transition-colors cursor-pointer ${
+          addMenuOpen ? 'text-neutral-100 bg-neutral-800' : 'text-neutral-600 hover:text-neutral-200 hover:bg-neutral-800/60'
+        }`}
+        title={t('blockAddBelowTooltip')}
+      >
+        <Plus size={16} />
+      </button>
+      )}
+
+      {addMenuOpen && (
+        <div
+          ref={addMenuRef}
+          style={{ position: 'fixed', top: Math.min(handle.top + 26, vh - 300), left: Math.min(Math.max(4, handle.left - 26), vw - 230), zIndex: 9998 }}
+        >
+          <SlashCommandList ref={addMenuListRef} items={addMenuItems} command={applyAddCommand} />
+        </div>
+      )}
+
       {/* The gutter grip is hidden when the menu was opened by right-click (the
           menu then floats at the cursor instead of beside the grip). */}
       {!menuAnchor && (
@@ -770,7 +873,7 @@ export default function BlockDragHandle({ editor }: Props) {
         // Touch: keep the editor focused so the selection-anchored handle survives
         // the tap (a blur would otherwise dismiss it before the menu opens).
         onMouseDown={isCoarse ? (e) => e.preventDefault() : undefined}
-        onClick={(e) => { e.preventDefault(); setMenuAnchor(null); setMenuOpen((v) => !v); }}
+        onClick={(e) => { e.preventDefault(); setAddMenuOpen(false); setMenuAnchor(null); setMenuOpen((v) => !v); }}
         onMouseEnter={() => { if (hideTimer.current) { clearTimeout(hideTimer.current); hideTimer.current = null; } }}
         style={{ position: 'fixed', top: handle.top, left: handle.left, zIndex: 100 }}
         className={`block-drag-handle flex items-center justify-center p-1 text-neutral-600 hover:text-neutral-200 hover:bg-neutral-800/60 rounded transition-colors ${isCoarse ? 'cursor-pointer' : 'cursor-grab active:cursor-grabbing'}`}
