@@ -1,7 +1,7 @@
 import { getTranslations } from 'next-intl/server';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Smartphone, Monitor } from 'lucide-react';
+import { ArrowRight, Laptop, TabletSmartphone } from 'lucide-react';
 
 /**
  * Landing section 08 — "Take Remnus everywhere". Shows desktop visitors that
@@ -36,32 +36,27 @@ export default async function LandingDownload() {
         <div className="mt-10 lg:mt-12 grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-5 items-stretch">
           {/* Phone & tablet — installable web app */}
           <div
-            className="relative flex flex-col rounded-xl border border-neutral-800 overflow-hidden"
+            className="marketing-download-card relative flex flex-col rounded-xl border border-neutral-800 overflow-hidden"
             style={{ background: 'linear-gradient(160deg, rgba(68,92,149,0.1) 0%, transparent 55%)' }}
           >
             <div className="p-6 lg:p-8 pb-0 flex-1">
-              <div className="flex items-center justify-between mb-4">
-                <span className="w-9 h-9 rounded-lg bg-blue-500/15 border border-blue-500/30 flex items-center justify-center">
-                  <Smartphone size={17} className="text-blue-300" />
+              <div className="flex items-start gap-4">
+                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-blue-500/20 bg-blue-500/10 text-blue-500 ring-1 ring-inset ring-blue-500/5">
+                  <TabletSmartphone size={22} strokeWidth={1.8} />
                 </span>
-                <span
-                  className="font-mono text-[10px] uppercase tracking-widest px-2.5 py-1 rounded-full"
-                  style={{
-                    color: 'var(--color-blue-500)',
-                    background: 'rgba(68,92,149,0.1)',
-                    border: '1px solid rgba(68,92,149,0.45)',
-                  }}
-                >
-                  {t('bridgeDownloadMobileTag')}
-                </span>
+                <div className="min-w-0 pt-0.5">
+                  <span className="inline-flex rounded-full border border-blue-500/25 bg-blue-500/10 px-2.5 py-1 font-mono text-[9.5px] uppercase tracking-[0.14em] text-blue-500">
+                    {t('bridgeDownloadMobileTag')}
+                  </span>
+                  <h3
+                    className="m-0 mt-2.5 font-semibold text-neutral-100 text-[19px] lg:text-[21px]"
+                    style={{ letterSpacing: '-0.018em' }}
+                  >
+                    {t('bridgeDownloadMobileTitle')}
+                  </h3>
+                </div>
               </div>
-              <h3
-                className="m-0 font-semibold text-neutral-100 text-[19px] lg:text-[21px]"
-                style={{ letterSpacing: '-0.018em' }}
-              >
-                {t('bridgeDownloadMobileTitle')}
-              </h3>
-              <p className="m-0 mt-2.5 text-[13.5px] leading-[1.6] text-dim max-w-md">
+              <p className="m-0 mt-4 text-[13.5px] leading-[1.6] text-dim max-w-md">
                 {t('bridgeDownloadMobileDesc')}
               </p>
               <Link
@@ -69,13 +64,17 @@ export default async function LandingDownload() {
                 className="mt-5 inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-blue-500 hover:bg-accent-strong text-white text-[13px] font-medium transition-colors duration-150"
               >
                 {t('bridgeDownloadMobileCta')}
-                <span aria-hidden>→</span>
+                <ArrowRight aria-hidden="true" size={14} />
               </Link>
             </div>
 
             {/* Phone frame with the real mobile screenshot, cropped by the card */}
-            <div className="relative mt-6 lg:mt-8 h-52 lg:h-60 overflow-hidden">
-              <div className="mx-auto w-52 sm:w-56 rounded-t-[1.6rem] border border-b-0 border-neutral-700 bg-neutral-900 p-1.5 pb-0 shadow-2xl">
+            <div className="marketing-device-stage relative mt-6 lg:mt-8 h-52 lg:h-60 overflow-hidden border-t border-neutral-800/60 bg-neutral-850/40 pt-6">
+              <div className="relative mx-auto w-52 sm:w-56 rounded-t-[1.65rem] border border-b-0 border-neutral-700 bg-neutral-900 p-1.5 pb-0 shadow-2xl">
+                <span
+                  aria-hidden="true"
+                  className="absolute left-1/2 top-2.5 z-10 h-1 w-10 -translate-x-1/2 rounded-full bg-neutral-700/80"
+                />
                 <Image
                   src="/screenshots/mobile-board.png"
                   alt={t('bridgeDownloadMobileTitle')}
@@ -89,32 +88,27 @@ export default async function LandingDownload() {
 
           {/* Desktop — native app */}
           <div
-            className="relative flex flex-col rounded-xl border border-neutral-800 overflow-hidden"
+            className="marketing-download-card relative flex flex-col rounded-xl border border-neutral-800 overflow-hidden"
             style={{ background: 'linear-gradient(160deg, rgba(127,195,109,0.05) 0%, transparent 55%)' }}
           >
             <div className="p-6 lg:p-8 pb-0 flex-1">
-              <div className="flex items-center justify-between mb-4">
-                <span className="w-9 h-9 rounded-lg bg-neutral-950/60 border border-neutral-800 flex items-center justify-center">
-                  <Monitor size={17} className="text-neutral-300" />
+              <div className="flex items-start gap-4">
+                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border border-green-400/20 bg-green-400/10 text-green-400 ring-1 ring-inset ring-green-400/5">
+                  <Laptop size={22} strokeWidth={1.8} />
                 </span>
-                <span
-                  className="font-mono text-[10px] uppercase tracking-widest px-2.5 py-1 rounded-full"
-                  style={{
-                    color: 'var(--color-green-400)',
-                    background: 'rgba(127,195,109,0.08)',
-                    border: '1px solid rgba(127,195,109,0.35)',
-                  }}
-                >
-                  {t('bridgeDownloadDesktopTag')}
-                </span>
+                <div className="min-w-0 pt-0.5">
+                  <span className="inline-flex rounded-full border border-green-400/25 bg-green-400/10 px-2.5 py-1 font-mono text-[9.5px] uppercase tracking-[0.14em] text-green-400">
+                    {t('bridgeDownloadDesktopTag')}
+                  </span>
+                  <h3
+                    className="m-0 mt-2.5 font-semibold text-neutral-100 text-[19px] lg:text-[21px]"
+                    style={{ letterSpacing: '-0.018em' }}
+                  >
+                    {t('bridgeDownloadDesktopTitle')}
+                  </h3>
+                </div>
               </div>
-              <h3
-                className="m-0 font-semibold text-neutral-100 text-[19px] lg:text-[21px]"
-                style={{ letterSpacing: '-0.018em' }}
-              >
-                {t('bridgeDownloadDesktopTitle')}
-              </h3>
-              <p className="m-0 mt-2.5 text-[13.5px] leading-[1.6] text-dim max-w-md">
+              <p className="m-0 mt-4 text-[13.5px] leading-[1.6] text-dim max-w-md">
                 {t('bridgeDownloadDesktopDesc')}
               </p>
               <Link
@@ -122,13 +116,21 @@ export default async function LandingDownload() {
                 className="mt-5 inline-flex items-center gap-2 px-4 py-2.5 rounded-lg border border-neutral-700 text-[13px] font-medium text-neutral-50 hover:border-neutral-500 hover:text-neutral-100 transition-colors duration-150"
               >
                 {t('bridgeDownloadDesktopCta')}
-                <span aria-hidden>→</span>
+                <ArrowRight aria-hidden="true" size={14} />
               </Link>
             </div>
 
             {/* Desktop screenshot in a browser-style frame, cropped by the card */}
-            <div className="relative mt-6 lg:mt-8 h-52 lg:h-60 overflow-hidden pl-6 lg:pl-8">
+            <div className="marketing-device-stage relative mt-6 lg:mt-8 h-52 lg:h-60 overflow-hidden border-t border-neutral-800/60 bg-neutral-850/40 pl-6 pt-6 lg:pl-8">
               <div className="rounded-tl-xl border border-b-0 border-r-0 border-neutral-700 overflow-hidden shadow-2xl">
+                <div
+                  aria-hidden="true"
+                  className="flex h-7 items-center gap-1.5 border-b border-neutral-800 bg-neutral-900 px-3"
+                >
+                  <span className="h-1.5 w-1.5 rounded-full bg-red-400/70" />
+                  <span className="h-1.5 w-1.5 rounded-full bg-amber-400/70" />
+                  <span className="h-1.5 w-1.5 rounded-full bg-green-400/70" />
+                </div>
                 <Image
                   src="/screenshots/desktop-board.png"
                   alt={t('bridgeDownloadDesktopTitle')}

@@ -31,6 +31,7 @@ Audit and improve the public landing/marketing pages in light mode so they read 
 - Replaced dark-only white hover washes with token-based hover surfaces that work in both themes.
 - Added light-specific preview/dropdown shadows and restored dark monochrome Cursor/Notion marks on white.
 - Refined light-mode pricing: removed page-wide hero wash and per-plan gradient darkening, standardized white cards, reduced the comparison-column fill to an edge-defined near-white treatment, and made Startup the single filled CTA.
+- Polished the landing download section with larger platform-specific icon surfaces, title-linked tags, consistent device stages, and more convincing phone/desktop chrome in both themes.
 - Kept the authenticated workspace palette and dark marketing theme unchanged.
 
 ## Changed files
@@ -43,6 +44,7 @@ Audit and improve the public landing/marketing pages in light mode so they read 
 - `src/components/marketing/PwaNavButton.tsx`
 - `src/components/marketing/LandingHero.tsx`
 - `src/components/marketing/LandingPricing.tsx`
+- `src/components/marketing/LandingDownload.tsx`
 - `src/components/marketing/WhatsInsideViewer.tsx`
 - `src/components/docs/WikiSidebar.tsx`
 - `AGENTS.md`
@@ -56,6 +58,7 @@ Audit and improve the public landing/marketing pages in light mode so they read 
 - `git diff --check` passed.
 - Headless Edge visual checks passed for the landing page (desktop/mobile), `/pricing`, `/docs`, and `/contact` in Turkish light mode.
 - A second 1440×1800 `/pricing` pass confirmed the cleaner card hierarchy and comparison table after the refinement.
+- Desktop light/dark captures confirmed the download cards, device framing, and section spacing; targeted ESLint and `npx tsc --noEmit` passed after the polish.
 
 ## Remaining work
 
