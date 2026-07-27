@@ -19,7 +19,7 @@ export default function PwaNavButton() {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="lg:hidden inline-flex items-center gap-1.5 px-2 sm:px-2.5 py-2 text-[13px] text-neutral-50 hover:text-neutral-100 transition-colors duration-150 rounded-md hover:bg-white/5"
+        className="lg:hidden inline-flex items-center gap-1.5 px-2 sm:px-2.5 py-2 text-[13px] text-neutral-50 hover:text-neutral-100 transition-colors duration-150 rounded-md hover:bg-neutral-900"
         aria-label={t('pwaShortLabel')}
         title={t('pwaShortLabel')}
       >

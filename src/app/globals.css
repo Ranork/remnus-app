@@ -315,14 +315,93 @@
 [data-theme="catppuccin"] ::-webkit-scrollbar-thumb { background: #c1cad6; border-radius: 4px; }
 [data-theme="catppuccin"] ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
+/* Public marketing surfaces: clean editorial light mode. The workspace light
+   palette intentionally keeps a cool frame around its canvas; public pages use
+   a white page, ink typography, elevated cards and near-white section bands. */
+[data-theme="catppuccin"] body:has(.marketing-site),
+[data-theme="catppuccin"] .marketing-site {
+  --color-neutral-950: #ffffff;
+  --color-neutral-900: #ffffff;
+  --color-neutral-850: #f8fafc;
+  --color-neutral-800: #e2e8f0;
+  --color-neutral-700: #cbd5e1;
+  --color-neutral-600: #64748b;
+  --color-neutral-500: #8492a6;
+  --color-neutral-400: #64748b;
+  --color-neutral-300: #475569;
+  --color-neutral-200: #334155;
+  --color-neutral-100: #172033;
+  --color-neutral-50: #334155;
+  --color-dim: #64748b;
+  --color-dimmer: #94a3b8;
+  --color-border-soft: #edf0f4;
+  --color-accent-strong: #1d4ed8;
+  background: #ffffff;
+  color: #172033;
+}
+
+[data-theme="catppuccin"] .marketing-site .marketing-nav {
+  background: rgba(255, 255, 255, 0.9);
+  border-color: rgba(226, 232, 240, 0.9);
+  box-shadow: 0 1px 0 rgba(15, 23, 42, 0.03), 0 8px 30px rgba(15, 23, 42, 0.035);
+  backdrop-filter: blur(16px) saturate(150%);
+}
+
+[data-theme="catppuccin"] .marketing-site main > section:nth-of-type(even) {
+  background: #f8fafc;
+}
+
+[data-theme="catppuccin"] .marketing-site .marketing-hero {
+  background:
+    radial-gradient(circle at 80% 10%, rgba(37, 99, 235, 0.085), transparent 32%),
+    radial-gradient(circle at 12% 4%, rgba(14, 165, 233, 0.045), transparent 26%),
+    #ffffff;
+}
+
+[data-theme="catppuccin"] .marketing-site footer {
+  background: #f8fafc;
+}
+
+[data-theme="catppuccin"] .marketing-site .marketing-preview-shadow {
+  box-shadow: 0 28px 70px -28px rgba(15, 23, 42, 0.24), 0 10px 28px -18px rgba(15, 23, 42, 0.16) !important;
+}
+
+[data-theme="catppuccin"] .marketing-site .shadow-xl,
+[data-theme="catppuccin"] .marketing-site .shadow-2xl {
+  box-shadow: 0 20px 50px -24px rgba(15, 23, 42, 0.22), 0 8px 18px -14px rgba(15, 23, 42, 0.14);
+}
+
+/* Monochrome marks lightened for the dark theme need their dark reading on white. */
+[data-theme="catppuccin"] .marketing-site svg[aria-label="cursor"],
+[data-theme="catppuccin"] .marketing-site svg[aria-label="Notion"] {
+  fill: #1f2937;
+}
+
 /* ── Landing pricing: featured ("most popular") card ──────────────────────────
    Dark-first design used a hardcoded dark gradient base; on the light theme that
    left dark text on a dark card (unreadable). Base is theme-aware now. */
 .pricing-card-featured {
   background: linear-gradient(160deg, rgba(68,92,149,0.14) 0%, rgba(28,30,38,1) 55%);
 }
+[data-theme="catppuccin"] .marketing-site .pricing-plan-card {
+  background: #ffffff !important;
+  border-color: #e2e8f0 !important;
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.025), 0 12px 34px -28px rgba(15, 23, 42, 0.24) !important;
+}
 [data-theme="catppuccin"] .pricing-card-featured {
-  background: linear-gradient(160deg, rgba(68,92,149,0.12) 0%, var(--color-neutral-850) 55%);
+  background: #ffffff;
+}
+[data-theme="catppuccin"] .marketing-site .pricing-card-featured {
+  border-color: #93b4f8 !important;
+  box-shadow: 0 0 0 1px rgba(37, 99, 235, 0.08), 0 22px 52px -30px rgba(37, 99, 235, 0.42) !important;
+}
+
+.pricing-comparison-featured {
+  background: rgba(68,92,149,0.07);
+}
+[data-theme="catppuccin"] .marketing-site .pricing-comparison-featured {
+  background: #fbfdff;
+  box-shadow: inset 1px 0 #edf3ff, inset -1px 0 #edf3ff;
 }
 
 /* ── Landing hero: hover dim over the workspace screenshot ─────────────────────
@@ -1297,4 +1376,3 @@ body.resize-drag-active * {
 .prose-doc td { color: var(--color-neutral-300); }
 .prose-doc td p,
 .prose-doc th p { margin: 0; }
-

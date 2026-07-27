@@ -12,7 +12,7 @@ import LandingFooter from './LandingFooter';
 
 export default function LandingBridgeSwitcher() {
   return (
-    <div className="min-h-screen bg-neutral-950 text-neutral-100">
+    <div className="marketing-site min-h-screen bg-neutral-950 text-neutral-100">
       <LandingNav />
       <main>
         <LandingHero />

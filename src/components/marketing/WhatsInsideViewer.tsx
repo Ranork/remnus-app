@@ -37,7 +37,7 @@ export default function WhatsInsideViewer({
 
   return (
     <div
-      className="bg-neutral-900 border border-neutral-800 rounded-xl overflow-hidden"
+      className="marketing-preview-shadow bg-neutral-900 border border-neutral-800 rounded-xl overflow-hidden"
       style={{ boxShadow: '0 30px 60px -20px rgba(0,0,0,0.4)' }}
     >
       {/* breadcrumb / view bar */}

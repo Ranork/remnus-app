@@ -14,41 +14,48 @@ master
 
 ## Goal
 
-Refocus the landing-page hero on trying the product: replace the old action/stat rows with a large demo CTA, a lower-emphasis free-start CTA, and a quiet integrations discovery link in the established Remnus visual language.
+Audit and improve the public landing/marketing pages in light mode so they read as a deliberate white-site design rather than a dark design with inverted tokens.
 
 ## Scope
 
-- Landing hero CTA hierarchy only.
-- Preserve the existing heading, subhead, desktop workspace showcase, trust badges, and hover demo interaction.
-- Keep all user-facing strings localized across 8 locales.
+- Public pages rendered through `LandingBridgeSwitcher` and `MarketingShell`.
+- Keep the authenticated workspace Catppuccin palette unchanged.
+- Preserve dark-mode visuals and existing component structure/copy.
 
 ## Completed
 
-- Removed the inline “Start your workspace” / “See the integrations” actions.
-- Removed the 19-tools / 5-resources / 5-prompts stat strip and MCP-details link.
-- Added a persistent, full-width `HeroDemoButton` as the dominant left-column CTA; it calls the existing `loginAsDemo` action and has loading feedback.
-- Added a lower-emphasis `/login` button underneath with localized “Start for free” copy.
-- Added a tertiary localized “Explore integrations” text link below the buttons; it smooth-scrolls to the existing `#integrations` section.
-- Reused the same demo interaction module for the existing desktop screenshot hover overlay.
-- Removed obsolete CTA/stat translation keys and added `bridgeHeroCtaFree` plus `bridgeHeroExploreIntegrations` in all 8 locales; strengthened demo wording from “explore” to “try” where applicable.
-- Updated `AGENTS.md` and Serena core memory to reflect the new CTA hierarchy and removal of the hero count-sync obligation.
+- Added a shared `.marketing-site` scope to the main landing composition and every `MarketingShell` page.
+- Added a Catppuccin-only marketing palette—including body-portaled modal/banner chrome on marketing routes—with a true white page, ink headings, readable slate body text, white cards, light inset surfaces and refined borders.
+- Added alternating near-white section bands and a restrained blue hero wash for clearer long-page rhythm.
+- Restyled the sticky marketing nav as a translucent white, blurred surface with a fine shadow.
+- Replaced dark-only white hover washes with token-based hover surfaces that work in both themes.
+- Added light-specific preview/dropdown shadows and restored dark monochrome Cursor/Notion marks on white.
+- Refined light-mode pricing: removed page-wide hero wash and per-plan gradient darkening, standardized white cards, reduced the comparison-column fill to an edge-defined near-white treatment, and made Startup the single filled CTA.
+- Kept the authenticated workspace palette and dark marketing theme unchanged.
 
 ## Changed files
 
+- `src/app/globals.css`
+- `src/components/marketing/LandingBridgeSwitcher.tsx`
+- `src/components/marketing/MarketingShell.tsx`
+- `src/components/marketing/LandingNav.tsx`
+- `src/components/marketing/LandingThemeToggle.tsx`
+- `src/components/marketing/PwaNavButton.tsx`
 - `src/components/marketing/LandingHero.tsx`
-- `src/components/marketing/HeroDemoOverlay.tsx`
-- `messages/{en,tr,hi,es,fr,de,zh,ru}.json`
+- `src/components/marketing/LandingPricing.tsx`
+- `src/components/marketing/WhatsInsideViewer.tsx`
+- `src/components/docs/WikiSidebar.tsx`
 - `AGENTS.md`
 - `.serena/memories/core.md`
 - `.ai/CURRENT_TASK.md`
 
 ## Verification
 
-- Targeted ESLint passed for both hero components.
-- Source TypeScript passed with `.next` excluded (active dev processes had left malformed generated `.next/dev/types` output).
-- All 8 locale JSON files parse and contain `Landing.bridgeHeroCtaFree` and `Landing.bridgeHeroExploreIntegrations`; removed keys have no remaining source/message references.
+- Targeted ESLint passed for every modified TSX component.
+- Serena diagnostics are clean for the primary wrappers and hero component.
 - `git diff --check` passed.
-- Headless Edge visual checks passed at 1440×1000 and responsive 500×900 widths in the Turkish light theme; hierarchy, alignment, wrapping, and button widths were visually confirmed.
+- Headless Edge visual checks passed for the landing page (desktop/mobile), `/pricing`, `/docs`, and `/contact` in Turkish light mode.
+- A second 1440×1800 `/pricing` pass confirmed the cleaner card hierarchy and comparison table after the refinement.
 
 ## Remaining work
 
@@ -60,4 +67,4 @@ Refocus the landing-page hero on trying the product: replace the old action/stat
 
 ## Next exact step
 
-Review the landing hero in the preferred production theme, then commit if approved.
+Review the public pages in a normal browser, then commit if approved.

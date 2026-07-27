@@ -33,7 +33,7 @@ export default function LandingThemeToggle({ label }: { label: string }) {
       onClick={toggle}
       title={label}
       aria-label={label}
-      className="inline-flex items-center justify-center h-9 w-9 rounded-md text-neutral-50 hover:text-neutral-100 hover:bg-white/5 transition-colors duration-150 cursor-pointer shrink-0"
+      className="inline-flex items-center justify-center h-9 w-9 rounded-md text-neutral-50 hover:text-neutral-100 hover:bg-neutral-900 transition-colors duration-150 cursor-pointer shrink-0"
     >
       {isLight ? <Moon size={16} /> : <Sun size={16} />}
     </button>

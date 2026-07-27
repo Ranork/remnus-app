@@ -13,7 +13,7 @@ export default async function LandingNav() {
   const isAuthed = !!session?.user;
 
   return (
-    <header className="sticky top-0 z-50 border-b border-neutral-800 bg-neutral-950">
+    <header className="marketing-nav sticky top-0 z-50 border-b border-neutral-800 bg-neutral-950">
       <div className="px-4 sm:px-8 lg:px-14 py-4">
         <div className="max-w-7xl mx-auto flex items-center gap-2 sm:gap-4 lg:gap-7">
           <Link href="/" className="inline-flex items-center gap-2.5 shrink-0">
@@ -73,7 +73,7 @@ export default async function LandingNav() {
               <>
                 <Link
                   href="/login"
-                  className="hidden sm:block px-4 py-2 text-[13px] text-neutral-50 hover:text-neutral-100 transition-colors duration-150 rounded-md hover:bg-white/5"
+                  className="hidden sm:block px-4 py-2 text-[13px] text-neutral-50 hover:text-neutral-100 transition-colors duration-150 rounded-md hover:bg-neutral-900"
                 >
                   {t('navSignIn')}
                 </Link>

@@ -7,7 +7,7 @@ interface Props {
 
 export default async function MarketingShell({ children }: Props) {
   return (
-    <div className="min-h-screen bg-neutral-950 flex flex-col justify-between">
+    <div className="marketing-site min-h-screen bg-neutral-950 flex flex-col justify-between">
       <LandingNav />
       <main className="grow">{children}</main>
       <LandingFooter />

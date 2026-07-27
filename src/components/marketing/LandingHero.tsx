@@ -49,7 +49,7 @@ export default async function LandingHero() {
   const t = await getTranslations('Landing');
 
   return (
-    <section className="relative overflow-hidden px-4 sm:px-8 lg:px-14 pt-16 pb-12 lg:pt-[110px] lg:pb-[90px]">
+    <section className="marketing-hero relative overflow-hidden px-4 sm:px-8 lg:px-14 pt-16 pb-12 lg:pt-[110px] lg:pb-[90px]">
       {/* radial bg glow */}
       <div
         className="absolute top-20 -left-60 w-175 h-175 pointer-events-none"
@@ -335,7 +335,7 @@ export default async function LandingHero() {
 function HeroWorkspaceShot() {
   return (
     <div
-      className="bg-neutral-950 border border-neutral-800 rounded-[10px] overflow-hidden flex"
+      className="marketing-preview-shadow bg-neutral-950 border border-neutral-800 rounded-[10px] overflow-hidden flex"
       style={{
         width: 720,
         height: 445,

@@ -45,7 +45,7 @@ function NavList({
             className={`group flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[13.5px] transition-colors duration-150 ${
               active
                 ? 'bg-blue-500/10 text-neutral-100 font-medium'
-                : 'text-neutral-50 hover:text-neutral-100 hover:bg-white/5'
+                : 'text-neutral-50 hover:text-neutral-100 hover:bg-neutral-900'
             }`}
           >
             {Icon && (

@@ -74,7 +74,7 @@ export default async function LandingPricing({ showComparison = false }: { showC
       ],
       cta: t('bridgePricingFreeCta'),
       ctaHref: '/login',
-      ctaVariant: 'solid' as const,
+      ctaVariant: 'outline' as const,
       featured: false,
     },
     {
@@ -253,8 +253,9 @@ export default async function LandingPricing({ showComparison = false }: { showC
                     {colTitles.map((title, i) => (
                       <th
                         key={title}
-                        className="py-4 px-3 lg:px-4 text-center text-[13.5px] font-semibold text-neutral-100"
-                        style={i === 1 ? { background: 'rgba(68,92,149,0.07)' } : undefined}
+                        className={`py-4 px-3 lg:px-4 text-center text-[13.5px] font-semibold text-neutral-100 ${
+                          i === 1 ? 'pricing-comparison-featured' : ''
+                        }`}
                       >
                         {title}
                       </th>
@@ -279,8 +280,9 @@ export default async function LandingPricing({ showComparison = false }: { showC
                         {row.cells.map((cell, i) => (
                           <td
                             key={i}
-                            className="py-3 px-3 lg:px-4 text-center text-[13px] text-neutral-100"
-                            style={i === 1 ? { background: 'rgba(68,92,149,0.07)' } : undefined}
+                            className={`py-3 px-3 lg:px-4 text-center text-[13px] text-neutral-100 ${
+                              i === 1 ? 'pricing-comparison-featured' : ''
+                            }`}
                           >
                             {typeof cell === 'boolean'
                               ? (cell ? <CheckIcon color="var(--color-blue-500)" inline /> : <DashIcon />)
@@ -356,7 +358,7 @@ function PlanCard({
   const a = ACCENTS[accent];
   return (
     <div
-      className={`relative flex flex-col h-full rounded-xl border ${
+      className={`pricing-plan-card relative flex flex-col h-full rounded-xl border ${
         featured ? 'pricing-card-featured p-6 lg:p-8 lg:-my-4 lg:z-10' : 'p-6 lg:p-7'
       }`}
       style={
