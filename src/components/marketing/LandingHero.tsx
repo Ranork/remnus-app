@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
 import { BadgeCheck } from 'lucide-react';
 import AIMark from './AIMark';
-import { HeroDemoOverlay } from './HeroDemoOverlay';
+import { HeroDemoButton, HeroDemoOverlay } from './HeroDemoOverlay';
 
 const AI_TILES = [
   { id: 'claude',      name: 'Claude',      sub: 'Desktop · Claude Code', color: '#d97757', action: 'creating page' },
@@ -87,51 +87,34 @@ export default async function LandingHero() {
               {t('bridgeHeroSubhead')}
             </p>
 
-            <div className="mt-7 lg:mt-[32px] flex flex-wrap items-center gap-4 lg:gap-[18px]">
+            <div className="mt-8 lg:mt-9 flex max-w-[420px] flex-col gap-3">
+              <HeroDemoButton
+                buttonLabel={t('bridgeHeroDemoButton')}
+                loadingLabel={t('bridgeHeroDemoLoading')}
+              />
               <Link
                 href="/login"
-                className="inline-flex items-center gap-2 bg-blue-500 hover:bg-accent-strong text-white px-5 py-3.5 rounded-md text-[15px] font-medium transition-colors duration-150"
+                className="group/free inline-flex min-h-12 w-full items-center justify-center gap-2 rounded-md border border-neutral-800 bg-neutral-900/45 px-5 py-3 text-sm font-medium text-neutral-100 transition-all duration-200 hover:border-blue-500/50 hover:bg-neutral-900"
               >
-                {t('bridgeHeroCtaPrimary')}
-                <span aria-hidden>→</span>
+                {t('bridgeHeroCtaFree')}
+                <span
+                  aria-hidden="true"
+                  className="text-xs text-accent-strong transition-transform duration-200 group-hover/free:translate-x-0.5"
+                >
+                  →
+                </span>
               </Link>
               <Link
                 href="#integrations"
-                className="inline-flex items-center gap-1.5 text-sm text-neutral-100 border-b border-neutral-800 pb-1 hover:border-neutral-100 transition-colors duration-150"
+                className="group/integrations self-center inline-flex items-center gap-1.5 pt-1 font-mono text-[10.5px] tracking-[0.03em] text-dim transition-colors duration-150 hover:text-accent-strong"
               >
-                {t('bridgeHeroCtaSecondary')}
-                <span aria-hidden className="text-xs">→</span>
-              </Link>
-            </div>
-
-            {/* stats row — scales down on mobile, never wraps */}
-            <div className="mt-8 lg:mt-10 space-y-2">
-              <div className="flex border border-neutral-800 rounded-md overflow-hidden w-fit max-w-full">
-                {[
-                  { num: t('bridgeHeroStat1Num'), label: t('bridgeHeroStat1Label') },
-                  { num: t('bridgeHeroStat2Num'), label: t('bridgeHeroStat2Label') },
-                  { num: t('bridgeHeroStat3Num'), label: t('bridgeHeroStat3Label') },
-                ].map((s, i) => (
-                  <div
-                    key={i}
-                    className="flex items-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2.5"
-                    style={{ borderLeft: i ? '1px solid var(--color-neutral-800)' : 'none' }}
-                  >
-                    <span className="font-sans font-bold text-neutral-100 text-[17px] sm:text-[20px] lg:text-[22px] tracking-[-0.02em] leading-none">
-                      {s.num}
-                    </span>
-                    <span className="font-mono text-[10px] sm:text-[11px] text-dim leading-tight max-w-16.25 sm:max-w-22.5">
-                      {s.label}
-                    </span>
-                  </div>
-                ))}
-              </div>
-              <Link
-                href="#tools"
-                className="inline-flex items-center gap-1 font-mono text-[10.5px] text-accent-strong tracking-[0.02em] hover:underline"
-              >
-                {t('bridgeHeroStatNote')}
-                <span aria-hidden className="text-[10px]">→</span>
+                {t('bridgeHeroExploreIntegrations')}
+                <span
+                  aria-hidden="true"
+                  className="text-[10px] transition-transform duration-150 group-hover/integrations:translate-y-0.5"
+                >
+                  ↓
+                </span>
               </Link>
             </div>
           </div>

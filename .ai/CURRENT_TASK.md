@@ -14,40 +14,41 @@ master
 
 ## Goal
 
-Redesign the admin landing-traffic trend visualization around a polished line chart, add a daily view, and add frequently used selectable date ranges for every granularity.
+Refocus the landing-page hero on trying the product: replace the old action/stat rows with a large demo CTA, a lower-emphasis free-start CTA, and a quiet integrations discovery link in the established Remnus visual language.
 
 ## Scope
 
-- Admin landing-traffic PostHog trend data and visualization only.
-- Preserve the existing Sources tab, channel/campaign selector, hover tooltip, and optional bar view.
-- Add all new user-facing strings to all 8 locales.
+- Landing hero CTA hierarchy only.
+- Preserve the existing heading, subhead, desktop workspace showcase, trust badges, and hover demo interaction.
+- Keep all user-facing strings localized across 8 locales.
 
 ## Completed
 
-- Added a zero-filled, last-30-days `daily` series to `getTrafficTrend()` with matching per-channel and campaign-tag PostHog queries.
-- Added a localized Daily tab beside Sources, Weekly, and Monthly.
-- Changed the trend default from bar to line while retaining the bar toggle.
-- Redesigned the line rendering with a taller plot, smooth bounded curves, subtle line glow, gradient area fill for single-series views, reduced point clutter, endpoint emphasis, hover points, and granularity-aware date labels.
-- Added independent range selectors: Daily 30/90/365 days, Weekly 12/26/52 weeks, Monthly 12/24/36 months.
-- Expanded `getTrafficTrend()` to return zero-filled maximum windows (365 days / 52 weeks / 36 months), then slice them client-side for instant switching without more PostHog requests.
-- Made X-axis label density responsive to the measured chart width so the 365-day series stays readable.
-- Updated the project source map and all 8 translation files.
+- Removed the inline “Start your workspace” / “See the integrations” actions.
+- Removed the 19-tools / 5-resources / 5-prompts stat strip and MCP-details link.
+- Added a persistent, full-width `HeroDemoButton` as the dominant left-column CTA; it calls the existing `loginAsDemo` action and has loading feedback.
+- Added a lower-emphasis `/login` button underneath with localized “Start for free” copy.
+- Added a tertiary localized “Explore integrations” text link below the buttons; it smooth-scrolls to the existing `#integrations` section.
+- Reused the same demo interaction module for the existing desktop screenshot hover overlay.
+- Removed obsolete CTA/stat translation keys and added `bridgeHeroCtaFree` plus `bridgeHeroExploreIntegrations` in all 8 locales; strengthened demo wording from “explore” to “try” where applicable.
+- Updated `AGENTS.md` and Serena core memory to reflect the new CTA hierarchy and removal of the hero count-sync obligation.
 
 ## Changed files
 
-- `src/lib/actions/analytics.ts`
-- `src/components/features/admin/AdminTrafficSources.tsx`
-- `src/components/features/admin/TrafficTrendChart.tsx`
+- `src/components/marketing/LandingHero.tsx`
+- `src/components/marketing/HeroDemoOverlay.tsx`
 - `messages/{en,tr,hi,es,fr,de,zh,ru}.json`
 - `AGENTS.md`
+- `.serena/memories/core.md`
 - `.ai/CURRENT_TASK.md`
 
 ## Verification
 
-- Targeted ESLint passed for the analytics action and both traffic components.
-- Source TypeScript passed with a temporary config excluding `.next`; the normal command is currently blocked by concurrently corrupted `.next/dev/types` generated output from active dev processes.
-- All 8 message JSON files parse successfully and contain the new daily keys.
+- Targeted ESLint passed for both hero components.
+- Source TypeScript passed with `.next` excluded (active dev processes had left malformed generated `.next/dev/types` output).
+- All 8 locale JSON files parse and contain `Landing.bridgeHeroCtaFree` and `Landing.bridgeHeroExploreIntegrations`; removed keys have no remaining source/message references.
 - `git diff --check` passed.
+- Headless Edge visual checks passed at 1440×1000 and responsive 500×900 widths in the Turkish light theme; hierarchy, alignment, wrapping, and button widths were visually confirmed.
 
 ## Remaining work
 
@@ -55,8 +56,8 @@ Redesign the admin landing-traffic trend visualization around a polished line ch
 
 ## Known issues
 
-- Runtime visual verification of live PostHog data requires an authenticated admin session and runtime PostHog query credentials; those were not available through this coding session.
+- None introduced by this change.
 
 ## Next exact step
 
-Review all nine range/granularity combinations in an authenticated admin session with live PostHog data, then commit if approved.
+Review the landing hero in the preferred production theme, then commit if approved.
