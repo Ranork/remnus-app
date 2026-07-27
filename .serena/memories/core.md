@@ -63,6 +63,7 @@ src/
     #   GOTCHA: manifest.json/sw.js/workbox-* are excluded in BOTH proxy.ts matcher AND auth.config.ts isPublicAsset —
     #   browser fetches them cookie-less; without the exclusions they bounced to /login and PWA install was broken.
   components/features/      # All feature React components (see mem:conventions)
+    # Admin landing traffic: AdminTrafficSources tabs = Sources/Daily/Weekly/Monthly. Range selectors are Daily 30/90/365 days, Weekly 12/26/52 weeks, Monthly 12/24/36 months; the selected range is kept per granularity. getTrafficTrend returns zero-filled maximum windows (365 days / 52 weeks / 36 months) once and the client slices them instantly. TrafficTrendChart defaults to a smoothed line chart with bar view still optional and width-aware X-axis label sampling.
     # Key components: ContextMenu (shared Notion-style right-click menu primitive — useContextMenu(onClose?)→{open(e,items),close,node} + MenuItem type {action|separator|label}; portal, viewport flip/clamp, Esc/outside/scroll close; wired on sidebar items + table/kanban/calendar rows/cards; i18n open/copyLink in Workspace+Database ns), WorkspaceSidebar, DatabaseView, MobileNavWrapper, ViewsBar,
     # StandalonePageEditor, PageEditor, TemplatePickerModal, WorkspaceSettingsModal,
     # DatabasePropertiesSidebar, TableLayout, KanbanBoard, CalendarView,

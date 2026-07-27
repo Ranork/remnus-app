@@ -339,9 +339,11 @@ export type TrafficTrendPoint = {
 };
 
 export type TrafficTrendData = {
-  /** Last 12 ISO weeks (Mon-start, UTC), oldest → newest. `date` = week start. */
+  /** Last 365 calendar days (UTC), oldest → newest. `date` = day. */
+  daily: TrafficTrendPoint[];
+  /** Last 52 ISO weeks (Mon-start, UTC), oldest → newest. `date` = week start. */
   weekly: TrafficTrendPoint[];
-  /** Last 12 calendar months (UTC), oldest → newest. `date` = month start. */
+  /** Last 36 calendar months (UTC), oldest → newest. `date` = month start. */
   monthly: TrafficTrendPoint[];
   /**
    * Fixed series set for the "by campaign" breakdown — the top `?ref=`/
@@ -381,34 +383,64 @@ const MAX_TREND_CAMPAIGN_TAGS = 6;
  */
 export async function getTrafficTrend(): Promise<TrafficTrendData> {
   await assertAdmin();
-  const [weeklyDomainRows, monthlyDomainRows, weeklyTagRows, monthlyTagRows] = await Promise.all([
-    runHogQL<[string, string, number]>(`
+  const [dailyDomainRows, weeklyDomainRows, monthlyDomainRows, dailyTagRows, weeklyTagRows, monthlyTagRows] =
+    await Promise.all([
+      runHogQL<[string, string, number]>(`
+        SELECT
+          toStartOfDay(timestamp) AS bucket,
+          coalesce(nullIf(properties.$referring_domain, ''), '$direct') AS domain,
+          count(DISTINCT person_id) AS visitors
+        FROM events
+        WHERE event = '$pageview'
+          AND timestamp > now() - INTERVAL 365 DAY
+          AND properties.$pathname = '/'
+        GROUP BY bucket, domain
+        ORDER BY bucket ASC
+        LIMIT 20000
+      `),
+      runHogQL<[string, string, number]>(`
       SELECT
         toStartOfWeek(timestamp, 1) AS bucket,
         coalesce(nullIf(properties.$referring_domain, ''), '$direct') AS domain,
         count(DISTINCT person_id) AS visitors
       FROM events
       WHERE event = '$pageview'
-        AND timestamp > now() - INTERVAL 12 WEEK
+        AND timestamp > now() - INTERVAL 52 WEEK
         AND properties.$pathname = '/'
       GROUP BY bucket, domain
       ORDER BY bucket ASC
       LIMIT 5000
-    `),
-    runHogQL<[string, string, number]>(`
+      `),
+      runHogQL<[string, string, number]>(`
       SELECT
         toStartOfMonth(timestamp) AS bucket,
         coalesce(nullIf(properties.$referring_domain, ''), '$direct') AS domain,
         count(DISTINCT person_id) AS visitors
       FROM events
       WHERE event = '$pageview'
-        AND timestamp > now() - INTERVAL 12 MONTH
+        AND timestamp > now() - INTERVAL 36 MONTH
         AND properties.$pathname = '/'
       GROUP BY bucket, domain
       ORDER BY bucket ASC
       LIMIT 5000
-    `),
-    runHogQL<[string, string | null, number]>(`
+      `),
+      runHogQL<[string, string | null, number]>(`
+      SELECT
+        toStartOfDay(timestamp) AS bucket,
+        coalesce(
+          nullIf(extractURLParameter(properties.$current_url, 'ref'), ''),
+          nullIf(extractURLParameter(properties.$current_url, 'utm_source'), '')
+        ) AS tag,
+        count(DISTINCT person_id) AS visitors
+      FROM events
+      WHERE event = '$pageview'
+        AND timestamp > now() - INTERVAL 365 DAY
+        AND properties.$pathname = '/'
+      GROUP BY bucket, tag
+      ORDER BY bucket ASC
+      LIMIT 20000
+      `),
+      runHogQL<[string, string | null, number]>(`
       SELECT
         toStartOfWeek(timestamp, 1) AS bucket,
         coalesce(
@@ -418,13 +450,13 @@ export async function getTrafficTrend(): Promise<TrafficTrendData> {
         count(DISTINCT person_id) AS visitors
       FROM events
       WHERE event = '$pageview'
-        AND timestamp > now() - INTERVAL 12 WEEK
+        AND timestamp > now() - INTERVAL 52 WEEK
         AND properties.$pathname = '/'
       GROUP BY bucket, tag
       ORDER BY bucket ASC
       LIMIT 5000
-    `),
-    runHogQL<[string, string | null, number]>(`
+      `),
+      runHogQL<[string, string | null, number]>(`
       SELECT
         toStartOfMonth(timestamp) AS bucket,
         coalesce(
@@ -434,15 +466,22 @@ export async function getTrafficTrend(): Promise<TrafficTrendData> {
         count(DISTINCT person_id) AS visitors
       FROM events
       WHERE event = '$pageview'
-        AND timestamp > now() - INTERVAL 12 MONTH
+        AND timestamp > now() - INTERVAL 36 MONTH
         AND properties.$pathname = '/'
       GROUP BY bucket, tag
       ORDER BY bucket ASC
       LIMIT 5000
-    `),
-  ]);
-  if (weeklyDomainRows == null || monthlyDomainRows == null || weeklyTagRows == null || monthlyTagRows == null) {
-    return { weekly: [], monthly: [], campaignTags: [], available: false };
+      `),
+    ]);
+  if (
+    dailyDomainRows == null ||
+    weeklyDomainRows == null ||
+    monthlyDomainRows == null ||
+    dailyTagRows == null ||
+    weeklyTagRows == null ||
+    monthlyTagRows == null
+  ) {
+    return { daily: [], weekly: [], monthly: [], campaignTags: [], available: false };
   }
 
   // Fold the per-domain rows into per-bucket channel totals via the same
@@ -471,15 +510,17 @@ export async function getTrafficTrend(): Promise<TrafficTrendData> {
     return map;
   }
 
+  const dailyChannelMap = aggregateChannels(dailyDomainRows);
   const weeklyChannelMap = aggregateChannels(weeklyDomainRows);
   const monthlyChannelMap = aggregateChannels(monthlyDomainRows);
+  const dailyTagMap = aggregateTags(dailyTagRows);
   const weeklyTagMap = aggregateTags(weeklyTagRows);
   const monthlyTagMap = aggregateTags(monthlyTagRows);
   const totalOf = (c: Record<TrafficChannel, number>) => c.direct + c.organic + c.social + c.referral;
 
-  // Fixed campaign-tag series set: top N by total visitors over the 12-month
-  // window (the superset of the 12-week one), so a tag's identity/color/order
-  // is stable whether the reader is looking at the weekly or monthly tab.
+  // Fixed campaign-tag series set: top N by total visitors over the 36-month
+  // window (the superset of every selectable range), so a tag's identity/color
+  // and order stay stable when the reader changes granularity or range.
   const tagTotals = new Map<string, number>();
   for (const perBucket of monthlyTagMap.values()) {
     for (const [tag, v] of perBucket) tagTotals.set(tag, (tagTotals.get(tag) ?? 0) + v);
@@ -495,14 +536,24 @@ export async function getTrafficTrend(): Promise<TrafficTrendData> {
     return out;
   }
 
-  // Monday of the current week (UTC) — anchor for both fills below.
+  // UTC anchors for the zero-filled daily, weekly, and monthly series below.
   const now = new Date();
+  const daily: TrafficTrendPoint[] = [];
+  const today = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  for (let i = 364; i >= 0; i--) {
+    const d = new Date(today);
+    d.setUTCDate(d.getUTCDate() - i);
+    const key = d.toISOString().slice(0, 10);
+    const channels = dailyChannelMap.get(key) ?? EMPTY_CHANNELS;
+    daily.push({ date: key, visitors: totalOf(channels), channels, campaigns: campaignsFor(dailyTagMap.get(key)) });
+  }
+
   const dow = now.getUTCDay(); // 0=Sun..6=Sat
   const mondayOffset = dow === 0 ? 6 : dow - 1;
   const thisMonday = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() - mondayOffset));
 
   const weekly: TrafficTrendPoint[] = [];
-  for (let i = 11; i >= 0; i--) {
+  for (let i = 51; i >= 0; i--) {
     const d = new Date(thisMonday);
     d.setUTCDate(d.getUTCDate() - i * 7);
     const key = d.toISOString().slice(0, 10);
@@ -511,14 +562,14 @@ export async function getTrafficTrend(): Promise<TrafficTrendData> {
   }
 
   const monthly: TrafficTrendPoint[] = [];
-  for (let i = 11; i >= 0; i--) {
+  for (let i = 35; i >= 0; i--) {
     const d = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() - i, 1));
     const key = d.toISOString().slice(0, 10);
     const channels = monthlyChannelMap.get(key) ?? EMPTY_CHANNELS;
     monthly.push({ date: key, visitors: totalOf(channels), channels, campaigns: campaignsFor(monthlyTagMap.get(key)) });
   }
 
-  return { weekly, monthly, campaignTags, available: true };
+  return { daily, weekly, monthly, campaignTags, available: true };
 }
 
 export type DesktopDownloadStats = {

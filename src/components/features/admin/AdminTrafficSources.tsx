@@ -6,16 +6,23 @@ import { getTrafficSources, getTrafficTrend } from '@/lib/actions/analytics';
 import type { TrafficSourcesData, TrafficChannel, TrafficTrendData } from '@/lib/actions/analytics';
 import { TrafficTrendChart } from './TrafficTrendChart';
 
-type Tab = 'sources' | 'weekly' | 'monthly';
+type Tab = 'sources' | 'daily' | 'weekly' | 'monthly';
 type TrendViewMode = 'bar' | 'line';
 type TrendSource = 'channel:all' | `channel:${TrafficChannel}` | 'campaign:all' | `campaign:${string}`;
+type TrendGranularity = 'day' | 'week' | 'month';
+
+const RANGE_OPTIONS: Record<TrendGranularity, number[]> = {
+  day: [30, 90, 365],
+  week: [12, 26, 52],
+  month: [12, 24, 36],
+};
 
 /**
  * Landing-traffic card. Self-fetches from PostHog (via the `getTrafficSources`
  * + `getTrafficTrend` server actions) on mount so a slow/failed PostHog Query
  * API call never blocks the admin page's server render. Tabbed: "Sources"
  * (channel-type summary, per-referring-domain breakdown, campaign tags) plus
- * "Weekly"/"Monthly" (visitor-count trend bar charts) sharing the same card.
+ * "Daily"/"Weekly"/"Monthly" visitor trends sharing the same card.
  */
 export default function AdminTrafficSources() {
   const t = useTranslations('Admin');
@@ -25,8 +32,9 @@ export default function AdminTrafficSources() {
   const [loading, setLoading] = useState(true);
   // Lifted up (rather than local to TrafficTrendChart) so the chosen view/source
   // survives switching away to the Sources tab and back within the same session.
-  const [trendView, setTrendView] = useState<TrendViewMode>('bar');
+  const [trendView, setTrendView] = useState<TrendViewMode>('line');
   const [trendSource, setTrendSource] = useState<TrendSource>('channel:all');
+  const [trendRanges, setTrendRanges] = useState<Record<TrendGranularity, number>>({ day: 30, week: 12, month: 12 });
 
   useEffect(() => {
     let alive = true;
@@ -49,6 +57,7 @@ export default function AdminTrafficSources() {
 
   const tabs: { id: Tab; label: string }[] = [
     { id: 'sources', label: t('trafficTabSources') },
+    { id: 'daily', label: t('trafficTabDaily') },
     { id: 'weekly', label: t('trafficTabWeekly') },
     { id: 'monthly', label: t('trafficTabMonthly') },
   ];
@@ -80,8 +89,11 @@ export default function AdminTrafficSources() {
       </div>
     );
 
-  if (tab === 'weekly' || tab === 'monthly') {
-    const points = tab === 'weekly' ? trend?.weekly : trend?.monthly;
+  if (tab === 'daily' || tab === 'weekly' || tab === 'monthly') {
+    const granularity: TrendGranularity = tab === 'daily' ? 'day' : tab === 'weekly' ? 'week' : 'month';
+    const range = trendRanges[granularity];
+    const allPoints = tab === 'daily' ? trend?.daily : tab === 'weekly' ? trend?.weekly : trend?.monthly;
+    const points = allPoints?.slice(-range);
     return (
       <div>
         {tabStrip}
@@ -90,12 +102,17 @@ export default function AdminTrafficSources() {
         ) : (
           <TrafficTrendChart
             data={points ?? []}
-            granularity={tab === 'weekly' ? 'week' : 'month'}
+            granularity={granularity}
+            range={range}
+            rangeOptions={RANGE_OPTIONS[granularity]}
+            onRangeChangeAction={(nextRange) =>
+              setTrendRanges((current) => ({ ...current, [granularity]: nextRange }))
+            }
             campaignTags={trend.campaignTags}
             viewMode={trendView}
-            onViewModeChange={setTrendView}
+            onViewModeChangeAction={setTrendView}
             source={trendSource}
-            onSourceChange={setTrendSource}
+            onSourceChangeAction={setTrendSource}
           />
         )}
       </div>
