@@ -81,6 +81,12 @@ Paste-driven bulk add/update UI for database rows (`BulkRowsDialog.tsx`, `bulkCr
 
 ---
 
+## Prior task (Codex, done — merged in from origin/master)
+
+Added the public blog article "How to Connect OpenAI Codex to Remnus with MCP" (`docs/blog/connect-openai-codex-to-remnus-mcp.md`, registered in `src/lib/content/manifest.ts`, listed in `docs/blog/README.md`). Verified: word count, `npm run lint`/`tsc`, rendered HTML structure, and live link checks (Remnus pages 200, official OpenAI docs resolved, `/api/mcp` returned expected 401). Not committed/pushed by that session — landed on `origin/master` via commits `ee11bdb`/`1eb97b9`, merged into this branch alongside the bulk-import/id-column work above.
+
+---
+
 ## Prior task (separate, pending user verification — not touched this session)
 
 Tauri desktop "Show in folder" download-toast bug: root cause identified as missing Tauri v2 ACL permissions for custom Rust commands on the remote-origin webview. Fixed via `src-tauri/permissions/app-commands.toml` (new) + `src-tauri/capabilities/default.json`, version bumped to 0.1.15 and tagged/pushed. Could not compile-verify (no Rust toolchain on this machine) — the bare vs. `remnus-app:`-prefixed permission-identifier syntax is unconfirmed. Awaiting the user's build/test result; if the build fails with an "unknown permission" ACL error, retry with the `remnus-app:` prefix. See git history (`v0.1.15` tag) for full detail if picking this back up.
