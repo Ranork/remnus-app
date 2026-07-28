@@ -1,14 +1,3 @@
-## SEO Metadata
-
-- **Title tag:** How to Connect OpenAI Codex to Remnus with MCP
-- **Meta description:** Connect OpenAI Codex to a Remnus MCP workspace for requirements, tasks, decisions, documentation, status reports, and durable agent memory.
-- **Slug:** `connect-openai-codex-to-remnus-mcp`
-- **Primary keyword:** Codex MCP server
-- **Secondary keywords:** OpenAI Codex MCP, Codex Remnus, Codex workspace, connect Codex to MCP
-- **Search intent:** Practical setup guide for developers connecting local Codex clients to a remote MCP workspace
-- **Featured image concept:** A terminal running Codex beside a Remnus project board, joined by a clear MCP connection line
-- **Alt text:** OpenAI Codex connected to a Remnus workspace through an MCP server
-
 Codex can inspect a repository, edit files, run commands, and verify changes. It cannot automatically know the requirements, backlog, architecture decisions, or project history that live outside that repository.
 
 Connecting Codex to [Remnus](https://remnus.com) through the Model Context Protocol (MCP) gives it a structured external workspace. Codex can search requirements, query task databases, update work, and save decisions for the next session or agent. Your team sees the same data in the Remnus UI.

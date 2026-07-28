@@ -34,12 +34,12 @@ Add the English article "How to Connect OpenAI Codex to Remnus with MCP" to the 
 
 - Scoped the guide to local Codex CLI and IDE-extension clients, explicitly excluding ChatGPT web connectors, the OpenAI API, the Codex SDK, and Codex cloud.
 - Used the current CLI-first OAuth setup (`codex mcp add ... --url` + `codex mcp login`) and retained project `config.toml` plus PAT environment-variable configuration as alternatives.
-- Kept the requested SEO Metadata section in the article body. The route supplies the H1 from manifest metadata, so the Markdown body does not duplicate it.
+- Kept reader-visible SEO production notes out of the Markdown body; the route supplies the title and meta description from manifest metadata.
 - No dedicated multi-agent workspace article is published; linked the current MCP-native workspace article, which covers the shared/multi-agent model.
 
 ## Verification
 
-- Article word count: 2,173 words including SEO metadata (target 1,600–2,200).
+- Article word count: 2,071 words (target 1,600–2,200).
 - `npm run lint -- src/lib/content/manifest.ts` passed.
 - `npx tsc --noEmit` passed.
 - `getBlogPost('connect-openai-codex-to-remnus-mcp')` rendered 18,134 HTML characters, 13 H2s, 16 H3s, and an 11-minute reading time.
