@@ -269,7 +269,7 @@ export default function KanbanBoard({
         const isOver = dragOverGroup === columnName;
         const groupBgStyle = groupColBg
           ? (isUncategorized
-              ? { backgroundColor: 'rgba(56, 59, 65, 0.08)' }
+              ? { backgroundColor: 'var(--database-muted-group-bg, rgba(56, 59, 65, 0.08))' }
               : { backgroundColor: getOptionColorByValue(groupColumn?.options || [], columnName).groupBg })
           : undefined;
 
@@ -299,9 +299,9 @@ export default function KanbanBoard({
                 }
               }}
               onMouseUp={() => setIsGroupDragReady(null)}
-              className={`pb-2 mb-2 flex justify-between items-baseline ${
-                hasBg ? 'border-b border-white/8' : 'border-b border-neutral-800/50'
-              } ${!isUncategorized ? 'cursor-grab active:cursor-grabbing' : ''}`}
+              className={`pb-2 mb-2 flex justify-between items-baseline border-b border-neutral-800/60 ${
+                !isUncategorized ? 'cursor-grab active:cursor-grabbing' : ''
+              }`}
             >
               <h3 className="text-xs font-medium uppercase tracking-wider text-neutral-400">
                 {isUncategorized ? t('uncategorized') : columnName}
@@ -348,12 +348,12 @@ export default function KanbanBoard({
                     onDragOver={(e) => handleCardDragOver(e, page.id, columnName)}
                     onDrop={(e) => handleCardDrop(e, page.id, columnName)}
                     onDragEnd={handleCardDragEnd}
-                    className={`relative py-3 px-3 mb-1.5 cursor-pointer transition-colors group rounded
+                    className={`database-card relative py-3 px-3 mb-1.5 cursor-pointer transition-colors group rounded
                       ${isCardEditing ? 'overflow-visible z-30' : 'overflow-hidden'}
                       ${draggedCardId === page.id ? 'opacity-25' : ''}
                       ${dragOverCardId === page.id ? 'border-t-2 border-t-blue-500/60' : ''}
                     `}
-                    style={{ backgroundColor: bgColor ?? 'rgba(64,68,75,0.55)' }}
+                    style={{ backgroundColor: bgColor ?? 'var(--database-card-bg, rgba(64,68,75,0.55))' }}
                   >
                     {borderDots.length > 0 && (
                       <div className={`${borderLineClass} pointer-events-none`} aria-hidden>

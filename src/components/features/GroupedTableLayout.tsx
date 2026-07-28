@@ -100,7 +100,7 @@ export default function GroupedTableLayout({
         const isOver = dragOverGroup === groupName;
         const groupBgStyle = groupColBg
           ? (isUncategorized
-              ? { backgroundColor: 'rgba(56, 59, 65, 0.08)' }
+              ? { backgroundColor: 'var(--database-muted-group-bg, rgba(56, 59, 65, 0.08))' }
               : { backgroundColor: getOptionColorByValue(groupColumn?.options || [], groupName).groupBg })
           : undefined;
 
@@ -119,7 +119,7 @@ export default function GroupedTableLayout({
                 setDraggedGroup(null);
                 setDragOverGroup(null);
               }}
-              className={`mb-3 flex items-center border-b pb-2.5 ${groupColBg ? 'border-white/8' : 'border-neutral-800/50'}`}
+              className="mb-3 flex items-center border-b border-neutral-800/60 pb-2.5"
             >
               <div className={`flex items-center gap-2.5 min-w-0 ${!isUncategorized ? 'cursor-grab active:cursor-grabbing' : ''}`}>
                 {!isUncategorized && <GripVertical size={15} className="text-neutral-600 shrink-0" />}

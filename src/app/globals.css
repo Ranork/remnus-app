@@ -271,19 +271,19 @@
 /* ── Catppuccin (clean light) ─────────────────────────────────────────────── */
 [data-theme="catppuccin"] {
   --background: #ffffff;
-  --foreground: #111827;
-  --color-neutral-950: #edf2f7;   /* body frame       */
-  --color-neutral-900: #f7f8fa;   /* sidebar          */
+  --foreground: #101828;
+  --color-neutral-950: #f1f3f6;   /* body frame       */
+  --color-neutral-900: #f8f9fb;   /* sidebar          */
   --color-neutral-850: #ffffff;   /* content canvas   */
-  --color-neutral-800: #e2e8f0;   /* borders          */
-  --color-neutral-700: #d1d8e3;   /* hover bg         */
-  --color-neutral-600: #64748b;   /* muted text / icons — clearly readable */
-  --color-neutral-500: #94a3b8;   /* placeholder / very muted */
-  --color-neutral-400: #7b8fa6;   /* secondary muted  */
-  --color-neutral-300: #5a6a7e;   /* secondary text   */
-  --color-neutral-200: #374151;   /* body text        */
+  --color-neutral-800: #e3e7ed;   /* borders          */
+  --color-neutral-700: #d5dae2;   /* stronger hover   */
+  --color-neutral-600: #8792a2;   /* quiet controls   */
+  --color-neutral-500: #768296;   /* placeholder      */
+  --color-neutral-400: #667085;   /* secondary muted  */
+  --color-neutral-300: #4b5565;   /* secondary text   */
+  --color-neutral-200: #344054;   /* body text        */
   --color-neutral-100: #1f2937;   /* subheadings      */
-  --color-neutral-50:  #111827;   /* primary text     */
+  --color-neutral-50:  #101828;   /* primary text     */
   --color-blue-300: #93c5fd;
   --color-blue-400: #60a5fa;
   --color-blue-500: #2563eb;
@@ -294,10 +294,14 @@
   --color-green-500: #15803d;
   --color-amber-400: #d97706;
   --color-amber-500: #b45309;
-  --color-dim:    #64748b;
-  --color-dimmer: #94a3b8;
-  --color-border-soft:   #e2e8f0;
+  --color-dim:    #667085;
+  --color-dimmer: #98a2b3;
+  --color-border-soft:   #edf0f4;
   --color-accent-strong: #2563eb;
+  --database-card-bg: #ffffff;
+  --database-muted-group-bg: #f4f6f8;
+  --code-block-fade-start: rgba(248,249,251,0);
+  --code-block-fade-mid: rgba(248,249,251,0.82);
 
   /* select/multi-select chip colors — soft tints for light bg */
   --chip-default-bg:    #f1f5f9; --chip-default-text: #475569; --chip-default-dot: #94a3b8; --chip-default-group: rgba(148,163,184,0.12);
@@ -311,7 +315,7 @@
   --chip-pink-bg:       #fce7f3; --chip-pink-text:    #831843; --chip-pink-dot:    #db2777; --chip-pink-group:    rgba(219,39,119,0.08);
 }
 
-[data-theme="catppuccin"] ::-webkit-scrollbar-track { background: #edf2f7; }
+[data-theme="catppuccin"] ::-webkit-scrollbar-track { background: #f1f3f6; }
 [data-theme="catppuccin"] ::-webkit-scrollbar-thumb { background: #c1cad6; border-radius: 4px; }
 [data-theme="catppuccin"] ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
@@ -429,6 +433,45 @@
 [data-theme="catppuccin"] .modal-shadow {
   box-shadow: 0 8px 32px -4px rgba(76, 79, 105, 0.14), 0 2px 8px -2px rgba(76, 79, 105, 0.08);
 }
+
+[data-theme="catppuccin"] .workspace-root-active {
+  box-shadow: inset 0 0 0 1px var(--color-neutral-800);
+}
+
+[data-theme="catppuccin"] .workspace-item-active {
+  background: color-mix(in srgb, var(--color-blue-500) 7%, white);
+  box-shadow: inset 2px 0 var(--color-blue-500);
+}
+
+[data-theme="catppuccin"] .database-card {
+  border: 1px solid var(--color-neutral-800);
+  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.035);
+}
+
+/* Neutral controls that intentionally use white ink in dark mode need dark
+   ink on the same token-backed surfaces in light mode. Semantic color buttons
+   (primary, success, destructive) keep their white labels. */
+[data-theme="catppuccin"] .bg-neutral-700.text-white,
+[data-theme="catppuccin"] .bg-neutral-800.text-white,
+[data-theme="catppuccin"] .bg-neutral-900.text-white,
+[data-theme="catppuccin"] .bg-neutral-950.text-white {
+  color: var(--color-neutral-100);
+}
+
+[data-theme="catppuccin"] .hover\:bg-neutral-700.hover\:text-white:hover,
+[data-theme="catppuccin"] .hover\:bg-neutral-800.hover\:text-white:hover,
+[data-theme="catppuccin"] .hover\:bg-neutral-850.hover\:text-white:hover {
+  color: var(--color-neutral-100);
+}
+
+[data-theme="catppuccin"] .border-blue-500.text-white {
+  color: var(--color-blue-500);
+}
+
+[data-theme="catppuccin"] .scheme-dark {
+  color-scheme: light;
+}
+
 @media (min-width: 640px) {
   .sm\:modal-shadow { box-shadow: 0 0 50px -12px rgba(0,0,0,0.8); }
   [data-theme="catppuccin"] .sm\:modal-shadow {
@@ -734,8 +777,8 @@ pre,
   border-radius: 0 0 8px 8px;
   background: linear-gradient(
     to bottom,
-    rgba(33, 37, 43, 0) 0%,
-    rgba(33, 37, 43, 0.7) 45%,
+    var(--code-block-fade-start, rgba(33, 37, 43, 0)) 0%,
+    var(--code-block-fade-mid, rgba(33, 37, 43, 0.7)) 45%,
     var(--color-neutral-900) 100%
   );
 }

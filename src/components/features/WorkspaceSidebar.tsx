@@ -987,7 +987,7 @@ export default function WorkspaceSidebar({
                 onDrop={(e) => handleWorkspaceItemDropOnRoot(e, w.id)}
                 className={`flex items-center justify-between px-2 py-1.5 rounded-lg text-sm transition-all group/root cursor-pointer ${
                   isCurrentActive
-                    ? 'bg-neutral-850 text-neutral-50 font-medium shadow-sm'
+                    ? 'workspace-root-active bg-neutral-850 text-neutral-50 font-medium shadow-sm'
                     : 'text-neutral-400 hover:bg-neutral-850/50 hover:text-neutral-200'
                 } ${
                   dragOverWorkspaceForItemId === w.id
@@ -1111,7 +1111,7 @@ export default function WorkspaceSidebar({
                           <div
                             className={`flex items-center gap-1.5 min-w-0 px-2 ${density === 'compact' ? 'py-1' : 'py-1.5'} rounded-md text-sm transition-all duration-200 group/item cursor-pointer relative ${
                               isActive(item)
-                                ? 'bg-neutral-850 text-neutral-50 font-medium'
+                                ? 'workspace-item-active bg-neutral-850 text-neutral-50 font-medium'
                                 : 'text-neutral-400 hover:bg-neutral-850/50 hover:text-neutral-200'
                             } ${isLoading ? 'opacity-40 pointer-events-none' : ''} ${
                               isItemDragged ? 'opacity-30 animate-pulse' : ''

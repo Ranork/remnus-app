@@ -7,10 +7,11 @@ import { useTranslations } from 'next-intl';
 import { createPage, getPage, deletePage, duplicatePage, reorderPages, updatePageProperties } from '@/lib/actions/page';
 import { updateDatabaseViews } from '@/lib/actions/database';
 import { updateWorkspaceItemIcon, updateWorkspaceItemTitle } from '@/lib/actions/workspace';
-import { Plus, Settings, Columns3, Filter, ArrowUpDown, X, Maximize2, Database, ArrowLeftRight, MoreHorizontal, Trash2, Copy, ChevronLeft, RefreshCw } from 'lucide-react';
+import { Plus, Settings, Columns3, Filter, ArrowUpDown, X, Maximize2, Database, ArrowLeftRight, MoreHorizontal, Trash2, Copy, ChevronLeft, RefreshCw, ClipboardList } from 'lucide-react';
 import TableLayout from './TableLayout';
 import GroupedTableLayout from './GroupedTableLayout';
 import { ConfirmDialog } from './ConfirmDialog';
+import { BulkRowsDialog } from './BulkRowsDialog';
 import KanbanBoard from './KanbanBoard';
 import CalendarView from './CalendarView';
 import ViewsBar from './ViewsBar';
@@ -64,11 +65,15 @@ const SIDE_PEEK_MAX_WIDTH = 1100;
 const SIDE_PEEK_DEFAULT_WIDTH = 772; // previous fixed max-w-2xl (672px) + 100px
 const SIDE_PEEK_WIDTH_STORAGE_KEY = 'remnus_side_peek_width';
 
-function defaultTableView(name = 'Table'): DatabaseView {
+// The `id` column (row's real primary key) is always seeded into new databases but
+// starts hidden — it's a precision tool (e.g. targeting exact rows in bulk update),
+// not something most people need visible in every table view.
+function defaultTableView(schema: any[], name = 'Table'): DatabaseView {
+  const hasIdColumn = schema.some((c: any) => c.type === 'id');
   return {
     id: uid(),
     name,
-    config: { type: 'table', columnOrder: [], hiddenColumns: [], filters: [], sorts: [], openBehavior: 'center' },
+    config: { type: 'table', columnOrder: [], hiddenColumns: hasIdColumn ? ['id'] : [], filters: [], sorts: [], openBehavior: 'center' },
   };
 }
 
@@ -297,6 +302,7 @@ export default function DatabaseView({
   const router = useRouter();
   const tabNav = useTabNav();
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
 
   const handleManualRefresh = useCallback(() => {
     setIsRefreshing(true);
@@ -385,7 +391,7 @@ export default function DatabaseView({
   const [views, setViews] = useState<DatabaseView[]>(() => {
     const saved = database.views as DatabaseView[] | null | undefined;
     if (Array.isArray(saved) && saved.length > 0) return saved;
-    return [defaultTableView()];
+    return [defaultTableView(schema)];
   });
 
   const [activeViewId, setActiveViewId] = useState(() => views[0].id);
@@ -751,7 +757,7 @@ export default function DatabaseView({
     
     let newView: DatabaseView;
     if (type === 'table') {
-      newView = defaultTableView(name);
+      newView = defaultTableView(schema, name);
     } else if (type === 'kanban') {
       newView = defaultKanbanView(schema, name);
     } else {
@@ -1067,6 +1073,15 @@ export default function DatabaseView({
             <Settings size={13} /> {t('settings')}
           </button>
 
+          {/* Bulk add/update — hidden on mobile, paste-driven multi-row add/update */}
+          <button
+            onClick={() => setBulkDialogOpen(true)}
+            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs text-neutral-500 hover:text-neutral-200 transition-colors cursor-pointer rounded"
+            title={t('bulkImport.button')}
+          >
+            <ClipboardList size={13} />
+          </button>
+
           {/* New Page button — hidden on mobile (available via bottom nav) */}
           <button
             onClick={handleHeaderNewClick}
@@ -1077,6 +1092,14 @@ export default function DatabaseView({
           </button>
         </div>
       </div>
+
+      {bulkDialogOpen && (
+        <BulkRowsDialog
+          databaseId={database.id}
+          schema={schema}
+          onClose={() => setBulkDialogOpen(false)}
+        />
+      )}
 
       {/* Content + Sidebar Area */}
       <div className="flex-1 flex gap-4 relative pt-4 pb-8 min-w-0 overflow-hidden">

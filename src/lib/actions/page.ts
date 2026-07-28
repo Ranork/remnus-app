@@ -9,6 +9,19 @@ import { publish } from '@/lib/realtime/publish';
 import { isCloudinaryUrl, deleteCloudinaryImage } from '@/lib/cloudinary';
 import { recordDeletionTombstone } from '@/lib/services/workspace';
 import { syncPageLinks, removePageLinksFor, purgeReferencesTo } from '@/lib/services/pageLinks';
+import { coerceRowValues, assignOptionColors, type DatabaseColumn } from '@/lib/utils/propertyCoercion';
+
+const MAX_BULK_ROWS = 500;
+
+function getSchemaDefaults(schema: DatabaseColumn[]): Record<string, any> {
+  const defaults: Record<string, any> = {};
+  for (const col of schema) {
+    if ((col.type === 'select' || col.type === 'status') && col.defaultValue) {
+      defaults[col.id] = col.defaultValue;
+    }
+  }
+  return defaults;
+}
 
 // Verify user has access to the workspace that owns this database.
 // Returns { userId, workspaceId } so callers can emit realtime events.
@@ -239,4 +252,179 @@ export async function updatePageIcon(id: string, icon: string | null, iconColor:
   revalidatePath(`/db/${page[0].databaseId}`);
   revalidatePath(`/db/${page[0].databaseId}/${id}`);
   publish({ scope: 'database', workspaceId, resourceId: page[0].databaseId, actorId: userId });
+}
+
+// ── Bulk add / update (paste-driven, for fast web-based bulk entry) ───────────────
+
+export interface BulkAddedOption {
+  column: string;
+  values: string[];
+}
+
+export async function bulkCreatePages(
+  databaseId: string,
+  rows: Record<string, unknown>[],
+): Promise<{ created: number; errors: { row: number; message: string }[]; addedOptions: BulkAddedOption[] }> {
+  const { userId, workspaceId } = await assertDatabaseAccess(databaseId);
+
+  if (!rows.length) return { created: 0, errors: [], addedOptions: [] };
+  if (rows.length > MAX_BULK_ROWS) throw new Error(`Too many rows: max ${MAX_BULK_ROWS} per import`);
+
+  const [dbRecord] = await db.select({ schema: databases.schema }).from(databases).where(eq(databases.id, databaseId)).limit(1);
+  if (!dbRecord) throw new Error('Database not found');
+  const schema = (dbRecord.schema ?? []) as DatabaseColumn[];
+  const schemaDefaults = getSchemaDefaults(schema);
+
+  const existing = await db.select({ sortOrder: pages.sortOrder }).from(pages).where(eq(pages.databaseId, databaseId));
+  let nextSort = existing.reduce((max, p) => (p.sortOrder > max ? p.sortOrder : max), 0);
+
+  const errors: { row: number; message: string }[] = [];
+  const newOptionsByColumn = new Map<string, Set<string>>();
+  const toInsert: (typeof pages.$inferInsert)[] = [];
+  const now = new Date();
+
+  rows.forEach((rawRow, idx) => {
+    const { properties, newOptionsByColumn: rowOptions } = coerceRowValues(schema, rawRow as Record<string, string>);
+    const title = typeof properties.title === 'string' ? (properties.title as string).trim() : '';
+    if (!title) {
+      errors.push({ row: idx, message: 'Missing title' });
+      return;
+    }
+    for (const [colId, values] of rowOptions) {
+      const set = newOptionsByColumn.get(colId) ?? new Set<string>();
+      values.forEach((v) => set.add(v));
+      newOptionsByColumn.set(colId, set);
+    }
+    nextSort += 1;
+    toInsert.push({
+      id: crypto.randomUUID(),
+      databaseId,
+      title,
+      content: '',
+      properties: { ...schemaDefaults, ...properties, title },
+      sortOrder: nextSort,
+      createdAt: now,
+      updatedAt: now,
+    });
+  });
+
+  const addedOptions: BulkAddedOption[] = [];
+
+  await db.transaction(async (tx) => {
+    if (newOptionsByColumn.size > 0) {
+      const nextSchema = schema.map((col) => {
+        const additions = newOptionsByColumn.get(col.id);
+        if (!additions || additions.size === 0) return col;
+        const values = [...additions];
+        addedOptions.push({ column: col.name, values });
+        return { ...col, options: [...(col.options ?? []), ...assignOptionColors(values)] };
+      });
+      await tx.update(databases).set({ schema: nextSchema, updatedAt: now }).where(eq(databases.id, databaseId));
+    }
+    if (toInsert.length > 0) {
+      await tx.insert(pages).values(toInsert);
+    }
+  });
+
+  if (toInsert.length > 0) {
+    revalidatePath(`/db/${databaseId}`);
+    publish({ scope: 'database', workspaceId, resourceId: databaseId, actorId: userId });
+  }
+
+  return { created: toInsert.length, errors, addedOptions };
+}
+
+export async function bulkUpdatePagesByMatch(
+  databaseId: string,
+  matchColumnId: string,
+  rows: Record<string, unknown>[],
+): Promise<{ updated: number; unmatched: number[]; errors: { row: number; message: string }[]; addedOptions: BulkAddedOption[] }> {
+  const { userId, workspaceId } = await assertDatabaseAccess(databaseId);
+
+  if (!rows.length) return { updated: 0, unmatched: [], errors: [], addedOptions: [] };
+  if (rows.length > MAX_BULK_ROWS) throw new Error(`Too many rows: max ${MAX_BULK_ROWS} per import`);
+
+  const [dbRecord] = await db.select({ schema: databases.schema }).from(databases).where(eq(databases.id, databaseId)).limit(1);
+  if (!dbRecord) throw new Error('Database not found');
+  const schema = (dbRecord.schema ?? []) as DatabaseColumn[];
+  const matchCol = schema.find((c) => c.id === matchColumnId);
+  if (!matchCol) throw new Error('Match column not found in schema');
+
+  const existingRows = await db
+    .select({ id: pages.id, title: pages.title, properties: pages.properties })
+    .from(pages)
+    .where(eq(pages.databaseId, databaseId));
+
+  const matchValueOf = (id: string, title: string, properties: Record<string, any>): string => {
+    if (matchCol.type === 'id') return id.toLowerCase();
+    const v = matchColumnId === 'title' ? title : properties?.[matchColumnId];
+    return typeof v === 'string' ? v.trim().toLowerCase() : '';
+  };
+
+  const byMatch = new Map<string, string>();
+  const existingById = new Map<string, { title: string; properties: Record<string, any> }>();
+  for (const p of existingRows) {
+    const properties = (p.properties ?? {}) as Record<string, any>;
+    existingById.set(p.id, { title: p.title, properties });
+    const key = matchValueOf(p.id, p.title, properties);
+    if (key) byMatch.set(key, p.id);
+  }
+
+  const errors: { row: number; message: string }[] = [];
+  const unmatched: number[] = [];
+  const newOptionsByColumn = new Map<string, Set<string>>();
+  const updates: { pageId: string; properties: Record<string, unknown> }[] = [];
+
+  rows.forEach((rawRow, idx) => {
+    const { properties, rawByColumnId, newOptionsByColumn: rowOptions } = coerceRowValues(schema, rawRow as Record<string, string>);
+    const rawMatch = matchCol.type === 'id' ? rawByColumnId[matchColumnId] : properties[matchColumnId];
+    const key = typeof rawMatch === 'string'
+      ? rawMatch.trim().toLowerCase()
+      : (rawMatch != null ? String(rawMatch).toLowerCase() : '');
+    if (!key) {
+      errors.push({ row: idx, message: 'Missing match value' });
+      return;
+    }
+    const pageId = byMatch.get(key);
+    if (!pageId) {
+      unmatched.push(idx);
+      return;
+    }
+    for (const [colId, values] of rowOptions) {
+      const set = newOptionsByColumn.get(colId) ?? new Set<string>();
+      values.forEach((v) => set.add(v));
+      newOptionsByColumn.set(colId, set);
+    }
+    updates.push({ pageId, properties });
+  });
+
+  const addedOptions: BulkAddedOption[] = [];
+  const now = new Date();
+
+  await db.transaction(async (tx) => {
+    if (newOptionsByColumn.size > 0) {
+      const nextSchema = schema.map((col) => {
+        const additions = newOptionsByColumn.get(col.id);
+        if (!additions || additions.size === 0) return col;
+        const values = [...additions];
+        addedOptions.push({ column: col.name, values });
+        return { ...col, options: [...(col.options ?? []), ...assignOptionColors(values)] };
+      });
+      await tx.update(databases).set({ schema: nextSchema, updatedAt: now }).where(eq(databases.id, databaseId));
+    }
+    for (const u of updates) {
+      const existingPage = existingById.get(u.pageId);
+      if (!existingPage) continue;
+      const mergedProperties = { ...existingPage.properties, ...u.properties };
+      const nextTitle = typeof u.properties.title === 'string' ? (u.properties.title as string) : existingPage.title;
+      await tx.update(pages).set({ title: nextTitle, properties: mergedProperties, updatedAt: now }).where(eq(pages.id, u.pageId));
+    }
+  });
+
+  if (updates.length > 0) {
+    revalidatePath(`/db/${databaseId}`);
+    publish({ scope: 'database', workspaceId, resourceId: databaseId, actorId: userId });
+  }
+
+  return { updated: updates.length, unmatched, errors, addedOptions };
 }

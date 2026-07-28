@@ -4,6 +4,7 @@ export interface SchemaColumn {
   id: string;
   name: string;
   type:
+    | 'id'
     | 'text'
     | 'number'
     | 'select'
@@ -141,6 +142,7 @@ A next-generation analytics dashboard that helps teams track key metrics in real
         type: 'select',
         options: ['To Do', 'In Progress', 'Done'],
       },
+      { id: 'id', name: 'ID', type: 'id' },
     ],
     views: [
       {
@@ -149,7 +151,7 @@ A next-generation analytics dashboard that helps teams track key metrics in real
         config: {
           type: 'table',
           columnOrder: [],
-          hiddenColumns: [],
+          hiddenColumns: ['id'],
           filters: [],
           sorts: [],
           openBehavior: 'center',

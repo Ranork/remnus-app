@@ -626,7 +626,8 @@ export default function TableLayout({
                     const isEditing = editingCell?.pageId === page.id && editingCell?.colId === col.id;
                     const handleCellClick = (e: React.MouseEvent) => {
                       // Touch: let the click bubble to the row → opens the peek modal.
-                      if (col.id === 'title' || isCoarsePointer) return;
+                      // `id` columns show the row's real (immutable) primary key — never editable.
+                      if (col.id === 'title' || col.type === 'id' || isCoarsePointer) return;
                       e.stopPropagation();
                       setEditingCell({ pageId: page.id, colId: col.id });
                     };
@@ -702,6 +703,8 @@ export default function TableLayout({
                               />
                             )}
                           </div>
+                        ) : col.type === 'id' ? (
+                          <span className="text-[11px] font-mono text-neutral-500 truncate select-text" title={page.id}>{page.id}</span>
                         ) : col.type === 'select' ? (
                           val ? (() => {
                             const c = getOptionColorByValue(col.options || [], val);

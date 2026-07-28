@@ -438,6 +438,7 @@ export async function createWorkspaceDatabase(
     schema: options?.schema ?? [
       { id: 'title', name: 'Title', type: 'text' },
       { id: 'status', name: 'Status', type: 'select', options: ['To Do', 'In Progress', 'Done'] },
+      { id: 'id', name: 'ID', type: 'id' },
     ],
     views: options?.views ?? null,
     createdAt: now,

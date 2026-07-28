@@ -1274,12 +1274,16 @@ export async function createDatabaseInWorkspace(
     : [
         { id: 'title', name: 'Title', type: 'text' },
         { id: 'status', name: 'Status', type: 'select', options: ['To Do', 'In Progress', 'Done'] },
+        { id: 'id', name: 'ID', type: 'id' },
       ];
 
   const resolvedSchema = normalizeSchemaColumns(rawSchema);
 
   if (!resolvedSchema.some((c: any) => c.id === 'title')) {
     resolvedSchema.unshift({ id: 'title', name: 'Title', type: 'text' });
+  }
+  if (!resolvedSchema.some((c: any) => c.id === 'id')) {
+    resolvedSchema.push({ id: 'id', name: 'ID', type: 'id' });
   }
 
   const now = new Date();

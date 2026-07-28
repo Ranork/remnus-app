@@ -1,10 +1,11 @@
 'use client';
 
 import { useState } from 'react';
-import { Type, List, Tags, Hash, Calendar, Clock, AlignLeft, CheckSquare, CircleDashed, User, Users, Link, Mail, Phone, ChevronDown } from 'lucide-react';
+import { Type, List, Tags, Hash, Calendar, Clock, AlignLeft, CheckSquare, CircleDashed, User, Users, Link, Mail, Phone, ChevronDown, Fingerprint } from 'lucide-react';
 
 export function getPropertyIcon(type: string) {
   switch (type) {
+    case 'id':           return <Fingerprint size={11} className="text-neutral-500 shrink-0" />;
     case 'text':         return <Type size={11} className="text-neutral-500 shrink-0" />;
     case 'select':       return <List size={11} className="text-neutral-500 shrink-0" />;
     case 'multi_select': return <Tags size={11} className="text-neutral-500 shrink-0" />;

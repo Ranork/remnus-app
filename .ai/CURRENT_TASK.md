@@ -2,7 +2,7 @@
 
 ## Status
 
-Bumped to 0.1.15, tagged `v0.1.15`, pushed to `origin/master` — GitHub Actions `tauri-release.yml` builds and PUBLISHES a real (non-draft, non-prerelease) GitHub Release for Windows/macOS/Linux on tag push. Awaiting user to download and test the Windows build (cannot compile/test locally — no Rust toolchain on this machine).
+Implemented, type-checked, linted. **Not browser-verified this round** — user asked to skip the Playwright check and said they'd verify it themselves.
 
 ## Active agent
 
@@ -14,49 +14,73 @@ master
 
 ## Goal
 
-Fix the long-standing Tauri desktop bug: after a download finishes, the toast's "Show in folder" button does nothing (no reaction at all). Three prior dedicated commits (`fc3fa28`, `fba4c62`, `f224506`) already hardened the Windows-side `explorer.exe /select,` logic in `reveal_download` without resolving it — user asked to test one more hypothesis before falling back to routing all downloads through the system browser (Notion-style).
-
-## Root cause found (via code reading only — no Rust toolchain available to compile-verify)
-
-The main window loads a **remote origin** (`https://remnus.com` / `http://localhost:3000` — see `WebviewWindowBuilder` in `src-tauri/src/lib.rs`), not bundled local assets. Tauri v2's ACL requires every invokable command — including the app's own `#[tauri::command]` functions, not just plugin commands — to be explicitly granted to a capability for a remote-origin webview. None of this app's 9 custom commands (`reveal_download`, `get_download_dir`, `pick_download_dir`, `reset_download_dir`, `quit_app`, `detect_installed_agents`, `write_agent_config`, `run_claude_connect`, `install_remnus_skill`) had any ACL permission entry — `src-tauri/capabilities/default.json` only listed plugin permissions (`opener:*`, `deep-link:*`, etc.), and no `src-tauri/permissions/` directory existed. So `invoke('reveal_download', ...)` was silently rejected by Tauri before the Rust handler (which is itself correct) ever ran — this is why "no reaction at all" matches exactly, and why the Windows-side fixes in prior commits never helped (they fixed a layer that was never reached).
-
-This exact root cause was already independently discovered and documented in a comment in `src/components/features/editor/FileBlockView.tsx` (its own download button routes around `reveal_download` entirely via a signed URL + system browser, specifically because of this ACL block) — but the generic `DownloadToast.tsx` blob:/data: fallback path was never fixed the same way.
+Expose each database row's real primary key (`pages.id`, currently invisible) as a schema column so it can be shown in the table and — critically — used as a precise match key in the bulk-update feature (see prior task below), instead of relying on Title (which can have duplicates). Requirements from the user: immutable (never editable, never settable via paste), and hidden by default on new databases (toggleable back on via the existing "Toggle Columns" UI).
 
 ## Completed
 
-- Added `src-tauri/permissions/app-commands.toml` — 4 permission entries (`allow-reveal-download`, `allow-download-dir`, `allow-quit-app`, `allow-agent-connect`) covering all 9 custom commands.
-- Added those 4 identifiers (bare, unprefixed — my best-confidence reading of Tauri v2's convention for app-level, non-plugin permissions) to `src-tauri/capabilities/default.json`'s `permissions` array, in the same capability entry that already has `"remote": {"urls": [...]}"` scoping (so it should apply to the remote-loaded webview like the existing `opener:*` entries do).
-- Validated the edited `capabilities/default.json` is well-formed JSON.
+- **New column type `'id'`** (a synthetic/computed column — its value is always `page.id`, never stored in `pages.properties`):
+  - `src/lib/utils/propertyCoercion.ts` — `coerceRowValues` treats `id`-type columns like `user`/`multi_user` (never written), but now also returns `rawByColumnId` (every matched column's raw pasted value, keyed by column id) so callers can match on a non-writable column without needing a "written" value.
+  - `src/lib/actions/page.ts` — `bulkUpdatePagesByMatch` special-cases `matchCol.type === 'id'`: builds the match map directly from each existing row's real `pages.id` (not from `properties`), and reads the pasted match value from `rawByColumnId` instead of the coerced `properties`.
+  - `src/components/features/BulkRowsDialog.tsx` — new `isMatchableColumn` (excludes only `user`/`multi_user`) separate from `isWritableColumn` (also excludes `id`), so "ID" appears in the match-column dropdown despite never being written; when it's the active match column its pasted header is also treated as "matched" (not "ignored") in the preview.
+- **Seeded into new databases** (mirrors the existing `'title'`-guarantee pattern):
+  - `src/lib/actions/workspace.ts` (`createWorkspaceDatabase`) and `src/lib/services/workspace.ts` (`createDatabaseInWorkspace`) — both now include/guarantee an `{ id: 'id', name: 'ID', type: 'id' }` column in freshly-created schemas (covers: `/database` slash command, `SubItemsPanel` add-sub-item, MCP `create_database`, Notion import).
+  - `src/lib/templates.ts` — the **`db-blank` "Blank Database" template** (the actual "New Item" picker option a user reaches for a "normal" database — discovered during testing that it's a hardcoded template, not the schema-less code path) now also seeds the `id` column. Extended `SchemaColumn['type']` union to include `'id'`. The 4 other, more opinionated templates (Task Tracker, Event Calendar, Reading List, Agent Memory) were deliberately **not** touched — out of scope per "normal" database wording.
+- **Hidden by default**:
+  - `src/components/features/DatabaseView.tsx` — `defaultTableView(schema, name)` now takes `schema` and seeds `hiddenColumns: ['id']` when the column exists; both call sites (initial-views fallback, "add view" handler) updated.
+  - `src/lib/templates.ts` — `db-blank`'s Table view config sets `hiddenColumns: ['id']`.
+- **Immutable in the UI**:
+  - `src/components/features/TableLayout.tsx` — cell click handler no longer opens `InlineCellEditor` for `col.type === 'id'`; renders the real `page.id` directly (monospace, selectable/copyable text) instead of a (nonexistent) `properties.id` value. `GroupedTableLayout.tsx` needed no change — it wraps `TableLayout` per group.
+  - `src/components/features/database-sidebar/PropertiesPanel.tsx` — type dropdown is `disabled` for `id`-type columns (with a hidden `<option value="id">` so the disabled select still renders the right label instead of blank); rename and delete remain allowed (harmless, unlike Title).
+  - `src/components/features/database-sidebar/shared.tsx` — added a `Fingerprint` icon for the `id` type in `getPropertyIcon`.
+- i18n — added `Database.typeId` ("ID") to all 8 locale files, used by the now-locked type dropdown.
 
 ## Changed files
 
-- `src-tauri/permissions/app-commands.toml` (new)
-- `src-tauri/capabilities/default.json`
-- `package.json`, `src-tauri/Cargo.toml`, `src-tauri/Cargo.lock` (version bump 0.1.14 → 0.1.15, matching the convention of prior release commits like `fba4c62`)
+- `src/lib/utils/propertyCoercion.ts`
+- `src/lib/actions/page.ts`
+- `src/lib/actions/workspace.ts`
+- `src/lib/services/workspace.ts`
+- `src/lib/templates.ts`
+- `src/components/features/DatabaseView.tsx`
+- `src/components/features/TableLayout.tsx`
+- `src/components/features/BulkRowsDialog.tsx`
+- `src/components/features/database-sidebar/PropertiesPanel.tsx`
+- `src/components/features/database-sidebar/shared.tsx`
+- `messages/{en,tr,es,fr,de,zh,ru,hi}.json`
+
+## Decisions
+
+- `id`-type is **not** offered in the "Add property" type dropdown — it's exclusively system-seeded (one per database, fixed column id `'id'`), since its value is always `page.id` and doesn't make sense as a user-chosen/duplicable type.
+- **Not retroactive** — only newly-created databases (via the paths above) get the column. Existing databases (e.g. the demo workspace's "Sprint Board", used in the prior task's testing) do not have it and there's no migration/backfill; out of scope per the user's "yeni bir database açıldığında" (when a new database is created) wording.
+- Deletable (unlike Title) — removing the column from schema is harmless since `pages.id` always exists regardless of whether it's mirrored into `schema`.
+- Kanban/Calendar card-property rendering was **not** specially handled for `id` type (would show blank/dash if manually added to a card's visible properties) — low priority since the column is hidden by default and the feature's real use case is table + bulk-update targeting.
 
 ## Verification
 
-- **Could not compile-verify** — this machine has no Rust/Cargo toolchain installed (`cargo`/`rustc` not found via bash or PowerShell, no `~/.cargo/bin`). The exact ACL identifier-namespace syntax (bare identifier vs. a crate-name-prefixed one, e.g. `remnus-app:allow-reveal-download`) is my best recollection of Tauri v2's convention, not something I could confirm against a real build here.
-- Only checked: JSON validity of the edited capabilities file, and that the command names in the new permission file match the exact function names registered in `tauri::generate_handler![...]`.
+- `npx tsc --noEmit` — clean.
+- `npm run lint` on all changed files — 0 errors (pre-existing warnings only, none new).
+- **Browser verification was interrupted by the user** (asked to skip Playwright, will check manually) partway through — had confirmed the `id` column is correctly seeded and hidden-by-default on a freshly-created "Blank Database" (via Toggle Columns showing only Title/Status until the templates.ts fix, then not re-confirmed after that fix). **Still unverified in-browser**: the templates.ts fix itself (does "Blank Database" now show ID in Toggle Columns?), the read-only/locked rendering in the table cell and Properties panel, and using "ID" as the bulk-update match column end-to-end.
 
 ## Remaining work
 
-- User will build/run the Tauri app themselves (`npm run tauri:dev` or their normal flow) and test:
-  1. Does it build at all? If Tauri's ACL validation rejects the permission identifiers, it should fail loudly at build time with a clear "unknown permission" error — if so, the likely fix is prefixing the 4 identifiers with the Cargo package name (`remnus-app:allow-reveal-download` etc., `src-tauri/Cargo.toml` package name is `remnus-app`) instead of using them bare.
-  2. If it builds: trigger a blob:/data: download (something that still hits the in-app save+toast path, not an http(s) one already delegated to the system browser) and click "Show in folder" — does Explorer now open and select the file?
-  3. Bonus (same root cause, same fix): "Quit & Reopen" after an update download (`UpdateBanner.tsx`), and the AI-agent auto-connect/skill-install flow — these use `quit_app`/`detect_installed_agents`/`write_agent_config`/`run_claude_connect`/`install_remnus_skill`, which had the identical missing-ACL problem and should now also start working if the theory holds.
-- If this doesn't resolve it (or the user doesn't want to keep chasing the platform-specific ACL/Windows-Explorer angle), fall back to the previously-discussed plan: extend the already-proven browser-delegation pattern (signed URL + system browser, as `FileBlockView.tsx` already does) to cover the remaining blob:/data: download call sites, and remove the now-unnecessary `reveal_download`/download-dir Rust machinery.
+- User will verify manually. If something looks off, likely first places to check: `db-blank` template's schema/views in `src/lib/templates.ts`, and the `defaultTableView`/`getVisibleColumns` interaction in `DatabaseView.tsx`/`TableLayout.tsx`.
 
 ## Known issues
 
-- Namespace-prefix uncertainty noted above — this is the one part of the fix I'm not fully confident about without a compile check.
+None found by tsc/lint; browser behavior unconfirmed post-templates.ts-fix (see Verification).
 
 ## Next exact step
 
-Wait for the user's build/test result. If it's an ACL "unknown permission" build error, retry with the `remnus-app:` prefix on the 4 new identifiers instead of bare.
+Wait for the user's manual check. No commit made yet (commits are user-gated).
 
 ---
 
-## Prior task (separate, still pending user verification)
+## Prior task (done, browser-verified)
 
-A previous session in this same conversation fixed 4 unrelated database/editor bugs (schema live-sync, select-option-in-table-cell markdown copy, default select option). That work is done and type-checked but not yet confirmed working by the user in the browser. See git diff / conversation history for details — not re-summarized here to avoid this file growing unbounded; ask the user for status if picking this back up.
+Paste-driven bulk add/update UI for database rows (`BulkRowsDialog.tsx`, `bulkCreatePages`/`bulkUpdatePagesByMatch` in `page.ts`, `propertyCoercion.ts`, `parseTabularPaste.ts`) — lets a browser-automation agent (no MCP access) create/update many rows via paste + one click instead of one manual flow per row. Fully implemented, type-checked, linted, and manually verified in the browser (demo workspace "Sprint Board": add mode with new-option auto-creation, update mode with merge semantics and unmatched-row reporting). This task is what the "ID column" work above extends (ID is now available as a precise match-column choice in that same dialog).
+
+---
+
+## Prior task (separate, pending user verification — not touched this session)
+
+Tauri desktop "Show in folder" download-toast bug: root cause identified as missing Tauri v2 ACL permissions for custom Rust commands on the remote-origin webview. Fixed via `src-tauri/permissions/app-commands.toml` (new) + `src-tauri/capabilities/default.json`, version bumped to 0.1.15 and tagged/pushed. Could not compile-verify (no Rust toolchain on this machine) — the bare vs. `remnus-app:`-prefixed permission-identifier syntax is unconfirmed. Awaiting the user's build/test result; if the build fails with an "unknown permission" ACL error, retry with the `remnus-app:` prefix. See git history (`v0.1.15` tag) for full detail if picking this back up.

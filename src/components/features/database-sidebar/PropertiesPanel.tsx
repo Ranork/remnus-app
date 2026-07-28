@@ -64,6 +64,7 @@ export default function PropertiesPanel({
     <div className="flex flex-col">
       {schema.map((col, idx) => {
         const isTitle = col.id === 'title';
+        const isIdColumn = col.type === 'id';
         return (
           <div key={col.id}>
             <div className="flex items-center gap-2 px-3 py-2 border-b border-neutral-800/50 hover:bg-neutral-800/10 group transition-colors">
@@ -85,9 +86,10 @@ export default function PropertiesPanel({
                   const options = nextType === 'status' ? DEFAULT_STATUS_OPTIONS : [];
                   onUpdateColumn(idx, { type: nextType, options, defaultValue: undefined });
                 }}
-                disabled={isTitle}
+                disabled={isTitle || isIdColumn}
                 className={`${selectCls} text-neutral-400 py-1 px-1.5 shrink-0 disabled:opacity-40 w-28 cursor-pointer truncate`}
               >
+                {isIdColumn && <option value="id" hidden>{t('typeId')}</option>}
                 <option value="text">{t('typeText')}</option>
                 <option value="select">{t('typeSelect')}</option>
                 <option value="multi_select">{t('typeMultiSelect')}</option>

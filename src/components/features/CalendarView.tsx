@@ -429,10 +429,10 @@ export default function CalendarView({
                       onDragEnd={() => {
                         setDraggedCardId(null);
                       }}
-                      className={`relative py-1 lg:py-2.5 px-1 lg:px-2 cursor-pointer transition-colors group flex flex-col select-none overflow-hidden rounded ${
+                      className={`database-card relative py-1 lg:py-2.5 px-1 lg:px-2 cursor-pointer transition-colors group flex flex-col select-none overflow-hidden rounded ${
                         draggedCardId === page.id ? 'opacity-25' : ''
                       }`}
-                      style={{ backgroundColor: bgColor ?? 'rgba(64,68,75,0.55)' }}
+                      style={{ backgroundColor: bgColor ?? 'var(--database-card-bg, rgba(64,68,75,0.55))' }}
                     >
                       {borderDots.length > 0 && (
                         <div className={`${borderLineClass} pointer-events-none`} aria-hidden>
