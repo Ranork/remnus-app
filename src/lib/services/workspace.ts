@@ -1563,9 +1563,19 @@ export async function updatePageById(
   const updateData: Record<string, any> = { updatedAt: new Date() };
   if (patch.title !== undefined) updateData.title = patch.title;
   if (patch.content !== undefined) updateData.content = patch.content;
-  if (patch.properties !== undefined) {
-    const resolved = await resolvePropertiesBySchema(page.databaseId, patch.properties);
-    updateData.properties = { ...(page.properties ?? {}), ...resolved };
+  if (patch.title !== undefined || patch.properties !== undefined) {
+    // `title` is mirrored into `properties.title` too — table views render a row's
+    // name from `properties.title`, not `pages.title`, so writing only the former
+    // (as an MCP caller naturally would via `title:`) used to leave the visible
+    // title unchanged. An explicit `properties.title` in the same patch still wins.
+    const resolved = patch.properties !== undefined
+      ? await resolvePropertiesBySchema(page.databaseId, patch.properties)
+      : {};
+    updateData.properties = {
+      ...(page.properties ?? {}),
+      ...(patch.title !== undefined ? { title: patch.title } : {}),
+      ...resolved,
+    };
   }
   if (agentCtx) {
     updateData.agentEditedAt = new Date();

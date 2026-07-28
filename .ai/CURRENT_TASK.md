@@ -2,7 +2,7 @@
 
 ## Status
 
-Implemented, type-checked, linted. **Not browser-verified this round** — user asked to skip the Playwright check and said they'd verify it themselves.
+Done. Type-checked, linted. Not live-probed against a running server this round (user asked to skip Playwright/browser verification earlier in the session; kept the same posture here since these are small, well-understood MCP changes).
 
 ## Active agent
 
@@ -11,6 +11,42 @@ Claude Code
 ## Branch
 
 master
+
+## Goal
+
+Act on an external review doc (`remnus-mcp-oneriler.md`) of the MCP server, written by probing `initialize`/`tools/list`/`resources/list`/`prompts/list` directly. Verified each claim against the actual code (not taken at face value) before fixing anything — one claim (delete_page "looks like success") turned out to already be handled correctly, one (`create_database` "two titles") was a correct symptom attributed to the wrong function. Implemented the 4 fixes the user asked for.
+
+## Completed (this round)
+
+- `src/app/api/mcp/route.ts` — `new McpServer(...)` now passes `{ instructions: buildInstructions(ctx) }` as a second arg (previously omitted entirely, so `initialize` never returned an `instructions` field). `buildInstructions` is short and scope-aware: always points at `remnus://workspace/{id}/digest` for orientation and names `recall-context`/`save-memory` explicitly (the two prompts an agent couldn't discover without probing raw JSON-RPC); adds a write-semantics line only when `ctx.scope === 'write'`. Deliberately does **not** inline the full digest text — `getWorkspaceDigest` is one line per workspace item, unbounded, and would ride on every request.
+- `src/app/api/mcp/route.ts` — `json()` and `withMcpHeader()` now force `Content-Type: application/json; charset=utf-8`. Root cause was in the third-party MCP SDK's transport (`WebStandardStreamableHTTPServerTransport`), which replies with a bare `application/json`; fixed by normalizing the header on the way out instead of patching the SDK.
+- `src/lib/services/workspace.ts` (`updatePageById`) — **real bug, independently confirmed by tracing the code, not just taking the doc's word for it**: passing `title` to `update_page` updated `pages.title` but left `properties.title` untouched, and table views render a row's name from `properties.title` — so an MCP-driven rename silently didn't show up in the UI. Fixed by always syncing `title` into `properties.title` when either `title` or `properties` is patched; an explicit `properties.title` in the same call still wins over the plain `title` field.
+- `src/app/api/mcp/tools/write.ts` — enriched `create_page`/`update_page`/`bulk_update_pages` descriptions (previously 40-58 chars vs. 100-465 chars for their siblings in the same file). Now document the properties-merge semantics, the title-sync behavior above, and — accurately, not aspirationally — that `bulk_update_pages` is `Promise.all`-based: one invalid id fails the whole batch with no partial results (did not change this behavior, just stopped the description from implying otherwise).
+
+## Changed files (this round)
+
+- `src/app/api/mcp/route.ts`
+- `src/app/api/mcp/tools/write.ts`
+- `src/lib/services/workspace.ts`
+
+## Verification (this round)
+
+- `npx tsc --noEmit` — clean.
+- `npm run lint` on the 3 changed files — 0 errors (2 pre-existing unrelated warnings in `workspace.ts`).
+- Confirmed via SDK source (`node_modules/@modelcontextprotocol/sdk/dist/esm/server/index.d.ts` + `mcp.js`) that `McpServer`'s second constructor arg accepts `instructions` and passes it straight to the underlying `Server`.
+- Not re-verified live against a running MCP client this round (see Status).
+
+## Open question raised by the user (not yet actioned)
+
+Databases created **before** the `id`-column work (prior task below) don't have the column at all — expected/by-design (seeding only happens in the create paths, no backfill was built, deliberately, since it was scoped to "yeni bir database açıldığında"). Asked the user whether they want a backfill for existing databases; local `.env.local`'s `DATABASE_URL` looks like a short local file path (not a Turso remote URL, based on length only — didn't read the actual value), so a local backfill would be low-risk, but which environment(s) to target is their call before anything runs.
+
+## Next exact step
+
+Wait for the user's answer on the backfill question. No commit made yet.
+
+---
+
+## Prior task (id column + bulk import work)
 
 ## Goal
 

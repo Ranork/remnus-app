@@ -26,7 +26,7 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
   server.registerTool(
     'create_page',
     {
-      description: 'Create a new standalone page or database row.',
+      description: 'Create a new standalone page (use parentId to nest it) or a database row (use databaseId). For rows, `properties` keys may be column names or ids (matched case-insensitively); `title` is always mirrored into the row\'s own title property.',
       inputSchema: {
         title: z.string().describe('Page title'),
         content: z.string().optional().describe('Initial markdown content'),
@@ -62,7 +62,7 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
   server.registerTool(
     'update_page',
     {
-      description: 'Update an existing page or database row.',
+      description: 'Update a page or database row. Only the fields you pass are changed — omit a field to leave it untouched. For rows, `properties` are merged into the existing values (not replaced), and `title` also updates the row\'s title property so the change shows up in table views.',
       inputSchema: {
         pageId: z.string().describe('The workspace item ID or database row ID to update'),
         title: z.string().optional().describe('New title'),
@@ -97,7 +97,7 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
   server.registerTool(
     'bulk_update_pages',
     {
-      description: 'Update multiple pages or database rows in a single call.',
+      description: 'Update multiple pages or database rows in one call — same merge semantics as update_page per entry (partial patch, properties merged, title synced). All updates run concurrently and share one outcome: if any pageId is invalid or one update fails, the whole call fails with no partial results — validate ids first for large batches.',
       inputSchema: {
         updates: z.array(z.object({
           pageId: z.string().describe('The workspace item ID or database row ID to update'),

@@ -147,13 +147,39 @@ function checkRateLimit(tokenId: string): boolean {
 const MCP_HEADERS = { 'MCP-Protocol-Version': LATEST_PROTOCOL_VERSION };
 
 function json(body: object, status: number): Response {
-  return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json', ...MCP_HEADERS } });
+  return new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json; charset=utf-8', ...MCP_HEADERS } });
 }
 
 function withMcpHeader(res: Response): Response {
   const headers = new Headers(res.headers);
   headers.set('MCP-Protocol-Version', LATEST_PROTOCOL_VERSION);
+  // The MCP SDK's transport replies with a bare `application/json` (no charset),
+  // which some clients (e.g. PowerShell) decode as ISO-8859-1 and mojibake non-ASCII text.
+  if (headers.get('Content-Type') === 'application/json') {
+    headers.set('Content-Type', 'application/json; charset=utf-8');
+  }
   return new Response(res.body, { status: res.status, statusText: res.statusText, headers });
+}
+
+// Surfaced directly in the model's system prompt at session start (per the MCP spec) — this
+// is the only channel that reaches the agent without it first calling a tool, so it's where
+// the save-memory/recall-context prompts and the digest resource need to be advertised, or an
+// agent has no way to discover they exist. Kept short (well under the ~1-2KB that's reasonable
+// for a system-prompt addition); for the full workspace map, point at the digest resource
+// instead of inlining it here — that scales with workspace size and shouldn't ride on every request.
+function buildInstructions(ctx: TokenContext): string {
+  const digestUri = `remnus://workspace/${ctx.workspaceId}/digest`;
+  const lines = [
+    'This is a Remnus workspace: pages and databases an AI agent can read and, with a write-scoped token, edit directly.',
+    `Orient before searching or guessing: read resource ${digestUri} for a compact map (titles, ids, row counts, last-updated).`,
+    'Two prompts exist specifically for cross-session memory: recall-context(topic) before starting work, save-memory(content, memory_type) after a decision, preference, or gotcha worth keeping.',
+  ];
+  if (ctx.scope === 'write') {
+    lines.push(
+      'Writing: update_page/bulk_update_pages merge properties (partial patches are safe) and also sync `title` into the row\'s title property. delete_page and destructive schema/view changes require confirm: true — omit it first to preview.',
+    );
+  }
+  return lines.join('\n');
 }
 
 export async function POST(req: Request) { return handleMcpRequest(req); }
@@ -195,7 +221,7 @@ async function handleMcpRequest(req: Request): Promise<Response> {
   }
 
   // Build and register server capabilities
-  const server = new McpServer({ name: 'remnus-mcp', version: '1.0.0' });
+  const server = new McpServer({ name: 'remnus-mcp', version: '1.0.0' }, { instructions: buildInstructions(ctx) });
   registerResources(server, ctx);
   registerPrompts(server, ctx);
   registerReadTools(server, ctx);
