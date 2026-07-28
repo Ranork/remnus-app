@@ -599,6 +599,7 @@
     "dateFormatRelative": "Relatif",
     "propertyName": "Nom de propriété",
     "addOption": "Ajouter une option…",
+    "setAsDefaultOption": "Définir par défaut pour les nouvelles lignes",
     "renameView": "Renommer",
     "deleteView": "Supprimer la vue",
     "viewName": "Nom de la vue",

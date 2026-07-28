@@ -599,6 +599,7 @@
     "dateFormatRelative": "Relativ",
     "propertyName": "Eigenschaftsname",
     "addOption": "Option hinzufügen…",
+    "setAsDefaultOption": "Als Standard für neue Zeilen festlegen",
     "renameView": "Umbenennen",
     "deleteView": "Ansicht löschen",
     "viewName": "Ansichtsname",

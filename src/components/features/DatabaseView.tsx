@@ -184,6 +184,18 @@ function applySorts(pages: any[], sorts: ViewSort[]): any[] {
   });
 }
 
+// Select/status columns with a configured default option pre-fill new rows,
+// so the option shows up already selected instead of empty.
+function getDefaultPropertiesFromSchema(schema: any[]): Record<string, any> {
+  const props: Record<string, any> = {};
+  for (const col of schema) {
+    if ((col.type === 'select' || col.type === 'status') && col.defaultValue) {
+      props[col.id] = col.defaultValue;
+    }
+  }
+  return props;
+}
+
 function getDefaultPropertiesFromFilters(filters: ViewFilter[], schema: any[]): Record<string, any> {
   const props: Record<string, any> = {};
 
@@ -273,7 +285,15 @@ export default function DatabaseView({
   const t = useTranslations('Database');
   const tPage = useTranslations('Page');
   const tWs = useTranslations('Workspace');
-  const schema: any[] = database.schema ?? [];
+  // Schema mutations (new inline option, settings-panel save) only persist server-side
+  // and revalidate the route for the NEXT navigation — they never touch this already-
+  // mounted client tree. Mirror it locally (like localPages below) so option/color
+  // changes show up immediately instead of requiring a manual page refresh.
+  const [localSchema, setLocalSchema] = useState<any[]>(() => database.schema ?? []);
+  useEffect(() => { setLocalSchema(database.schema ?? []); }, [database.schema]);
+  const schema: any[] = localSchema;
+  const handleSchemaChange = useCallback((nextSchema: any[]) => { setLocalSchema(nextSchema); }, []);
+  const liveDatabase = useMemo(() => ({ ...database, schema }), [database, schema]);
   const router = useRouter();
   const tabNav = useTabNav();
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -510,8 +530,9 @@ export default function DatabaseView({
   };
 
   const handleAddRow = (initialProperties?: Record<string, any>, opts?: { openAfterCreate?: boolean }) => {
+    const schemaDefaults = getDefaultPropertiesFromSchema(schema || []);
     const filterProps = getDefaultPropertiesFromFilters(config.filters || [], schema || []);
-    const mergedProperties = { ...filterProps, ...initialProperties };
+    const mergedProperties = { ...schemaDefaults, ...filterProps, ...initialProperties };
 
     const tempId = `temp-${crypto.randomUUID().slice(0, 8)}`;
     const now = new Date();
@@ -1063,7 +1084,7 @@ export default function DatabaseView({
           {isTableView && tableConfig ? (
             isGroupedTableView ? (
               <GroupedTableLayout
-                database={database}
+                database={liveDatabase}
                 pages={processedPages}
                 groupByCol={tableConfig.groupByCol!}
                 groupOrder={tableConfig.groupOrder ?? []}
@@ -1094,7 +1115,8 @@ export default function DatabaseView({
               />
             ) : (
               <TableLayout
-                database={database}
+                database={liveDatabase}
+                onSchemaChange={handleSchemaChange}
                 pages={processedPages}
                 columnOrder={tableConfig.columnOrder}
                 hiddenColumns={tableConfig.hiddenColumns}
@@ -1121,7 +1143,8 @@ export default function DatabaseView({
             )
           ) : kanbanConfig ? (
             <KanbanBoard
-              database={database}
+              database={liveDatabase}
+              onSchemaChange={handleSchemaChange}
               pages={processedPages}
               groupByCol={kanbanConfig.groupByCol}
               groupOrder={kanbanConfig.groupOrder}
@@ -1147,7 +1170,7 @@ export default function DatabaseView({
             />
           ) : calendarConfig ? (
             <CalendarView
-              database={database}
+              database={liveDatabase}
               currentUserId={currentUserId}
               pages={processedPages}
               dateCol={calendarConfig.dateCol}
@@ -1188,7 +1211,8 @@ export default function DatabaseView({
             sm:absolute sm:inset-x-auto sm:bottom-auto sm:top-0 sm:right-0 sm:h-full sm:max-h-none sm:rounded-none sm:border-t-0 sm:flex-row sm:overflow-visible
           ">
             <DatabasePropertiesSidebar
-              database={database}
+              database={liveDatabase}
+              onSchemaChange={handleSchemaChange}
               activeView={activeView}
               activeTab={sidebarTab}
               setActiveTab={setSidebarTab}
@@ -1355,7 +1379,8 @@ export default function DatabaseView({
                   ) : (
                     peekPage && (
                       <PageEditor
-                        database={database}
+                        database={liveDatabase}
+                        onSchemaChange={handleSchemaChange}
                         initialPage={peekPage}
                         isPeek={true}
                         onClose={() => setPeekPageId(null)}
@@ -1471,7 +1496,8 @@ export default function DatabaseView({
                 ) : (
                   peekPage && (
                     <PageEditor
-                      database={database}
+                      database={liveDatabase}
+                      onSchemaChange={handleSchemaChange}
                       initialPage={peekPage}
                       isPeek={true}
                       onClose={() => setPeekPageId(null)}

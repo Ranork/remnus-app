@@ -599,6 +599,7 @@
     "dateFormatRelative": "Göreli",
     "propertyName": "Özellik adı",
     "addOption": "Seçenek ekle…",
+    "setAsDefaultOption": "Yeni satırlar için varsayılan yap",
     "renameView": "Yeniden adlandır",
     "deleteView": "Görünümü sil",
     "viewName": "Görünüm adı",

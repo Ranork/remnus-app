@@ -27,6 +27,7 @@ function getEffectiveGroupOrder(options: string[], groupOrder: string[]): string
 
 export default function KanbanBoard({
   database,
+  onSchemaChange,
   pages,
   groupByCol,
   groupOrder,
@@ -51,6 +52,7 @@ export default function KanbanBoard({
   hiddenGroups = [],
 }: {
   database: any;
+  onSchemaChange?: (schema: any[]) => void;
   pages: any[];
   groupByCol: string;
   groupOrder: string[];
@@ -106,8 +108,7 @@ export default function KanbanBoard({
     onUpdatePageProperties(pageId, nextProps);
   };
 
-  // Persists a newly-typed select/multi_select option onto the column's schema
-  // (server revalidates `/db/[id]`, so `database.schema` picks it up shortly after).
+  // Persists a newly-typed select/multi_select option onto the column's schema.
   const handleCreateOption = (colId: string, value: string) => {
     const col = schema.find((c) => c.id === colId);
     if (!col) return;
@@ -116,6 +117,7 @@ export default function KanbanBoard({
     const nextSchema = schema.map((c) =>
       c.id === colId ? { ...c, options: [...(c.options || []), { value, color: 'default' }] } : c
     );
+    onSchemaChange?.(nextSchema);
     updateDatabaseSchema(database.id, nextSchema);
   };
 

@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { X, Plus, GripVertical, Smile } from 'lucide-react';
+import { X, Plus, GripVertical, Smile, Star } from 'lucide-react';
 import {
   type SelectOption,
   type SelectOptionColor,
@@ -83,7 +83,7 @@ export default function PropertiesPanel({
                   const nextType = e.target.value;
                   // Seed sensible defaults so the new type is usable immediately.
                   const options = nextType === 'status' ? DEFAULT_STATUS_OPTIONS : [];
-                  onUpdateColumn(idx, { type: nextType, options });
+                  onUpdateColumn(idx, { type: nextType, options, defaultValue: undefined });
                 }}
                 disabled={isTitle}
                 className={`${selectCls} text-neutral-400 py-1 px-1.5 shrink-0 disabled:opacity-40 w-28 cursor-pointer truncate`}
@@ -183,10 +183,13 @@ export default function PropertiesPanel({
                           type="text"
                           value={opt.value}
                           onChange={(e) => {
+                            const newVal = e.target.value;
                             const newOpts = [...(col.options || [])].map((o: string | SelectOption, i: number) =>
-                              i === optIdx ? { ...normalizeOption(o), value: e.target.value } : o,
+                              i === optIdx ? { ...normalizeOption(o), value: newVal } : o,
                             );
-                            onUpdateColumn(idx, { options: newOpts });
+                            const updates: any = { options: newOpts };
+                            if (col.defaultValue === opt.value) updates.defaultValue = newVal;
+                            onUpdateColumn(idx, updates);
                           }}
                           className="bg-transparent border-none focus:outline-none focus:bg-white/10 px-0.5 rounded text-[10px] py-0 font-medium cursor-text"
                           style={{ color: c.text, width: `${Math.max(30, opt.value.length * 6 + 8)}px`, minWidth: '24px' }}
@@ -211,11 +214,26 @@ export default function PropertiesPanel({
                             <option value="complete">{t('statusGroupComplete')}</option>
                           </select>
                         )}
+                        {col.type !== 'multi_select' && (
+                          <button
+                            onClick={() => {
+                              const isDefault = col.defaultValue === opt.value;
+                              onUpdateColumn(idx, { defaultValue: isDefault ? undefined : opt.value });
+                            }}
+                            title={t('setAsDefaultOption')}
+                            className="ml-0.5 cursor-pointer shrink-0"
+                            style={{ color: c.text, opacity: col.defaultValue === opt.value ? 1 : 0.35 }}
+                          >
+                            <Star size={9} fill={col.defaultValue === opt.value ? 'currentColor' : 'none'} />
+                          </button>
+                        )}
                         <button
                           onClick={() => {
                             const newOpts = [...(col.options || [])];
                             newOpts.splice(optIdx, 1);
-                            onUpdateColumn(idx, { options: newOpts });
+                            const updates: any = { options: newOpts };
+                            if (col.defaultValue === opt.value) updates.defaultValue = undefined;
+                            onUpdateColumn(idx, updates);
                           }}
                           className="ml-0.5 cursor-pointer opacity-60 hover:opacity-100"
                           style={{ color: c.text }}

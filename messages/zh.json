@@ -599,6 +599,7 @@
     "dateFormatRelative": "相对",
     "propertyName": "属性名称",
     "addOption": "添加选项…",
+    "setAsDefaultOption": "设为新行的默认值",
     "renameView": "重命名",
     "deleteView": "删除视图",
     "viewName": "视图名称",

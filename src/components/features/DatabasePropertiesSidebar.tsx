@@ -18,6 +18,7 @@ import { selectCls } from './database-sidebar/shared';
 
 interface DatabasePropertiesSidebarProps {
   database: any;
+  onSchemaChange?: (schema: any[]) => void;
   activeView: DatabaseView;
   activeTab: 'properties' | 'layout';
   setActiveTab: (tab: 'properties' | 'layout') => void;
@@ -65,6 +66,7 @@ interface DatabasePropertiesSidebarProps {
 
 export default function DatabasePropertiesSidebar({
   database,
+  onSchemaChange,
   activeView,
   activeTab,
   setActiveTab,
@@ -137,6 +139,7 @@ export default function DatabasePropertiesSidebar({
   const handleSaveSchema = async () => {
     setIsSavingSchema(true);
     await updateDatabaseSchema(database.id, schema);
+    onSchemaChange?.(schema);
     setIsSavingSchema(false);
   };
 

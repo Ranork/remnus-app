@@ -599,6 +599,7 @@
     "dateFormatRelative": "Относительный",
     "propertyName": "Название свойства",
     "addOption": "Добавить опцию…",
+    "setAsDefaultOption": "Сделать значением по умолчанию для новых строк",
     "renameView": "Переименовать",
     "deleteView": "Удалить представление",
     "viewName": "Название представления",

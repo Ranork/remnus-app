@@ -599,6 +599,7 @@
     "dateFormatRelative": "सापेक्ष",
     "propertyName": "गुण नाम",
     "addOption": "विकल्प जोड़ें…",
+    "setAsDefaultOption": "नई पंक्तियों के लिए डिफ़ॉल्ट सेट करें",
     "renameView": "नाम बदलें",
     "deleteView": "दृश्य हटाएं",
     "viewName": "दृश्य नाम",

@@ -1,6 +1,6 @@
 {
   "mcpServers": {
-    "remnus": {
+    "remnus_app": {
       "type": "http",
       "url": "https://www.remnus.com/api/mcp"
     }

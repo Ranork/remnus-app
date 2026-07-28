@@ -599,6 +599,7 @@
     "dateFormatRelative": "Relative",
     "propertyName": "Property name",
     "addOption": "Add option…",
+    "setAsDefaultOption": "Set as default for new rows",
     "renameView": "Rename",
     "deleteView": "Delete view",
     "viewName": "View name",

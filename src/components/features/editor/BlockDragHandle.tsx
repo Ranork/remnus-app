@@ -148,7 +148,7 @@ function getNodeType(editor: Editor, pos: number): BlockType | null {
 const ITEM_NODES = new Set(['listItem', 'taskItem']);
 
 // Resolve the most specific draggable block at vertical position clientY.
-function blockAt(editor: Editor, clientY: number): { pos: number; dom: HTMLElement } | null {
+function blockAt(editor: Editor, clientY: number): { pos: number; dom: HTMLElement; cellPos: number | null } | null {
   const view = editor.view;
   const er = view.dom.getBoundingClientRect();
   const children = Array.from(view.dom.children) as HTMLElement[];
@@ -169,10 +169,13 @@ function blockAt(editor: Editor, clientY: number): { pos: number; dom: HTMLEleme
     if (!coords) continue;
 
     let pos: number;
+    let cellPos: number | null = null;
     if (coords.inside >= 0) {
       const $inside = view.state.doc.resolve(coords.inside);
       pos = $inside.depth > 0 ? $inside.before(1) : coords.inside;
       for (let d = $inside.depth; d >= 1; d--) {
+        const role = $inside.node(d).type.spec.tableRole;
+        if (cellPos === null && (role === 'cell' || role === 'header_cell')) cellPos = $inside.before(d);
         if (ITEM_NODES.has($inside.node(d).type.name)) { pos = $inside.before(d); break; }
       }
     } else {
@@ -180,12 +183,14 @@ function blockAt(editor: Editor, clientY: number): { pos: number; dom: HTMLEleme
       const $near = view.state.doc.resolve(clampedPos);
       pos = $near.depth > 0 ? $near.before(1) : clampedPos;
       for (let d = $near.depth; d >= 1; d--) {
+        const role = $near.node(d).type.spec.tableRole;
+        if (cellPos === null && (role === 'cell' || role === 'header_cell')) cellPos = $near.before(d);
         if (ITEM_NODES.has($near.node(d).type.name)) { pos = $near.before(d); break; }
       }
     }
 
     const dom = view.nodeDOM(pos);
-    return { pos, dom: dom instanceof HTMLElement ? dom : el };
+    return { pos, dom: dom instanceof HTMLElement ? dom : el, cellPos };
   }
   return null;
 }
@@ -193,7 +198,9 @@ function blockAt(editor: Editor, clientY: number): { pos: number; dom: HTMLEleme
 // What a right-click acts on: a partial text range, a multi-block (marquee)
 // selection, or — with no selection — the single block under the cursor.
 type Target =
-  | { kind: 'block'; pos: number }
+  // cellPos: when the block is a table and the cursor was over one of its cells,
+  // the cell's own pos — lets Copy grab just that cell instead of the whole table.
+  | { kind: 'block'; pos: number; cellPos?: number }
   | { kind: 'range'; from: number; to: number }
   | { kind: 'blocks'; positions: number[] };
 
@@ -433,7 +440,7 @@ export default function BlockDragHandle({ editor }: Props) {
       } else {
         const found = blockAt(editor, e.clientY);
         if (!found) return;
-        tgt = { kind: 'block', pos: found.pos };
+        tgt = { kind: 'block', pos: found.pos, cellPos: found.cellPos ?? undefined };
         pos = found.pos;
       }
       e.preventDefault();
@@ -649,7 +656,11 @@ export default function BlockDragHandle({ editor }: Props) {
   const currentTarget = (): Target => target ?? { kind: 'block', pos: handle.pos };
 
   // ── Target-aware primitives (no menu side-effects) ──
-  const copyTarget = (tgt: Target) => {
+  // cellScoped: when the target is a table cell (no active selection), copy just
+  // that cell's content instead of the whole table's markdown (`| … |` syntax).
+  // Cut passes false — it deletes the whole table block, so it should also copy
+  // the whole thing rather than leave a cell's text as the only surviving copy.
+  const copyTarget = (tgt: Target, cellScoped = true) => {
     let text: string | null = null;
     try {
       if (tgt.kind === 'blocks') {
@@ -657,6 +668,11 @@ export default function BlockDragHandle({ editor }: Props) {
       } else if (tgt.kind === 'range') {
         // Plain text of the exact range (preserves line breaks within the block).
         text = editor.state.doc.textBetween(tgt.from, tgt.to, '\n', '\n');
+      } else if (cellScoped && tgt.cellPos != null) {
+        const cellNode = editor.state.doc.nodeAt(tgt.cellPos);
+        const cellChildren: any[] = [];
+        cellNode?.forEach((child) => cellChildren.push(child));
+        if (cellChildren.length) text = nodesToCleanMarkdown(editor, cellChildren);
       } else {
         const node = editor.state.doc.nodeAt(tgt.pos);
         if (node) text = nodesToCleanMarkdown(editor, [node]);
@@ -707,7 +723,7 @@ export default function BlockDragHandle({ editor }: Props) {
 
   // ── Menu button handlers ──
   const doCopy = () => { copyTarget(currentTarget()); closeMenu(); };
-  const doCut = () => { const t = currentTarget(); copyTarget(t); if (deleteTarget(t)) closeMenu(); };
+  const doCut = () => { const t = currentTarget(); copyTarget(t, false); if (deleteTarget(t)) closeMenu(); };
   const doDuplicate = () => { duplicateTarget(currentTarget()); closeMenu(); };
   const doDelete = () => { if (deleteTarget(currentTarget())) closeMenu(); };
 
