@@ -1,0 +1,38 @@
+# Permissions for this app's OWN `#[tauri::command]` functions (not a plugin's).
+#
+# The main window loads a REMOTE origin (https://remnus.com in prod, or
+# http://localhost:3000 in dev — see WebviewWindowBuilder in src/lib.rs), not
+# bundled local assets. Tauri's ACL requires every invokable command to be
+# explicitly granted to a capability for a remote-origin webview — including
+# the app's own commands, not just plugin ones. Without an entry here,
+# `invoke("reveal_download", ...)` (and friends) from the frontend is silently
+# rejected before the Rust handler ever runs — this was the real reason the
+# desktop "show in folder" toast button had no effect, not the Windows-side
+# explorer.exe logic in `reveal_download` (which is correct on its own).
+#
+# See capabilities/default.json, which lists these identifiers.
+
+[[permission]]
+identifier = "allow-reveal-download"
+description = "Allows revealing a downloaded file in its containing folder."
+commands.allow = ["reveal_download"]
+
+[[permission]]
+identifier = "allow-download-dir"
+description = "Allows reading, choosing, and resetting the custom download directory."
+commands.allow = ["get_download_dir", "pick_download_dir", "reset_download_dir"]
+
+[[permission]]
+identifier = "allow-quit-app"
+description = "Allows quitting the app (used after installing an update)."
+commands.allow = ["quit_app"]
+
+[[permission]]
+identifier = "allow-agent-connect"
+description = "Allows detecting installed AI coding agents and writing their MCP client config."
+commands.allow = [
+  "detect_installed_agents",
+  "write_agent_config",
+  "run_claude_connect",
+  "install_remnus_skill",
+]

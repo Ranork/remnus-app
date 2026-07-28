@@ -2,7 +2,7 @@
 
 ## Status
 
-Done — awaiting user manual verification (dev server running for testing)
+Bumped to 0.1.15, tagged `v0.1.15`, pushed to `origin/master` — GitHub Actions `tauri-release.yml` builds and PUBLISHES a real (non-draft, non-prerelease) GitHub Release for Windows/macOS/Linux on tag push. Awaiting user to download and test the Windows build (cannot compile/test locally — no Rust toolchain on this machine).
 
 ## Active agent
 
@@ -14,60 +14,49 @@ master
 
 ## Goal
 
-Fix four reported database/editor bugs:
-1. A select option created inline (from a page's property panel or a table/kanban cell) doesn't show up in Database Settings until the page is refreshed.
-2. Changing select/status option colors in Database Settings and clicking Save appears to revert when the settings panel is closed and reopened (only a full page refresh shows the saved colors).
-3. Copying a single table cell in the page editor sometimes still produces full markdown table syntax (`| … |`) instead of plain cell text.
-4. Selects/status columns have no way to mark one option as the default, pre-filled on newly created rows.
+Fix the long-standing Tauri desktop bug: after a download finishes, the toast's "Show in folder" button does nothing (no reaction at all). Three prior dedicated commits (`fc3fa28`, `fba4c62`, `f224506`) already hardened the Windows-side `explorer.exe /select,` logic in `reveal_download` without resolving it — user asked to test one more hypothesis before falling back to routing all downloads through the system browser (Notion-style).
 
-## Scope
+## Root cause found (via code reading only — no Rust toolchain available to compile-verify)
 
-- `DatabaseView.tsx` and the table/kanban/calendar/properties-sidebar/page-editor children it renders.
-- The in-page rich-text editor's block right-click "Copy" action (`BlockDragHandle.tsx`).
-- `PropertiesPanel.tsx` (Database Settings → Properties tab) and the 8 i18n message files.
+The main window loads a **remote origin** (`https://remnus.com` / `http://localhost:3000` — see `WebviewWindowBuilder` in `src-tauri/src/lib.rs`), not bundled local assets. Tauri v2's ACL requires every invokable command — including the app's own `#[tauri::command]` functions, not just plugin commands — to be explicitly granted to a capability for a remote-origin webview. None of this app's 9 custom commands (`reveal_download`, `get_download_dir`, `pick_download_dir`, `reset_download_dir`, `quit_app`, `detect_installed_agents`, `write_agent_config`, `run_claude_connect`, `install_remnus_skill`) had any ACL permission entry — `src-tauri/capabilities/default.json` only listed plugin permissions (`opener:*`, `deep-link:*`, etc.), and no `src-tauri/permissions/` directory existed. So `invoke('reveal_download', ...)` was silently rejected by Tauri before the Rust handler (which is itself correct) ever ran — this is why "no reaction at all" matches exactly, and why the Windows-side fixes in prior commits never helped (they fixed a layer that was never reached).
+
+This exact root cause was already independently discovered and documented in a comment in `src/components/features/editor/FileBlockView.tsx` (its own download button routes around `reveal_download` entirely via a signed URL + system browser, specifically because of this ACL block) — but the generic `DownloadToast.tsx` blob:/data: fallback path was never fixed the same way.
 
 ## Completed
 
-- Root cause for bugs 1 & 2: `updateDatabaseSchema` only calls `revalidatePath` (marks the Next.js router cache stale for the *next* navigation) — it never refreshes the already-mounted client tree, and none of `TableLayout`/`KanbanBoard`/`PageEditor`/`DatabasePropertiesSidebar` kept a local mirror of `database.schema`. Fixed by adding `localSchema` state + a `liveDatabase` merged object in `DatabaseView.tsx`, and threading a new `onSchemaChange` callback into `TableLayout`, `KanbanBoard`, `PageEditor` (both peek instances), and `DatabasePropertiesSidebar` so schema edits (new inline option, settings-panel save) apply optimistically without a manual reload.
-- Root cause for bug 3 (part 1): verified via live browser testing that the existing `transformCopied`/`clipboardTextSerializer` fix in `BlockEditor.tsx` (2026-07-08) already handles the literal single-cell `CellSelection` (triple-click) case correctly. The remaining gap there was the right-click block-menu "Copy" action in `BlockDragHandle.tsx`: `blockAt()` always resolved the position to the top-level block (the whole `<table>`), so right-clicking anywhere inside a cell and choosing "Copy" copied the entire table as markdown. Fixed by having `blockAt()` also report the innermost table-cell position (`cellPos`), and `copyTarget()` now serializes just that cell's content when present (Copy button only — Cut still copies+deletes the whole table, unchanged, since it removes the whole block).
-- Root cause for bug 3 (part 2, reported again after the above): a plain text drag-select confined to one cell (not a triple-click/CellSelection) can still slice down with the outer `table` node kept (table→row→cell), not just row→cell — a shape neither `transformCopied` (`BlockEditor.tsx`) nor `unwrapSingleCellTableFragment` (`clipboardMarkdown.ts`) previously recognized, so it fell through to full markdown table serialization (empty synthesized header + separator + the one data row — matches the user's exact repro screenshot). Both now peel off an optional outer `table` wrapper before checking for the single-row/single-cell shape.
-- Bug 4: added an optional `defaultValue` field on select/status columns. `PropertiesPanel.tsx` now renders a small star toggle next to each select/status option (not multi_select) to mark it as the column's default — kept in sync on option rename/remove/type-change. `DatabaseView.tsx`'s `handleAddRow` now merges `getDefaultPropertiesFromSchema(schema)` as the base layer (view filters / explicit initial properties still take priority), so every row-creation entry point (Table/Kanban/Calendar "+ New", header "New") pre-fills the configured default option. Added `Database.setAsDefaultOption` i18n key to all 8 locale files.
-- `npx tsc --noEmit` clean; targeted ESLint on all touched files shows only pre-existing warnings (no new ones).
+- Added `src-tauri/permissions/app-commands.toml` — 4 permission entries (`allow-reveal-download`, `allow-download-dir`, `allow-quit-app`, `allow-agent-connect`) covering all 9 custom commands.
+- Added those 4 identifiers (bare, unprefixed — my best-confidence reading of Tauri v2's convention for app-level, non-plugin permissions) to `src-tauri/capabilities/default.json`'s `permissions` array, in the same capability entry that already has `"remote": {"urls": [...]}"` scoping (so it should apply to the remote-loaded webview like the existing `opener:*` entries do).
+- Validated the edited `capabilities/default.json` is well-formed JSON.
 
 ## Changed files
 
-- `src/components/features/DatabaseView.tsx`
-- `src/components/features/TableLayout.tsx`
-- `src/components/features/KanbanBoard.tsx`
-- `src/components/features/PageEditor.tsx`
-- `src/components/features/DatabasePropertiesSidebar.tsx`
-- `src/components/features/database-sidebar/PropertiesPanel.tsx`
-- `src/components/features/editor/BlockDragHandle.tsx`
-- `src/components/features/editor/BlockEditor.tsx`
-- `src/components/features/editor/clipboardMarkdown.ts`
-- `messages/{en,tr,hi,es,fr,de,zh,ru}.json`
+- `src-tauri/permissions/app-commands.toml` (new)
+- `src-tauri/capabilities/default.json`
+- `package.json`, `src-tauri/Cargo.toml`, `src-tauri/Cargo.lock` (version bump 0.1.14 → 0.1.15, matching the convention of prior release commits like `fba4c62`)
 
 ## Verification
 
-- `npx tsc --noEmit` passed.
-- `npm run lint` on all 7 touched TSX files: 0 errors, only pre-existing warnings unrelated to this change.
-- Bugs 1 & 2 confirmed by code-path analysis (revalidatePath does not refresh a mounted client tree; fix mirrors the existing `localPages` optimistic-update pattern already used elsewhere in the same file).
-- Bug 3's CellSelection path was empirically confirmed already-fixed via a live Playwright session (triple-click → copy → plain text, not markdown); the block-menu "Copy" gap was confirmed by reading `blockAt()`'s position resolution.
-- Bug 4 implemented and type-checked; not yet exercised in a browser.
-- Not yet manually tested end-to-end in the running app by a human — user asked to take over manual testing themselves instead of further automated browser testing.
+- **Could not compile-verify** — this machine has no Rust/Cargo toolchain installed (`cargo`/`rustc` not found via bash or PowerShell, no `~/.cargo/bin`). The exact ACL identifier-namespace syntax (bare identifier vs. a crate-name-prefixed one, e.g. `remnus-app:allow-reveal-download`) is my best recollection of Tauri v2's convention, not something I could confirm against a real build here.
+- Only checked: JSON validity of the edited capabilities file, and that the command names in the new permission file match the exact function names registered in `tauri::generate_handler![...]`.
 
 ## Remaining work
 
-- User to manually verify all four fixes in the browser (suggested test steps below).
+- User will build/run the Tauri app themselves (`npm run tauri:dev` or their normal flow) and test:
+  1. Does it build at all? If Tauri's ACL validation rejects the permission identifiers, it should fail loudly at build time with a clear "unknown permission" error — if so, the likely fix is prefixing the 4 identifiers with the Cargo package name (`remnus-app:allow-reveal-download` etc., `src-tauri/Cargo.toml` package name is `remnus-app`) instead of using them bare.
+  2. If it builds: trigger a blob:/data: download (something that still hits the in-app save+toast path, not an http(s) one already delegated to the system browser) and click "Show in folder" — does Explorer now open and select the file?
+  3. Bonus (same root cause, same fix): "Quit & Reopen" after an update download (`UpdateBanner.tsx`), and the AI-agent auto-connect/skill-install flow — these use `quit_app`/`detect_installed_agents`/`write_agent_config`/`run_claude_connect`/`install_remnus_skill`, which had the identical missing-ACL problem and should now also start working if the theory holds.
+- If this doesn't resolve it (or the user doesn't want to keep chasing the platform-specific ACL/Windows-Explorer angle), fall back to the previously-discussed plan: extend the already-proven browser-delegation pattern (signed URL + system browser, as `FileBlockView.tsx` already does) to cover the remaining blob:/data: download call sites, and remove the now-unnecessary `reveal_download`/download-dir Rust machinery.
 
 ## Known issues
 
-- None known. Cut on a table cell (via the right-click block menu) still copies+deletes the *whole table* (unchanged behavior) — only the dedicated "Copy" action is now cell-scoped, by design (deleting just a cell isn't a well-defined "cut the block" operation here).
+- Namespace-prefix uncertainty noted above — this is the one part of the fix I'm not fully confident about without a compile check.
 
 ## Next exact step
 
-Hand off to the user for manual browser verification. A `next dev` server is already running on http://localhost:3000 (background task) for this. Suggested checks:
-1. **Inline option sync**: open a database row (peek or full page), type a brand-new select option value into a select/status property, then — without refreshing — open that database's Settings → Properties tab and confirm the new option is listed.
-2. **Color save persistence**: open Database Settings → Properties, change a select/status option's color, click Save, close the settings panel, reopen it — colors should still show the new color (and the table/kanban cells should already reflect it too, without a page refresh).
-3. **Single-cell copy**: in a page with a table, (a) right-click inside one cell (cursor only, no text selected) → Copy, (b) triple-click a cell to select it → Ctrl+C, and (c) plain click-drag to select just the visible text inside one cell → Ctrl+C — paste each into a plain-text field and confirm all three paste just that cell's text, never a `| … |` markdown table.
-4. **Default select option**: in Database Settings → Properties, click the star next to one option on a select/status column, then create a new row from Table/Kanban/Calendar "+ New" — the property should come pre-filled with that option. Also check a Kanban "+ New" inside a specific column still uses that column's group value (not the schema default) when they differ.
+Wait for the user's build/test result. If it's an ACL "unknown permission" build error, retry with the `remnus-app:` prefix on the 4 new identifiers instead of bare.
+
+---
+
+## Prior task (separate, still pending user verification)
+
+A previous session in this same conversation fixed 4 unrelated database/editor bugs (schema live-sync, select-option-in-table-cell markdown copy, default select option). That work is done and type-checked but not yet confirmed working by the user in the browser. See git diff / conversation history for details — not re-summarized here to avoid this file growing unbounded; ask the user for status if picking this back up.

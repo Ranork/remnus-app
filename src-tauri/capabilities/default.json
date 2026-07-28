@@ -20,6 +20,10 @@
     "notification:default",
     "global-shortcut:allow-register",
     "global-shortcut:allow-unregister",
-    "updater:default"
+    "updater:default",
+    "allow-reveal-download",
+    "allow-download-dir",
+    "allow-quit-app",
+    "allow-agent-connect"
   ]
 }
