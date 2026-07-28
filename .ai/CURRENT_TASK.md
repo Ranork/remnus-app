@@ -2,6 +2,69 @@
 
 ## Status
 
+Done locally. Article created and registered; no commit or push requested.
+
+## Active agent
+
+Codex
+
+## Branch
+
+master
+
+## Goal
+
+Add the English article "How to Connect OpenAI Codex to Remnus with MCP" to the file-driven public Docs blog.
+
+## Completed
+
+- Reviewed the current official OpenAI Codex manual and public MCP/AGENTS.md documentation.
+- Verified the current local Codex CLI supports remote Streamable HTTP servers through `codex mcp add --url`, OAuth through `codex mcp login`, and bearer-token environment variables.
+- Verified the current Remnus endpoint, OAuth/PAT setup, scopes, tool workflows, audit behavior, rate limit, public setup docs, security page, and MCP-native workspace article.
+- Added the article, registered its metadata, and updated the blog source README.
+
+## Changed files
+
+- `docs/blog/connect-openai-codex-to-remnus-mcp.md`
+- `docs/blog/README.md`
+- `src/lib/content/manifest.ts`
+- `.ai/CURRENT_TASK.md`
+
+## Decisions
+
+- Scoped the guide to local Codex CLI and IDE-extension clients, explicitly excluding ChatGPT web connectors, the OpenAI API, the Codex SDK, and Codex cloud.
+- Used the current CLI-first OAuth setup (`codex mcp add ... --url` + `codex mcp login`) and retained project `config.toml` plus PAT environment-variable configuration as alternatives.
+- Kept the requested SEO Metadata section in the article body. The route supplies the H1 from manifest metadata, so the Markdown body does not duplicate it.
+- No dedicated multi-agent workspace article is published; linked the current MCP-native workspace article, which covers the shared/multi-agent model.
+
+## Verification
+
+- Article word count: 2,173 words including SEO metadata (target 1,600–2,200).
+- `npm run lint -- src/lib/content/manifest.ts` passed.
+- `npx tsc --noEmit` passed.
+- `getBlogPost('connect-openai-codex-to-remnus-mcp')` rendered 18,134 HTML characters, 13 H2s, 16 H3s, and an 11-minute reading time.
+- All article links were checked; Remnus pages returned 200, official OpenAI pages resolved through the live official docs fetch, and `/api/mcp` returned the expected unauthenticated 401 with OAuth resource metadata.
+- `git diff --check` passed.
+
+## Remaining work
+
+- None for the article.
+
+## Known issues
+
+- The required Remnus Work Plan MCP tools were not exposed in this session, so no external task row was updated.
+- The prior Tauri ACL fix below still awaits the user's build/test result.
+
+## Next exact step
+
+Review the local diff. Commit and push only if the user requests it.
+
+---
+
+# Prior task — Tauri desktop download ACL
+
+## Status
+
 Bumped to 0.1.15, tagged `v0.1.15`, pushed to `origin/master` — GitHub Actions `tauri-release.yml` builds and PUBLISHES a real (non-draft, non-prerelease) GitHub Release for Windows/macOS/Linux on tag push. Awaiting user to download and test the Windows build (cannot compile/test locally — no Rust toolchain on this machine).
 
 ## Active agent

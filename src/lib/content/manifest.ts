@@ -77,6 +77,15 @@ export type BlogPost = {
 
 export const BLOG_POSTS: BlogPost[] = [
   {
+    slug: 'connect-openai-codex-to-remnus-mcp',
+    file: 'connect-openai-codex-to-remnus-mcp.md',
+    title: 'How to Connect OpenAI Codex to Remnus with MCP',
+    description:
+      'Connect OpenAI Codex to a Remnus MCP workspace for requirements, tasks, decisions, documentation, status reports, and durable agent memory.',
+    date: '2026-07-28',
+    icon: Plug,
+  },
+  {
     slug: 'connect-cursor-to-remnus-mcp',
     file: 'connect-cursor-to-remnus-mcp.md',
     title: 'How to Connect Cursor to Remnus with MCP',
