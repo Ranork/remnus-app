@@ -46,12 +46,20 @@ export async function GET(req: NextRequest) {
   const contentType = upstream.headers.get('content-type') || 'application/octet-stream';
   // Sanitize name for Content-Disposition — strip quotes and backslashes.
   const safeName = name.replace(/["\\]/g, '_');
+  // HTTP header values must fit in Latin-1 (ByteString) — any name with non-Latin-1
+  // characters (e.g. Turkish İ/Ç/ı/Ş/Ğ) throws "Cannot convert argument to a
+  // ByteString" when set directly, crashing the route with a bare 500 instead of
+  // sending the file. Keep a stripped ASCII `filename=` for old clients and add the
+  // RFC 5987 `filename*=UTF-8''…` percent-encoded form, which every modern browser
+  // prefers and renders correctly (accented/Turkish name preserved).
+  const asciiName = (safeName.replace(/[^\x20-\x7E]/g, '_') || 'download');
+  const encodedName = encodeURIComponent(safeName);
 
   return new NextResponse(upstream.body, {
     status: 200,
     headers: {
       'Content-Type': contentType,
-      'Content-Disposition': `attachment; filename="${safeName}"`,
+      'Content-Disposition': `attachment; filename="${asciiName}"; filename*=UTF-8''${encodedName}`,
       'Cache-Control': 'private, max-age=3600',
     },
   });
