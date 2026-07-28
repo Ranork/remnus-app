@@ -364,17 +364,25 @@ const BlockEditor = forwardRef<BlockEditorHandle, Props>(function BlockEditor({
       },
       // Selecting all the text of a SINGLE table cell (triple-click, or a drag
       // that grazes the cell border) yields a single-cell CellSelection whose
-      // copied slice is still wrapped in table→row→cell. That wrapper makes the
-      // clipboard carry a whole `<table>` (text/html) and `| … |` GFM syntax
-      // (text/plain) — so pasting anywhere reproduces a table instead of the
-      // plain cell text. `transformCopied` runs BEFORE both the html and text
-      // serializers, so unwrapping the slice to just the cell's own content here
-      // fixes EVERY clipboard format at once. A multi-cell / whole-row / whole-
-      // table copy has >1 cell (or a `table` at the top) and is left untouched.
+      // copied slice is still wrapped in table→row→cell. A plain text drag
+      // confined to one cell can ALSO land here — depending on where the
+      // selection's shared ancestor resolves, `doc.slice` sometimes keeps the
+      // outer `table` node too (table→row→cell), not just row→cell. Either
+      // wrapper makes the clipboard carry a whole `<table>` (text/html) and
+      // `| … |` GFM syntax (text/plain) — so pasting anywhere reproduces a
+      // table instead of the plain cell text. `transformCopied` runs BEFORE
+      // both the html and text serializers, so unwrapping the slice to just
+      // the cell's own content here fixes EVERY clipboard format at once. A
+      // multi-cell / whole-row / whole-table copy has >1 cell (or >1 row) and
+      // is left untouched.
       transformCopied: (slice) => {
         const content = slice.content;
         if (content.childCount !== 1) return slice;
-        const row = content.firstChild;
+        let row = content.firstChild!;
+        if (row.type.spec.tableRole === 'table') {
+          if (row.childCount !== 1) return slice;
+          row = row.firstChild!;
+        }
         if (!row || row.type.spec.tableRole !== 'row' || row.childCount !== 1) return slice;
         const cell = row.firstChild;
         const role = cell?.type.spec.tableRole;

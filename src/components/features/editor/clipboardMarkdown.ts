@@ -159,17 +159,24 @@ function wrappingListNode(editor: any): { type: string; attrs: Record<string, an
 }
 
 /**
- * A copy of exactly one table cell always slices down to this exact shape —
- * one `tableRow` containing one `tableCell`/`tableHeader` — regardless of
- * which Selection subclass produced it (a single-cell CellSelection is the
- * common case, via triple-click or a drag that grazed the cell border, but
- * this is a structural check rather than an `instanceof` one so it also
- * catches any other path that lands on the same shape). A real multi-cell
- * copy has more than one cell and/or more than one row, so it's untouched.
+ * A copy of exactly one table cell slices down to one `tableRow` containing
+ * one `tableCell`/`tableHeader` — sometimes still wrapped in the outer
+ * `table` node, depending on exactly where the selection's shared ancestor
+ * resolved (a single-cell CellSelection via triple-click or a drag that
+ * grazed the cell border is the common case, but a plain text drag confined
+ * to one cell can land here too). This is a structural check rather than an
+ * `instanceof` one so it catches any path that lands on either shape. A real
+ * multi-cell copy has more than one cell and/or more than one row, so it's
+ * untouched.
  */
 function unwrapSingleCellTableFragment(json: any[]): any[] | null {
   if (json.length !== 1) return null;
-  const row = json[0];
+  let row = json[0];
+  if (row?.type === 'table') {
+    const rows = row.content ?? [];
+    if (rows.length !== 1) return null;
+    row = rows[0];
+  }
   if (!row || row.type !== 'tableRow') return null;
   const cells = row.content ?? [];
   if (cells.length !== 1) return null;
