@@ -2,8 +2,8 @@
 // Release automation for the Tauri desktop app + auto-updater.
 //
 // Bumps the version in every place that must stay in lockstep (package.json,
-// src-tauri/Cargo.toml, src-tauri/Cargo.lock), commits, creates an annotated
-// `vX.Y.Z` tag, and pushes branch + tag. Pushing the tag triggers
+// package-lock.json, src-tauri/Cargo.toml, src-tauri/Cargo.lock), commits,
+// creates an annotated `vX.Y.Z` tag, and pushes branch + tag. Pushing the tag triggers
 // .github/workflows/tauri-release.yml, which builds every platform, generates
 // the updater artifacts (latest.json) and publishes the GitHub release — at
 // which point the in-app auto-updater picks the new version up.
@@ -32,10 +32,12 @@ const dryRun = args.includes('--dry-run');
 const arg = (args.find((a) => !a.startsWith('--')) || 'patch').toLowerCase();
 
 const pkgPath = join(root, 'package.json');
+const pkgLockPath = join(root, 'package-lock.json');
 const cargoTomlPath = join(root, 'src-tauri', 'Cargo.toml');
 const cargoLockPath = join(root, 'src-tauri', 'Cargo.lock');
 
 const pkg = JSON.parse(readFileSync(pkgPath, 'utf8'));
+const pkgLock = JSON.parse(readFileSync(pkgLockPath, 'utf8'));
 const current = pkg.version;
 
 const bump = (v, kind) => {
@@ -89,6 +91,13 @@ if (doBump) {
   pkg.version = next;
   if (!dryRun) writeFileSync(pkgPath, JSON.stringify(pkg, null, 2) + '\n');
 
+  pkgLock.version = next;
+  if (!pkgLock.packages?.['']) {
+    fail('Could not find the root package entry in package-lock.json.');
+  }
+  pkgLock.packages[''].version = next;
+  if (!dryRun) writeFileSync(pkgLockPath, JSON.stringify(pkgLock, null, 2) + '\n');
+
   let toml = readFileSync(cargoTomlPath, 'utf8');
   // Only the [package] version line starts at column 0; build-dep versions are inline.
   const tomlNext = toml.replace(/^version = ".*"$/m, `version = "${next}"`);
@@ -103,7 +112,7 @@ if (doBump) {
   if (lockNext === lock) fail('Could not find the remnus-app entry in Cargo.lock.');
   if (!dryRun) writeFileSync(cargoLockPath, lockNext);
 
-  console.log(`  • package.json, Cargo.toml, Cargo.lock → ${next}`);
+  console.log(`  • package.json, package-lock.json, Cargo.toml, Cargo.lock → ${next}`);
 }
 
 if (dryRun) {
@@ -113,7 +122,7 @@ if (dryRun) {
 
 // --- Commit, tag, push -----------------------------------------------------
 if (doBump) {
-  runLive(`git add package.json src-tauri/Cargo.toml src-tauri/Cargo.lock`);
+  runLive(`git add package.json package-lock.json src-tauri/Cargo.toml src-tauri/Cargo.lock`);
   runLive(`git commit -m "chore(release): ${tag}"`);
 }
 

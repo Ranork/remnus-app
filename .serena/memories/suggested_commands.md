@@ -34,6 +34,8 @@ npm run tauri:build
 npm run cap:sync
 npm run cap:open:android
 npm run mcpb:build
+npm run release:patch -- --dry-run  # verify next desktop version without writes
+npm run release:patch               # bumps npm/Cargo lockstep, commits, tags, pushes, starts updater release CI
 npx tsx scripts/test-emails.ts
 ```
 
