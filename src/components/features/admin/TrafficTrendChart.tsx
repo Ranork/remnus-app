@@ -32,17 +32,22 @@ const CHANNEL_COLOR: Record<TrafficChannel, string> = {
 // campaign-tag series — never shown alongside the channel palette, so reusing
 // hue *identity* isn't a concern, only reusing the validated ramp is the point.
 const CAMPAIGN_PALETTE = ['#9085e9', '#e66767', '#d55181', '#d95926'];
+// Neutral (not one of the 4 channel hues) — signals "combined, unbroken-down
+// total" rather than any specific channel, echoing the grand-total number's
+// text-neutral-100 styling above the chart.
+const TOTAL_COLOR = '#e4e4e7';
 
-type SourceValue = 'channel:all' | `channel:${TrafficChannel}` | 'campaign:all' | `campaign:${string}`;
+type SourceValue = 'total' | 'channel:all' | `channel:${TrafficChannel}` | 'campaign:all' | `campaign:${string}`;
 
 type Series = {
   key: string;
-  type: 'channel' | 'campaign';
+  type: 'channel' | 'campaign' | 'total';
   channel?: TrafficChannel;
   tag?: string;
 };
 
 function seriesDefsFor(source: SourceValue, campaignTags: string[]): Series[] {
+  if (source === 'total') return [{ key: 'total', type: 'total' }];
   if (source === 'channel:all') return CHANNEL_ORDER.map((ch) => ({ key: ch, type: 'channel', channel: ch }));
   if (source.startsWith('channel:')) {
     const ch = source.slice('channel:'.length) as TrafficChannel;
@@ -145,14 +150,18 @@ export function TrafficTrendChart({
   const series = useMemo(() => {
     return seriesDefsFor(source, campaignTags).map((s) => ({
       ...s,
-      label: s.type === 'channel' ? channelLabel[s.channel!] : s.tag!,
+      label: s.type === 'total' ? t('trafficSourceTotal') : s.type === 'channel' ? channelLabel[s.channel!] : s.tag!,
       color:
-        s.type === 'channel'
-          ? CHANNEL_COLOR[s.channel!]
-          : CAMPAIGN_PALETTE[Math.max(0, campaignTags.indexOf(s.tag!)) % CAMPAIGN_PALETTE.length],
-      values: data.map((d) => (s.type === 'channel' ? d.channels[s.channel!] : (d.campaigns[s.tag!] ?? 0))),
+        s.type === 'total'
+          ? TOTAL_COLOR
+          : s.type === 'channel'
+            ? CHANNEL_COLOR[s.channel!]
+            : CAMPAIGN_PALETTE[Math.max(0, campaignTags.indexOf(s.tag!)) % CAMPAIGN_PALETTE.length],
+      values: data.map((d) =>
+        s.type === 'total' ? d.visitors : s.type === 'channel' ? d.channels[s.channel!] : (d.campaigns[s.tag!] ?? 0),
+      ),
     }));
-  }, [source, campaignTags, data, channelLabel]);
+  }, [source, campaignTags, data, channelLabel, t]);
 
   const totals = series.map((s) => s.values.reduce((a, b) => a + b, 0));
   const grandTotal = totals.reduce((a, b) => a + b, 0);
@@ -465,19 +474,22 @@ function SourceSelect({
   }, [open]);
 
   const currentLabel = (() => {
+    if (value === 'total') return t('trafficSourceTotal');
     if (value === 'channel:all') return t('trafficSourceAllChannels');
     if (value === 'campaign:all') return t('trafficSourceAllCampaigns');
     if (value.startsWith('channel:')) return channelLabel[value.slice('channel:'.length) as TrafficChannel];
     return value.slice('campaign:'.length);
   })();
   const currentColor =
-    value === 'channel:all' || value === 'campaign:all'
-      ? null
-      : value.startsWith('channel:')
-        ? CHANNEL_COLOR[value.slice('channel:'.length) as TrafficChannel]
-        : CAMPAIGN_PALETTE[
-            Math.max(0, campaignTags.indexOf(value.slice('campaign:'.length))) % CAMPAIGN_PALETTE.length
-          ];
+    value === 'total'
+      ? TOTAL_COLOR
+      : value === 'channel:all' || value === 'campaign:all'
+        ? null
+        : value.startsWith('channel:')
+          ? CHANNEL_COLOR[value.slice('channel:'.length) as TrafficChannel]
+          : CAMPAIGN_PALETTE[
+              Math.max(0, campaignTags.indexOf(value.slice('campaign:'.length))) % CAMPAIGN_PALETTE.length
+            ];
 
   const pick = (v: SourceValue) => {
     onChange(v);
@@ -497,6 +509,13 @@ function SourceSelect({
       </button>
       {open && (
         <div className="absolute left-0 top-full z-30 mt-1.5 max-h-72 w-56 overflow-y-auto rounded-md border border-neutral-800 bg-neutral-850 py-1 shadow-xl">
+          <SourceOption
+            active={value === 'total'}
+            label={t('trafficSourceTotal')}
+            color={TOTAL_COLOR}
+            onClick={() => pick('total')}
+          />
+          <div className="my-1 border-t border-neutral-800" />
           <SourceOption active={value === 'channel:all'} label={t('trafficSourceAllChannels')} onClick={() => pick('channel:all')} />
           {CHANNEL_ORDER.map((ch) => (
             <SourceOption

@@ -76,7 +76,7 @@ Onboarding sırasında full build, tüm test suite'i veya dev server çalıştı
 
 ## Project overview
 
-Remnus, workspace etrafında kurulu Notion-benzeri bir üründür. Standalone markdown sayfaları ve dinamik kolonlu database'ler aynı sidebar ağacında yaşar; her database satırı aynı zamanda içerik taşıyan bir sayfadır. Web, Tauri masaüstü, Capacitor mobil ve PWA istemcileri cloud-first olarak aynı Remnus web uygulamasını kullanır. Remote MCP/OAuth yüzeyi AI ajanlarına workspace okuma-yazma yeteneği verir.
+Remnus, insan ve AI ajanlarının Model Context Protocol (MCP) etrafında eşit vatandaşlar olarak birlikte çalıştığı bir Human-Agent Collaborative Workspace ürünüdür (bkz. `docs/WHAT_IS_REMNUS.md`) — bir Notion alternatifi değildir. Standalone markdown sayfaları ve dinamik kolonlu database'ler aynı sidebar ağacında yaşar; her database satırı aynı zamanda içerik taşıyan bir sayfadır. Web, Tauri masaüstü, Capacitor mobil ve PWA istemcileri cloud-first olarak aynı Remnus web uygulamasını kullanır. Remote MCP/OAuth yüzeyi AI ajanlarına workspace okuma-yazma yeteneği verir.
 
 Repository monorepo değildir. Ana npm uygulamasına ek olarak dağıtım için paketlenen bağımsız `mcpb/server` yardımcı paketi bulunur.
 

@@ -6,11 +6,11 @@ import { METADATA_BASE_URL, DEFAULT_OG_IMAGE, DEFAULT_TWITTER_IMAGE } from '@/li
 export const metadata: Metadata = {
   metadataBase: new URL(METADATA_BASE_URL),
   title: 'Pricing',
-  description: 'Simple, transparent pricing for Remnus — the MCP-Native workspace for vibe coders. Start free with unlimited pages and databases.',
+  description: 'Simple, transparent pricing for Remnus — the Human-Agent Collaborative Workspace. Start free with unlimited pages and databases.',
   alternates: { canonical: 'https://remnus.com/pricing' },
   openGraph: {
     title: 'Pricing | Remnus',
-    description: 'Simple, transparent pricing for Remnus — the MCP-Native workspace for vibe coders. Start free with unlimited pages and databases.',
+    description: 'Simple, transparent pricing for Remnus — the Human-Agent Collaborative Workspace. Start free with unlimited pages and databases.',
     url: 'https://remnus.com/pricing',
     siteName: 'Remnus',
     images: [DEFAULT_OG_IMAGE],
@@ -19,7 +19,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'Pricing | Remnus',
-    description: 'Simple, transparent pricing for Remnus — the MCP-Native workspace for vibe coders. Start free with unlimited pages and databases.',
+    description: 'Simple, transparent pricing for Remnus — the Human-Agent Collaborative Workspace. Start free with unlimited pages and databases.',
     images: [DEFAULT_TWITTER_IMAGE],
   },
 };

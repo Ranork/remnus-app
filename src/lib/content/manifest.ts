@@ -133,7 +133,7 @@ export const BLOG_POSTS: BlogPost[] = [
   {
     slug: 'how-i-built-mcp-native',
     file: 'how-i-built-mcp-native.md',
-    title: 'How I Built an MCP-Native Open-Source Notion Alternative',
+    title: 'How I Built Remnus, an MCP-Native Open-Source Workspace',
     description:
       "The build story, from the headless agent that Notion's MCP could not run to the token contract that made Remnus.",
     date: '2026-06-23',

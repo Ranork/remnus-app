@@ -14,7 +14,7 @@ Kanban boards, databases, and pages that Claude, Cursor, and any AI agent can re
 
 ## What is Remnus?
 
-Remnus is a Notion-like workspace built around the [Model Context Protocol (MCP)](https://modelcontextprotocol.io). Every page, database, and kanban board in your workspace is accessible to AI agents via a first-class MCP server — connect editors with one-click **OAuth 2.1 (PKCE)**, or use a scoped **bearer token** for headless / CI agents.
+Remnus is the Human-Agent Collaborative Workspace, built around the [Model Context Protocol (MCP)](https://modelcontextprotocol.io). Every page, database, and kanban board in your workspace is accessible to AI agents via a first-class MCP server — connect editors with one-click **OAuth 2.1 (PKCE)**, or use a scoped **bearer token** for headless / CI agents.
 
 **Unlike Notion's MCP integration**, Remnus is designed for headless, CI/CD, and coding agent workflows from day one.
 

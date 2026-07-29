@@ -1,137 +1,114 @@
 # Remnus — Agent Primer
 
-> Bu metin, herhangi bir AI agent oturumuna "Remnus nedir?" sorusuna derinlemesine ve doğru cevap verebilmesi için context olarak verilebilecek bir prompt parçasıdır. Kaynak: `remnus-app` reposundaki `README.md`, `AGENTS.md`, `docs/mcp/*`, `docs/blog/*`, `server.json` (2026-07-28 itibarıyla). Sürüm: `remnus-app@0.1.14`.
+> Bu metin, herhangi bir AI agent oturumuna "Remnus nedir?" sorusuna derinlemesine ve doğru cevap verebilmesi için context olarak verilebilecek bir prompt parçasıdır. Kaynak: `remnus-app` reposundaki `README.md`, `AGENTS.md`, `docs/mcp/*`, `docs/blog/*`, `server.json` (2026-07-29 itibarıyla). Sürüm: `remnus-app@0.1.15`.
 >
 > Bu dosya `docs/mcp/*` ve `docs/blog/*` içerik pipeline'ının dışındadır (`src/lib/content/manifest.ts` içinde kayıtlı değildir), bu yüzden `/wiki` veya `/docs` altında otomatik olarak yayınlanmaz — düz bir agent-context referans dosyasıdır.
 
 ## 1. Tek cümlelik kimlik
 
-**Remnus**, insanlar ve AI ajanlarının birlikte kullandığı, **Model Context Protocol (MCP) etrafında baştan tasarlanmış**, açık kaynak (AGPL-3.0), Notion-benzeri bir **workspace** ürünüdür. `server.json` özeti: *"MCP-native open-source Notion alternative: read & write pages, databases and kanban boards."*
+**Remnus**, insanların ve yapay zeka ajanlarının (AI Agents) eşit vatandaşlar olarak birlikte çalıştığı, **Model Context Protocol (MCP) etrafında baştan tasarlanmış ilk "Human-Agent Collaborative Workspace"** (İnsan-Ajan Ortak Çalışma Alanı) ürünüdür.
+`server.json` özeti: *"The first MCP-native workspace for human-agent teams. Read, write, and collaborate seamlessly with AI using structured data and verifiable audit logs."*
 
-## 2. Ürün modeli
+## 2. Neden var: "MCP-Native" Pozisyonu ve Vizyon
 
-- Her kullanıcı bir veya birden fazla **workspace**'e sahiptir; workspace tek bir sidebar ağacı etrafında kurulur.
-- Sidebar'da iki tür item birlikte yaşar:
-  - **Standalone pages** — başlık + Tiptap tabanlı markdown editör, slash komutları, nested sub-page desteği, ikonlar.
-  - **Databases** — dinamik kolonlu (text/select/status/date/number/relation vb.) tablolar; **Table / Kanban / Calendar** görünümleri, filtre ve sort desteklenir.
-- Kritik tasarım kararı: **her database satırı aynı zamanda bir sayfadır** — yani bir kanban kartının hem tipli property'leri hem de tam markdown içeriği (body) vardır. Bu, "task" ile "not" arasındaki ayrımı ortadan kaldırır.
-- Workspace'ler arası davet/roller: **owner / member / viewer**.
-- Veri modeli EAV değil, **JSON Column Pattern** ile tutulur (dinamik property'ler `schema`/`properties` JSON kolonlarında) — SQLite/Turso + Drizzle ORM üzerinde.
+Geleneksel araçlar (Notion, Obsidian, vb.) sadece *insanlar* için tasarlanmış, AI entegrasyonları ise dışarıdan API'lerle "yamanmıştır". Remnus ise **agent erişiminin mimari bir tasarım kısıtı olduğu (MCP-native)** bir sistemdir. Remnus'un temel iddiası şudur: *Ajanlar takımınızın bir parçasıysa, sizinle aynı masada, aynı güvenlik ve şeffaflık kurallarıyla çalışmalıdır.*
 
-## 3. Neden var: "MCP-native" pozisyonu
+Pratikte bu vizyon şu anlama gelir:
+*   **Bir "Notion Alternatifi" Değildir:** Amacı insan-insan işbirliğini optimize etmek değil; kod yazan, araştırma yapan veya task yöneten AI ajanları (Cursor, Claude, Windsurf) ile insan takım üyelerini **ortak bir bağlamda (Shared Context)** buluşturmaktır.
+*   **Opaque (Kapalı Kutu) Hafıza Yerine Şeffaf Hafıza:** Agent memory bir "vector store" (vektör veritabanı) karadeliği değildir. Ajanın öğrendiği, kaydettiği her bilgi **insan tarafından okunabilir, düzeltilebilir ve silinebilir sıradan sayfalardan** oluşur.
+*   **First-Class Token ve Değiştirilemez Denetim (Audit Log):** İnsan oturumları üzerine yama yapılmış yetkiler yoktur. Agent token'ları (OAuth/PAT) birincil kimliklerdir. Ajanın okuduğu veya yazdığı *her bir satır veri*, değiştirilemez bir **audit log (denetim günlüğü)** olarak kaydedilir. İnsan takımı ajana %100 güvenir çünkü ne yaptığını harfi harfine denetleyebilir.
+*   **Yapılandırılmış (Structured) Yanıtlar:** Flattened (düz) metin export'ları yerine ajanlara; kolon tipleri, şemalar ve select-option'ları korunmuş tipli (typed) veriler döner.
 
-Remnus'un temel iddiası, çoğu araç gibi *insana göre tasarlanıp sonradan MCP eklenen* ("MCP-integrated") değil, **agent erişiminin mimari bir tasarım kısıtı olduğu** ("MCP-native") bir ürün olmasıdır. Pratikte bu şu demek:
+## 3. Ürün modeli
 
-- MCP sunucusu ayrı bir wrapper/sidecar değil, `/api/mcp` altında **uygulamanın kendisinin bir parçası**dır — web UI'ı besleyen aynı sorgular ve yetki kontrolleri agent çağrılarını da besler.
-- Bir insanın UI üzerinden yapabildiği her şeyi (arama, okuma, yazma, schema değiştirme) bir agent de aynı auth/scope/audit zinciriyle yapabilir.
-- Flattened/prose export yerine **tipli, structured tool response**'lar döner (schema, column type'ları, select option'ları korunur).
-- Tekil "bir seferde bir item" yazma modeli yerine **batch write tool'ları** vardır (`bulk_update_pages`).
-- Auth insan session'ı üstüne "yamalı" değildir; **agent token'ları first-class principal**'dır (OAuth 2.1 + PKCE veya scoped PAT).
-- Her agent çağrısı **immutable audit log**'a yazılır (token kimliği + tool + sonuç).
-- Agent memory bir opaque vector store değil, **okunabilir/düzeltilebilir sıradan sayfalar**dan oluşan bir database'dir.
+*   Her kullanıcı bir veya birden fazla **workspace**'e sahiptir; workspace tek bir sidebar ağacı etrafında kurulur.
+*   Sidebar'da insan ve makine okumasına eşit derecede uygun iki tür item birlikte yaşar:
+    *   **Standalone pages** — Başlık + Tiptap tabanlı markdown editör, slash komutları, alt sayfa hiyerarşisi.
+    *   **Databases** — Dinamik kolonlu (text/select/status/date/number/relation vb.) tablolar; **Table / Kanban / Calendar** görünümleri, filtre ve sort desteklenir.
+*   Kritik tasarım kararı: **Her database satırı aynı zamanda bir sayfadır**. Bir kanban kartının hem ajanların filtreleyebileceği tipli (typed) property'leri, hem de uzun format markdown içeriği (body) vardır.
+*   Veri modeli EAV değil, **JSON Column Pattern** ile tutulur (dinamik property'ler `schema`/`properties` JSON kolonlarında).
 
-Bu farkı Remnus, Notion, Obsidian, AppFlowy ve AFFiNE ile detaylı karşılaştıran blog yazılarında (`docs/blog/remnus-vs-*.md`) somutlaştırır: Notion'a göre günlük kullanımda (view çeşitliliği, offline mobil, template pazarı) daha geride ama headless/agent auth + audit trail'i her planda (Free dahil) sunar; Obsidian tamamen local-first tekil kullanıcı aracıdır, Remnus ise takım + agent'ın birlikte çalıştığı network tabanlı bir workspace'tir; AppFlowy'nin resmi bir agent bağlantı yolu yoktur, Remnus'un first-party MCP sunucusu vardır; AFFiNE self-host'ta 10 seat sınırı olan bir Team lisansına bağlıyken Remnus self-host'ta seat sınırı koymaz.
+## 4. MCP Sunucusu — Teknik Yüzey
 
-## 4. MCP sunucusu — teknik yüzey
+**Endpoint:** `https://www.remnus.com/api/mcp` (Her zaman `www` host'u kullanılmalı). **Streamable HTTP** (stateless) ve **SSE** (stateful) dual transport desteklenir. Sunucu ayrı bir sidecar değildir; `/api/mcp` doğrudan Remnus web uygulamasının çekirdeğidir.
 
-**Endpoint:** `https://www.remnus.com/api/mcp` (her zaman `www` host'u kullanılmalı; apex `remnus.com` redirect eder ve bazı OAuth client'ları resource-indicator mismatch nedeniyle bunu reddeder). **Streamable HTTP** (stateless) ve **SSE** (stateful) dual transport desteklenir.
+### Kimlik Doğrulama ve Güvenlik Sınırları
+*   **OAuth 2.1 + PKCE (S256)** — Önerilen yol. Dynamic client registration (`POST /api/oauth/register`). Access token 1 saat, refresh token 30 gün. İnsan kullanıcı (owner) consent ekranında ajanın read/write yetkilerini belirler.
+*   **Personal Access Token (PAT)** — Headless/CI veya özel ajanlar için, workspace **owner**'ları tarafından üretilir.
+*   **Scope'lar:** `read` (9 tool) ve `write` (tüm tool'lar). Read-scoped token ile write çağrısı anında bloklanır.
+*   **Rate limit:** Token başına dakikada 60 istek.
+*   **İzlenebilirlik (Audit Log):** Her tool çağrısı (hangi sayfa okundu, hangi property değiştirildi) workspace audit log'una yazılır.
 
-### Kimlik doğrulama
-- **OAuth 2.1 + PKCE (S256)** — önerilen yol, token yapıştırmaya gerek yok. Dynamic client registration (RFC 7591, `POST /api/oauth/register`). Access token 1 saat, refresh token 30 gün (rotate-on-use). Consent ekranında workspace, scope (read/write) ve agent adı seçilir.
-- **Personal Access Token (PAT)** — headless/CI için, yalnızca workspace **owner**'ları üretebilir (`rmns_...` prefix, `Authorization: Bearer` header). Süresiz ya da expiry'li olabilir.
-- Her token/bağlantı **tek bir workspace**'e scope'ludur.
-- **Scope'lar:** `read` (9 read tool) ve `write` (tüm read tool'lar + 10 write tool). Read-scoped token ile write tool çağrısı hata döner, hiçbir değişiklik yapılmaz.
-- **Rate limit:** token başına dakikada 60 istek, aşımda `429`.
-- **Audit log:** her tool çağrısı (PAT + OAuth) workspace audit log'una yazılır; `query_audit_log` tool'u veya "AI Agents" panelinden izlenebilir.
+### 19 MCP Tool (Ajanların Yetenekleri)
 
-### 19 MCP Tool (9 read + 10 write)
-
-| Tool | Scope | Ne yapar |
+| Tool | Scope | Ne Yapar (Ajanlar İçin) |
 |---|---|---|
-| `search_workspace` | read | Sayfalar ve database'ler üzerinde full-text arama |
-| `list_workspace` | read | Sidebar item'larını sayfalama ile listeler |
-| `get_page` | read | ID ile sayfa veya database satırı getirir (`mode: "outline"` ile ucuz özet) |
-| `get_database_schema` | read | Bir database'in kolon şemasını getirir |
-| `query_database` | read | Filtre/sayfalama ile satır sorgular (`fields` projection ile token tasarrufu) |
-| `list_members` | read | Workspace üyelerini rolleriyle listeler |
-| `query_audit_log` | read | Filtrelenmiş agent aktivite kaydı |
-| `get_changes_since` | read | Bir zaman damgası/cursor'dan bu yana ne değişti (delta-sync) |
-| `get_related_pages` | read | Bir sayfanın parent/children/outgoing link/backlink/database sibling'leri (link graph) |
-| `create_page` | write | Standalone sayfa veya database satırı oluşturur |
-| `update_page` | write | Başlık/içerik/property günceller |
-| `bulk_update_pages` | write | Tek çağrıda birden çok satırı günceller |
-| `delete_page` | write | Sayfa siler (`confirm: true` zorunlu) |
-| `move_item` | write | Item'ı yeni bir parent'a taşır |
-| `create_database` | write | Özel şemalı yeni database oluşturur |
-| `update_database_schema` | write | Kolon ekler/kaldırır |
-| `create_database_view` | write | Table/kanban/calendar view ekler |
-| `update_database_view` | write | View'ı yeniden adlandırır veya config'ini değiştirir |
-| `delete_database_view` | write | Kayıtlı view siler (`confirm: true` zorunlu) |
+| `search_workspace` | read | Sayfalar ve database'ler üzerinde semantik/full-text arama |
+| `list_workspace` | read | Tüm workspace hiyerarşisinde gezinme |
+| `get_page` | read | ID ile sayfa/satır çekme (`mode: "outline"` ile token tasarrufu) |
+| `get_database_schema` | read | Yapılandırılmış bir database'in kolon tiplerini ve kurallarını öğrenme |
+| `query_database` | read | Filtreleme ve sıralama ile satırları SQL-vari şekilde sorgulama |
+| `list_members` | read | Takımdaki insan ve makine üyelerini listeleme |
+| `query_audit_log` | read | Kendi (veya diğer) ajanların geçmiş aktivite kayıtlarını okuma |
+| `get_changes_since` | read | Belirli bir timestamp'ten beri olan tüm değişiklikleri çekme (delta-sync) |
+| `get_related_pages` | read | Link graph analizi (parent/child/backlink bulma) |
+| `create_page` | write | Yeni doküman veya task (satır) oluşturma |
+| `update_page` | write | Mevcut sayfanın içeriğini veya properties (durum, etiket vb.) güncelleme |
+| `bulk_update_pages` | write | **(Ajanlara Özel)** Tek çağrıda onlarca satırı (örn: 50 taskın durumunu) güncelleme |
+| `delete_page` | write | Sayfa silme (`confirm: true` zorunlu koruması ile) |
+| `move_item` | write | Hiyerarşiyi yeniden düzenleme |
+| `create_database` | write | Sıfırdan şemalı yeni bir hafıza tablosu/iş akışı kurma |
+| `update_database_schema` | write | Veritabanına yeni tipli kolonlar ekleme/çıkarma |
+| `create/update/delete_database_view` | write | İnsanların görmesi için tablo/kanban görünümleri yaratma ve yönetme |
 
-### 5 MCP Resource (ucuz, subscribe edilebilir context)
+### 5 MCP Resource (Ucuz Context Kanalları)
+Ajanların hızlıca oryantasyon sağlaması için URI üzerinden abone olabildiği veriler:
+*   `remnus://workspace/{id}/schema` (Tüm workspace'in yapısı)
+*   `remnus://workspace/{id}/digest` (Tek satır tldr özet harita)
+*   `remnus://page/{id}`
+*   `remnus://database/{id}/schema`
+*   `remnus://audit-log/recent` (Son 50 güvenlik kaydı)
 
-| URI | İçerik |
-|---|---|
-| `remnus://workspace/{id}/schema` | Workspace'teki tüm database'lerin tam JSON şeması |
-| `remnus://workspace/{id}/digest` | Tüm workspace'in tek satır/item halinde markdown ağacı — agent'ın oryantasyonu için en ucuz yol |
-| `remnus://page/{id}` | Herhangi bir sayfa/satırın markdown içeriği + property'leri |
-| `remnus://database/{id}/schema` | Tek bir database'in kolon şeması |
-| `remnus://audit-log/recent` | Mevcut token için en son 50 audit log kaydı |
+### 7 MCP Prompt (Yerleşik Ajan Şablonları)
+Sunucu tarafında barınan komutlar: `summarize-page`, `weekly-status-report`, `kanban-triage`, `extract-tasks`, `search-and-create`, `save-memory` (Şeffaf hafıza yazma), `recall-context` (Link-graph destekli hafıza çağırma).
 
-### 7 MCP Prompt (server-side, yeniden kullanılabilir şablonlar)
+## 5. Platformlar & Dağıtım
 
-`summarize-page` (bullet/paragraph/tldr özet), `weekly-status-report` (status'e göre gruplanmış haftalık rapor), `kanban-triage` (blocker/öncelik/next-action analizi), `extract-tasks` (bir sayfadan actionable task checklist çıkarma), `search-and-create` (yeni sayfa yazmadan önce benzer içerik kontrolü), `save-memory` (kalıcı memory'i structured bir satır olarak yazmak için talimat üretir — decision/preference/gotcha/fact tipleri), `recall-context` (bir konu hakkında en iyi eşleşen sayfaların outline'larını + link graph komşuluğunu tek pakette döner).
+*   **Desteklenen Ajan/İstemciler:** Claude Code, Claude Desktop (mcp-remote bridge veya standart config), Cursor, VS Code, Codex, Windsurf, Continue, Antigravity, Cline, Zed ve MCP-uyumlu her sistem. Otomatik keşif için resmi MCP Registry ve Smithery'de yayındadır.
+*   **İnsan Arayüzleri:** Web (Next.js 16 App Router), Masaüstü (Tauri v2 Rust shell), Mobil (Capacitor v8, iOS+Android), PWA.
+*   **Self-Host:** Lokal CLI, Docker Compose veya Vercel/Railway.
 
-### Agent Memory kavramı
+## 6. Teknoloji Yığını (Özet)
+*   Next.js 16.2.6, React 19.2, TypeScript 5.
+*   SQLite (`@libsql/client`, Turso) + Drizzle ORM.
+*   Auth.js v5 + RFC 7591 dynamic client registration sunucusu.
+*   Tiptap v3 (Rich text editör), TanStack Query, Tailwind CSS.
+*   **Lisans: AGPL-3.0** (Açık kaynak; modifikasyon serbest).
 
-Remnus'un öne çıkan kullanım senaryolarından biri: agent memory, opaque bir vector/embedding store değil, **sıradan bir database'teki structured sayfalar**dır (Type/Tags/Date property'leriyle). İnsan bu memory'leri workspace içinde okuyabilir, düzeltebilir, gruplayabilir. `save-memory` / `recall-context` prompt çifti bunun için tasarlanmıştır.
+## 7. Dil Desteği
+English (Varsayılan), Türkçe, हिन्दी, Español, Français, Deutsch, 中文, Русский.
 
-## 5. Platformlar & dağıtım
+## 8. Fiyatlandırma Modeli (Özet)
+Planlar insan sayısından ziyade ajan yoğunluğuna göre ölçeklenir: **Free / Startup / Professional / Enterprise**. Temel ayrım noktaları Agent (Token) sayısı, API Rate Limitleri ve Audit-Log tutma süreleri (retention). Ücretsiz planda bile tam kapsamlı MCP, audit log ve agent auth erişimi mevcuttur.
 
-- **Web:** Next.js 16.2.6 (App Router) — cloud'da `remnus.com` / self-host'ta kendi domain'iniz.
-- **Masaüstü:** Tauri v2 (Rust shell), Windows/macOS/Linux — `remnus.com`'u sistem WebView'inde yükler.
-- **Mobil:** Capacitor v8, iOS + Android — aynı şekilde `remnus.com`'u yükler.
-- **PWA:** Workbox tabanlı service worker, install prompt akışı, `/download` sayfası.
-- **Self-host seçenekleri:** `npm run dev` ile lokal, Docker Compose (5 dakikalık kurulum, SQLite volume ile persist), tek tıkla Vercel veya Railway deploy.
-- **Kayıt/registry:** Resmi MCP Registry'de (`io.github.Ranork/remnus`) ve Smithery'de (`ranorkk/remnus`) yayınlıdır — MCP-aware client'lar otomatik keşfedebilir.
-- **Claude Desktop:** `mcpb/` altında paketlenmiş remote-MCP proxy bundle'ı ile bağlanılabilir; standart `mcpServers` JSON config veya `mcp-remote` bridge ile de her editör bağlanabilir.
-- **Desteklenen editör/istemciler:** Claude Code, Claude Desktop, Cursor, VS Code, Codex, Windsurf, Continue, Antigravity, Cline, Zed ve genel olarak her MCP-uyumlu client.
+## 9. Tipik Kullanım Senaryoları (Human-Agent Collab)
 
-## 6. Teknoloji yığını (özet)
+1.  **Otonom Ajan Hafızası (Shared Memory):** Ajanın proje kural setlerini, preference'ları ve alınan kararları (Decision Records) Remnus tablosuna kaydetmesi, insanın bunları onaylayıp düzenlemesi.
+2.  **Agentic Yazılım Geliştirme:** Cursor veya Cline gibi bir kodlama ajanının Remnus'taki Kanban tablosunu okuyarak blocker'ları görmesi, kodu yazdıktan sonra Remnus API'si ile task statüsünü "Done"a çekmesi.
+3.  **Otomatik Durum Raporlama:** Bir analiz ajanının gece çalışarak workspace'teki tüm değişiklikleri (`get_changes_since`) okuyup, sabah insan takımı için haftalık özet (`weekly-status-report`) sayfası oluşturması.
+4.  **Güvenli Araştırma:** Ajanın dış dünyadan (web) topladığı verileri, tipli bir Remnus veritabanına doğrudan yapılandırılmış veri (structured data) olarak yığması.
 
-- **Framework:** Next.js 16.2.6 (App Router), React 19.2, strict TypeScript 5.
-- **Veritabanı:** SQLite (`@libsql/client`, Turso-uyumlu) + Drizzle ORM; dinamik property'ler JSON kolonlarda (EAV değil).
-- **Auth:** Auth.js v5 — Google & GitHub OAuth; ayrıca kendi OAuth 2.1 + PKCE authorization server'ı (agent'lar için, RFC 7591 dynamic client registration).
-- **i18n:** next-intl v4, `localePrefix: 'never'`.
-- **Editör:** Tiptap v3 (rich text/markdown).
-- **State/cache:** TanStack Query.
-- **Stil:** Tailwind CSS + Lucide icons; flat/borderless, üç katmanlı neutral dark palette (auth sayfaları istisna, rounded-card stilinde).
-- **Entegrasyonlar:** Cloudinary (görsel upload), Stripe (billing), PostHog (analytics + error tracking), AWS SES (transactional/newsletter e-posta).
-- **Lisans:** **AGPL-3.0** — self-host ve modifikasyon serbest; SaaS fork'ları değişikliklerini açık kaynak yapmak zorunda.
-
-## 7. Dil desteği
-
-8 dil: **English (kaynak/varsayılan), Türkçe, हिन्दी, Español, Français, Deutsch, 中文, Русский.**
-
-## 8. Fiyatlandırma modeli (özet)
-
-Abonelik bir **workspace**'e değil, bir **billing owner (kullanıcı)**'a bağlıdır; owner bir seat pool'u tutar. Planlar: **Free / Startup / Professional / Enterprise** — seat, agent (token) sayısı, storage ve audit-log retention limitleri farklıdır. Ücretsiz planda bile MCP + audit log + scoped token erişimi vardır.
-
-## 9. Tipik kullanım senaryoları
-
-- **Proje planlama**, **task/kanban yönetimi**, **agent memory**, **dokümantasyon bakımı**, **çoklu-agent işbirliği**, **otomatik durum raporlama**.
-
-## 10. Hızlı referans
+## 10. Hızlı Referans
 
 | Alan | Değer |
 |---|---|
+| Kategori | Human-Agent Collaborative Workspace |
 | MCP endpoint | `https://www.remnus.com/api/mcp` |
 | Tool / Resource / Prompt | 19 / 5 / 7 |
-| Auth | OAuth 2.1 + PKCE (önerilen), PAT |
-| Rate limit | 60 istek/dk/token |
+| Auth Modeli | Agent-First: OAuth 2.1 + PKCE, PAT |
+| Güvenlik/Güven | Tam Kapsamlı Workspace Audit Log |
 | Lisans | AGPL-3.0 |
 | Repo | `github.com/Ranork/remnus-app` |
-| Diller | en, tr, hi, es, fr, de, zh, ru |
 
 ---
 

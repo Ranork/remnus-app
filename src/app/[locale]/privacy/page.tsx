@@ -7,11 +7,11 @@ import { METADATA_BASE_URL, DEFAULT_OG_IMAGE, DEFAULT_TWITTER_IMAGE } from '@/li
 export const metadata: Metadata = {
   metadataBase: new URL(METADATA_BASE_URL),
   title: 'Privacy Policy',
-  description: 'Remnus privacy policy — how we collect, use, and protect your data in the MCP-Native workspace for vibe coders.',
+  description: 'Remnus privacy policy — how we collect, use, and protect your data in the Human-Agent Collaborative Workspace.',
   alternates: { canonical: 'https://remnus.com/privacy' },
   openGraph: {
     title: 'Privacy Policy | Remnus',
-    description: 'Remnus privacy policy — how we collect, use, and protect your data in the MCP-Native workspace for vibe coders.',
+    description: 'Remnus privacy policy — how we collect, use, and protect your data in the Human-Agent Collaborative Workspace.',
     url: 'https://remnus.com/privacy',
     siteName: 'Remnus',
     images: [DEFAULT_OG_IMAGE],
@@ -20,7 +20,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'Privacy Policy | Remnus',
-    description: 'Remnus privacy policy — how we collect, use, and protect your data in the MCP-Native workspace for vibe coders.',
+    description: 'Remnus privacy policy — how we collect, use, and protect your data in the Human-Agent Collaborative Workspace.',
     images: [DEFAULT_TWITTER_IMAGE],
   },
 };

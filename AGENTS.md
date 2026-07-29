@@ -41,7 +41,7 @@ Do NOT create new Serena memories for every change — prefer editing existing o
 
 # Project Details: Remnus
 
-**Remnus** is a Notion-like application built around a **workspace** model. Users can create standalone pages (title + markdown) and customizable databases (dynamic columns, table/kanban/calendar views) — both living side by side in a unified sidebar. Each database row is also a page with markdown content.
+**Remnus** is the Human-Agent Collaborative Workspace — a **workspace** model where humans and AI agents read/write through the same MCP surface, not a Notion alternative. Users can create standalone pages (title + markdown) and customizable databases (dynamic columns, table/kanban/calendar views) — both living side by side in a unified sidebar. Each database row is also a page with markdown content.
 
 ## i18n & Localization
 
