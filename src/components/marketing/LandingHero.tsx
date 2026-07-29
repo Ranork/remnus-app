@@ -70,17 +70,17 @@ export default async function LandingHero() {
           {/* left — copy */}
           <div>
             <h1
-              className="font-sans font-semibold text-neutral-100 leading-[0.98] m-0 text-[44px] sm:text-[62px] lg:text-[82px]"
+              className="font-sans font-semibold text-neutral-100 leading-[0.98] m-0 break-words text-[38px] sm:text-[54px] lg:text-[62px]"
               style={{ letterSpacing: '-0.035em' }}
             >
               {t('bridgeHeroH1Part1')}
               <br />
+              {t('bridgeHeroH1Part2')}
+              <br />
               {t('bridgeHeroH1Pre')}
-              <span className="font-serif italic text-accent-strong text-[48px] sm:text-[68px] lg:text-[88px]">
+              <span className="font-serif italic text-accent-strong text-[42px] sm:text-[60px] lg:text-[68px]">
                 {t('bridgeHeroH1Accent')}
               </span>
-              <br />
-              {t('bridgeHeroH1Part2')}
             </h1>
 
             <p className="mt-6 lg:mt-[26px] text-base lg:text-[17px] leading-[1.5] text-neutral-50 max-w-[420px]">
