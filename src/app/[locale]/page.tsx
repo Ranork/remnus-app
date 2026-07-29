@@ -5,9 +5,9 @@ import { METADATA_BASE_URL, DEFAULT_OG_IMAGE, DEFAULT_TWITTER_IMAGE } from '@/li
 export const metadata: Metadata = {
   metadataBase: new URL(METADATA_BASE_URL),
   title: {
-    absolute: 'Remnus | MCP-Native workspace for vibe coders',
+    absolute: 'Remnus | Human-Agent Collaborative Workspace',
   },
-  description: 'The workspace built for vibe coders and AI agents. Build databases, kanban boards, and pages that Claude, Cursor, Windsurf, and any MCP client can read and write.',
+  description: 'Remnus is the Human-Agent Collaborative Workspace. Build databases, kanban boards, and pages that Claude, Cursor, Windsurf, and any MCP client can read and write.',
   alternates: {
     canonical: 'https://remnus.com',
     languages: {
@@ -23,8 +23,8 @@ export const metadata: Metadata = {
     },
   },
   openGraph: {
-    title: 'Remnus | MCP-Native workspace for vibe coders',
-    description: 'The workspace built for vibe coders and AI agents. Build databases, kanban boards, and pages that Claude, Cursor, Windsurf, and any MCP client can read and write.',
+    title: 'Remnus | Human-Agent Collaborative Workspace',
+    description: 'Remnus is the Human-Agent Collaborative Workspace. Build databases, kanban boards, and pages that Claude, Cursor, Windsurf, and any MCP client can read and write.',
     url: METADATA_BASE_URL,
     siteName: 'Remnus',
     images: [DEFAULT_OG_IMAGE],
@@ -32,8 +32,8 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Remnus | MCP-Native workspace for vibe coders',
-    description: 'The workspace built for vibe coders and AI agents. Build databases, kanban boards, and pages that Claude, Cursor, Windsurf, and any MCP client can read and write.',
+    title: 'Remnus | Human-Agent Collaborative Workspace',
+    description: 'Remnus is the Human-Agent Collaborative Workspace. Build databases, kanban boards, and pages that Claude, Cursor, Windsurf, and any MCP client can read and write.',
     images: [DEFAULT_TWITTER_IMAGE],
   },
 };

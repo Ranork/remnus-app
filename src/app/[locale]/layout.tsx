@@ -22,7 +22,7 @@ export const metadata: Metadata = {
     default: 'Remnus',
     template: '%s | Remnus',
   },
-  description: 'Remnus is the MCP-Native workspace for vibe coders — kanban boards, databases, and pages that Claude, Cursor, and any AI agent can read and write via MCP.',
+  description: 'Remnus is the Human-Agent Collaborative Workspace — kanban boards, databases, and pages that Claude, Cursor, and any AI agent can read and write via MCP.',
   manifest: '/manifest.json',
   appleWebApp: {
     capable: true,
@@ -35,7 +35,7 @@ export const metadata: Metadata = {
     apple: '/apple-touch-icon.png',
   },
   openGraph: {
-    title: 'Remnus | MCP-Native workspace for vibe coders',
+    title: 'Remnus | Human-Agent Collaborative Workspace',
     description: 'Kanban boards, databases, and pages that Claude, Cursor, and any AI agent can read and write via MCP.',
     url: METADATA_BASE_URL,
     siteName: 'Remnus',
@@ -44,7 +44,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Remnus | MCP-Native workspace for vibe coders',
+    title: 'Remnus | Human-Agent Collaborative Workspace',
     description: 'Kanban boards, databases, and pages that Claude, Cursor, and any AI agent can read and write via MCP.',
     images: [DEFAULT_TWITTER_IMAGE],
   },
