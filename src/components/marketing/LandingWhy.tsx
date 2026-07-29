@@ -25,6 +25,10 @@ export default async function LandingWhy() {
           {t('bridgeWhyPart2')}
         </blockquote>
 
+        <p className="mt-5 lg:mt-6 max-w-[640px] text-base lg:text-[17px] leading-[1.5] text-neutral-400">
+          {t('bridgeWhyUnderline')}
+        </p>
+
         <div className="mt-8 flex items-center gap-3 justify-end text-[13px] text-dim">
           <span className="w-8 h-px bg-dim" />
           <span className="font-mono">{t('bridgeWhySig')}</span>

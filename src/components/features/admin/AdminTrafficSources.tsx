@@ -8,7 +8,7 @@ import { TrafficTrendChart } from './TrafficTrendChart';
 
 type Tab = 'sources' | 'daily' | 'weekly' | 'monthly';
 type TrendViewMode = 'bar' | 'line';
-type TrendSource = 'channel:all' | `channel:${TrafficChannel}` | 'campaign:all' | `campaign:${string}`;
+type TrendSource = 'total' | 'channel:all' | `channel:${TrafficChannel}` | 'campaign:all' | `campaign:${string}`;
 type TrendGranularity = 'day' | 'week' | 'month';
 
 const RANGE_OPTIONS: Record<TrendGranularity, number[]> = {
