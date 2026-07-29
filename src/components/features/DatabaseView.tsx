@@ -7,16 +7,17 @@ import { useTranslations } from 'next-intl';
 import { createPage, getPage, deletePage, duplicatePage, reorderPages, updatePageProperties } from '@/lib/actions/page';
 import { updateDatabaseViews } from '@/lib/actions/database';
 import { updateWorkspaceItemIcon, updateWorkspaceItemTitle } from '@/lib/actions/workspace';
-import { Plus, Settings, Columns3, Filter, ArrowUpDown, X, Maximize2, Database, ArrowLeftRight, MoreHorizontal, Trash2, Copy, ChevronLeft, RefreshCw, ClipboardList } from 'lucide-react';
+import { Plus, Settings, Columns3, Filter, ArrowUpDown, X, Maximize2, Database, ArrowLeftRight, MoreHorizontal, Trash2, Copy, ChevronLeft, RefreshCw, ClipboardList, FileCode2 } from 'lucide-react';
 import TableLayout from './TableLayout';
 import GroupedTableLayout from './GroupedTableLayout';
 import { ConfirmDialog } from './ConfirmDialog';
 import { BulkRowsDialog } from './BulkRowsDialog';
+import { PageMarkdownDialog } from './PageMarkdownDialog';
 import KanbanBoard from './KanbanBoard';
 import CalendarView from './CalendarView';
 import ViewsBar from './ViewsBar';
 import DatabasePropertiesSidebar from './DatabasePropertiesSidebar';
-import PageEditor from './PageEditor';
+import PageEditor, { type PageEditorHandle } from './PageEditor';
 import PageIcon from './PageIcon';
 import IconPicker from './IconPicker';
 import { MembersProvider, type WorkspaceMember } from './MembersContext';
@@ -327,6 +328,8 @@ export default function DatabaseView({
   // bar can reveal the title and keep it visible.
   const [peekScrolled, setPeekScrolled] = useState(false);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+  const [markdownDraft, setMarkdownDraft] = useState<string | null>(null);
+  const peekEditorRef = useRef<PageEditorHandle>(null);
   const [showIconPicker, setShowIconPicker] = useState(false);
   const dbButtonRef = useRef<HTMLButtonElement>(null);
   const [dbName, setDbName] = useState<string>(database.name ?? '');
@@ -1356,7 +1359,18 @@ export default function DatabaseView({
                       {openMenuId === peekPageId && (
                         <>
                           <div className="fixed inset-0 z-40 cursor-default" onClick={() => setOpenMenuId(null)} />
-                          <div className="absolute right-0 top-full mt-1.5 z-50 bg-neutral-850 border border-neutral-800 shadow-xl py-1 w-36 rounded overflow-hidden text-left animate-fade-in animate-duration-100">
+                          <div className="absolute right-0 top-full mt-1.5 z-50 bg-neutral-850 border border-neutral-800 shadow-xl py-1 w-40 rounded overflow-hidden text-left animate-fade-in animate-duration-100">
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setOpenMenuId(null);
+                                setMarkdownDraft(peekEditorRef.current?.getMarkdown() ?? peekPage?.content ?? '');
+                              }}
+                              className="w-full px-3 py-2 text-xs text-neutral-300 hover:bg-neutral-800 flex items-center gap-2 cursor-pointer transition-colors border-b border-neutral-850"
+                            >
+                              <FileCode2 size={13} />
+                              <span>{tPage('markdown.button')}</span>
+                            </button>
                             <button
                               onClick={async (e) => {
                                 e.stopPropagation();
@@ -1402,6 +1416,7 @@ export default function DatabaseView({
                   ) : (
                     peekPage && (
                       <PageEditor
+                        ref={peekEditorRef}
                         database={liveDatabase}
                         onSchemaChange={handleSchemaChange}
                         initialPage={peekPage}
@@ -1473,7 +1488,18 @@ export default function DatabaseView({
                     {openMenuId === peekPageId && (
                       <>
                         <div className="fixed inset-0 z-40 cursor-default" onClick={() => setOpenMenuId(null)} />
-                        <div className="absolute right-0 top-full mt-1.5 z-50 bg-neutral-850 border border-neutral-800 shadow-xl py-1 w-36 rounded overflow-hidden text-left animate-fade-in animate-duration-100">
+                        <div className="absolute right-0 top-full mt-1.5 z-50 bg-neutral-850 border border-neutral-800 shadow-xl py-1 w-40 rounded overflow-hidden text-left animate-fade-in animate-duration-100">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setOpenMenuId(null);
+                              setMarkdownDraft(peekEditorRef.current?.getMarkdown() ?? peekPage?.content ?? '');
+                            }}
+                            className="w-full px-3 py-2 text-xs text-neutral-300 hover:bg-neutral-800 flex items-center gap-2 cursor-pointer transition-colors border-b border-neutral-850"
+                          >
+                            <FileCode2 size={13} />
+                            <span>{tPage('markdown.button')}</span>
+                          </button>
                           <button
                             onClick={async (e) => {
                               e.stopPropagation();
@@ -1519,6 +1545,7 @@ export default function DatabaseView({
                 ) : (
                   peekPage && (
                     <PageEditor
+                      ref={peekEditorRef}
                       database={liveDatabase}
                       onSchemaChange={handleSchemaChange}
                       initialPage={peekPage}
@@ -1532,6 +1559,13 @@ export default function DatabaseView({
             </div>
           )}
         </>
+      )}
+      {markdownDraft !== null && (
+        <PageMarkdownDialog
+          initialMarkdown={markdownDraft}
+          onApply={(md) => peekEditorRef.current?.replaceContent(md)}
+          onClose={() => setMarkdownDraft(null)}
+        />
       )}
       {confirmDeletePageId && (
         <ConfirmDialog

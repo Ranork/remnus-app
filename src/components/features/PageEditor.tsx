@@ -1,5 +1,5 @@
 'use client';
-import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
+import { useState, useMemo, useEffect, useRef, useCallback, forwardRef, useImperativeHandle } from 'react';
 import { updatePageContent, updatePageProperties, duplicatePage, deletePage, updatePageIcon } from '@/lib/actions/page';
 import { updateDatabaseSchema } from '@/lib/actions/database';
 import { ArrowLeft, X, Check, ChevronDown, MoreHorizontal, Trash2, Copy, Smile, ArrowLeftRight, Globe, CheckSquare, Square, ExternalLink, Plus, FileCode2 } from 'lucide-react';
@@ -75,16 +75,14 @@ function AutoGrowTextarea({
   );
 }
 
-export default function PageEditor({
-  database,
-  onSchemaChange,
-  initialPage,
-  isPeek = false,
-  onClose,
-  onPageUpdated,
-  subItems,
-  isAdmin = false,
-}: {
+export type PageEditorHandle = {
+  /** Current document serialized to the same storage-markdown format used for persistence. */
+  getMarkdown: () => string;
+  /** Replace the whole document from a storage-markdown string and persist it immediately. */
+  replaceContent: (markdown: string) => void;
+};
+
+type PageEditorProps = {
   database: any;
   onSchemaChange?: (schema: any[]) => void;
   initialPage: any;
@@ -93,7 +91,18 @@ export default function PageEditor({
   onPageUpdated?: (updatedPage: any) => void;
   subItems?: WorkspaceItemRow[];
   isAdmin?: boolean;
-}) {
+};
+
+const PageEditor = forwardRef<PageEditorHandle, PageEditorProps>(function PageEditor({
+  database,
+  onSchemaChange,
+  initialPage,
+  isPeek = false,
+  onClose,
+  onPageUpdated,
+  subItems,
+  isAdmin = false,
+}, ref) {
   const t = useTranslations('Page');
   const tDb = useTranslations('Database');
   const tEditor = useTranslations('Editor');
@@ -142,6 +151,11 @@ export default function PageEditor({
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const menuDropdownRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<BlockEditorHandle>(null);
+
+  useImperativeHandle(ref, () => ({
+    getMarkdown: () => editorRef.current?.getMarkdown() ?? '',
+    replaceContent: (markdown: string) => editorRef.current?.replaceContent(markdown),
+  }), []);
 
   // Keep the Tauri keep-alive query cache (TabPane) in sync with each save, so
   // leaving and re-entering this tab within the staleTime window doesn't reload
@@ -845,4 +859,6 @@ export default function PageEditor({
       )}
     </div>
   );
-}
+});
+
+export default PageEditor;
