@@ -34,9 +34,9 @@ export function GET() {
 
   const body = `# Remnus
 
-> Remnus is the MCP-Native workspace for vibe coders — pages and databases that Claude, Cursor, and any MCP-compatible AI agent can read and write over a standard HTTP API.
+> Remnus is the Human-Agent Collaborative Workspace — pages and databases that Claude, Cursor, and any MCP-compatible AI agent can read and write over a standard HTTP API, under the same audit trail your team sees.
 
-Remnus pairs a Notion-like editor (pages, databases, kanban/table/calendar views) with a built-in Model Context Protocol (MCP) server, so an AI agent can search, read, and write workspace content directly instead of copy-pasting through a chat window.
+Remnus pairs a page-and-database editor (pages, databases, kanban/table/calendar views) with a built-in Model Context Protocol (MCP) server, so an AI agent can search, read, and write workspace content directly instead of copy-pasting through a chat window.
 
 ## Wiki
 

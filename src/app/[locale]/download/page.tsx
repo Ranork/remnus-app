@@ -6,11 +6,11 @@ import { METADATA_BASE_URL, DEFAULT_OG_IMAGE, DEFAULT_TWITTER_IMAGE } from '@/li
 export const metadata: Metadata = {
   metadataBase: new URL(METADATA_BASE_URL),
   title: 'Download',
-  description: 'Download Remnus for Windows, macOS, or Linux. The MCP-Native workspace for vibe coders — now as a native desktop app powered by Tauri.',
+  description: 'Download Remnus for Windows, macOS, or Linux. The Human-Agent Collaborative Workspace — now as a native desktop app powered by Tauri.',
   alternates: { canonical: 'https://remnus.com/download' },
   openGraph: {
     title: 'Download | Remnus',
-    description: 'Download Remnus for Windows, macOS, or Linux. The MCP-Native workspace for vibe coders — now as a native desktop app powered by Tauri.',
+    description: 'Download Remnus for Windows, macOS, or Linux. The Human-Agent Collaborative Workspace — now as a native desktop app powered by Tauri.',
     url: 'https://remnus.com/download',
     siteName: 'Remnus',
     images: [DEFAULT_OG_IMAGE],
@@ -19,7 +19,7 @@ export const metadata: Metadata = {
   twitter: {
     card: 'summary_large_image',
     title: 'Download | Remnus',
-    description: 'Download Remnus for Windows, macOS, or Linux. The MCP-Native workspace for vibe coders — now as a native desktop app powered by Tauri.',
+    description: 'Download Remnus for Windows, macOS, or Linux. The Human-Agent Collaborative Workspace — now as a native desktop app powered by Tauri.',
     images: [DEFAULT_TWITTER_IMAGE],
   },
 };
