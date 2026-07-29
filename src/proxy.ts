@@ -25,6 +25,8 @@ export const config = {
     // check would bounce them to /login and break PWA install/offline. Same
     // reasoning for llms.txt — AI crawlers fetch it cookie-less, and it's
     // rewritten (afterFiles, i.e. after this middleware decision) to /api/llms.
-    '/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|llms.txt|manifest.json|sw.js|workbox-.*|logo.*|.*\\.(?:png|ico|svg|jpg|jpeg|webp|woff2?)).*)',
+    // Vendored widget files are public static assets and must bypass
+    // locale/auth rewrites so the script and license files resolve directly.
+    '/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|llms.txt|manifest.json|sw.js|workbox-.*|vendor/accessibility-preference-widget/.*|logo.*|.*\\.(?:png|ico|svg|jpg|jpeg|webp|woff2?)).*)',
   ],
 };

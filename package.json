@@ -8,6 +8,7 @@
     "build": "npx tsx src/db/migrate.ts && next build",
     "start": "next start",
     "lint": "eslint",
+    "sync:accessibility-widget": "node scripts/sync-accessibility-widget.mjs",
     "db:migrate": "npx tsx src/db/migrate.ts",
     "db:setup": "npx tsx src/db/setup.ts",
     "tauri": "tauri",

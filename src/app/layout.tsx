@@ -3,6 +3,7 @@ import { Onest, JetBrains_Mono, Fraunces } from 'next/font/google';
 import './globals.css';
 import { cookies } from 'next/headers';
 import { getLocale } from 'next-intl/server';
+import Script from 'next/script';
 import DebugConsole from '@/components/providers/DebugConsole';
 
 const onest = Onest({
@@ -22,7 +23,6 @@ const fraunces = Fraunces({
 export const viewport: Viewport = {
   width: 'device-width',
   initialScale: 1,
-  maximumScale: 1,
 };
 
 const VALID_THEMES = new Set(['remnus', 'dracula', 'tokyo-night', 'nord', 'catppuccin']);
@@ -59,6 +59,15 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body className="font-sans bg-neutral-950 text-neutral-50" suppressHydrationWarning>
         <DebugConsole />
         {children}
+        <Script
+          id="accessibility-preference-widget"
+          src="/vendor/accessibility-preference-widget/widget.min.js"
+          strategy="afterInteractive"
+          data-language={locale}
+          data-position="bottom-left"
+          data-offset-x="1.25rem"
+          data-offset-y="5rem"
+        />
       </body>
     </html>
   );
