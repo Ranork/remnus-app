@@ -345,6 +345,30 @@
       "description": "Permission identifier",
       "oneOf": [
         {
+          "description": "Allows detecting installed AI coding agents and writing their MCP client config.",
+          "type": "string",
+          "const": "allow-agent-connect",
+          "markdownDescription": "Allows detecting installed AI coding agents and writing their MCP client config."
+        },
+        {
+          "description": "Allows reading, choosing, and resetting the custom download directory.",
+          "type": "string",
+          "const": "allow-download-dir",
+          "markdownDescription": "Allows reading, choosing, and resetting the custom download directory."
+        },
+        {
+          "description": "Allows quitting the app (used after installing an update).",
+          "type": "string",
+          "const": "allow-quit-app",
+          "markdownDescription": "Allows quitting the app (used after installing an update)."
+        },
+        {
+          "description": "Allows revealing a downloaded file in its containing folder.",
+          "type": "string",
+          "const": "allow-reveal-download",
+          "markdownDescription": "Allows revealing a downloaded file in its containing folder."
+        },
+        {
           "description": "Default core plugins set.\n#### This default permission set includes:\n\n- `core:path:default`\n- `core:event:default`\n- `core:window:default`\n- `core:webview:default`\n- `core:app:default`\n- `core:image:default`\n- `core:resources:default`\n- `core:menu:default`\n- `core:tray:default`",
           "type": "string",
           "const": "core:default",
