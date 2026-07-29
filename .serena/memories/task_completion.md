@@ -1,6 +1,6 @@
 # Task Completion Checklist
 
-Last verified: 2026-07-14
+Last verified: 2026-07-29
 Primary sources: `AI.md`, `AGENTS.md`, `package.json`
 
 Use the narrowest checks that match the change:
@@ -12,5 +12,5 @@ Use the narrowest checks that match the change:
 5. **i18n** — new user-facing text must use next-intl and exist in all 8 `messages/*.json` files (en/tr/hi/es/fr/de/zh/ru).
 6. **Database** — schema changes require the documented migration flow; confirm the latest threshold (`> 1782000000000`) and target database before any apply command.
 7. **Documentation/memory** — structural changes update `AGENTS.md` plus relevant Serena memories. Shared workflow changes update `AI.md`.
-8. **Handoff** — update `.ai/CURRENT_TASK.md` accurately and run `scripts/ai/update-handoff.ps1`.
+8. **Handoff** — update the local Git-ignored `.ai/CURRENT_TASK.md` accurately (create it from `.ai/CURRENT_TASK.template.md` when missing; never stage/commit it) and run `scripts/ai/update-handoff.ps1`.
 9. **Work Plan** — when a matching task exists and `remnus-mcp` is available, write the file/test summary and set it to `Done`.

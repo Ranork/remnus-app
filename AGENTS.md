@@ -2,7 +2,7 @@
 
 `AI.md` is the canonical shared guide for Claude Code and Codex. Read and follow it before coding, debugging, reviewing, or making architectural changes.
 
-Use `.ai/CURRENT_TASK.md`, the current Git state, and relevant Serena memories to recover active context. Keep this file as the detailed product/source map; structural changes must update it and the matching Serena memories.
+Use the local, Git-ignored `.ai/CURRENT_TASK.md` (create it from `.ai/CURRENT_TASK.template.md` when missing), the current Git state, and relevant Serena memories to recover active context. Keep this file as the detailed product/source map; structural changes must update it and the matching Serena memories.
 
 ---
 

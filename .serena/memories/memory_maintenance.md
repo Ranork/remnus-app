@@ -1,6 +1,6 @@
 # Memory Maintenance
 
-Last verified: 2026-07-14
+Last verified: 2026-07-29
 Primary sources: `AI.md`, `AGENTS.md`, `.serena/memories/`
 
 ## Discovery Model
@@ -29,7 +29,7 @@ Keep guidance durable and generalizable, not task-local.
 
 Add or update memories only with stable, non-obvious project conventions that avoid complex rediscovery in the future.
 Do not add: quick-read facts; generic language/framework knowledge; one-off task notes; volatile line-level details; behavior likely to change soon.
-- Never create a `current-task` Serena memory. Active/partial work belongs in `.ai/CURRENT_TASK.md`; mechanical Git state belongs in the ignored `.ai/HANDOFF.generated.md`.
+- Never create a `current-task` Serena memory. Active/partial work belongs in the local Git-ignored `.ai/CURRENT_TASK.md` (created from tracked `.ai/CURRENT_TASK.template.md` when missing); mechanical Git state belongs in the ignored `.ai/HANDOFF.generated.md`.
 
 ## Maintenance Actions
 

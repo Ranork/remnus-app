@@ -1,6 +1,6 @@
 # AI Project Guide
 
-Last verified: 2026-07-14
+Last verified: 2026-07-29
 
 ## Language
 
@@ -13,7 +13,8 @@ Last verified: 2026-07-14
 - `AI.md`, Claude Code ve Codex için canonical ortak çalışma rehberidir.
 - `AGENTS.md`, ayrıntılı ürün/source map ve projeye özel zorunlu kuralları taşır. Yapısal değişikliklerde güncellenmeli ve Serena ile senkron tutulmalıdır.
 - `.serena/memories/`, kalıcı ve ayrıntılı proje bilgisidir. `mem:core` keşif girişidir.
-- `.ai/CURRENT_TASK.md`, yalnızca aktif ve geçici görev durumudur.
+- `.ai/CURRENT_TASK.md`, yalnızca aktif ve geçici görev durumudur; working tree'ye özeldir ve Git tarafından izlenmez.
+- `.ai/CURRENT_TASK.template.md`, yeni clone/worktree'lerde yerel görev dosyasını başlatmak için izlenen nötr şablondur.
 - `.ai/HANDOFF.generated.md`, mekanik Git snapshot'ıdır; sohbet özeti veya doğruluk kaynağı değildir.
 - Kaynaklar çelişirse kod/Git gerçeğini esas al, sonra stale rehberi düzelt.
 
@@ -21,7 +22,7 @@ Last verified: 2026-07-14
 
 Basit typo, format veya salt soru-cevap işleri dışında:
 
-1. `.ai/CURRENT_TASK.md` dosyasını oku.
+1. `.ai/CURRENT_TASK.md` varsa oku; yoksa `.ai/CURRENT_TASK.template.md` dosyasını kopyalayarak yerel dosyayı oluştur.
 2. Branch, HEAD, `git status --short` ve ilgili diff'i kontrol et.
 3. Kullanıcının mevcut değişikliklerini kendi çalışman kabul etme; koru ve çakışma varsa bildir.
 4. Serena kullanılabiliyorsa gerekli manual/activation akışını uygula, `list_memories` çağır ve yalnızca ilgili memory'leri oku.
@@ -40,7 +41,7 @@ Basit typo, format veya salt soru-cevap işleri dışında:
 ## After a meaningful change
 
 1. En dar ilgili doğrulamaları çalıştır.
-2. Aktif görev sürüyorsa `.ai/CURRENT_TASK.md` alanlarını güncelle; bittiyse durumu doğru biçimde kapat.
+2. Aktif görev sürüyorsa yerel `.ai/CURRENT_TASK.md` alanlarını güncelle; bittiyse durumu doğru biçimde kapat. Bu dosyayı stage veya commit etme.
 3. Kalıcı proje bilgisi değiştiyse ilgili Serena memory'sini düzelt; stale bilgiyi yalnızca ekleme yaparak bırakma.
 4. Kritik ortak akış değiştiyse `AI.md`; yapısal ürün haritası değiştiyse `AGENTS.md` güncelle.
 5. `AGENTS.md` değiştiyse Serena'yı `remnus-app` için aktive et, memory listesini kontrol et ve özellikle `core`/`conventions` ile senkronla.
@@ -50,7 +51,7 @@ Basit typo, format veya salt soru-cevap işleri dışında:
 ## Agent handoff protocol
 
 - Handoff'ta goal, scope, completed, changed files, decisions, verification, remaining work, known issues ve next exact step alanlarını güncel tut.
-- Yeni ajan önce `AI.md`, `.ai/CURRENT_TASK.md`, Git durumu ve ilgili Serena memory'lerini karşılaştırır.
+- Yeni ajan önce `AI.md`, varsa yerel `.ai/CURRENT_TASK.md`, Git durumu ve ilgili Serena memory'lerini karşılaştırır.
 - Önceki ajanın anlatımını kod ve diff ile doğrulamadan source of truth sayma.
 - `.ai/HANDOFF.generated.md` yalnızca branch/HEAD/status/diff stat gibi mekanik metadata içerir ve Git tarafından izlenmez.
 
@@ -150,4 +151,4 @@ Serena'da `mem:core` genel source map'tir. Kodlama kuralları ve gotcha'lar içi
 
 ## Active work
 
-Aktif görevi ve exact next step'i `.ai/CURRENT_TASK.md` içinden al. Mekanik Git snapshot'ı gerektiğinde `scripts/ai/update-handoff.ps1` ile yenile.
+Aktif görevi ve exact next step'i varsa yerel `.ai/CURRENT_TASK.md` içinden al; dosya yoksa `.ai/CURRENT_TASK.template.md` şablonundan oluştur. Mekanik Git snapshot'ı gerektiğinde `scripts/ai/update-handoff.ps1` ile yenile.

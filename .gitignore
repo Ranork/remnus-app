@@ -82,5 +82,6 @@ next-env.d.ts
 # rendered email template previews (scripts/test-emails.ts fallback)
 email-previews/
 
-# Local AI handoff snapshot (generated from Git metadata)
+# Local AI task state and handoff snapshot
+/.ai/CURRENT_TASK.md
 /.ai/HANDOFF.generated.md
