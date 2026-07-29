@@ -820,7 +820,16 @@
     "saving": "Saving…",
     "saved": "Saved",
     "savingError": "Error saving",
-    "backlinksTitle": "Backlinks ({count})"
+    "backlinksTitle": "Backlinks ({count})",
+    "markdown": {
+      "button": "Edit as Markdown",
+      "title": "Edit as Markdown",
+      "description": "The full page body as markdown, in a separate view — editing here won't touch the block editor above until you apply. Embedded blocks (images, callouts, files, child pages, links) appear as their underlying HTML; leave those lines alone if you're not sure.",
+      "copy": "Copy",
+      "copied": "Copied",
+      "apply": "Apply",
+      "cancel": "Cancel"
+    }
   },
   "IconPicker": {
     "title": "Icon",

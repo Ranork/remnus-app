@@ -2,7 +2,7 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react';
 import { updatePageContent, updatePageProperties, duplicatePage, deletePage, updatePageIcon } from '@/lib/actions/page';
 import { updateDatabaseSchema } from '@/lib/actions/database';
-import { ArrowLeft, X, Check, ChevronDown, MoreHorizontal, Trash2, Copy, Smile, ArrowLeftRight, Globe, CheckSquare, Square, ExternalLink, Plus } from 'lucide-react';
+import { ArrowLeft, X, Check, ChevronDown, MoreHorizontal, Trash2, Copy, Smile, ArrowLeftRight, Globe, CheckSquare, Square, ExternalLink, Plus, FileCode2 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
@@ -15,6 +15,7 @@ import AgentEditBadge from './AgentEditBadge';
 import SaveStatus, { type SaveState } from './SaveStatus';
 import { ConfirmDialog } from './ConfirmDialog';
 import ShareModal from '@/components/share/ShareModal';
+import { PageMarkdownDialog } from './PageMarkdownDialog';
 import PageBacklinksPanel from './PageBacklinksPanel';
 import type { WorkspaceItemRow } from '@/lib/actions/workspace';
 import {
@@ -117,6 +118,7 @@ export default function PageEditor({
   const selectDropdownRef = useRef<HTMLDivElement>(null);
   const iconButtonRef = useRef<HTMLButtonElement>(null);
   const [showShareModal, setShowShareModal] = useState(false);
+  const [markdownDraft, setMarkdownDraft] = useState<string | null>(null);
 
   type WidthMode = 'narrow' | 'wide' | 'full';
   const [widthMode, setWidthMode] = useState<WidthMode>('full');
@@ -341,6 +343,15 @@ export default function PageEditor({
                   >
                     <Globe size={12} className="text-neutral-500" />
                     {tSharing('shareButton')}
+                  </button>
+
+                  {/* Markdown — separate copy/edit surface for the whole page body */}
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setOpenMenu(false); setMarkdownDraft(editorRef.current?.getMarkdown() ?? initialPage.content ?? ''); }}
+                    className="w-full px-3 py-1.5 text-xs text-neutral-300 hover:bg-neutral-800 flex items-center gap-2 cursor-pointer transition-colors"
+                  >
+                    <FileCode2 size={12} className="text-neutral-500" />
+                    {t('markdown.button')}
                   </button>
 
                   <div className="border-t border-neutral-800 my-1" />
@@ -810,6 +821,13 @@ export default function PageEditor({
           workspaceId={database.workspaceId}
           isAdmin={isAdmin}
           onClose={() => setShowShareModal(false)}
+        />
+      )}
+      {markdownDraft !== null && (
+        <PageMarkdownDialog
+          initialMarkdown={markdownDraft}
+          onApply={(md) => editorRef.current?.replaceContent(md)}
+          onClose={() => setMarkdownDraft(null)}
         />
       )}
       {showDeleteConfirm && (

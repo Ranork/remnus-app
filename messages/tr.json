@@ -820,7 +820,16 @@
     "saving": "Kaydediliyor…",
     "saved": "Kaydedildi",
     "savingError": "Kaydetme hatası",
-    "backlinksTitle": "Backlink'ler ({count})"
+    "backlinksTitle": "Backlink'ler ({count})",
+    "markdown": {
+      "button": "Markdown olarak düzenle",
+      "title": "Markdown olarak düzenle",
+      "description": "Sayfanın tüm içeriği markdown olarak, ayrı bir görünümde — burada yapılan değişiklikler siz uygulayana kadar yukarıdaki blok editörünü etkilemez. Gömülü bloklar (görsel, not kutusu, dosya, alt sayfa, bağlantı) kendi HTML karşılıklarıyla görünür; emin değilseniz o satırlara dokunmayın.",
+      "copy": "Kopyala",
+      "copied": "Kopyalandı",
+      "apply": "Uygula",
+      "cancel": "Vazgeç"
+    }
   },
   "IconPicker": {
     "title": "Simge",

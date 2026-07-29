@@ -820,7 +820,16 @@
     "saving": "正在保存…",
     "saved": "已保存",
     "savingError": "保存出错",
-    "backlinksTitle": "反向链接 ({count})"
+    "backlinksTitle": "反向链接 ({count})",
+    "markdown": {
+      "button": "以 Markdown 编辑",
+      "title": "以 Markdown 编辑",
+      "description": "整页内容以 Markdown 形式显示在一个独立的视图中——在这里的修改在你点击应用之前不会影响上方的块编辑器。嵌入的块(图片、标注框、文件、子页面、链接)会显示为其底层 HTML;如果不确定,请不要改动这些行。",
+      "copy": "复制",
+      "copied": "已复制",
+      "apply": "应用",
+      "cancel": "取消"
+    }
   },
   "IconPicker": {
     "title": "图标",

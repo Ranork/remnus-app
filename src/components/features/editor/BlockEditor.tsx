@@ -120,6 +120,10 @@ import type { WorkspaceItemRow } from '@/lib/actions/workspace';
 export type BlockEditorHandle = {
   focusStart: () => void;
   insertLineAtStart: () => void;
+  /** Current document serialized to the same storage-markdown format used for persistence. */
+  getMarkdown: () => string;
+  /** Replace the whole document from a storage-markdown string and persist it immediately. */
+  replaceContent: (markdown: string) => void;
 };
 
 type Props = {
@@ -262,6 +266,16 @@ const BlockEditor = forwardRef<BlockEditorHandle, Props>(function BlockEditor({
       const tr = state.tr.insert(0, para);
       view.dispatch(tr.setSelection(TextSelection.near(tr.doc.resolve(1))));
       view.focus();
+    },
+    getMarkdown: () => editorRef.current?.getMarkdown?.() ?? '',
+    replaceContent: (markdown: string) => {
+      const editor = editorRef.current;
+      if (!editor) return;
+      editor.commands.setContent(markdown, { contentType: 'markdown' });
+      // setContent already emits an update (debounced onChange), but the whole
+      // point of this action is an explicit, immediate save — flush it now
+      // rather than waiting out the debounce.
+      onImmediateSaveRef.current?.(editor.getMarkdown());
     },
   }), []);
 

@@ -820,7 +820,16 @@
     "saving": "Guardando…",
     "saved": "Guardado",
     "savingError": "Error al guardar",
-    "backlinksTitle": "Backlinks ({count})"
+    "backlinksTitle": "Backlinks ({count})",
+    "markdown": {
+      "button": "Editar como Markdown",
+      "title": "Editar como Markdown",
+      "description": "El contenido completo de la página en markdown, en una vista aparte — editar aquí no afecta al editor de bloques hasta que apliques los cambios. Los bloques incrustados (imágenes, notas, archivos, subpáginas, enlaces) aparecen como su HTML subyacente; si no estás seguro, no modifiques esas líneas.",
+      "copy": "Copiar",
+      "copied": "Copiado",
+      "apply": "Aplicar",
+      "cancel": "Cancelar"
+    }
   },
   "IconPicker": {
     "title": "Ícono",

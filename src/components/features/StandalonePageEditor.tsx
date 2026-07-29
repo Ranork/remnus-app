@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 
 import Link from 'next/link';
-import { ChevronLeft, RefreshCw, MoreHorizontal, Globe, ArrowLeftRight } from 'lucide-react';
+import { ChevronLeft, RefreshCw, MoreHorizontal, Globe, ArrowLeftRight, FileCode2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useQueryClient } from '@tanstack/react-query';
 import { updateStandalonePageContent, updateWorkspaceItemTitle, updateWorkspaceItemIcon } from '@/lib/actions/workspace';
@@ -11,6 +11,7 @@ import PageIcon from './PageIcon';
 import IconPicker from './IconPicker';
 import SaveStatus, { type SaveState } from './SaveStatus';
 import ShareModal from '@/components/share/ShareModal';
+import { PageMarkdownDialog } from './PageMarkdownDialog';
 import PageBacklinksPanel from './PageBacklinksPanel';
 import { useTabNav } from '@/components/providers/TabsContext';
 import { tabKeys } from './tabs/keys';
@@ -54,6 +55,7 @@ export default function StandalonePageEditor({
   const [widthMode, setWidthMode] = useState<WidthMode>('narrow');
   const [openMenu, setOpenMenu] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
+  const [markdownDraft, setMarkdownDraft] = useState<string | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<BlockEditorHandle>(null);
 
@@ -226,6 +228,15 @@ export default function StandalonePageEditor({
                   <Globe size={12} className="text-neutral-500" />
                   {tSharing('shareButton')}
                 </button>
+
+                {/* Markdown — separate copy/edit surface for the whole page body */}
+                <button
+                  onClick={() => { setOpenMenu(false); setMarkdownDraft(editorRef.current?.getMarkdown() ?? page.content); }}
+                  className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-neutral-300 hover:bg-neutral-800 cursor-pointer transition-colors"
+                >
+                  <FileCode2 size={12} className="text-neutral-500" />
+                  {t('markdown.button')}
+                </button>
               </div>
             )}
           </div>
@@ -237,6 +248,14 @@ export default function StandalonePageEditor({
             workspaceId={item.workspaceId}
             isAdmin={isAdmin}
             onClose={() => setShowShareModal(false)}
+          />
+        )}
+
+        {markdownDraft !== null && (
+          <PageMarkdownDialog
+            initialMarkdown={markdownDraft}
+            onApply={(md) => editorRef.current?.replaceContent(md)}
+            onClose={() => setMarkdownDraft(null)}
           />
         )}
       </div>

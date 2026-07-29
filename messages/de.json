@@ -820,7 +820,16 @@
     "saving": "Wird gespeichert…",
     "saved": "Gespeichert",
     "savingError": "Speicherfehler",
-    "backlinksTitle": "Backlinks ({count})"
+    "backlinksTitle": "Backlinks ({count})",
+    "markdown": {
+      "button": "Als Markdown bearbeiten",
+      "title": "Als Markdown bearbeiten",
+      "description": "Der gesamte Seiteninhalt als Markdown in einer separaten Ansicht — Änderungen hier wirken sich erst nach dem Anwenden auf den Block-Editor oben aus. Eingebettete Blöcke (Bilder, Callouts, Dateien, Unterseiten, Links) erscheinen als ihr zugrunde liegendes HTML; lassen Sie diese Zeilen unverändert, wenn Sie unsicher sind.",
+      "copy": "Kopieren",
+      "copied": "Kopiert",
+      "apply": "Anwenden",
+      "cancel": "Abbrechen"
+    }
   },
   "IconPicker": {
     "title": "Symbol",

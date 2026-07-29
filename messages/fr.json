@@ -820,7 +820,16 @@
     "saving": "Enregistrement…",
     "saved": "Enregistré",
     "savingError": "Erreur d'enregistrement",
-    "backlinksTitle": "Rétroliens ({count})"
+    "backlinksTitle": "Rétroliens ({count})",
+    "markdown": {
+      "button": "Modifier en Markdown",
+      "title": "Modifier en Markdown",
+      "description": "Le contenu complet de la page en markdown, dans une vue séparée — les modifications ici n'affectent l'éditeur de blocs ci-dessus qu'une fois appliquées. Les blocs intégrés (images, encadrés, fichiers, sous-pages, liens) apparaissent sous leur forme HTML brute ; ne touchez pas à ces lignes si vous n'êtes pas sûr.",
+      "copy": "Copier",
+      "copied": "Copié",
+      "apply": "Appliquer",
+      "cancel": "Annuler"
+    }
   },
   "IconPicker": {
     "title": "Icône",
