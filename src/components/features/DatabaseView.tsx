@@ -624,7 +624,6 @@ export default function DatabaseView({
     if (source) {
       const now = new Date();
       const copiedProperties = { ...(source.properties || {}) };
-      if (copiedProperties.title) copiedProperties.title = `${copiedProperties.title} (Copy)`;
       const maxSort = localPages.length > 0
         ? Math.max(...localPages.map((p) => p.sortOrder ?? 0))
         : 0;
@@ -634,7 +633,7 @@ export default function DatabaseView({
         {
           ...source,
           id: tempId,
-          title: `${source.title} (Copy)`,
+          title: source.title,
           properties: copiedProperties,
           sortOrder: maxSort + 1,
           createdAt: now,

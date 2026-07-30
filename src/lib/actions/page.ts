@@ -199,9 +199,8 @@ export async function duplicatePage(id: string, databaseId: string) {
   const existing = await db.select({ sortOrder: pages.sortOrder }).from(pages).where(eq(pages.databaseId, databaseId));
   const maxSort = existing.reduce((max, p) => p.sortOrder > max ? p.sortOrder : max, 0);
 
-  const copiedTitle = `${sourcePage.title} (Copy)`;
+  const copiedTitle = sourcePage.title;
   const copiedProps = { ...((sourcePage.properties as Record<string, any>) || {}) };
-  if (copiedProps.title) copiedProps.title = `${copiedProps.title} (Copy)`;
 
   const now = new Date();
   await db.insert(pages).values({

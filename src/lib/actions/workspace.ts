@@ -665,7 +665,7 @@ export async function duplicateWorkspaceItem(itemId: string) {
     id: newItemId,
     workspaceId: item[0].workspaceId,
     type: item[0].type,
-    title: `${item[0].title} (Copy)`,
+    title: item[0].title,
     parentId: item[0].parentId,
     sortOrder: item[0].sortOrder + 1,
     icon: item[0].icon,
@@ -694,7 +694,7 @@ export async function duplicateWorkspaceItem(itemId: string) {
     const newDbId = crypto.randomUUID();
     await db.insert(databases).values({
       id: newDbId,
-      name: `${dbRow[0].name} (Copy)`,
+      name: dbRow[0].name,
       itemId: newItemId,
       schema: dbRow[0].schema,
       views: dbRow[0].views,
