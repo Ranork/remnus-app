@@ -11,12 +11,24 @@ export default async function LandingSetup() {
   const t = await getTranslations('Landing');
 
   return (
-    <section className="px-4 sm:px-8 lg:px-14 pt-0 lg:pt-1 pb-8 lg:pb-10">
+    <section className="setup-strip-section px-4 sm:px-8 lg:px-14 pt-0 lg:pt-1 pb-8 lg:pb-10">
       <div className="max-w-[1280px] mx-auto">
-        <div className="relative overflow-hidden rounded-xl border border-neutral-800 bg-neutral-900">
+        {/*
+          Plain neutral-900/border-neutral-800 (below) is the right look in
+          every dark theme — don't re-tint it here. It only falls apart in
+          catppuccin (light), where neutral-900 lands almost on top of the
+          page's own alternating section background and reads as an
+          accidental grey smear. That's handled as a catppuccin-only override
+          in globals.css (`.setup-strip-card` / `.setup-strip-divider`) so the
+          dark themes keep their original flat look untouched.
+        */}
+        <div
+          className="setup-strip-card relative overflow-hidden rounded-xl border border-neutral-800 bg-neutral-900"
+          style={{ boxShadow: '0 1px 2px rgba(0,0,0,0.05), 0 10px 30px -14px rgba(0,0,0,0.2)' }}
+        >
           <div
             aria-hidden
-            className="pointer-events-none absolute inset-0"
+            className="setup-strip-glow pointer-events-none absolute inset-0"
             style={{
               background: 'radial-gradient(480px circle at 6% 30%, color-mix(in oklab, var(--color-opt-teal) 12%, transparent), transparent 70%)',
             }}
@@ -25,7 +37,7 @@ export default async function LandingSetup() {
           <div className="relative flex flex-col sm:flex-row sm:items-center gap-5 sm:gap-7 p-6 sm:p-7">
             <div className="flex items-center gap-4 flex-1 min-w-0">
               <span
-                className="shrink-0 w-12 h-12 rounded-full inline-flex items-center justify-center"
+                className="setup-strip-icon shrink-0 w-12 h-12 rounded-full inline-flex items-center justify-center"
                 style={{ background: 'color-mix(in oklab, var(--color-opt-teal) 16%, transparent)' }}
               >
                 <ShieldCheck size={21} style={{ color: 'var(--color-opt-teal)' }} />
@@ -33,25 +45,25 @@ export default async function LandingSetup() {
 
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2.5">
-                  <p className="m-0 text-[16px] sm:text-[17px] font-semibold text-neutral-100 tracking-[-0.015em]">
+                  <p className="setup-strip-title m-0 text-[16px] sm:text-[17px] font-semibold text-neutral-100 tracking-[-0.015em]">
                     {t('bridgeSetupStripTitle')}
                   </p>
                   <span
-                    className="font-mono text-[10px] uppercase tracking-[0.08em] font-medium px-1.75 py-0.5 rounded-xs"
+                    className="setup-strip-badge font-mono text-[10px] uppercase tracking-[0.08em] font-medium px-1.75 py-0.5 rounded-xs"
                     style={{ color: 'var(--color-opt-teal)', background: 'color-mix(in oklab, var(--color-opt-teal) 16%, transparent)' }}
                   >
                     OAuth 2.1
                   </span>
                 </div>
-                <p className="m-0 mt-1.5 text-[13.5px] text-dim leading-[1.55] max-w-xl">
+                <p className="setup-strip-body m-0 mt-1.5 text-[13.5px] text-dim leading-[1.55] max-w-xl">
                   {t('bridgeSetupStripBody')}
                 </p>
               </div>
             </div>
 
-            <div className="hidden sm:block w-px self-stretch bg-neutral-800" />
+            <div className="setup-strip-divider hidden sm:block w-px self-stretch bg-neutral-800" />
 
-            <div className="shrink-0">
+            <div className="setup-strip-cta shrink-0">
               <SetupGuideModal
                 variant="button"
                 linkLabel={t('bridgeIntSetupLink')}

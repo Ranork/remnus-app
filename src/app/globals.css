@@ -375,6 +375,56 @@
   box-shadow: 0 20px 50px -24px rgba(15, 23, 42, 0.22), 0 8px 18px -14px rgba(15, 23, 42, 0.14);
 }
 
+/* LandingSetup's "No API keys" strip: the dark treatment stays untouched.
+   In Catppuccin, remove the alternating grey section band and present the
+   strip as a crisp white trust callout with a restrained teal accent. */
+[data-theme="catppuccin"] .marketing-site main > section.setup-strip-section {
+  background: #ffffff;
+}
+[data-theme="catppuccin"] .marketing-site .setup-strip-card {
+  background: linear-gradient(110deg, color-mix(in oklab, var(--color-opt-teal) 5%, #ffffff) 0%, #ffffff 44%);
+  border-color: color-mix(in oklab, var(--color-opt-teal) 30%, #dbe4eb);
+  box-shadow:
+    inset 3px 0 0 color-mix(in oklab, var(--color-opt-teal) 82%, #0f766e),
+    0 1px 2px rgba(15, 23, 42, 0.04),
+    0 18px 44px -30px rgba(15, 23, 42, 0.3) !important;
+}
+[data-theme="catppuccin"] .marketing-site .setup-strip-glow {
+  opacity: 0.55;
+}
+[data-theme="catppuccin"] .marketing-site .setup-strip-icon {
+  background: #e8f7f4 !important;
+  border: 1px solid #c4e8e1;
+}
+[data-theme="catppuccin"] .marketing-site .setup-strip-icon svg {
+  color: #0f766e !important;
+}
+[data-theme="catppuccin"] .marketing-site .setup-strip-title {
+  color: #0f172a;
+}
+[data-theme="catppuccin"] .marketing-site .setup-strip-body {
+  color: #475569;
+}
+[data-theme="catppuccin"] .marketing-site .setup-strip-badge {
+  color: #0f766e !important;
+  background: #e8f7f4 !important;
+  border: 1px solid #c4e8e1;
+}
+[data-theme="catppuccin"] .marketing-site .setup-strip-divider {
+  background: #dbe7e5;
+}
+[data-theme="catppuccin"] .marketing-site .setup-strip-cta > button {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  color: #172033;
+}
+[data-theme="catppuccin"] .marketing-site .setup-strip-cta > button:hover,
+[data-theme="catppuccin"] .marketing-site .setup-strip-cta > button:focus-visible {
+  background: #f0fdfa;
+  border-color: #5fb9ae;
+  color: #0f766e;
+}
+
 [data-theme="catppuccin"] .marketing-site .marketing-download-card {
   background: #ffffff !important;
   border-color: #e2e8f0;
