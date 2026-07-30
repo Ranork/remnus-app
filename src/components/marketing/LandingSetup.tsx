@@ -1,69 +1,78 @@
+import { ShieldCheck } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
+import SetupGuideModal from './SetupGuideModal';
 
+// A compact callout, not a full numbered section — the "3 steps to connect"
+// pitch already lives in LandingIntegrations (intro copy + per-client Setup
+// guide modal), so repeating it here as a whole section was redundant. This
+// leads with the one claim that's actually differentiated: no API keys to
+// manage. The full step-by-step is still one click away via SetupGuideModal.
 export default async function LandingSetup() {
   const t = await getTranslations('Landing');
 
-  const steps = [
-    { num: '01', titleKey: 'bridgeSetup1Title', bodyKey: 'bridgeSetup1Body', code: 'https://remnus.com/login' },
-    { num: '02', titleKey: 'bridgeSetup2Title', bodyKey: 'bridgeSetup2Body', code: t('bridgeSetupCode2') },
-    { num: '03', titleKey: 'bridgeSetup3Title', bodyKey: 'bridgeSetup3Body', code: 'https://www.remnus.com/api/mcp' },
-  ];
-
   return (
-    <section className="px-4 sm:px-8 lg:px-14 py-16 lg:py-[110px]">
+    <section className="px-4 sm:px-8 lg:px-14 pt-0 lg:pt-1 pb-8 lg:pb-10">
       <div className="max-w-[1280px] mx-auto">
-        {/* section header */}
-        <div className="flex items-center gap-3 mb-10 lg:mb-14">
-          <span className="font-mono text-[11px] text-dim uppercase tracking-[0.18em]">
-            {t('bridgeSetupSnum')}
-          </span>
-          <span className="flex-1 h-px bg-neutral-800" />
-          <span className="font-mono text-[11px] text-dim hidden sm:block">{t('bridgeSetupCaption')}</span>
-        </div>
+        <div className="relative overflow-hidden rounded-xl border border-neutral-800 bg-neutral-900">
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0"
+            style={{
+              background: 'radial-gradient(480px circle at 6% 30%, color-mix(in oklab, var(--color-opt-teal) 12%, transparent), transparent 70%)',
+            }}
+          />
 
-        <h2
-          className="m-0 mb-10 lg:mb-14 font-sans font-semibold text-neutral-100 leading-[0.98] text-[30px] sm:text-[38px] lg:text-[48px]"
-          style={{ letterSpacing: '-0.035em' }}
-        >
-          {t('bridgeSetupH2Part1')}{' '}
-          <span className="font-serif italic text-accent-strong text-[34px] sm:text-[42px] lg:text-[52px]">
-            {t('bridgeSetupH2Accent')}
-          </span>{' '}
-          {t('bridgeSetupH2Part2')}
-        </h2>
+          <div className="relative flex flex-col sm:flex-row sm:items-center gap-5 sm:gap-7 p-6 sm:p-7">
+            <div className="flex items-center gap-4 flex-1 min-w-0">
+              <span
+                className="shrink-0 w-12 h-12 rounded-full inline-flex items-center justify-center"
+                style={{ background: 'color-mix(in oklab, var(--color-opt-teal) 16%, transparent)' }}
+              >
+                <ShieldCheck size={21} style={{ color: 'var(--color-opt-teal)' }} />
+              </span>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-px bg-neutral-800 rounded-lg overflow-hidden">
-          {steps.map((s) => (
-            <div
-              key={s.num}
-              className="flex flex-col p-6 lg:p-8 bg-neutral-950"
-            >
-              <div className="flex items-center gap-3.5 mb-[18px]">
-                <span
-                  className="w-8 h-8 rounded-md bg-neutral-900 border border-neutral-800 inline-flex items-center justify-center font-mono text-[13px] text-accent-strong font-semibold"
-                >
-                  {s.num}
-                </span>
-                <span className="font-mono text-[11px] text-dim uppercase tracking-[0.1em]">
-                  {t('bridgeSetupStep')}
-                </span>
-              </div>
-              <h3
-                className="m-0 mb-3 font-semibold text-neutral-100"
-                style={{ fontSize: 22, letterSpacing: '-0.015em' }}
-              >
-                {t(s.titleKey)}
-              </h3>
-              <p className="m-0 text-sm text-dim leading-[1.6] flex-1">
-                {t(s.bodyKey)}
-              </p>
-              <div
-                className="mt-5 px-3 py-2 bg-neutral-900 border border-neutral-800 rounded font-mono text-xs text-accent-strong whitespace-nowrap overflow-hidden text-ellipsis"
-              >
-                {s.code}
+              <div className="min-w-0">
+                <div className="flex flex-wrap items-center gap-2.5">
+                  <p className="m-0 text-[16px] sm:text-[17px] font-semibold text-neutral-100 tracking-[-0.015em]">
+                    {t('bridgeSetupStripTitle')}
+                  </p>
+                  <span
+                    className="font-mono text-[10px] uppercase tracking-[0.08em] font-medium px-1.75 py-0.5 rounded-xs"
+                    style={{ color: 'var(--color-opt-teal)', background: 'color-mix(in oklab, var(--color-opt-teal) 16%, transparent)' }}
+                  >
+                    OAuth 2.1
+                  </span>
+                </div>
+                <p className="m-0 mt-1.5 text-[13.5px] text-dim leading-[1.55] max-w-xl">
+                  {t('bridgeSetupStripBody')}
+                </p>
               </div>
             </div>
-          ))}
+
+            <div className="hidden sm:block w-px self-stretch bg-neutral-800" />
+
+            <div className="shrink-0">
+              <SetupGuideModal
+                variant="button"
+                linkLabel={t('bridgeIntSetupLink')}
+                title={t('bridgeSetupModalTitle')}
+                subtitle={t('bridgeSetupModalSubtitle')}
+                s1Label={t('bridgeSetupModalS1Label')}
+                s1Title={t('bridgeSetupModalS1Title')}
+                s1Body={t('bridgeSetupModalS1Body')}
+                s2Label={t('bridgeSetupModalS2Label')}
+                s2Title={t('bridgeSetupModalS2Title')}
+                s2Body={t('bridgeSetupModalS2Body')}
+                s3Label={t('bridgeSetupModalS3Label')}
+                s3Title={t('bridgeSetupModalS3Title')}
+                s3Body={t('bridgeSetupModalS3Body')}
+                endpointLabel={t('bridgeSetupModalEndpointLabel')}
+                headerLabel={t('bridgeSetupModalHeaderLabel')}
+                docsNote={t('bridgeSetupModalDocsNote')}
+                closeLabel={t('bridgeSetupModalClose')}
+              />
+            </div>
+          </div>
         </div>
       </div>
     </section>

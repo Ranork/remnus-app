@@ -18,8 +18,8 @@ export default function LandingBridgeSwitcher() {
         <LandingHero />
         <LandingWhy />
         <LandingIntegrations />
-        <LandingWhatsInside />
         <LandingSetup />
+        <LandingWhatsInside />
         <LandingTools />
         <LandingPricing />
         <LandingDownload />

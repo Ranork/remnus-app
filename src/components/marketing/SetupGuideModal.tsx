@@ -13,6 +13,9 @@ interface Props {
   headerLabel: string;
   docsNote: string;
   closeLabel: string;
+  /** 'link' (default) — quiet inline text link, used inside the per-client cards.
+   *  'button' — bordered pill CTA, used where the trigger stands alone (e.g. LandingSetup). */
+  variant?: 'link' | 'button';
 }
 
 const STEPS = (p: Props) => [
@@ -28,7 +31,11 @@ export default function SetupGuideModal(props: Props) {
     <>
       <button
         onClick={() => setOpen(true)}
-        className="mt-[18px] inline-flex items-center gap-1.5 font-mono text-[12px] text-accent-strong hover:text-blue-400 transition-colors duration-150 cursor-pointer"
+        className={
+          props.variant === 'button'
+            ? 'inline-flex items-center gap-1.5 shrink-0 px-4 py-2 rounded-full border border-neutral-700 font-medium text-[13px] text-neutral-100 hover:border-accent-strong hover:text-accent-strong transition-colors duration-150 cursor-pointer'
+            : 'mt-4.5 inline-flex items-center gap-1.5 font-mono text-[12px] text-accent-strong hover:text-blue-400 transition-colors duration-150 cursor-pointer'
+        }
       >
         {props.linkLabel}{' '}
         <span aria-hidden className="text-[11px]">→</span>
