@@ -1,7 +1,7 @@
 import LandingChip from '../LandingChip';
 
 const ALL_ROWS = [
-  { t: 'MCP token auth & rate limiting',    st: 'In progress', stc: 'var(--color-blue-500)',   pri: 'High',   prc: 'var(--color-red-400)',     due: 'May 23', a: 'EA', ac: 'var(--color-opt-purple)', aiEdit: true },
+  { t: 'MCP token auth & rate limiting',    st: 'In progress', stc: 'var(--color-blue-500)',   pri: 'High',   prc: 'var(--color-red-400)',     due: 'May 23', a: 'EA', ac: 'var(--color-opt-purple)', justEdited: true },
   { t: 'Inline cell editor — date popover', st: 'In progress', stc: 'var(--color-blue-500)',   pri: 'Medium', prc: 'var(--color-amber-500)',   due: 'May 24', a: 'CK', ac: 'var(--color-opt-teal)'   },
   { t: 'Drag-reorder workspaces',           st: 'Review',      stc: 'var(--color-opt-yellow)', pri: 'Medium', prc: 'var(--color-amber-500)',   due: 'May 25', a: 'EA', ac: 'var(--color-opt-purple)' },
   { t: 'Kanban segmented border accent',    st: 'Done',        stc: 'var(--color-green-400)',  pri: 'Low',    prc: 'var(--color-opt-teal)',    due: 'May 21', a: 'SK', ac: 'var(--color-opt-yellow)' },
@@ -38,12 +38,16 @@ export default function TableMini({ rows = 6 }: TableMiniProps) {
           style={{
             gridTemplateColumns: GRID,
             borderBottom: '1px solid var(--color-border-soft)',
-            background: r.aiEdit ? 'rgba(68,92,149,0.10)' : 'transparent',
+            background: r.justEdited ? 'rgba(68,92,149,0.10)' : 'transparent',
           }}
         >
-          {r.aiEdit && (
-            <span className="absolute top-1 right-3 font-mono text-[10px] text-accent-strong tracking-[0.04em]">
-              · claude
+          {r.justEdited && (
+            <span className="absolute top-1 right-3 inline-flex items-center gap-1 font-mono text-[10px] text-green-400 tracking-[0.04em]">
+              <span className="relative flex w-1.5 h-1.5">
+                <span className="absolute inline-flex w-full h-full rounded-full bg-green-400 opacity-75 animate-ping" />
+                <span className="relative inline-flex w-1.5 h-1.5 rounded-full bg-green-400" />
+              </span>
+              now
             </span>
           )}
 

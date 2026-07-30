@@ -5,9 +5,11 @@
 // Week 4: May 18–24 (today=21)
 // Week 5: May 25–31, Jun 1(dim)
 
+import AIMark from '../AIMark';
+
 const HEADERS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
 
-type CalEvent = { color: string; title: string };
+type CalEvent = { color: string; title: string; agent?: 'cursor' };
 
 const EVENTS: Record<number, CalEvent[]> = {
   1:  [{ color: 'var(--color-blue-500)',   title: 'Sprint planning' }],
@@ -20,7 +22,7 @@ const EVENTS: Record<number, CalEvent[]> = {
   18: [{ color: 'var(--color-blue-500)',   title: 'v2.0 Release'   }, { color: 'var(--color-opt-teal)', title: 'Demo' }],
   19: [{ color: 'var(--color-opt-yellow)', title: 'Planning'       }],
   21: [{ color: 'var(--color-blue-500)',   title: 'Sprint start'   }],
-  22: [{ color: 'var(--color-opt-pink)',   title: 'Team demo'      }],
+  22: [{ color: 'var(--color-opt-pink)',   title: 'Team demo', agent: 'cursor' }],
   25: [{ color: 'var(--color-opt-teal)',   title: 'Design handoff' }],
   28: [{ color: 'var(--color-opt-purple)', title: 'Sprint end'     }],
   29: [{ color: 'var(--color-blue-500)',   title: 'Planning'       }],
@@ -85,14 +87,22 @@ export default function CalendarMini() {
               {evs.map((ev, j) => (
                 <div
                   key={j}
-                  className="rounded-xs px-1.5 py-0.5 text-[10px] leading-[1.4] truncate"
+                  className="flex items-center gap-1 rounded-xs px-1.5 py-0.5 text-[10px] leading-[1.4]"
                   style={{
-                    background: `color-mix(in oklab, ${ev.color} 18%, transparent)`,
+                    background: ev.agent
+                      ? 'rgba(68,92,149,0.22)'
+                      : `color-mix(in oklab, ${ev.color} 18%, transparent)`,
                     color: ev.color,
                     borderLeft: `2px solid ${ev.color}`,
+                    boxShadow: ev.agent ? '0 0 0 1px var(--color-blue-500)' : undefined,
                   }}
                 >
-                  {ev.title}
+                  {ev.agent && (
+                    <span className="shrink-0 inline-flex items-center justify-center w-3 h-3 rounded-full bg-blue-600">
+                      <AIMark name={ev.agent} size={8} />
+                    </span>
+                  )}
+                  <span className="truncate">{ev.title}</span>
                 </div>
               ))}
             </div>

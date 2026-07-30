@@ -1,31 +1,33 @@
+import AIMark from '../AIMark';
+
 const COLS = [
   {
     name: 'Backlog', color: 'var(--color-dim)', n: 5,
     cards: [
       { t: 'Set up i18n loader',         tag: 'infra',   tc: 'var(--color-opt-purple)' },
-      { t: 'API rate limiting strategy',  tag: 'backend', tc: 'var(--color-opt-teal)'   },
+      { t: 'API rate limiting strategy',  tag: 'backend', tc: 'var(--color-opt-teal)',   a: 'EA', ac: 'var(--color-opt-purple)' },
       { t: 'Dark mode token audit',       tag: 'design',  tc: 'var(--color-opt-pink)'   },
     ],
   },
   {
     name: 'In progress', color: 'var(--color-blue-500)', n: 2,
     cards: [
-      { t: 'Kanban segmented border', tag: 'design', tc: 'var(--color-opt-pink)'   },
-      { t: 'Inline cell editor',      tag: 'editor', tc: 'var(--color-amber-500)' },
+      { t: 'Kanban segmented border', tag: 'design', tc: 'var(--color-opt-pink)',  a: 'SK', ac: 'var(--color-opt-yellow)' },
+      { t: 'Inline cell editor',      tag: 'editor', tc: 'var(--color-amber-500)', agent: 'claude' as const },
     ],
   },
   {
     name: 'Review', color: 'var(--color-opt-yellow)', n: 1,
     cards: [
-      { t: 'MCP token auth',  tag: 'infra', tc: 'var(--color-opt-teal)' },
+      { t: 'MCP token auth',  tag: 'infra', tc: 'var(--color-opt-teal)', a: 'EA', ac: 'var(--color-opt-purple)' },
     ],
   },
   {
     name: 'Done', color: 'var(--color-green-400)', n: 8,
     cards: [
-      { t: 'TanStack Query provider', tag: 'infra',   tc: 'var(--color-opt-purple)' },
+      { t: 'TanStack Query provider', tag: 'infra',   tc: 'var(--color-opt-purple)', a: 'CK', ac: 'var(--color-opt-teal)' },
       { t: 'Demo mode reset action',  tag: 'auth',    tc: 'var(--color-opt-teal)'   },
-      { t: 'Drag-reorder workspaces', tag: 'sidebar', tc: 'var(--color-opt-purple)' },
+      { t: 'Drag-reorder workspaces', tag: 'sidebar', tc: 'var(--color-opt-purple)', a: 'EA', ac: 'var(--color-opt-purple)' },
     ],
   },
 ] as const;
@@ -45,21 +47,47 @@ export default function KanbanMini() {
           </div>
 
           {/* cards */}
-          {col.cards.map((c) => (
-            <div
-              key={c.t}
-              className="bg-neutral-800/40 rounded flex flex-col gap-2 py-2.5 px-3"
-              style={{ borderLeft: `2.5px solid ${c.tc}` }}
-            >
-              <span className="text-neutral-100 font-medium text-[12.5px] leading-[1.3]">{c.t}</span>
-              <span
-                className="self-start font-mono text-[10.5px] px-1.5 py-0.5 rounded-sm"
-                style={{ color: c.tc, background: `color-mix(in oklab, ${c.tc} 14%, transparent)` }}
+          {col.cards.map((c) => {
+            const agent = 'agent' in c ? c.agent : undefined;
+            return (
+              <div
+                key={c.t}
+                className="rounded flex flex-col gap-2 py-2.5 px-3"
+                style={{
+                  borderLeft: `2.5px solid ${c.tc}`,
+                  background: agent ? 'rgba(68,92,149,0.14)' : 'rgba(56,59,65,0.4)',
+                  boxShadow: agent ? '0 0 0 1px var(--color-blue-500)' : undefined,
+                }}
               >
-                {c.tag}
-              </span>
-            </div>
-          ))}
+                <span className="text-neutral-100 font-medium text-[12.5px] leading-[1.3]">{c.t}</span>
+                <div className="flex items-center gap-1.5">
+                  <span
+                    className="font-mono text-[10.5px] px-1.5 py-0.5 rounded-sm"
+                    style={{ color: c.tc, background: `color-mix(in oklab, ${c.tc} 14%, transparent)` }}
+                  >
+                    {c.tag}
+                  </span>
+                  <span className="flex-1" />
+                  {agent ? (
+                    <span
+                      className="w-5 h-5 rounded-full flex items-center justify-center shrink-0"
+                      style={{ background: 'var(--color-blue-500)' }}
+                      title={agent}
+                    >
+                      <AIMark name={agent} size={11} />
+                    </span>
+                  ) : 'a' in c && c.a ? (
+                    <span
+                      className="w-5 h-5 rounded-full flex items-center justify-center font-mono text-[9px] font-semibold text-white shrink-0"
+                      style={{ background: c.ac }}
+                    >
+                      {c.a}
+                    </span>
+                  ) : null}
+                </div>
+              </div>
+            );
+          })}
 
           {/* add card placeholder */}
           <div className="flex items-center gap-1.5 px-1 py-1.5 text-neutral-600 hover:text-neutral-400 cursor-pointer">

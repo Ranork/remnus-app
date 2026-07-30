@@ -1,8 +1,10 @@
+import AIMark from '../AIMark';
+
 const CHECKLIST = [
   { done: true,  text: 'Drag-reorder workspaces' },
   { done: true,  text: 'Inline cell editor' },
   { done: false, text: 'Date format selector' },
-  { done: false, text: 'Per-view default icon', aiEdit: true },
+  { done: false, text: 'Per-view default icon', agent: 'cursor' as const },
 ];
 
 interface MarkdownPageMiniProps {
@@ -38,9 +40,13 @@ export default function MarkdownPageMini({ width = 520 }: MarkdownPageMiniProps)
               {it.done ? '✓' : ''}
             </span>
             <span className="flex-1">{it.text}</span>
-            {it.aiEdit && (
-              <span className="font-mono text-[8.5px] bg-blue-500 text-white px-1 py-0.5 rounded-[2px] tracking-[0.04em]">
-                cursor
+            {it.agent && (
+              <span
+                className="inline-flex items-center gap-1 font-mono text-[9px] text-white pl-1 pr-1.5 py-0.5 rounded-full"
+                style={{ background: 'var(--color-blue-500)' }}
+              >
+                <AIMark name={it.agent} size={9} />
+                {it.agent}
               </span>
             )}
           </div>

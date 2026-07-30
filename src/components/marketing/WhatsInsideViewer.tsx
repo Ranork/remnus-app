@@ -13,7 +13,7 @@ interface Props {
   viewLabel: string;
   labels: [string, string, string];
   subs: [string, string, string];
-  footer1: string;
+  footer1: [string, string, string];
   footer2: string;
 }
 
@@ -122,7 +122,7 @@ export default function WhatsInsideViewer({
       {/* footer */}
       <div className="flex items-center gap-2.5 flex-wrap px-6 py-3.5 border-t border-neutral-800 bg-neutral-850 text-[12.5px] text-dim">
         <span className="w-1.75 h-1.75 rounded-full shrink-0 bg-accent-strong" />
-        <span className="text-neutral-100">{footer1}</span>
+        <span key={active} className="text-neutral-100 animate-fade-in">{footer1[active]}</span>
         <span className="flex-1" />
         <span className="font-mono text-accent-strong">{footer2}</span>
       </div>

@@ -42,7 +42,11 @@ export default async function LandingWhatsInside() {
           viewLabel={t('bridgeInsideViewLabel')}
           labels={[t('bridgeInsideTabBoard'), t('bridgeInsideTabTable'), t('bridgeInsideTabCalendar')]}
           subs={[t('bridgeInsideTabBoardSub'), t('bridgeInsideTabTableSub'), t('bridgeInsideTabCalendarSub')]}
-          footer1={t('bridgeInsideFrameFooter1')}
+          footer1={[
+            t('bridgeInsideFrameFooter1Board'),
+            t('bridgeInsideFrameFooter1Table'),
+            t('bridgeInsideFrameFooter1Calendar'),
+          ]}
           footer2={t('bridgeInsideFrameFooter2')}
         />
 
@@ -67,7 +71,10 @@ export default async function LandingWhatsInside() {
             <p className="m-0 text-sm text-dim leading-[1.6] flex-1">
               {t('bridgeInsidePagesBody')}
             </p>
-            <div className="mt-[18px] flex items-center gap-2 flex-wrap">
+            <span className="mt-4.5 text-[12px] text-dim">
+              {t('bridgeInsidePagesChipLabel')}
+            </span>
+            <div className="mt-2 flex items-center gap-2 flex-wrap">
               {['remnus://pages/<id>', 'page.update_content'].map((chip) => (
                 <span
                   key={chip}
