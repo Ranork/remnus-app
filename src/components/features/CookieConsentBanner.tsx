@@ -1,8 +1,17 @@
 'use client';
 
+import { useEffect } from 'react';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { useConsent } from '@/components/providers/ConsentContext';
+
+declare global {
+  interface Window {
+    AccessibilityPreferenceWidget?: {
+      configure: (options: { offsetY?: string; offsetX?: string; [key: string]: unknown }) => void;
+    };
+  }
+}
 
 /**
  * Bottom consent bar. Two modes:
@@ -13,6 +22,20 @@ import { useConsent } from '@/components/providers/ConsentContext';
 export default function CookieConsentBanner() {
   const t = useTranslations('Consent');
   const { consent, consentRequired, accept, reject } = useConsent();
+
+  // The accessibility widget (src/app/layout.tsx) sits bottom-left with a
+  // corner-hugging default offset. While this banner spans the full width at
+  // the bottom, push the widget up so it doesn't overlap the banner's text/
+  // buttons; once a choice is stored (now or from a prior visit) drop it back
+  // to the corner. Re-applies on the widget's own "mounted" event in case it
+  // finishes loading after this effect already ran.
+  useEffect(() => {
+    const offsetY = consent === null ? '5rem' : '1.25rem';
+    const apply = () => window.AccessibilityPreferenceWidget?.configure({ offsetY });
+    apply();
+    document.addEventListener('accessibility-preference-widget:mounted', apply);
+    return () => document.removeEventListener('accessibility-preference-widget:mounted', apply);
+  }, [consent]);
 
   if (consent !== null) return null;
 

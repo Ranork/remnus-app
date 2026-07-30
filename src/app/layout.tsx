@@ -5,6 +5,7 @@ import { cookies } from 'next/headers';
 import { getLocale } from 'next-intl/server';
 import Script from 'next/script';
 import DebugConsole from '@/components/providers/DebugConsole';
+import AccessibilityWidgetTheme from '@/components/providers/AccessibilityWidgetTheme';
 
 const onest = Onest({
   subsets: ['latin'],
@@ -66,9 +67,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           data-language={locale}
           data-position="bottom-left"
           data-offset-x="1.25rem"
-          data-offset-y="5rem"
+          data-offset-y="1.25rem"
           data-exclude-paths="/app,/admin,/db,/page"
         />
+        <AccessibilityWidgetTheme />
       </body>
     </html>
   );
