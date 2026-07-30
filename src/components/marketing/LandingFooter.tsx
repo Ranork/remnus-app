@@ -51,48 +51,65 @@ export default async function LandingFooter() {
   ];
 
   return (
-    <footer className="px-4 sm:px-8 lg:px-14 py-12 lg:py-16 border-t border-neutral-800">
-      <div className="max-w-7xl mx-auto grid gap-10 lg:gap-16 grid-cols-2 sm:grid-cols-3 lg:grid-cols-[1.4fr_1fr_1fr_1fr_1fr]">
-        {/* Left: logo + tagline + copyright */}
-        <div className="flex flex-col gap-4 col-span-2 sm:col-span-3 lg:col-span-1">
-          <Link href="/" className="inline-flex items-center gap-2.5">
-            <Image src="/logo-square-transparent.png" alt="Remnus" width={22} height={22} />
-            <span className="font-semibold text-neutral-100 text-[15px] tracking-[-0.01em]">Remnus</span>
-          </Link>
-          <p className="text-[13.5px] text-dim leading-[1.55] max-w-55">
-            {t('bridgeFooterTagline')}
-          </p>
-          <span className="font-mono text-[11px] text-dimmer mt-auto">
-            {t('bridgeFooterCopyright', { year })}
-          </span>
-        </div>
-
-        {/* 3 link columns */}
-        {cols.map((col) => (
-          <div key={col.head} className="flex flex-col gap-3">
-            {col.headHref ? (
-              <Link
-                href={col.headHref}
-                className="font-mono text-[11px] text-dim hover:text-neutral-100 uppercase tracking-[0.12em] mb-1 transition-colors duration-150"
-              >
-                {col.head}
-              </Link>
-            ) : (
-              <span className="font-mono text-[11px] text-dim uppercase tracking-[0.12em] mb-1">
-                {col.head}
-              </span>
-            )}
-            {col.links.map((l) => (
-              <Link
-                key={l.label}
-                href={l.href}
-                className="text-[13.5px] text-neutral-50 hover:text-neutral-100 transition-colors duration-150"
-              >
-                {l.label}
-              </Link>
-            ))}
+    <footer className="border-t border-neutral-800">
+      <div className="px-4 sm:px-8 lg:px-14 py-12 lg:py-16">
+        <div className="max-w-7xl mx-auto grid gap-10 lg:gap-16 grid-cols-2 sm:grid-cols-3 lg:grid-cols-[1.4fr_1fr_1fr_1fr_1fr]">
+          {/* Left: logo + tagline + copyright */}
+          <div className="flex flex-col gap-4 col-span-2 sm:col-span-3 lg:col-span-1">
+            <Link href="/" className="inline-flex items-center gap-2.5">
+              <Image src="/logo-square-transparent.png" alt="Remnus" width={22} height={22} />
+              <span className="font-semibold text-neutral-100 text-[15px] tracking-[-0.01em]">Remnus</span>
+            </Link>
+            <p className="text-[13.5px] text-dim leading-[1.55] max-w-55">
+              {t('bridgeFooterTagline')}
+            </p>
+            <span className="font-mono text-[11px] text-dimmer mt-auto">
+              {t('bridgeFooterCopyright', { year })}
+            </span>
           </div>
-        ))}
+
+          {/* 3 link columns */}
+          {cols.map((col) => (
+            <div key={col.head} className="flex flex-col gap-3">
+              {col.headHref ? (
+                <Link
+                  href={col.headHref}
+                  className="font-mono text-[11px] text-dim hover:text-neutral-100 uppercase tracking-[0.12em] mb-1 transition-colors duration-150"
+                >
+                  {col.head}
+                </Link>
+              ) : (
+                <span className="font-mono text-[11px] text-dim uppercase tracking-[0.12em] mb-1">
+                  {col.head}
+                </span>
+              )}
+              {col.links.map((l) => (
+                <Link
+                  key={l.label}
+                  href={l.href}
+                  className="text-[13.5px] text-neutral-50 hover:text-neutral-100 transition-colors duration-150"
+                >
+                  {l.label}
+                </Link>
+              ))}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Bottom strip: Akatron Network attribution badge */}
+      <div className="border-t border-neutral-800 px-4 py-5 flex justify-center">
+        <a
+          href="https://akatron.net"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex items-center gap-2 rounded-full border border-neutral-800 bg-neutral-900 px-4 py-2 text-[12.5px] text-dim hover:border-neutral-700 hover:text-dimmer transition-colors duration-150"
+        >
+          <Image src="/akatron-logo.png" alt="" width={16} height={16} className="shrink-0" />
+          {t.rich('bridgeFooterCraftedBy', {
+            b: (chunks) => <span className="font-semibold text-neutral-100">{chunks}</span>,
+          })}
+        </a>
       </div>
     </footer>
   );
