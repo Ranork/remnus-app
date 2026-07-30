@@ -67,6 +67,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           data-position="bottom-left"
           data-offset-x="1.25rem"
           data-offset-y="5rem"
+          data-exclude-paths="/app,/admin,/db,/page"
         />
       </body>
     </html>
