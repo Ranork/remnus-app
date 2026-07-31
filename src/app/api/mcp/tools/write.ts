@@ -97,7 +97,7 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
   server.registerTool(
     'bulk_update_pages',
     {
-      description: 'Update multiple pages or database rows in one call — same merge semantics as update_page per entry (partial patch, properties merged, title synced). All updates run concurrently and share one outcome: if any pageId is invalid or one update fails, the whole call fails with no partial results — validate ids first for large batches.',
+      description: 'Update multiple pages or database rows in one call — same merge semantics as update_page per entry (partial patch, properties merged, title synced). Updates run concurrently and are NOT atomic: if one entry fails the call returns an error, but entries that already succeeded stay applied and the error does not say which ones. Validate ids first for large batches, and re-read before retrying after a failure.',
       inputSchema: {
         updates: z.array(z.object({
           pageId: z.string().describe('The workspace item ID or database row ID to update'),
