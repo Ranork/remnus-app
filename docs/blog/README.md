@@ -4,6 +4,7 @@ Thoughts on open source, AI-native tooling, and building in public.
 
 ## Posts
 
+- [AI Agent Project Management: The Complete Guide](/docs/ai-agent-project-management-guide) — A practical framework for agent-ready tasks, human approval gates, kanban workflows, project lifecycles, permissions, memory, and auditability.
 - [How to Connect OpenAI Codex to Remnus with MCP](/docs/connect-openai-codex-to-remnus-mcp) — Verified Codex CLI and config.toml setup, OAuth vs personal access tokens, shared-workspace workflows, AGENTS.md boundaries, and troubleshooting.
 - [How to Connect Cursor to Remnus with MCP](/docs/connect-cursor-to-remnus-mcp) — Verified mcp.json setup, OAuth vs tokens, global vs project config, five workflows, and troubleshooting.
 - [What Is an MCP-Native Workspace? A Complete Guide](/docs/what-is-an-mcp-native-workspace) — What "MCP-native" means, how it differs from a bolted-on MCP connector, the core use cases, and where the model fits.

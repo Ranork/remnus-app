@@ -77,6 +77,15 @@ export type BlogPost = {
 
 export const BLOG_POSTS: BlogPost[] = [
   {
+    slug: 'ai-agent-project-management-guide',
+    file: 'ai-agent-project-management-guide.md',
+    title: 'AI Agent Project Management: The Complete Guide',
+    description:
+      'A practical guide to AI agent project management: realistic responsibilities, human oversight, project lifecycles, safeguards, and MCP-enabled workflows.',
+    date: '2026-07-31',
+    icon: Bot,
+  },
+  {
     slug: 'connect-openai-codex-to-remnus-mcp',
     file: 'connect-openai-codex-to-remnus-mcp.md',
     title: 'How to Connect OpenAI Codex to Remnus with MCP',
