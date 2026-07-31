@@ -4,5 +4,10 @@
       "path": "/api/cron/emails",
       "schedule": "0 9 * * *"
     }
-  ]
+  ],
+  "functions": {
+    "src/app/api/mcp/route.ts": {
+      "memory": 256
+    }
+  }
 }

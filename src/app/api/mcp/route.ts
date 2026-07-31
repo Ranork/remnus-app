@@ -1,4 +1,5 @@
 export const runtime = 'nodejs';
+export const maxDuration = 300;
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js';
