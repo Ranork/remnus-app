@@ -3,6 +3,14 @@
     "remnus_app": {
       "type": "http",
       "url": "https://www.remnus.com/api/mcp"
+    },
+    "vercel": {
+      "type": "http",
+      "url": "https://mcp.vercel.com"
+    },
+    "posthog": {
+      "type": "http",
+      "url": "https://mcp.posthog.com/mcp"
     }
   }
 }

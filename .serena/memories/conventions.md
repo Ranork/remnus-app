@@ -1,6 +1,6 @@
 # Conventions
 
-Last verified: 2026-07-14
+Last verified: 2026-08-03
 Primary sources: `AI.md`, `AGENTS.md`, `messages/`, `src/auth.config.ts`, `src/lib/`, `src/db/`
 
 ## i18n (CRITICAL)
@@ -67,6 +67,12 @@ Primary sources: `AI.md`, `AGENTS.md`, `messages/`, `src/auth.config.ts`, `src/l
 - **tsx/ESM import-hoisting gotcha:** in tsx scripts that `import { db } from '@/db'`, a `dotenv.config()` CALL runs too late (imports hoist above it) → '@/db' initializes with DATABASE_URL unset and silently falls back to file:local.db. Fix: `import 'dotenv/config';` as the FIRST import (see backfill-page-links.ts). Raw createClient apply scripts are immune; command-line `DATABASE_URL=...` prefix always safe. This misdirected a "Turso" backfill (2026-07-07) and probably Faz 0's 0034 "Turso" apply (prod audit-log inserts silently failed from the cd5faa2 deploy until 0034 was actually applied to prod on 2026-07-07).
 
 - **Direct-insert gotcha (same family as createdAt/updatedAt above):** `seed.ts` inserts rows straight into the DB (`db.batch`), bypassing every action-layer side effect (`syncPageLinks`, tombstones, etc.) those tables normally get on write. Found 2026-07-07: seed content with a real childBlock link never entered `page_links` because `createRichWorkspaceData` never called `syncPageLinks()` — fixed by adding one explicit call after the batch insert. When adding a new write side-effect to an action, check whether `seed.ts` (or any other direct-DB-insert path) also needs it.
+
+## Agent Tooling: project-scoped MCP servers (added 2026-08-03)
+- `.mcp.json` (TRACKED in git — only `.env*` is gitignored) registers three project-scoped servers: `remnus_app` (`https://www.remnus.com/api/mcp`), `vercel` (`https://mcp.vercel.com`), `posthog` (`https://mcp.posthog.com/mcp`). All three authenticate over MCP OAuth — NEVER add an `Authorization` header or token to that file. PostHog's personal-API-key mode exists but is for clients without OAuth; don't switch this repo to it.
+- Vercel MCP = production truth for remnus.com: `get_runtime_errors`/`get_runtime_logs`, `get_deployment_build_logs`, `list_deployments`/`get_deployment`, `get_web_analytics`, `search_vercel_documentation` (platform only — Next.js questions still go to `node_modules/next/dist/docs/`). It's the only way to catch build-green/runtime-500 bugs, e.g. the `generateStaticParams` × unconditional `headers()`/`cookies()` `DYNAMIC_SERVER_USAGE` case. `buy_pro`/`buy_credits`/`buy_addon`/`buy_domain` spend real money; `deploy_to_vercel` and `update_project_deployment_protection` mutate prod — all user-gated.
+- PostHog MCP = a SINGLE `exec` tool dispatching CLI-style commands: `search <pattern>` → `info <tool>` (once, reuse it) → `schema <tool> <field>` for any field carrying a `hint` → `call <tool> <json>`. Always `call read-data-schema` before an analytical query — Remnus's funnel events are custom (`signup`, `mcp_token_created`, `agent_call`, `connect_*`, `oauth_*`) and even `$pageview` varies per team. Bound to the EU-cloud ("eu.posthog.com") "Remnus" project; person-on-events is enabled, so `person.properties.*` on events = value at ingest time, not current. Writes (dashboards/insights/cohorts/flags/experiments/surveys/annotations) land in the real production project — user-gated.
+- Full guidance: `AGENTS.md` → **Agent MCP Servers** (with back-pointers from **Activation Funnel Analytics** and **Crash Reporting & Source Maps**).
 
 ## Performance
 - `Promise.all` for independent fetches (no waterfalls in layouts)

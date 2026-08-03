@@ -89,6 +89,51 @@ When working on project tasks, agents MUST use the **remnus-mcp** server to inte
 2. **Updating Status:** When starting a task, update its status to `In Progress` (if applicable), and when completed, update its status to `Done` in the database via the `update_page` tool.
 3. **Writing Task Outputs:** Upon task completion, write a detailed markdown summary of the changes made, files modified, and test outcomes directly into the task's page content in the database using the `update_page` tool.
 
+## Agent MCP Servers
+
+Three MCP servers are registered **project-scoped** in [.mcp.json](.mcp.json) — a tracked file, so everyone who clones the repo gets them. Claude Code lists project-scoped servers as `⏸ Pending approval` until accepted once in this directory; `/mcp` then runs the OAuth flow per server. Restart the client after editing `.mcp.json` by hand.
+
+| Server       | Endpoint                            | Use it for                                                                                                             |
+| ------------ | ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `remnus_app` | `https://www.remnus.com/api/mcp`    | The production Remnus workspace — Work Plan tasks, pages, databases. See **Agent Task Management & Work Plan** above.    |
+| `vercel`     | `https://mcp.vercel.com`            | Production truth for remnus.com: deployments, build logs, runtime logs/errors, Web Analytics, Vercel platform docs.      |
+| `posthog`    | `https://mcp.posthog.com/mcp`       | Product analytics for the Remnus PostHog project (EU cloud): events, funnels, error tracking, replays, flags, SQL.       |
+
+**All three authenticate over MCP OAuth — never put a credential in `.mcp.json`.** That file is tracked by git (`.env*` is ignored, `.mcp.json` is not), so an `Authorization: Bearer …` header there would publish a key. PostHog also accepts a personal-API-key header, but that mode exists for clients without OAuth — do not switch this repo to it. Each developer authorizes their own account and picks the Remnus org/project during consent, so access is per-person, not shared. If two PostHog servers show up in a session, the extra one is a personal client-level connector (e.g. a claude.ai connector), not this repo's config.
+
+**Read freely, write deliberately.** Both external servers point at live production systems. Queries, log reads, and analytics lookups need no ceremony; anything that creates, mutates, or spends requires explicit user intent — same rule as every other production system in `AI.md` **Safety rules**.
+
+### Vercel MCP
+
+Remnus deploys to Vercel (see **Cross-Platform Architecture**), so this server is the fastest path to *what production actually did*, as opposed to what the code says it should do.
+
+- **Prod-only failures:** `get_runtime_errors` / `get_runtime_logs` for a live 500, `get_deployment_build_logs` for a failed build, `list_deployments` / `get_deployment` to establish which commit is actually serving traffic. **Precedent:** the `generateStaticParams` × unconditional `headers()`/`cookies()` conflict documented in **Public Docs: Wiki + Blog** built green and only surfaced through a Vercel MCP runtime-error lookup (`DYNAMIC_SERVER_USAGE`) — that class of bug is invisible to `npm run build` and `tsc`.
+- **Deploy state:** `list_projects` / `get_project` for env-var names, domains, and framework settings; `get_project_deployment_protection` for preview-protection state. Cron entries and function `memory`/`maxDuration` live in [vercel.json](vercel.json) — read the file for intent, use the MCP to confirm what shipped.
+- **Web Analytics:** `get_web_analytics` covers visitors/pageviews at the edge. Product behaviour (funnels, retention, custom events) is PostHog's job, not this one — see below.
+- **Docs:** `search_vercel_documentation` for *platform* questions (cron, functions, protection, domains). Next.js *framework* questions still go to `node_modules/next/dist/docs/` per **This is NOT the Next.js you know** at the top of this file.
+- **Protected previews:** `get_access_to_vercel_url` / `web_fetch_vercel_url` to read a deployment behind deployment protection.
+- **Never call on your own initiative — real money or real production mutation:** `buy_pro`, `buy_credits`, `buy_addon`, `buy_domain`, `get_purchase_quote` follow-through, `deploy_to_vercel`, `update_project_deployment_protection`.
+
+### PostHog MCP
+
+Exposes a **single `exec` tool** that dispatches CLI-style commands rather than one tool per operation:
+
+```text
+exec { command: "search <pattern>" }        # find the tool (prefer over `tools`, which dumps everything)
+exec { command: "info <tool>" }             # read its schema ONCE, then reuse it
+exec { command: "schema <tool> <field>" }   # REQUIRED for any field whose info output carries a `hint`
+exec { command: "call <tool> <json>" }      # execute
+```
+
+Do not guess a schema, and do not re-run `info` before every call.
+
+- **Schema-first, every time:** before any analytical `call`, confirm the event/property actually exists via `call read-data-schema` — including canonical-looking names like `$pageview`, which vary per team. Remnus's funnel is largely **custom** (`signup`, `mcp_token_created`, `agent_call`, `connect_*`, `oauth_*`, `mcp_token_mint_blocked`) — see **Activation Funnel Analytics** for the authoritative list and where each is emitted.
+- **Active environment:** the Remnus project on **EU cloud** (`eu.posthog.com`). The server reports the live project/org ids in its own instructions at session start — read them there instead of hardcoding, and never paste the `phc_` project token into repo files (it belongs in `NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN`; the build-time personal key is `POSTHOG_API_KEY`, see **Crash Reporting & Source Maps**).
+- **Person-on-events is enabled:** `person.properties.*` on the events table reflects the value at ingest time, not the person's current value. Same person, different values across events — by design, not a bug to work around.
+- **Good uses:** verifying a newly instrumented event actually arrives after a deploy (the step that lint/tsc can't cover); querying the activation funnel, retention, or lifecycle; inspecting `$exception` issues from **Crash Reporting & Source Maps** and confirming source maps resolved; pulling a session replay for a reported bug; checking a feature flag's real rollout state; `execute-sql` for anything the typed `query-*` tools can't express.
+- **Dashboards/insights are no longer "manual-only":** **Activation Funnel Analytics** deliberately leaves the funnel insight and the agent-add drill-down as "PostHog-side config, not code" — those can now be built through this server. Because that writes into the real Remnus project, do it only when the task asks for it.
+- **Writes hit production:** creating or updating dashboards, insights, cohorts, feature flags, experiments, surveys, or annotations changes what the team sees. Explicit user intent required.
+
 ## Color Theme
 
 | Role                | Hex       | Tailwind token |
@@ -237,12 +282,12 @@ Self-service "right to erasure" — email-confirmed two-step flow, not immediate
   - **PAT (server):** `mcp_token_mint_blocked` (`{reason: <BillingLimitCode>, type:'pat'}`) when `mintAgentToken`'s `checkCanAddAgent` blocks — the PAT mirror of `agent_limit_reached`.
   - **Helpers** added to [analytics/server.ts](src/lib/analytics/server.ts): `captureForUser(event, userId, props)` (resolves consent+role from the user record) and `captureAnonymous(event, props)` (no user context); `captureServer` now accepts `userId: string | null` (null ⇒ forced anonymous). `FunnelEvent` union extended with the 4 new server events. **No new env, no migration, no new i18n.**
 - **Channel attribution:** `AttributionCapture` writes a first-touch `remnus_first_touch` cookie (UTM + referrer); `signup` reads it and pins `initial_utm_*`/`initial_referrer` as `$set_once` person props.
-- **Dashboard:** build the PostHog funnel insight (`$pageview /` → `signup` → `mcp_token_created` → `agent_call`) with a breakdown on `initial_utm_source`/`initial_referrer` (PostHog-side config, not code). **Agent-add drill-down funnel:** `connect_flow_opened` → `connect_editor_selected` → `oauth_authorize_viewed` → `oauth_consent_result(approved)` → `mcp_token_created` → `agent_call`, with `oauth_token_exchange_failed`/`mcp_token_mint_blocked`/`oauth_consent_result(denied)` broken down by `reason`/`result` to pinpoint the drop cause (PostHog-side config).
+- **Dashboard:** build the PostHog funnel insight (`$pageview /` → `signup` → `mcp_token_created` → `agent_call`) with a breakdown on `initial_utm_source`/`initial_referrer` (PostHog-side config, not code). **Agent-add drill-down funnel:** `connect_flow_opened` → `connect_editor_selected` → `oauth_authorize_viewed` → `oauth_consent_result(approved)` → `mcp_token_created` → `agent_call`, with `oauth_token_exchange_failed`/`mcp_token_mint_blocked`/`oauth_consent_result(denied)` broken down by `reason`/`result` to pinpoint the drop cause (PostHog-side config). Both funnels can be queried or built through the `posthog` MCP server — see **Agent MCP Servers**.
 - **Env:** reuses `NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN` + `NEXT_PUBLIC_POSTHOG_HOST` server-side (no new env).
 
 ### Crash Reporting & Source Maps
 
-Render crashes are caught by the error boundaries (`global-error.tsx` + `[locale]/error.tsx`) and forwarded to PostHog **Error Tracking** as `$exception` events via `src/lib/reportClientError.ts` (`posthog.captureException` + `digest`/`path`/`boundary` props). See the **Root app files** entry for the boundaries.
+Render crashes are caught by the error boundaries (`global-error.tsx` + `[locale]/error.tsx`) and forwarded to PostHog **Error Tracking** as `$exception` events via `src/lib/reportClientError.ts` (`posthog.captureException` + `digest`/`path`/`boundary` props). See the **Root app files** entry for the boundaries. Live issues are readable through the `posthog` MCP server (`query-error-tracking-issues-list` / `-issue-events`) — see **Agent MCP Servers**.
 
 - **Source-map upload (build-time):** [next.config.ts](next.config.ts) wraps the prod config with `withPostHogConfig` (`@posthog/nextjs-config`, devDependency). It generates hidden browser source maps during `next build`, uploads them to PostHog so minified production stacks (e.g. React #310 → `aP`/`L`) resolve to real component/file/line, then **deletes them (`deleteAfterUpload: true`) so they never ship to users**. EU cloud → upload `host: 'https://eu.posthog.com'` (the API host, NOT the `eu.i.posthog.com` INGEST host in `NEXT_PUBLIC_POSTHOG_HOST`).
 - **Gating:** applied only when `NODE_ENV === 'production'` **and** both build creds are set, so local builds / forks build untouched.
