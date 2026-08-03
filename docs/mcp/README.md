@@ -15,7 +15,7 @@ Remnus MCP is a [Model Context Protocol](https://modelcontextprotocol.io) server
 https://www.remnus.com/api/mcp
 ```
 
-Always use the `www` host — the apex `remnus.com` redirects to `www.remnus.com`, and some OAuth clients reject the resulting resource-indicator mismatch. Supports both **Streamable HTTP** (stateless, one request per call) and **SSE** (stateful, persistent connection).
+Always use the `www` host — the apex `remnus.com` redirects to `www.remnus.com`, and some OAuth clients reject the resulting resource-indicator mismatch. Uses the modern **Streamable HTTP** transport (stateless, one request per call) — the transport the current MCP spec recommends for remote servers.
 
 ## Quick start
 

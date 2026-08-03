@@ -30,7 +30,7 @@ In practice, this vision means:
 
 ## 4. The MCP server — technical surface
 
-**Endpoint:** `https://www.remnus.com/api/mcp` (always use the `www` host). Supports both **Streamable HTTP** (stateless) and **SSE** (stateful) dual transport. The server is not a separate sidecar — `/api/mcp` is directly the core of the Remnus web application.
+**Endpoint:** `https://www.remnus.com/api/mcp` (always use the `www` host). Uses the modern **Streamable HTTP** transport (stateless — one HTTP request per call). The server is not a separate sidecar — `/api/mcp` is directly the core of the Remnus web application.
 
 ### Authentication and security boundaries
 *   **OAuth 2.1 + PKCE (S256)** — the recommended path. Dynamic client registration (`POST /api/oauth/register`). Access tokens last 1 hour, refresh tokens 30 days. The human user (owner) sets the agent's read/write permissions on the consent screen.

@@ -30,7 +30,7 @@ Pratikte bu vizyon şu anlama gelir:
 
 ## 4. MCP Sunucusu — Teknik Yüzey
 
-**Endpoint:** `https://www.remnus.com/api/mcp` (Her zaman `www` host'u kullanılmalı). **Streamable HTTP** (stateless) ve **SSE** (stateful) dual transport desteklenir. Sunucu ayrı bir sidecar değildir; `/api/mcp` doğrudan Remnus web uygulamasının çekirdeğidir.
+**Endpoint:** `https://www.remnus.com/api/mcp` (Her zaman `www` host'u kullanılmalı). Modern **Streamable HTTP** transport kullanılır (stateless — her çağrı tek bir HTTP isteği). Sunucu ayrı bir sidecar değildir; `/api/mcp` doğrudan Remnus web uygulamasının çekirdeğidir.
 
 ### Kimlik Doğrulama ve Güvenlik Sınırları
 *   **OAuth 2.1 + PKCE (S256)** — Önerilen yol. Dynamic client registration (`POST /api/oauth/register`). Access token 1 saat, refresh token 30 gün. İnsan kullanıcı (owner) consent ekranında ajanın read/write yetkilerini belirler.
