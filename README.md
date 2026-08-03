@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="public/remnus-animation.gif" alt="Remnus" width="100%" />
+</p>
+
 # Remnus
 
 **Open-source MCP-native workspace for humans and AI agents.**
