@@ -3,7 +3,7 @@ import { and, eq } from 'drizzle-orm';
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
 import { pageLinks, workspaceMembers } from '@/db/schema';
-import { getCurrentUser } from '@/lib/auth/session';
+import { auth } from '@/auth';
 import { buildOkfBundle } from '@/lib/okf/exporter';
 import { analyzeKnowledgeHealth } from '@/lib/okf/health';
 import { getOkfWorkspaceSnapshot } from '@/lib/okf/workspaceSnapshot';
@@ -17,7 +17,9 @@ const MAX_TEXT_BYTES = 25 * 1024 * 1024;
 
 export async function GET(request: NextRequest) {
   try {
-    const user = await getCurrentUser();
+    const session = await auth();
+    const user = session?.user;
+    if (!user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     const workspaceId = request.nextUrl.searchParams.get('workspaceId')?.trim();
     if (!workspaceId) return NextResponse.json({ error: 'workspaceId is required' }, { status: 400 });
 
