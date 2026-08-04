@@ -741,6 +741,7 @@
       "previewTitle": "Önizleme",
       "previewRowsSummary": "{count} satır bulundu",
       "ignoredColumn": "Yok sayılacak (eşleşen property yok)",
+      "contentColumn": "\"content\" sütunu property'ye değil, satırın sayfa gövdesine yazılır.",
       "cancel": "İptal",
       "preview": "Önizle",
       "back": "Geri",

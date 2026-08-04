@@ -741,6 +741,7 @@
       "previewTitle": "Vista previa",
       "previewRowsSummary": "{count} filas detectadas",
       "ignoredColumn": "Ignorada (sin propiedad coincidente)",
+      "contentColumn": "Una columna \"content\" se escribe en el cuerpo de página de la fila, no en una propiedad.",
       "cancel": "Cancelar",
       "preview": "Vista previa",
       "back": "Atrás",

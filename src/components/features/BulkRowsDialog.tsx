@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { X, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { parseTabularPaste } from '@/lib/utils/parseTabularPaste';
+import { CONTENT_HEADER } from '@/lib/utils/propertyCoercion';
 import { bulkCreatePages, bulkUpdatePagesByMatch } from '@/lib/actions/page';
 
 interface SchemaColumn {
@@ -77,7 +78,21 @@ export function BulkRowsDialog({ databaseId, schema, onClose }: BulkRowsDialogPr
     return map;
   }, [writableColumns, activeMatchCol]);
   const matchedHeaders = parsed.headers.filter((h) => nameToCol.has(h.trim().toLowerCase()));
-  const ignoredHeaders = parsed.headers.filter((h) => !nameToCol.has(h.trim().toLowerCase()));
+
+  // `content` isn't a property — it writes the row's page body. A database that
+  // actually has a column by that name keeps the column (see extractRowContent),
+  // so only treat the header as reserved when no such column exists.
+  const hasContentColumn = useMemo(
+    () => schema.some((c) => c.name.trim().toLowerCase() === CONTENT_HEADER),
+    [schema],
+  );
+  const contentHeader = hasContentColumn
+    ? undefined
+    : parsed.headers.find((h) => h.trim().toLowerCase() === CONTENT_HEADER);
+
+  const ignoredHeaders = parsed.headers.filter(
+    (h) => !nameToCol.has(h.trim().toLowerCase()) && h !== contentHeader,
+  );
 
   const tooManyRows = parsed.rows.length > MAX_BULK_ROWS;
   const canCommit = parsed.rows.length > 0 && !parsed.error && !tooManyRows;
@@ -196,7 +211,12 @@ export function BulkRowsDialog({ databaseId, schema, onClose }: BulkRowsDialogPr
                   className="w-full bg-neutral-900 border border-neutral-800 rounded px-3 py-2 text-xs text-neutral-200 font-mono resize-y focus:outline-none focus:border-blue-500/50"
                 />
                 {!raw.trim() && (
-                  <p className="text-[11px] text-neutral-600 mt-1">{t('bulkImport.emptyInput')}</p>
+                  <>
+                    <p className="text-[11px] text-neutral-600 mt-1">{t('bulkImport.emptyInput')}</p>
+                    {!hasContentColumn && (
+                      <p className="text-[11px] text-neutral-600 mt-1">{t('bulkImport.contentColumn')}</p>
+                    )}
+                  </>
                 )}
               </div>
 
@@ -218,6 +238,9 @@ export function BulkRowsDialog({ databaseId, schema, onClose }: BulkRowsDialogPr
               {!parsed.error && parsed.rows.length > 0 && (
                 <div className="space-y-2">
                   <p className="text-xs font-semibold text-neutral-300">{t('bulkImport.previewRowsSummary', { count: parsed.rows.length })}</p>
+                  {contentHeader && (
+                    <p className="text-[11px] text-neutral-400">{t('bulkImport.contentColumn')}</p>
+                  )}
                   {ignoredHeaders.length > 0 && (
                     <p className="text-[11px] text-neutral-500">
                       {ignoredHeaders.join(', ')} — {t('bulkImport.ignoredColumn')}
