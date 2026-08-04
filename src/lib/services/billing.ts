@@ -153,7 +153,14 @@ export async function countAgents(ownerId: string): Promise<number> {
     db
       .select({ n: sql<number>`count(*)` })
       .from(oauthAccessTokens)
-      .where(and(inArray(oauthAccessTokens.workspaceId, wsIds), isNull(oauthAccessTokens.revokedAt))),
+      .where(and(
+        inArray(oauthAccessTokens.workspaceId, wsIds),
+        isNull(oauthAccessTokens.revokedAt),
+        // Access tokens that expired without ever being refreshed (e.g. the client
+        // abandoned the session and re-authenticated from scratch) are functionally
+        // dead — don't let them permanently occupy an agent slot.
+        gt(oauthAccessTokens.expiresAt, new Date()),
+      )),
   ]);
   return Number(pat[0]?.n ?? 0) + Number(oauth[0]?.n ?? 0);
 }

@@ -156,10 +156,24 @@ function buildInstructions(ctx: TokenContext): string {
 }
 
 export async function POST(req: Request) { return handleMcpRequest(req); }
-export async function GET(req: Request)  { return handleMcpRequest(req); }
 export async function DELETE(req: Request) { return handleMcpRequest(req); }
 
-async function handleMcpRequest(req: Request): Promise<Response> {
+// GET is how Streamable HTTP clients open a standalone SSE stream for server-initiated
+// push (sampling / logging / elicitation). This server never sends any of those, so the
+// stream would sit open with nothing to push. The SDK transport (below) keeps such a
+// stream open indefinitely — on Vercel that means every GET idles until `maxDuration`
+// force-kills it as a 60s timeout (504), the same cost/reliability failure mode the
+// hand-rolled SSE branch was removed for. Worse, some MCP clients treat that timeout as
+// a dead connection and restart the whole session including OAuth, which is what was
+// producing repeated full re-authentications. Short-circuit with 405 instead — spec-legal
+// (the GET/SSE stream is optional) and tells the client immediately that none is offered.
+export async function GET(req: Request) {
+  const authed = await authenticate(req);
+  if (authed instanceof Response) return authed;
+  return json({ error: 'Method Not Allowed: this server does not offer an SSE stream' }, 405);
+}
+
+async function authenticate(req: Request): Promise<TokenContext | Response> {
   const reqUrl = new URL(req.url);
   const base = `${reqUrl.protocol}//${reqUrl.host}`;
 
@@ -174,6 +188,12 @@ async function handleMcpRequest(req: Request): Promise<Response> {
       },
     });
   }
+  return ctx;
+}
+
+async function handleMcpRequest(req: Request): Promise<Response> {
+  const ctx = await authenticate(req);
+  if (ctx instanceof Response) return ctx;
 
   if (!checkRateLimit(ctx.tokenId)) return json({ error: 'Too many requests' }, 429);
 
