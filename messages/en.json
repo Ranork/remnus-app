@@ -741,6 +741,7 @@
       "previewTitle": "Preview",
       "previewRowsSummary": "{count} rows detected",
       "ignoredColumn": "Ignored (no matching property)",
+      "contentColumn": "A \"content\" column is written to the row's page body, not to a property.",
       "cancel": "Cancel",
       "preview": "Preview",
       "back": "Back",

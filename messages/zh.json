@@ -741,6 +741,7 @@
       "previewTitle": "预览",
       "previewRowsSummary": "检测到 {count} 行",
       "ignoredColumn": "已忽略（无匹配属性）",
+      "contentColumn": "“content”列会写入该行的页面正文，而不是属性。",
       "cancel": "取消",
       "preview": "预览",
       "back": "返回",

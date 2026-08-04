@@ -741,6 +741,7 @@
       "previewTitle": "Vorschau",
       "previewRowsSummary": "{count} Zeilen erkannt",
       "ignoredColumn": "Ignoriert (keine passende Eigenschaft)",
+      "contentColumn": "Eine Spalte \"content\" wird in den Seiteninhalt der Zeile geschrieben, nicht in eine Eigenschaft.",
       "cancel": "Abbrechen",
       "preview": "Vorschau",
       "back": "Zurück",
