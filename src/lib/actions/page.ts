@@ -9,7 +9,7 @@ import { publish } from '@/lib/realtime/publish';
 import { isCloudinaryUrl, deleteCloudinaryImage } from '@/lib/cloudinary';
 import { recordDeletionTombstone } from '@/lib/services/workspace';
 import { syncPageLinks, removePageLinksFor, purgeReferencesTo } from '@/lib/services/pageLinks';
-import { coerceRowValues, assignOptionColors, type DatabaseColumn } from '@/lib/utils/propertyCoercion';
+import { coerceRowValues, extractRowContent, assignOptionColors, type DatabaseColumn } from '@/lib/utils/propertyCoercion';
 
 const MAX_BULK_ROWS = 500;
 
@@ -280,6 +280,9 @@ export async function bulkCreatePages(
   const errors: { row: number; message: string }[] = [];
   const newOptionsByColumn = new Map<string, Set<string>>();
   const toInsert: (typeof pages.$inferInsert)[] = [];
+  // Bodies to feed syncPageLinks once the rows exist — the link graph can only be
+  // written after the insert, and never inside the transaction (it's best-effort).
+  const linkSyncs: { id: string; content: string }[] = [];
   const now = new Date();
 
   rows.forEach((rawRow, idx) => {
@@ -294,17 +297,20 @@ export async function bulkCreatePages(
       values.forEach((v) => set.add(v));
       newOptionsByColumn.set(colId, set);
     }
+    const content = extractRowContent(schema, rawRow) ?? '';
+    const id = crypto.randomUUID();
     nextSort += 1;
     toInsert.push({
-      id: crypto.randomUUID(),
+      id,
       databaseId,
       title,
-      content: '',
+      content,
       properties: { ...schemaDefaults, ...properties, title },
       sortOrder: nextSort,
       createdAt: now,
       updatedAt: now,
     });
+    if (content) linkSyncs.push({ id, content });
   });
 
   const addedOptions: BulkAddedOption[] = [];
@@ -324,6 +330,10 @@ export async function bulkCreatePages(
       await tx.insert(pages).values(toInsert);
     }
   });
+
+  for (const { id, content } of linkSyncs) {
+    await syncPageLinks(workspaceId, id, 'database_row', content);
+  }
 
   if (toInsert.length > 0) {
     revalidatePath(`/db/${databaseId}`);
@@ -372,7 +382,7 @@ export async function bulkUpdatePagesByMatch(
   const errors: { row: number; message: string }[] = [];
   const unmatched: number[] = [];
   const newOptionsByColumn = new Map<string, Set<string>>();
-  const updates: { pageId: string; properties: Record<string, unknown> }[] = [];
+  const updates: { pageId: string; properties: Record<string, unknown>; content?: string }[] = [];
 
   rows.forEach((rawRow, idx) => {
     const { properties, rawByColumnId, newOptionsByColumn: rowOptions } = coerceRowValues(schema, rawRow as Record<string, string>);
@@ -394,7 +404,7 @@ export async function bulkUpdatePagesByMatch(
       values.forEach((v) => set.add(v));
       newOptionsByColumn.set(colId, set);
     }
-    updates.push({ pageId, properties });
+    updates.push({ pageId, properties, content: extractRowContent(schema, rawRow) });
   });
 
   const addedOptions: BulkAddedOption[] = [];
@@ -416,9 +426,20 @@ export async function bulkUpdatePagesByMatch(
       if (!existingPage) continue;
       const mergedProperties = { ...existingPage.properties, ...u.properties };
       const nextTitle = typeof u.properties.title === 'string' ? (u.properties.title as string) : existingPage.title;
-      await tx.update(pages).set({ title: nextTitle, properties: mergedProperties, updatedAt: now }).where(eq(pages.id, u.pageId));
+      // Omitted `content` leaves the existing body untouched — same partial-patch
+      // semantics the properties merge above already has.
+      await tx.update(pages).set({
+        title: nextTitle,
+        properties: mergedProperties,
+        ...(u.content !== undefined ? { content: u.content } : {}),
+        updatedAt: now,
+      }).where(eq(pages.id, u.pageId));
     }
   });
+
+  for (const u of updates) {
+    if (u.content !== undefined) await syncPageLinks(workspaceId, u.pageId, 'database_row', u.content);
+  }
 
   if (updates.length > 0) {
     revalidatePath(`/db/${databaseId}`);

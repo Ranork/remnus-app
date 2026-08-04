@@ -52,6 +52,37 @@ export function buildNameToColumnMap(schema: DatabaseColumn[]): Map<string, Data
   return new Map(schema.map((col) => [col.name.trim().toLowerCase(), col]));
 }
 
+// Reserved header that writes the row's markdown body instead of a property —
+// every other header resolves to a schema column. Rows in this product are pages,
+// so an import that can't carry a body can only ever produce half a row.
+export const CONTENT_HEADER = 'content';
+
+/**
+ * Pulls the reserved `content` header out of a pasted row.
+ *
+ * A schema column literally named "Content" wins: that database is already using
+ * the name for a property, and silently rerouting it to the page body would change
+ * what existing imports do. In that case this returns undefined and the value flows
+ * through `coerceRowValues` as a normal property.
+ *
+ * Returns undefined when absent or blank, so update callers can tell "no content
+ * given" (leave the body alone) apart from "content given".
+ */
+export function extractRowContent(
+  schema: DatabaseColumn[],
+  rawRow: Record<string, unknown>,
+): string | undefined {
+  if (buildNameToColumnMap(schema).has(CONTENT_HEADER)) return undefined;
+
+  for (const [key, rawValue] of Object.entries(rawRow)) {
+    if (key.trim().toLowerCase() !== CONTENT_HEADER) continue;
+    if (rawValue == null) return undefined;
+    const value = String(rawValue).trim();
+    return value === '' ? undefined : value;
+  }
+  return undefined;
+}
+
 // Resolves a pasted row (header name -> raw string) into schema-column-id-keyed,
 // type-coerced properties. Headers that don't match any column name (case-insensitive)
 // are silently ignored — the caller's preview step is responsible for surfacing that.

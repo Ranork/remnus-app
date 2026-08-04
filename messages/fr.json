@@ -678,6 +678,7 @@
       "previewTitle": "Aperçu",
       "previewRowsSummary": "{count} lignes détectées",
       "ignoredColumn": "Ignorée (aucune propriété correspondante)",
+      "contentColumn": "Une colonne \"content\" est écrite dans le corps de page de la ligne, pas dans une propriété.",
       "cancel": "Annuler",
       "preview": "Aperçu",
       "back": "Retour",
