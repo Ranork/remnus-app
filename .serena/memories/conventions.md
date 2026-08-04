@@ -43,6 +43,7 @@ Primary sources: `AI.md`, `AGENTS.md`, `messages/`, `src/auth.config.ts`, `src/l
 - JSON column pattern for dynamic properties (no EAV, no extra tables)
 - `SelectOption`: `{ value: string; color?: SelectOptionColor; icon?: string }` (icon = emoji/`lucide:Name`/upload URL, same format as `PageIcon`; rendered via `PropertyTags.tsx`'s `OptionIcon`) — `normalizeOption` for backward compat with plain strings
 - Date formatting: `formatDateValue()` from `properties.ts`; never hardcode `'en-US'`
+- Bulk paste import (`BulkRowsDialog` → `bulkCreatePages`/`bulkUpdatePagesByMatch`): headers match column NAMES case-insensitively; unknown headers are dropped; unknown select/status values are auto-appended to the schema as new options. `content` is a RESERVED header (`CONTENT_HEADER`/`extractRowContent` in `propertyCoercion.ts`, added 2026-08-04) that writes the row's markdown BODY, not a property — unless the database has a real column named "Content", which wins. Omitted `content` leaves an existing body untouched (partial patch, same as the properties merge). `syncPageLinks` runs per row AFTER the transaction, never inside it. Use JSON not TSV/CSV for multi-line bodies; `MAX_BULK_ROWS` 500 and Next's default 1MB server-action body limit both apply
 
 ## Component Patterns
 - Optimistic mutations: apply locally first, revalidate in background

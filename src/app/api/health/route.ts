@@ -36,12 +36,13 @@ export async function GET() {
   const database = await checkDatabase();
 
   // The MCP endpoint is served by this same Next.js process over Streamable
-  // HTTP (+ stateful SSE). If this handler responds, the MCP transport is being
-  // served; we surface the negotiated protocol version for registry tooling.
+  // HTTP (stateless — the legacy SSE transport was removed 2026-08-03). If this
+  // handler responds, the MCP transport is being served; we surface the
+  // negotiated protocol version for registry tooling.
   const mcp = {
     status: 'up' as const,
     endpoint: '/api/mcp',
-    transport: 'streamable-http+sse',
+    transport: 'streamable-http',
     protocolVersion: LATEST_PROTOCOL_VERSION,
   };
 
