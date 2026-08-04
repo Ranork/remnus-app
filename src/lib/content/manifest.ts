@@ -27,6 +27,7 @@ import {
   Gauge,
   Wrench,
   Bot,
+  SquareKanban,
   Scale,
 } from 'lucide-react';
 import { NotionMark, AppFlowyMark, AffineMark, ObsidianMark } from '@/components/docs/CompetitorMark';
@@ -76,6 +77,15 @@ export type BlogPost = {
 };
 
 export const BLOG_POSTS: BlogPost[] = [
+  {
+    slug: 'ai-agent-manage-kanban-board',
+    file: 'ai-agent-manage-kanban-board.md',
+    title: 'How to Let an AI Agent Manage Your Kanban Board',
+    description:
+      'Learn how to use an AI kanban board safely with agent-assisted triage, task updates, human approvals, MCP workflows, prompts, and failure controls.',
+    date: '2026-08-04',
+    icon: SquareKanban,
+  },
   {
     slug: 'ai-agent-project-management-guide',
     file: 'ai-agent-project-management-guide.md',

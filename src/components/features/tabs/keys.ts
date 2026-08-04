@@ -14,18 +14,24 @@ export const tabKeys = {
   members: (workspaceId: string) => ['tab', 'members', workspaceId] as const,
 };
 
-/** Invalidate only the queries backing the pane for `href` (a refresh). */
-export function invalidateTabHref(qc: QueryClient, href: string): void {
+/**
+ * Invalidate only the queries backing the pane for `href` (a refresh). Resolves
+ * once the triggered refetches settle, so callers can show progress; fire-and-forget
+ * callers can ignore the promise.
+ */
+export function invalidateTabHref(qc: QueryClient, href: string): Promise<void> {
   const parts = href.split('?')[0].split('#')[0].split('/').filter(Boolean);
+  const jobs: Promise<unknown>[] = [];
   if (parts[0] === 'page' && parts[1]) {
-    qc.invalidateQueries({ queryKey: tabKeys.standalone(parts[1]) });
-    qc.invalidateQueries({ queryKey: tabKeys.subItems(parts[1]) });
+    jobs.push(qc.invalidateQueries({ queryKey: tabKeys.standalone(parts[1]) }));
+    jobs.push(qc.invalidateQueries({ queryKey: tabKeys.subItems(parts[1]) }));
   } else if (parts[0] === 'db' && parts[1] && parts[2]) {
-    qc.invalidateQueries({ queryKey: tabKeys.database(parts[1]) });
-    qc.invalidateQueries({ queryKey: tabKeys.dbPage(parts[2]) });
-    qc.invalidateQueries({ queryKey: tabKeys.subItems(parts[2]) });
+    jobs.push(qc.invalidateQueries({ queryKey: tabKeys.database(parts[1]) }));
+    jobs.push(qc.invalidateQueries({ queryKey: tabKeys.dbPage(parts[2]) }));
+    jobs.push(qc.invalidateQueries({ queryKey: tabKeys.subItems(parts[2]) }));
   } else if (parts[0] === 'db' && parts[1]) {
-    qc.invalidateQueries({ queryKey: tabKeys.database(parts[1]) });
-    qc.invalidateQueries({ queryKey: tabKeys.pages(parts[1]) });
+    jobs.push(qc.invalidateQueries({ queryKey: tabKeys.database(parts[1]) }));
+    jobs.push(qc.invalidateQueries({ queryKey: tabKeys.pages(parts[1]) }));
   }
+  return Promise.all(jobs).then(() => undefined);
 }
