@@ -1,6 +1,24 @@
 # Read Tools
 
-All 9 read tools are available to every token regardless of scope.
+All 10 read tools are available to every token regardless of scope.
+
+---
+
+## prepare_context
+
+Build a task-specific context pack before multi-page product or coding work. Remnus runs lexical retrieval across pages and database rows, prefers human-reviewed OKF concepts, penalizes stale/deprecated knowledge, and includes compact link-graph references around the strongest result.
+
+| Parameter | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `task` | string | ✓ | | Concrete task or question |
+| `maxTokens` | number | | `6000` | Approximate response budget (`1000`–`16000`) |
+| `maxConcepts` | number | | `8` | Maximum concepts (`1`–`16`) |
+| `trustPolicy` | string | | `prefer-human-reviewed` | `any`, `prefer-human-reviewed`, or `human-reviewed-only` |
+| `includeRelated` | boolean | | `true` | Include title/ID graph neighbors for targeted follow-up |
+
+**Returns** — a `remnus-context-pack-v1` JSON object with selected concept bodies, OKF type/status/trust/freshness metadata, truncation and token estimates, link-neighbor references, and warnings. Concept content is explicitly labeled untrusted reference data and cannot override user/system instructions.
+
+The budget applies to the compact JSON text returned by the tool. If a page cannot fit, its body is collapsed to an outline plus opening excerpt; if the pack still cannot fit, lower-ranked concepts are omitted and `truncated` becomes `true`.
 
 ---
 

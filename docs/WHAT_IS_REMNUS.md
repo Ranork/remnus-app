@@ -35,14 +35,15 @@ In practice, this vision means:
 ### Authentication and security boundaries
 *   **OAuth 2.1 + PKCE (S256)** — the recommended path. Dynamic client registration (`POST /api/oauth/register`). Access tokens last 1 hour, refresh tokens 30 days. The human user (owner) sets the agent's read/write permissions on the consent screen.
 *   **Personal Access Token (PAT)** — for headless/CI or custom agents, minted by workspace **owners**.
-*   **Scopes:** `read` (9 tools) and `write` (all tools). A write call with a read-scoped token is blocked instantly.
+*   **Scopes:** `read` (10 tools) and `write` (all tools). A write call with a read-scoped token is blocked instantly.
 *   **Rate limit:** 60 requests/minute per token.
 *   **Traceability (audit log):** every tool call (which page was read, which property changed) is written to the workspace audit log.
 
-### 19 MCP tools (agent capabilities)
+### 20 MCP tools (agent capabilities)
 
 | Tool | Scope | What it does (for agents) |
 |---|---|---|
+| `prepare_context` | read | Build a trust/freshness-aware task context pack within an explicit token budget |
 | `search_workspace` | read | Semantic/full-text search across pages and databases |
 | `list_workspace` | read | Navigate the entire workspace hierarchy |
 | `get_page` | read | Fetch a page/row by ID (`mode: "outline"` to save tokens) |
@@ -61,8 +62,9 @@ In practice, this vision means:
 | `update_database_schema` | write | Add or remove typed columns on a database |
 | `create/update/delete_database_view` | write | Create and manage table/kanban views for humans to see |
 
-### 5 MCP resources (cheap context channels)
+### 6 MCP resources (cheap context channels)
 Data an agent can subscribe to via URI for quick orientation:
+*   `remnus://workspace/{id}/knowledge-health` (heuristic link, freshness, lifecycle, and review coverage)
 *   `remnus://workspace/{id}/schema` (the whole workspace's structure)
 *   `remnus://workspace/{id}/digest` (a one-line-per-item tl;dr summary map)
 *   `remnus://page/{id}`

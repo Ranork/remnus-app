@@ -12,9 +12,54 @@ import {
   getChangesSince,
   getRelatedPages,
 } from '@/lib/services/workspace';
+import { prepareContextPack } from '@/lib/services/contextPack';
 import { logActivity, type TokenContext } from '../context';
 
 export function registerReadTools(server: McpServer, ctx: TokenContext) {
+  server.registerTool(
+    'prepare_context',
+    {
+      description: 'Build one task-specific, token-budgeted context pack from relevant workspace pages. Ranks lexical matches, prefers human-reviewed OKF knowledge, penalizes stale/deprecated concepts, and adds the top result\'s link-graph neighbors. Use this before multi-page product or coding work instead of many search/get_page calls.',
+      inputSchema: {
+        task: z.string().min(3).max(2_000).describe('The concrete task or question to gather context for'),
+        maxTokens: z.number().int().min(1_000).max(16_000).optional().default(6_000).describe('Approximate maximum tokens in the returned JSON'),
+        maxConcepts: z.number().int().min(1).max(16).optional().default(8).describe('Maximum page concepts to include'),
+        trustPolicy: z.enum(['any', 'prefer-human-reviewed', 'human-reviewed-only']).optional().default('prefer-human-reviewed'),
+        includeRelated: z.boolean().optional().default(true).describe('Include title/id references from the top concept\'s graph neighborhood'),
+      },
+      outputSchema: z.object({
+        profile: z.literal('remnus-context-pack-v1'),
+        task: z.string(),
+        retrieval: z.string(),
+        handling: z.string(),
+        budgetTokens: z.number(),
+        estimatedTokens: z.number(),
+        truncated: z.boolean(),
+        concepts: z.array(z.object({
+          id: z.string(),
+          type: z.string(),
+          title: z.string(),
+          content: z.string(),
+          metadata: z.record(z.string(), z.any()),
+        }).passthrough()),
+        related: z.array(z.object({ id: z.string(), title: z.string(), relation: z.string() }).passthrough()),
+        warnings: z.array(z.string()),
+      }),
+      annotations: { title: 'Prepare agent context', readOnlyHint: true, openWorldHint: false },
+    },
+    async ({ task, maxTokens, maxConcepts, trustPolicy, includeRelated }) => {
+      try {
+        const pack = await prepareContextPack(ctx.workspaceId, { task, maxTokens, maxConcepts, trustPolicy, includeRelated });
+        const text = JSON.stringify(pack);
+        await logActivity(ctx, 'prepare_context', 'success', undefined, undefined, text);
+        return { content: [{ type: 'text' as const, text }], structuredContent: { ...pack } };
+      } catch (err) {
+        await logActivity(ctx, 'prepare_context', 'error');
+        return { content: [{ type: 'text' as const, text: `Error: ${String(err)}` }], isError: true };
+      }
+    },
+  );
+
   server.registerTool(
     'search_workspace',
     {

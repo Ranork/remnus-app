@@ -35,14 +35,15 @@ Pratikte bu vizyon şu anlama gelir:
 ### Kimlik Doğrulama ve Güvenlik Sınırları
 *   **OAuth 2.1 + PKCE (S256)** — Önerilen yol. Dynamic client registration (`POST /api/oauth/register`). Access token 1 saat, refresh token 30 gün. İnsan kullanıcı (owner) consent ekranında ajanın read/write yetkilerini belirler.
 *   **Personal Access Token (PAT)** — Headless/CI veya özel ajanlar için, workspace **owner**'ları tarafından üretilir.
-*   **Scope'lar:** `read` (9 tool) ve `write` (tüm tool'lar). Read-scoped token ile write çağrısı anında bloklanır.
+*   **Scope'lar:** `read` (10 tool) ve `write` (tüm tool'lar). Read-scoped token ile write çağrısı anında bloklanır.
 *   **Rate limit:** Token başına dakikada 60 istek.
 *   **İzlenebilirlik (Audit Log):** Her tool çağrısı (hangi sayfa okundu, hangi property değiştirildi) workspace audit log'una yazılır.
 
-### 19 MCP Tool (Ajanların Yetenekleri)
+### 20 MCP Tool (Ajanların Yetenekleri)
 
 | Tool | Scope | Ne Yapar (Ajanlar İçin) |
 |---|---|---|
+| `prepare_context` | read | Açık bir token bütçesi içinde güven ve güncellik farkındalıklı görev bağlamı hazırlar |
 | `search_workspace` | read | Sayfalar ve database'ler üzerinde semantik/full-text arama |
 | `list_workspace` | read | Tüm workspace hiyerarşisinde gezinme |
 | `get_page` | read | ID ile sayfa/satır çekme (`mode: "outline"` ile token tasarrufu) |
@@ -61,8 +62,9 @@ Pratikte bu vizyon şu anlama gelir:
 | `update_database_schema` | write | Veritabanına yeni tipli kolonlar ekleme/çıkarma |
 | `create/update/delete_database_view` | write | İnsanların görmesi için tablo/kanban görünümleri yaratma ve yönetme |
 
-### 5 MCP Resource (Ucuz Context Kanalları)
+### 6 MCP Resource (Ucuz Context Kanalları)
 Ajanların hızlıca oryantasyon sağlaması için URI üzerinden abone olabildiği veriler:
+*   `remnus://workspace/{id}/knowledge-health` (Link, güncellik, yaşam döngüsü ve insan onayı raporu)
 *   `remnus://workspace/{id}/schema` (Tüm workspace'in yapısı)
 *   `remnus://workspace/{id}/digest` (Tek satır tldr özet harita)
 *   `remnus://page/{id}`

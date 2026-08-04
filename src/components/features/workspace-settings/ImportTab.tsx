@@ -2,7 +2,8 @@
 import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { Upload, FileArchive, CheckCircle, AlertCircle, Loader2, Layers, FileText, Database, Image, ArrowLeft } from 'lucide-react';
+import { Upload, FileArchive, CheckCircle, AlertCircle, Loader2, Layers, FileText, Database, Image, ArrowLeft, BookOpen } from 'lucide-react';
+import OkfImport from '@/components/features/workspace-settings/OkfImport';
 import {
   parseNotionExport,
   materializeItems,
@@ -81,7 +82,7 @@ interface ImportResult {
 }
 
 type Step = 'idle' | 'analyzing' | 'preview' | 'importing' | 'done' | 'error';
-type Source = 'notion' | null;
+type Source = 'notion' | 'okf' | null;
 
 interface ImportTabProps {
   workspaceId: string;
@@ -494,8 +495,18 @@ export default function ImportTab({ workspaceId: _workspaceId }: ImportTabProps)
   if (source === 'notion') {
     return <NotionImport onBack={() => setSource(null)} />;
   }
+  if (source === 'okf') {
+    return <OkfImport onBack={() => setSource(null)} />;
+  }
 
   const sources: SourceCard[] = [
+    {
+      id: 'okf',
+      icon: <BookOpen size={32} className="text-blue-400" />,
+      name: t('importSourceOkfName'),
+      description: t('importSourceOkfDesc'),
+      available: true,
+    },
     {
       id: 'notion',
       icon: <NotionIcon size={32} />,

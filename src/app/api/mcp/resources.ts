@@ -1,11 +1,47 @@
 import { McpServer, ResourceTemplate } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { db } from '@/db';
-import { workspaceItems, pages, databases, agentActivity } from '@/db/schema';
+import { workspaceItems, pages, databases, agentActivity, pageLinks } from '@/db/schema';
 import { eq, and, desc } from 'drizzle-orm';
 import { listWorkspaceItems, getDatabaseSchema, getAnyPageById, getWorkspaceDigest } from '@/lib/services/workspace';
 import type { TokenContext } from './context';
+import { analyzeKnowledgeHealth } from '@/lib/okf/health';
+import { getOkfWorkspaceSnapshot } from '@/lib/okf/workspaceSnapshot';
 
 export function registerResources(server: McpServer, ctx: TokenContext) {
+  const knowledgeHealthTemplate = new ResourceTemplate('remnus://workspace/{id}/knowledge-health', {
+    list: async () => ({
+      resources: [{
+        uri: `remnus://workspace/${ctx.workspaceId}/knowledge-health`,
+        name: 'Knowledge Health',
+        mimeType: 'application/json',
+        description: 'Heuristic link, freshness, lifecycle, and human-review coverage report',
+      }],
+    }),
+  });
+
+  server.registerResource(
+    'Knowledge Health',
+    knowledgeHealthTemplate,
+    { mimeType: 'application/json', description: 'Compact knowledge-quality report; not a factual-accuracy or security certification' },
+    async (uri, variables) => {
+      const workspaceId = variables.id as string;
+      if (workspaceId !== ctx.workspaceId) throw new Error('Access denied or workspace not found');
+      const [snapshot, links] = await Promise.all([
+        getOkfWorkspaceSnapshot(ctx.workspaceId),
+        db.select({ fromId: pageLinks.fromId, toId: pageLinks.toId })
+          .from(pageLinks)
+          .where(eq(pageLinks.workspaceId, ctx.workspaceId)),
+      ]);
+      return {
+        contents: [{
+          uri: uri.href,
+          mimeType: 'application/json',
+          text: JSON.stringify(analyzeKnowledgeHealth(snapshot, links)),
+        }],
+      };
+    },
+  );
+
   // 1. Workspace Schema — remnus://workspace/{id}/schema
   const workspaceSchemaTemplate = new ResourceTemplate('remnus://workspace/{id}/schema', {
     list: async () => ({

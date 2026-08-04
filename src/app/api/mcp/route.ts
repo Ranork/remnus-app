@@ -143,7 +143,8 @@ function buildInstructions(ctx: TokenContext): string {
   const digestUri = `remnus://workspace/${ctx.workspaceId}/digest`;
   const lines = [
     'This is a Remnus workspace: pages and databases an AI agent can read and, with a write-scoped token, edit directly.',
-    `Orient before searching or guessing: read resource ${digestUri} for a compact map (titles, ids, row counts, last-updated).`,
+    'For a concrete multi-page product or coding task, call prepare_context(task, maxTokens?) first; do not pre-crawl the workspace. It returns a compact trust/freshness-aware pack within the requested budget.',
+    `For broad orientation or an unclear task, read resource ${digestUri} for a compact map (titles, ids, row counts, last-updated).`,
     'Two prompts exist specifically for cross-session memory: recall-context(topic) before starting work, save-memory(content, memory_type) after a decision, preference, or gotcha worth keeping.',
   ];
   if (ctx.scope === 'write') {

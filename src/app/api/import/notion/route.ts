@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/db';
-import { workspaces, workspaceMembers, databases } from '@/db/schema';
+import { databases } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { getCurrentUser } from '@/lib/auth/session';
 import { normalizeNotionDate, type ImportItem, type ImportSpacePayload } from '@/lib/import/notion-parser';
 import { createPageInWorkspace, createDatabaseInWorkspace } from '@/lib/services/workspace';
 import { SELECT_COLOR_ORDER, type SelectOptionColor } from '@/lib/types/properties';
+import { createImportedWorkspaceForUser } from '@/lib/import/workspace-import';
 
 // ── Import flow ──────────────────────────────────────────────────────────────────
 // The Notion export ZIP is parsed ENTIRELY in the browser (JSZip) and images are
@@ -91,13 +92,6 @@ function inferViews(schema: { id: string; name: string; type: string }[]) {
   }
 
   return views;
-}
-
-async function createWorkspaceForUser(userId: string, name: string): Promise<string> {
-  const id = crypto.randomUUID();
-  await db.insert(workspaces).values({ id, name: name.trim() || 'Untitled', createdAt: new Date() });
-  await db.insert(workspaceMembers).values({ workspaceId: id, userId, role: 'owner', createdAt: new Date() });
-  return id;
 }
 
 async function importItems(
@@ -201,7 +195,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid import payload' }, { status: 400 });
     }
 
-    const workspaceId = await createWorkspaceForUser(user.id, space.name);
+    const workspaceId = await createImportedWorkspaceForUser(user.id, space.name);
     const counters = { pages: 0, databases: 0, rows: 0 };
     await importItems(space.items, workspaceId, undefined, counters);
 

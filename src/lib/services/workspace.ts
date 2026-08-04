@@ -353,6 +353,7 @@ export async function getDatabasePageById(workspaceId: string, pageId: string) {
     content: page.content,
     icon: page.icon,
     properties: page.properties,
+    databaseId: page.databaseId,
   };
 }
 

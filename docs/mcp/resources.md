@@ -1,6 +1,18 @@
 # Resources
 
-MCP resources provide structured, addressable data that clients can subscribe to or read on demand. Remnus exposes five resource templates.
+MCP resources provide structured, addressable data that clients can subscribe to or read on demand. Remnus exposes six resource templates.
+
+---
+
+## remnus://workspace/{id}/knowledge-health
+
+Get a compact heuristic report covering orphan concepts, broken references, OKF freshness/lifecycle, and human-review coverage.
+
+**URI** — `remnus://workspace/{workspaceId}/knowledge-health`
+
+**Mime type** — `application/json`
+
+The score is an orientation signal, not a factual-accuracy or security certification.
 
 ---
 

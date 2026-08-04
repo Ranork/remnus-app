@@ -97,8 +97,8 @@ export default async function LandingFooter() {
         </div>
       </div>
 
-      {/* Bottom strip: Akatron Network attribution badge */}
-      <div className="border-t border-neutral-800 px-4 py-5 flex justify-center">
+      {/* Bottom strip: Akatron Network attribution + Scout Forge listing badge */}
+      <div className="border-t border-neutral-800 px-4 py-5 flex flex-wrap items-center justify-center gap-3">
         <a
           href="https://akatron.net"
           target="_blank"
@@ -109,6 +109,25 @@ export default async function LandingFooter() {
           {t.rich('bridgeFooterCraftedBy', {
             b: (chunks) => <span className="font-semibold text-neutral-100">{chunks}</span>,
           })}
+        </a>
+        {/* Remotely served SVG badge — next/image would need a remotePatterns
+            entry and buys nothing for a vector asset, so it stays a plain <img>. */}
+        <a
+          href="https://scoutforge.net/apps/remnus?ref=badge"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-flex opacity-90 hover:opacity-100 transition-opacity duration-150"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="https://scoutforge.net/badge/remnus/image?theme=dark&size=default"
+            alt="Remnus on Scout Forge"
+            width={300}
+            height={72}
+            loading="lazy"
+            decoding="async"
+            className="h-10 w-auto"
+          />
         </a>
       </div>
     </footer>

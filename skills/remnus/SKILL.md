@@ -29,6 +29,7 @@ Column types: `text` | `number` | `select` | `multi_select` | `date` | `datetime
 ## Tools at a glance
 
 **Read (safe, always allowed):**
+- `prepare_context` — start multi-page product/coding work with a task-specific, token-budgeted context pack; prefers reviewed/fresh knowledge.
 - `search_workspace` — find pages/databases by title. Your usual entry point.
 - `list_workspace` — list items, optionally under a `parentId`. Paginated.
 - `get_page` — full content of a page or row by ID. Auto-detects type.
@@ -36,6 +37,8 @@ Column types: `text` | `number` | `select` | `multi_select` | `date` | `datetime
 - `query_database` — schema + rows, with optional `filters`. Paginated.
 - `list_members` — workspace members and roles.
 - `query_audit_log` — history of MCP tool calls (yours and other agents').
+- `get_changes_since` — compact incremental change/deletion feed for recurring agents.
+- `get_related_pages` — parent, children, outgoing links, backlinks, and row siblings without bodies.
 
 **Write (needs a write-scoped token):**
 - `create_page` — new standalone page OR database row (see decision below).
@@ -53,6 +56,8 @@ If a write tool returns "This token only has read scope," the user connected a r
 Resources are read-only and listable; many clients let you attach them directly as context, which is cheaper and cleaner than a tool round-trip when you just need to *read*:
 
 - `remnus://workspace/{id}/schema` — every database in the workspace plus its columns, in one document. Best first pull to understand what databases exist and their shapes.
+- `remnus://workspace/{id}/digest` — token-cheap one-line map of titles, IDs, row counts, and update dates.
+- `remnus://workspace/{id}/knowledge-health` — compact link/freshness/lifecycle/review coverage report; heuristic, not a correctness certificate.
 - `remnus://database/{id}/schema` — columns of one database (same data as `get_database_schema`).
 - `remnus://page/{id}` — a page or row rendered as markdown (title + properties + content). Listing returns the 20 most recently updated; any page is reachable by its ID.
 - `remnus://audit-log/recent` — the last 50 activity entries for *this* token.
@@ -76,7 +81,7 @@ These only *fetch and format* — the actual writing/analysis is yours. If a cli
 ## Core rules — do not skip these
 
 ### 1. Inspect before you act
-Don't guess IDs or column names. Start from `search_workspace` or `list_workspace`, and run `get_database_schema` before `query_database` / before writing rows. You need real column IDs and the exact `select` option strings — invented values silently produce empty filters or unset properties.
+For multi-page product or coding work, start with `prepare_context`; it avoids repeated reads and respects the requested token budget. For a single known item, don't guess IDs or column names: start from `search_workspace` or `list_workspace`, and run `get_database_schema` before `query_database` / before writing rows. You need real column IDs and exact `select` option strings.
 
 ### 2. `update_page` MERGES properties — it never replaces
 Passing `properties: { status: "Done" }` changes only `status`; every other property is untouched. To *clear* a field, set it explicitly to `null`/`""`. Never re-send the whole property bag thinking you must preserve it — you don't, and doing so risks clobbering changes made since you read.
@@ -104,6 +109,8 @@ Updating several rows (e.g. "mark all done")? Build one `bulk_update_pages` call
 `content` is plain markdown. Headings, lists, tables, checkboxes (`- [ ]`) all work. Write clean markdown, not HTML.
 
 ## Common recipes
+
+**"Implement feature X using our product decisions"** → `prepare_context` with the concrete task and a suitable `maxTokens` budget → `get_page` only for related IDs whose full detail is still needed.
 
 **"Find X and show me"** → `search_workspace` → `get_page` on the best hit.
 

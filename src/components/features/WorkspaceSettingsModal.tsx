@@ -1,13 +1,14 @@
 ﻿'use client';
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { X, Zap, Settings, Users, Share2, CreditCard } from 'lucide-react';
+import { X, Zap, Settings, Users, Share2, CreditCard, Archive } from 'lucide-react';
 import { getWorkspaceMembers } from '@/lib/actions/auth';
 import GeneralTab from './workspace-settings/GeneralTab';
 import MembersTab from './workspace-settings/MembersTab';
 import TokensTab from './workspace-settings/TokensTab';
 import SharingTab from './workspace-settings/SharingTab';
 import BillingTab from './workspace-settings/BillingTab';
+import PortabilityTab from './workspace-settings/PortabilityTab';
 import type { CurrentUser, WorkspaceMember } from './workspace-settings/types';
 
 interface WorkspaceSettingsModalProps {
@@ -16,7 +17,7 @@ interface WorkspaceSettingsModalProps {
   workspaceIcon?: string | null;
   workspaceIconColor?: string | null;
   currentUser: CurrentUser;
-  initialTab?: 'general' | 'members' | 'tokens' | 'sharing' | 'billing';
+  initialTab?: 'general' | 'members' | 'tokens' | 'sharing' | 'billing' | 'portability';
   onClose: () => void;
   onRenamed: (newName: string) => void;
   onIconChanged?: (icon: string | null, iconColor: string | null) => void;
@@ -27,7 +28,7 @@ interface WorkspaceSettingsModalProps {
   onOpenBilling: () => void;
 }
 
-type Tab = 'general' | 'members' | 'tokens' | 'sharing' | 'billing';
+type Tab = 'general' | 'members' | 'tokens' | 'sharing' | 'billing' | 'portability';
 
 export default function WorkspaceSettingsModal({
   workspaceId,
@@ -80,6 +81,7 @@ export default function WorkspaceSettingsModal({
     { id: 'members',  label: t('tabMembers'),          icon: <Users size={13} /> },
     { id: 'sharing',  label: tSharing('tabSharing'),   icon: <Share2 size={13} />, accent: 'green' },
     { id: 'billing',  label: tBilling('tab'),          icon: <CreditCard size={13} /> },
+    { id: 'portability', label: t('tabPortability'),    icon: <Archive size={13} /> },
   ];
 
   return (
@@ -205,6 +207,9 @@ export default function WorkspaceSettingsModal({
                 isAdmin={currentUser.role === 'admin'}
                 onNavigateToMembers={() => setActiveTab('members')}
               />
+            )}
+            {activeTab === 'portability' && (
+              <PortabilityTab workspaceId={workspaceId} workspaceName={workspaceName} />
             )}
           </div>
         </div>

@@ -131,7 +131,7 @@ A working connection reports `remnus: https://www.remnus.com/api/mcp - ✔ Conne
 claude mcp get remnus
 ```
 
-**3. Check the tool count** inside a session with `/mcp`. The panel shows how many tools each server exposes. Remnus publishes **19**: 9 read tools and 10 write tools.
+**3. Check the tool count** inside a session with `/mcp`. The panel shows how many tools each server exposes. Remnus publishes **20**: 10 read tools and 10 write tools.
 
 **4. Run a safe read.** Ask Claude Code:
 
@@ -159,7 +159,7 @@ Remnus also exposes MCP **resources** (`remnus://…` URIs) for cheap read-only 
 
 Grant the smallest scope that does the job.
 
-**Start read-only.** A `read`-scoped connection can reach all 9 read tools — `search_workspace`, `list_workspace`, `get_page`, `get_database_schema`, `query_database`, `list_members`, `query_audit_log`, `get_changes_since`, and `get_related_pages` — and cannot modify anything. For summaries, reports, standups, and code work that only needs context, this is enough. Calling a write tool with a read token returns an error and changes nothing.
+**Start read-only.** A `read`-scoped connection can reach all 10 read tools — `prepare_context`, `search_workspace`, `list_workspace`, `get_page`, `get_database_schema`, `query_database`, `list_members`, `query_audit_log`, `get_changes_since`, and `get_related_pages` — and cannot modify anything. For summaries, reports, standups, and code work that only needs context, this is enough. Calling a write tool with a read token returns an error and changes nothing.
 
 **Add write access deliberately.** The `write` scope adds `create_page`, `update_page`, `bulk_update_pages`, `delete_page`, `move_item`, `create_database`, `update_database_schema`, and the three database-view tools. Use a separate write connection for the agent that genuinely needs to file tasks, rather than upgrading your everyday one.
 
@@ -179,7 +179,7 @@ Grant the smallest scope that does the job.
 
 **A bad token beats OAuth.** If you set `headers.Authorization` and the server rejects it, Claude Code reports the connection as **failed** rather than falling back to OAuth. Remove the header to use OAuth instead.
 
-**No tools appear.** Confirm the scope you connected at — read tokens still expose all 9 read tools, so an empty list means a connection problem, not a scope problem. Check `claude mcp get remnus`.
+**No tools appear.** Confirm the scope you connected at — read tokens still expose all 10 read tools, so an empty list means a connection problem, not a scope problem. Check `claude mcp get remnus`.
 
 **Expired or revoked tokens.** PATs can carry an expiry; expired and revoked tokens both return `401`. Mint a new one, or re-run the OAuth flow. From v2.1.195, when a refresh token is rejected Claude Code immediately points you at `/mcp`.
 

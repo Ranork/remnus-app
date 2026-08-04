@@ -1,10 +1,24 @@
 import Link from 'next/link';
-import { Search, Database, History, FilePlus2, Layers, Columns3, BookOpen, Sparkles } from 'lucide-react';
+import {
+  ArrowRight,
+  BookOpen,
+  CheckCircle2,
+  Columns3,
+  Database,
+  FilePlus2,
+  Gauge,
+  History,
+  Layers,
+  ShieldCheck,
+  Sparkles,
+  TriangleAlert,
+} from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
 
 // Canonical list of the current MCP surface — kept in sync with the actual
 // server tool/resource/prompt set so the landing counts below stay accurate.
 const TOOLS = [
+  { scope: 'read',  tool: 'prepare_context' },
   { scope: 'read',  tool: 'search_workspace' },
   { scope: 'read',  tool: 'list_workspace' },
   { scope: 'read',  tool: 'get_page' },
@@ -27,6 +41,7 @@ const TOOLS = [
 ] as const;
 
 const RESOURCES = [
+  { uri: 'remnus://workspace/{id}/knowledge-health' },
   { uri: 'remnus://workspace/{id}/schema' },
   { uri: 'remnus://workspace/{id}/digest' },
   { uri: 'remnus://page/{id}' },
@@ -44,11 +59,11 @@ const PROMPTS = [
   { name: 'recall-context' },
 ] as const;
 
-// Curated highlights shown as cards on the landing page — the full 19-tool
+// Curated highlights shown as cards on the landing page — the full 20-tool
 // reference table lives at /wiki/read-tools. Picked to span discovery, query,
 // live sync, creation, bulk ops, and schema control (3 read + 3 write).
 const FLAGSHIP_TOOLS = [
-  { tool: 'search_workspace',       scope: 'read',  icon: Search,     descKey: 'bridgeToolsFlagshipSearch' },
+  { tool: 'prepare_context',        scope: 'read',  icon: Sparkles,   descKey: 'bridgeToolsFlagshipContext' },
   { tool: 'query_database',         scope: 'read',  icon: Database,   descKey: 'bridgeToolsFlagshipQuery' },
   { tool: 'get_changes_since',      scope: 'read',  icon: History,    descKey: 'bridgeToolsFlagshipChanges' },
   { tool: 'create_page',            scope: 'write', icon: FilePlus2,  descKey: 'bridgeToolsFlagshipCreate' },
@@ -90,6 +105,84 @@ export default async function LandingTools() {
             </h2>
             <p className="m-0 text-[14px] lg:text-[15px] text-dim">{t('bridgeToolsSubhead')}</p>
           </div>
+        </div>
+
+        {/* prepare_context: compact task-to-context-pack walkthrough */}
+        <div className="overflow-hidden rounded-lg border border-neutral-800 bg-neutral-900">
+          <div className="border-b border-neutral-800 px-5 py-4 sm:px-6">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
+              <span className="font-mono text-[11px] font-semibold uppercase tracking-[0.16em] text-accent-strong">
+                {t('bridgeContextDemoEyebrow')}
+              </span>
+              <span className="hidden h-3 w-px bg-neutral-800 sm:block" />
+              <span className="font-mono text-[11px] text-dim">prepare_context</span>
+            </div>
+            <h3 className="mt-2 mb-0 font-sans text-[19px] font-semibold leading-tight text-neutral-100 sm:text-[22px]">
+              {t('bridgeContextDemoTitle')}
+            </h3>
+          </div>
+
+          <div className="grid items-stretch lg:grid-cols-[minmax(0,1fr)_52px_minmax(0,1fr)]">
+            <div className="space-y-4 p-5 sm:p-6">
+              <div>
+                <span className="mb-2 block font-mono text-[10px] font-semibold uppercase tracking-widest text-dim">
+                  {t('bridgeContextDemoTaskLabel')}
+                </span>
+                <p className="m-0 text-[14px] leading-relaxed text-neutral-100">
+                  “{t('bridgeContextDemoTask')}”
+                </p>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                <span className="inline-flex items-center gap-1.5 rounded-sm border border-neutral-800 bg-neutral-850 px-2.5 py-1.5 font-mono text-[11px] text-dim">
+                  <Gauge size={13} className="text-accent-strong" />
+                  {t('bridgeContextDemoBudget')}
+                </span>
+                <span className="inline-flex items-center gap-1.5 rounded-sm border border-neutral-800 bg-neutral-850 px-2.5 py-1.5 font-mono text-[11px] text-dim">
+                  <ShieldCheck size={13} className="text-green-400" />
+                  {t('bridgeContextDemoPolicy')}
+                </span>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-center border-y border-neutral-800 py-3 lg:border-x lg:border-y-0 lg:py-0">
+              <ArrowRight size={18} className="rotate-90 text-accent-strong lg:rotate-0" />
+            </div>
+
+            <div className="space-y-4 p-5 sm:p-6">
+              <div className="flex items-center gap-2">
+                <span className="flex h-7 w-7 items-center justify-center rounded-full bg-green-400/10">
+                  <CheckCircle2 size={15} className="text-green-400" />
+                </span>
+                <span className="font-mono text-[11px] font-semibold uppercase tracking-widest text-neutral-100">
+                  {t('bridgeContextDemoReady')}
+                </span>
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                <div className="border-l-2 border-accent-strong pl-3">
+                  <span className="block font-mono text-[18px] font-semibold text-neutral-100">6</span>
+                  <span className="text-[11px] leading-tight text-dim">{t('bridgeContextDemoConcepts')}</span>
+                </div>
+                <div className="border-l-2 border-blue-500 pl-3">
+                  <span className="block font-mono text-[18px] font-semibold text-neutral-100">~1,840</span>
+                  <span className="text-[11px] leading-tight text-dim">{t('bridgeContextDemoTokens')}</span>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-x-4 gap-y-2 text-[11px] text-dim">
+                <span className="inline-flex items-center gap-1.5">
+                  <ShieldCheck size={13} className="text-green-400" />
+                  {t('bridgeContextDemoReviewed')}
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <TriangleAlert size={13} className="text-amber-500" />
+                  {t('bridgeContextDemoWarning')}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <p className="m-0 border-t border-neutral-800 bg-neutral-850/50 px-5 py-3 text-[12.5px] leading-relaxed text-dim sm:px-6">
+            {t('bridgeContextDemoFooter')}
+          </p>
         </div>
 
         {/* ── Flagship tools grid ──────────────────────────────────────────────── */}
