@@ -142,6 +142,9 @@ export async function getUserAgentTokenCount(): Promise<number> {
       .where(and(
         eq(oauthAccessTokens.userId, user.id),
         isNull(oauthAccessTokens.revokedAt),
+        // Mirror the billing gate (checkCanAddAgent): expired-and-never-refreshed
+        // tokens shouldn't inflate the count shown to the user either.
+        gte(oauthAccessTokens.expiresAt, new Date()),
       )),
   ]);
 
