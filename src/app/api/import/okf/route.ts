@@ -3,7 +3,7 @@ import { getTranslations } from 'next-intl/server';
 import { eq } from 'drizzle-orm';
 import { db } from '@/db';
 import { workspaces } from '@/db/schema';
-import { getCurrentUser } from '@/lib/auth/session';
+import { auth } from '@/auth';
 import { createImportedWorkspaceForUser, ImportWorkspaceLimitError } from '@/lib/import/workspace-import';
 import { rewriteImportedConceptLinks } from '@/lib/okf/importLinks';
 import { normalizeArchivePath } from '@/lib/okf/paths';
@@ -49,7 +49,9 @@ export async function POST(request: NextRequest) {
   const t = await getTranslations('WorkspaceSettings');
   let createdWorkspaceId: string | null = null;
   try {
-    const user = await getCurrentUser();
+    const session = await auth();
+    const user = session?.user;
+    if (!user?.id) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     const declaredBytes = Number(request.headers.get('content-length') ?? 0);
     if (declaredBytes > MAX_PAYLOAD_BYTES) {
       return NextResponse.json({ error: 'payloadTooLarge' }, { status: 413 });
