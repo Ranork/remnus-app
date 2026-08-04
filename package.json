@@ -1,6 +1,6 @@
 {
   "name": "remnus-app",
-  "version": "0.1.16",
+  "version": "0.1.17",
   "private": true,
   "license": "AGPL-3.0-only",
   "scripts": {

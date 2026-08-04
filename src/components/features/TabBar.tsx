@@ -1,10 +1,12 @@
 'use client';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { X, Plus, ChevronLeft, ChevronRight } from 'lucide-react';
+import { X, Plus, ChevronLeft, ChevronRight, RotateCw } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { useQueryClient } from '@tanstack/react-query';
 import PageIcon from './PageIcon';
-import { useTabs, type Tab } from '@/components/providers/TabsContext';
+import { useTabs, isKeepAlivePane, type Tab } from '@/components/providers/TabsContext';
+import { invalidateTabHref } from '@/components/features/tabs/keys';
 
 /**
  * Tab strip designed to live INSIDE the Tauri titlebar row (no own background/border).
@@ -30,6 +32,30 @@ export default function TabBar() {
 
   const activeId = tabs?.activeId ?? null;
   const count = tabs?.tabs.length ?? 0;
+
+  // Per-tab refresh (the spinner runs on the tab being refreshed, not globally).
+  const queryClient = useQueryClient();
+  const [refreshingId, setRefreshingId] = useState<string | null>(null);
+
+  const refreshTab = useCallback((tab: Tab) => {
+    // Keep-alive panes are client-fetched, so a refresh means re-running exactly
+    // that tab's queries — never `router.refresh()`, which would refetch the
+    // (null) server route and leave the other panes' in-memory state alone anyway.
+    // Tabbable-but-server-rendered routes (e.g. /admin) only have something to
+    // refresh while they're the visible tab.
+    const done = isKeepAlivePane(tab.href)
+      ? invalidateTabHref(queryClient, tab.href)
+      : tab.id === activeId
+        ? Promise.resolve(router.refresh())
+        : null;
+    if (!done) return;
+    setRefreshingId(tab.id);
+    // Floor the spin so a cache-only refetch still reads as "something happened".
+    const minSpin = new Promise<void>((resolve) => setTimeout(resolve, 450));
+    void Promise.all([done, minSpin]).then(() => {
+      setRefreshingId((cur) => (cur === tab.id ? null : cur));
+    });
+  }, [queryClient, router, activeId]);
 
   const updateOverflow = useCallback(() => {
     const el = scrollRef.current;
@@ -149,6 +175,18 @@ export default function TabBar() {
                 fallbackType={meta.isDatabase ? 'database' : 'page'}
               />
               <span className="truncate flex-1 min-w-0 text-xs">{meta.title}</span>
+              {(isKeepAlivePane(tab.href) || isActive) && (
+                <button
+                  onClick={(e) => { e.stopPropagation(); refreshTab(tab); }}
+                  title={t('tabRefresh')}
+                  className={`shrink-0 p-0.5 rounded text-neutral-500 hover:text-neutral-100 hover:bg-neutral-700 transition-opacity ${
+                    refreshingId === tab.id ? 'opacity-100' : 'opacity-0 group-hover/tab:opacity-100'
+                  }`}
+                  tabIndex={-1}
+                >
+                  <RotateCw size={12} className={refreshingId === tab.id ? 'animate-spin' : ''} />
+                </button>
+              )}
               <button
                 onClick={(e) => { e.stopPropagation(); closeTab(tab.id); }}
                 title={t('tabClose')}
