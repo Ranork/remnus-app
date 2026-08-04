@@ -17,6 +17,7 @@ import { ConfirmDialog } from './ConfirmDialog';
 import ShareModal from '@/components/share/ShareModal';
 import { PageMarkdownDialog } from './PageMarkdownDialog';
 import PageBacklinksPanel from './PageBacklinksPanel';
+import KnowledgeContextPanel from './KnowledgeContextPanel';
 import type { WorkspaceItemRow } from '@/lib/actions/workspace';
 import {
   type SelectOption,
@@ -827,6 +828,7 @@ const PageEditor = forwardRef<PageEditorHandle, PageEditorProps>(function PageEd
         onImmediateSave={saveContent}
       />
 
+      {!isPeek && <KnowledgeContextPanel workspaceId={database.workspaceId} pageId={initialPage.id} />}
       {!isPeek && <PageBacklinksPanel workspaceId={database.workspaceId} pageId={initialPage.id} />}
 
       {showShareModal && (

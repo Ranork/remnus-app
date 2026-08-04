@@ -52,13 +52,17 @@ const prodConfig = process.env.NODE_ENV === 'production'
 // PostHog source-map upload: generates hidden browser source maps during the
 // production build, uploads them to PostHog Error Tracking (so minified stacks
 // like React #310 resolve to real component/file/line), then deletes them so
-// they never ship to end users. Gated on the build-time creds being present —
-// without them (local builds, forks) the build runs untouched. EU cloud, so the
-// API host is eu.posthog.com (NOT the eu.i.posthog.com INGEST host).
+// they never ship to end users. Vercel builds opt in automatically; any other
+// environment must explicitly set POSTHOG_SOURCEMAPS_UPLOAD=true. Credentials
+// alone are not sufficient because Next loads .env during local production
+// builds, which would otherwise mutate the live PostHog project unexpectedly.
+// EU cloud, so the API host is eu.posthog.com (NOT the eu.i.posthog.com INGEST host).
 const phApiKey = process.env.POSTHOG_API_KEY;
 const phProjectId = process.env.POSTHOG_PROJECT_ID;
+const uploadPostHogSourceMaps =
+  process.env.VERCEL === '1' || process.env.POSTHOG_SOURCEMAPS_UPLOAD === 'true';
 
-export default process.env.NODE_ENV === 'production' && phApiKey && phProjectId
+export default process.env.NODE_ENV === 'production' && uploadPostHogSourceMaps && phApiKey && phProjectId
   ? withPostHogConfig(prodConfig, {
       personalApiKey: phApiKey,
       projectId: phProjectId,

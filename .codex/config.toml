@@ -1,2 +1,3 @@
 [mcp_servers.remnus_app]
 url = "https://www.remnus.com/api/mcp"
+default_tools_approval_mode = "writes"

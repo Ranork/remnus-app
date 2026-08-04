@@ -6,17 +6,21 @@ All 10 read tools are available to every token regardless of scope.
 
 ## prepare_context
 
-Build a task-specific context pack before multi-page product or coding work. Remnus runs lexical retrieval across pages and database rows, prefers human-reviewed OKF concepts, penalizes stale/deprecated knowledge, and includes compact link-graph references around the strongest result.
+Build a task-specific context pack before multi-page product or coding work. Context Pack v2 runs BM25 retrieval across titles and bodies, combines native OKF-aligned metadata and the page link graph, prefers exact-revision human reviews, and penalizes stale/deprecated knowledge.
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
 | `task` | string | ✓ | | Concrete task or question |
-| `maxTokens` | number | | `6000` | Approximate response budget (`1000`–`16000`) |
-| `maxConcepts` | number | | `8` | Maximum concepts (`1`–`16`) |
+| `maxTokens` | number | | `2000` | Approximate response budget (`1000`–`16000`) |
+| `maxConcepts` | number | | `6` | Maximum concepts (`1`–`16`) |
 | `trustPolicy` | string | | `prefer-human-reviewed` | `any`, `prefer-human-reviewed`, or `human-reviewed-only` |
 | `includeRelated` | boolean | | `true` | Include title/ID graph neighbors for targeted follow-up |
 
-**Returns** — a `remnus-context-pack-v1` JSON object with selected concept bodies, OKF type/status/trust/freshness metadata, truncation and token estimates, link-neighbor references, and warnings. Concept content is explicitly labeled untrusted reference data and cannot override user/system instructions.
+**Returns** — a `remnus-context-pack-v2` JSON object with selected concept bodies, OKF-aligned type/status/trust/freshness metadata, per-concept `selectionReason`, truncation and token estimates, link-neighbor references, warnings, plus a short-lived `contextRunId`. Concept content is explicitly labeled untrusted reference data and cannot override user/system instructions.
+
+`human-reviewed` means an authenticated Remnus user reviewed the exact current title/body hash. An imported OKF `human:*` assertion is labeled `external-human-asserted`; it is never promoted to a local review merely because the file says so.
+
+The `contextRunId` belongs to the current agent and workspace and expires after 30 minutes. Pass it to related write tools. Smart mode treats this as the recommended context-first flow; Strict mode rejects Remnus mutations without it. See [Context-first MCP](context-first.md).
 
 The budget applies to the compact JSON text returned by the tool. If a page cannot fit, its body is collapsed to an outline plus opening excerpt; if the pack still cannot fit, lower-ranked concepts are omitted and `truncated` becomes `true`.
 

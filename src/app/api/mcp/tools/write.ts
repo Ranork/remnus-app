@@ -15,11 +15,31 @@ import {
 } from '@/lib/services/workspace';
 import { publish } from '@/lib/realtime/publish';
 import { logActivity, type TokenContext } from '../context';
+import { recordGeneratedKnowledge, validateContextRunForWrite } from '@/lib/services/knowledge';
 
 const READ_ONLY_ERROR = 'Error: This token only has read scope. A write-scoped token is required.';
+const CONTEXT_RUN_ID = z.string().uuid().optional().describe('prepare_context contextRunId. Required for mutations when the workspace uses Strict context.');
+const KNOWLEDGE_INPUT = z.object({
+  conceptType: z.string().max(120).optional(),
+  description: z.string().max(1_000).optional(),
+  tags: z.array(z.string().max(80)).max(30).optional(),
+  sources: z.array(z.object({ resource: z.string().max(2_000), title: z.string().max(300).optional() })).max(20).optional(),
+  status: z.enum(['draft', 'stable', 'deprecated']).optional(),
+  staleAfter: z.string().max(40).optional(),
+}).optional().describe('Optional OKF-aligned knowledge metadata. Agent-authored knowledge remains draft/machine-confirmed until a Remnus user reviews the exact revision.');
 
 function actorId(ctx: TokenContext) {
   return ctx.agentName ? `mcp:${ctx.agentName}:${ctx.tokenId}` : `mcp:${ctx.tokenId}`;
+}
+
+async function requireContext(ctx: TokenContext, contextRunId: string | undefined, tool: string, targetId?: string) {
+  const gate = await validateContextRunForWrite(ctx, contextRunId);
+  if (gate.ok) return null;
+  await logActivity(ctx, tool, 'error', undefined, targetId);
+  return {
+    content: [{ type: 'text' as const, text: `Error: CONTEXT_REQUIRED. ${gate.reason}` }],
+    isError: true as const,
+  };
 }
 
 export function registerWriteTools(server: McpServer, ctx: TokenContext) {
@@ -33,6 +53,8 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
         parentId: z.string().optional().describe('Parent workspace item ID (for standalone pages)'),
         databaseId: z.string().optional().describe('Database ID (creates a database row instead of a page)'),
         properties: z.record(z.string(), z.any()).optional().describe('Initial properties (for database rows)'),
+        knowledge: KNOWLEDGE_INPUT,
+        contextRunId: CONTEXT_RUN_ID,
       },
       outputSchema: z.object({
         id: z.string().describe('ID of the created page or row'),
@@ -40,14 +62,17 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
       }).passthrough(),
       annotations: { title: 'Create page', readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
     },
-    async ({ title, content, parentId, databaseId, properties }) => {
+    async ({ title, content, parentId, databaseId, properties, knowledge, contextRunId }) => {
       if (ctx.scope !== 'write') {
         await logActivity(ctx, 'create_page', 'error');
         return { content: [{ type: 'text' as const, text: READ_ONLY_ERROR }], isError: true };
       }
+      const contextError = await requireContext(ctx, contextRunId, 'create_page');
+      if (contextError) return contextError;
       try {
         const result = await createPageInWorkspace(ctx.workspaceId, { title, content, parentId, databaseId, properties }, { tokenId: ctx.tokenId });
-        const out = { id: result.id, type: result.type };
+        const knowledgeCaptured = await recordGeneratedKnowledge(ctx.workspaceId, result.id, actorId(ctx), knowledge).then(() => true).catch(() => false);
+        const out = { id: result.id, type: result.type, knowledgeCaptured };
         const text = JSON.stringify(out);
         await logActivity(ctx, 'create_page', 'success', result.type, result.id, text);
         publish({ scope: databaseId ? 'database' : 'sidebar', workspaceId: ctx.workspaceId, resourceId: databaseId, actorId: actorId(ctx) });
@@ -68,6 +93,8 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
         title: z.string().optional().describe('New title'),
         content: z.string().optional().describe('New markdown content'),
         properties: z.record(z.string(), z.any()).optional().describe('Properties to merge (for database rows)'),
+        knowledge: KNOWLEDGE_INPUT,
+        contextRunId: CONTEXT_RUN_ID,
       },
       outputSchema: z.object({
         updated: z.boolean().describe('Whether the update was applied'),
@@ -75,14 +102,17 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
       }).passthrough(),
       annotations: { title: 'Update page', readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     },
-    async ({ pageId, title, content, properties }) => {
+    async ({ pageId, title, content, properties, knowledge, contextRunId }) => {
       if (ctx.scope !== 'write') {
         await logActivity(ctx, 'update_page', 'error', 'page', pageId);
         return { content: [{ type: 'text' as const, text: READ_ONLY_ERROR }], isError: true };
       }
+      const contextError = await requireContext(ctx, contextRunId, 'update_page', pageId);
+      if (contextError) return contextError;
       try {
         await updatePageById(ctx.workspaceId, pageId, { title, content, properties }, { tokenId: ctx.tokenId });
-        const out = { updated: true, id: pageId };
+        const knowledgeCaptured = await recordGeneratedKnowledge(ctx.workspaceId, pageId, actorId(ctx), knowledge).then(() => true).catch(() => false);
+        const out = { updated: true, id: pageId, knowledgeCaptured };
         const text = JSON.stringify(out);
         await logActivity(ctx, 'update_page', 'success', 'page', pageId, text);
         publish({ scope: 'page', workspaceId: ctx.workspaceId, resourceId: pageId, actorId: actorId(ctx) });
@@ -105,6 +135,7 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
           content: z.string().optional().describe('New markdown content'),
           properties: z.record(z.string(), z.any()).optional().describe('Properties to merge'),
         })).describe('List of updates to apply'),
+        contextRunId: CONTEXT_RUN_ID,
       },
       outputSchema: z.object({
         results: z.array(z.object({
@@ -114,13 +145,16 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
       }),
       annotations: { title: 'Bulk update pages', readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     },
-    async ({ updates }) => {
+    async ({ updates, contextRunId }) => {
       if (ctx.scope !== 'write') {
         await logActivity(ctx, 'bulk_update_pages', 'error');
         return { content: [{ type: 'text' as const, text: READ_ONLY_ERROR }], isError: true };
       }
+      const contextError = await requireContext(ctx, contextRunId, 'bulk_update_pages');
+      if (contextError) return contextError;
       try {
         const results = await bulkUpdatePages(ctx.workspaceId, updates, { tokenId: ctx.tokenId });
+        await Promise.allSettled(updates.map(update => recordGeneratedKnowledge(ctx.workspaceId, update.pageId, actorId(ctx))));
         const text = JSON.stringify(results);
         await logActivity(ctx, 'bulk_update_pages', 'success', undefined, undefined, text);
         publish({ scope: 'database', workspaceId: ctx.workspaceId, actorId: actorId(ctx) });
@@ -139,6 +173,7 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
       inputSchema: {
         pageId: z.string().describe('The workspace item ID or database row ID to delete'),
         confirm: z.boolean().optional().default(false).describe('Set to true to confirm deletion. Without this flag, returns a preview of what would be deleted.'),
+        contextRunId: CONTEXT_RUN_ID,
       },
       outputSchema: z.object({
         deleted: z.boolean().describe('Whether the item was actually deleted (false for a preview)'),
@@ -147,7 +182,7 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
       }).passthrough(),
       annotations: { title: 'Delete page', readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: false },
     },
-    async ({ pageId, confirm }) => {
+    async ({ pageId, confirm, contextRunId }) => {
       if (ctx.scope !== 'write') {
         await logActivity(ctx, 'delete_page', 'error', 'page', pageId);
         return { content: [{ type: 'text' as const, text: READ_ONLY_ERROR }], isError: true };
@@ -158,6 +193,8 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
           const preview = `This will permanently delete "${item.title}" (type: ${item.type}). Set confirm: true to proceed.`;
           return { content: [{ type: 'text' as const, text: preview }], structuredContent: { deleted: false, id: pageId, preview } };
         }
+        const contextError = await requireContext(ctx, contextRunId, 'delete_page', pageId);
+        if (contextError) return contextError;
         const result = await deleteItemFromWorkspace(ctx.workspaceId, pageId);
         const out = { deleted: true, id: pageId };
         const text = JSON.stringify(out);
@@ -178,17 +215,20 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
       inputSchema: {
         itemId: z.string().describe('The workspace item ID to move'),
         newParentId: z.string().nullish().describe('New parent item ID. Pass null or omit to move to workspace root.'),
+        contextRunId: CONTEXT_RUN_ID,
       },
       outputSchema: z.object({
         moved: z.boolean().describe('Whether the item was moved'),
       }).passthrough(),
       annotations: { title: 'Move item', readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     },
-    async ({ itemId, newParentId }) => {
+    async ({ itemId, newParentId, contextRunId }) => {
       if (ctx.scope !== 'write') {
         await logActivity(ctx, 'move_item', 'error', 'item', itemId);
         return { content: [{ type: 'text' as const, text: READ_ONLY_ERROR }], isError: true };
       }
+      const contextError = await requireContext(ctx, contextRunId, 'move_item', itemId);
+      if (contextError) return contextError;
       try {
         const result = await moveItemInWorkspace(ctx.workspaceId, itemId, newParentId ?? null);
         const text = JSON.stringify(result);
@@ -214,6 +254,8 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
           type: z.string().describe('Column type: text | number | select | multi_select | status | user | multi_user | date | datetime | checkbox | url | email | phone'),
           options: z.array(z.any()).optional().describe('Options for select/multi_select/status columns. For status, each option may include a group: "todo" | "in_progress" | "complete". user/multi_user store workspace member user ids and need no options.'),
         })).optional().describe('Column definitions. Omit to use default schema (Title + Status).'),
+        knowledge: KNOWLEDGE_INPUT,
+        contextRunId: CONTEXT_RUN_ID,
       },
       outputSchema: z.object({
         id: z.string().describe('Workspace item ID of the new database'),
@@ -221,14 +263,17 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
       }).passthrough(),
       annotations: { title: 'Create database', readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
     },
-    async ({ name, parentId, schema }) => {
+    async ({ name, parentId, schema, knowledge, contextRunId }) => {
       if (ctx.scope !== 'write') {
         await logActivity(ctx, 'create_database', 'error');
         return { content: [{ type: 'text' as const, text: READ_ONLY_ERROR }], isError: true };
       }
+      const contextError = await requireContext(ctx, contextRunId, 'create_database');
+      if (contextError) return contextError;
       try {
         const result = await createDatabaseInWorkspace(ctx.workspaceId, { name, schema, parentId });
-        const out = { id: result.id, databaseId: result.databaseId };
+        const knowledgeCaptured = await recordGeneratedKnowledge(ctx.workspaceId, result.id, actorId(ctx), knowledge).then(() => true).catch(() => false);
+        const out = { id: result.id, databaseId: result.databaseId, knowledgeCaptured };
         const text = JSON.stringify(out);
         await logActivity(ctx, 'create_database', 'success', 'database', result.databaseId, text);
         publish({ scope: 'sidebar', workspaceId: ctx.workspaceId, actorId: actorId(ctx) });
@@ -253,6 +298,7 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
         })).optional().describe('Columns to add'),
         removeColumnIds: z.array(z.string()).optional().describe('Column IDs to remove (use get_database_schema to find IDs). Cannot remove the title column.'),
         confirm: z.boolean().optional().default(false).describe('Required when removing columns. Set to true to confirm the destructive operation.'),
+        contextRunId: CONTEXT_RUN_ID,
       },
       outputSchema: z.object({
         updated: z.boolean().describe('Whether the schema was updated'),
@@ -260,11 +306,13 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
       }).passthrough(),
       annotations: { title: 'Update database schema', readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: false },
     },
-    async ({ databaseId, addColumns, removeColumnIds, confirm }) => {
+    async ({ databaseId, addColumns, removeColumnIds, confirm, contextRunId }) => {
       if (ctx.scope !== 'write') {
         await logActivity(ctx, 'update_database_schema', 'error', 'database', databaseId);
         return { content: [{ type: 'text' as const, text: READ_ONLY_ERROR }], isError: true };
       }
+      const contextError = await requireContext(ctx, contextRunId, 'update_database_schema', databaseId);
+      if (contextError) return contextError;
       try {
         const result = await updateDatabaseSchemaById(ctx.workspaceId, databaseId, { addColumns, removeColumnIds }, confirm ?? false);
         const text = JSON.stringify(result);
@@ -298,6 +346,7 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
         dateCol: z.string().optional().describe('Calendar only: date/datetime column id or name to place cards on. Auto-picks the first date/datetime column if omitted.'),
         icon: z.string().optional().describe('Emoji, "lucide:Name", or image URL for the view tab'),
         iconColor: z.string().optional().describe('Theme color for a lucide icon'),
+        contextRunId: CONTEXT_RUN_ID,
       },
       outputSchema: z.object({
         created: z.boolean(),
@@ -305,11 +354,13 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
       }).passthrough(),
       annotations: { title: 'Create database view', readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
     },
-    async ({ databaseId, name, type, groupByCol, dateCol, icon, iconColor }) => {
+    async ({ databaseId, name, type, groupByCol, dateCol, icon, iconColor, contextRunId }) => {
       if (ctx.scope !== 'write') {
         await logActivity(ctx, 'create_database_view', 'error', 'database', databaseId);
         return { content: [{ type: 'text' as const, text: READ_ONLY_ERROR }], isError: true };
       }
+      const contextError = await requireContext(ctx, contextRunId, 'create_database_view', databaseId);
+      if (contextError) return contextError;
       try {
         const result = await createDatabaseView(ctx.workspaceId, databaseId, { name, type, groupByCol, dateCol, icon, iconColor });
         const text = JSON.stringify(result);
@@ -334,6 +385,7 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
         icon: z.string().optional().describe('Emoji, "lucide:Name", or image URL'),
         iconColor: z.string().optional().describe('Theme color for a lucide icon'),
         config: z.record(z.string(), z.any()).optional().describe('Partial config fields to merge in, e.g. { "groupByCol": "col_abc123" } or { "filters": [...] }'),
+        contextRunId: CONTEXT_RUN_ID,
       },
       outputSchema: z.object({
         updated: z.boolean(),
@@ -341,11 +393,13 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
       }).passthrough(),
       annotations: { title: 'Update database view', readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     },
-    async ({ databaseId, viewId, name, icon, iconColor, config }) => {
+    async ({ databaseId, viewId, name, icon, iconColor, config, contextRunId }) => {
       if (ctx.scope !== 'write') {
         await logActivity(ctx, 'update_database_view', 'error', 'database', databaseId);
         return { content: [{ type: 'text' as const, text: READ_ONLY_ERROR }], isError: true };
       }
+      const contextError = await requireContext(ctx, contextRunId, 'update_database_view', databaseId);
+      if (contextError) return contextError;
       try {
         const result = await updateDatabaseView(ctx.workspaceId, databaseId, viewId, { name, icon, iconColor, config });
         const text = JSON.stringify(result);
@@ -367,16 +421,21 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
         databaseId: z.string().describe('Database ID (from list_workspace or search)'),
         viewId: z.string().describe('View ID (from get_database_schema)'),
         confirm: z.boolean().optional().default(false).describe('Set to true to confirm deletion.'),
+        contextRunId: CONTEXT_RUN_ID,
       },
       outputSchema: z.object({
         deleted: z.boolean(),
       }).passthrough(),
       annotations: { title: 'Delete database view', readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: false },
     },
-    async ({ databaseId, viewId, confirm }) => {
+    async ({ databaseId, viewId, confirm, contextRunId }) => {
       if (ctx.scope !== 'write') {
         await logActivity(ctx, 'delete_database_view', 'error', 'database', databaseId);
         return { content: [{ type: 'text' as const, text: READ_ONLY_ERROR }], isError: true };
+      }
+      if (confirm) {
+        const contextError = await requireContext(ctx, contextRunId, 'delete_database_view', databaseId);
+        if (contextError) return contextError;
       }
       try {
         const result = await deleteDatabaseView(ctx.workspaceId, databaseId, viewId, confirm ?? false);

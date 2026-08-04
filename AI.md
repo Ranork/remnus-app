@@ -78,6 +78,8 @@ Onboarding sırasında full build, tüm test suite'i veya dev server çalıştı
 
 Remnus, insan ve AI ajanlarının Model Context Protocol (MCP) etrafında eşit vatandaşlar olarak birlikte çalıştığı bir Human-Agent Collaborative Workspace ürünüdür (bkz. `docs/WHAT_IS_REMNUS.md`) — bir Notion alternatifi değildir. Standalone markdown sayfaları ve dinamik kolonlu database'ler aynı sidebar ağacında yaşar; her database satırı aynı zamanda içerik taşıyan bir sayfadır. Web, Tauri masaüstü, Capacitor mobil ve PWA istemcileri cloud-first olarak aynı Remnus web uygulamasını kullanır. Remote MCP/OAuth yüzeyi AI ajanlarına workspace okuma-yazma yeteneği verir.
 
+OKF v0.2 dışa/içe aktarım adaptörüdür; kanonik bilgi modeli SQLite/Turso'daki `knowledge_metadata` + içerik hash'ine bağlı `knowledge_reviews` tablosudur. Context Pack v2 (`prepare_context`) BM25, metaveri ve link graph ile görev bağlamı üretir. Workspace politikası Manual/Smart/Strict'tir: Smart anlamlı çok-sayfalı işler için otomatik MCP yönlendirmesi verir; Strict ayrıca Remnus MCP mutasyonlarında aynı ajan için güncel `contextRunId` zorlar. Bu kapı yerel dosya/shell/Git işlemlerini kontrol etmez ve auth/destructive confirmation yerine geçmez.
+
 Repository monorepo değildir. Ana npm uygulamasına ek olarak dağıtım için paketlenen bağımsız `mcpb/server` yardımcı paketi bulunur.
 
 ## Architecture summary
@@ -96,7 +98,7 @@ Repository monorepo değildir. Ana npm uygulamasına ek olarak dağıtım için 
 - `src/app/`: layouts, pages, API routes, global styles ve proxy girişleri.
 - `src/components/`: feature, editor, database, marketing ve provider bileşenleri.
 - `src/lib/actions/`: session-aware server actions.
-- `src/lib/services/`: workspace, billing, asset ve page-link domain servisleri.
+- `src/lib/services/`: workspace, knowledge/context, billing, asset ve page-link domain servisleri.
 - `src/db/`: schema, custom migration runner, apply/backfill scriptleri ve migration'lar.
 - `messages/`: 8 locale JSON dosyası; `en.json` source of truth.
 - `docs/`: public Wiki/Docs uzun-form içerikleri.
@@ -142,6 +144,7 @@ npm run mcpb:build
 - Birçok yeni migration `_journal.json` dışında manuel apply scripti kullanır. Düz `npx tsx` komutu production Turso'yu hedefleyebilir; hedefi açıkça doğrula.
 - ESM import hoisting nedeniyle `dotenv.config()` DB importundan sonra çalışamaz; DB scriptlerinde ilk import olarak `dotenv/config` kullan.
 - PWA asset'leri ve bazı public endpoint'ler cookie olmadan çağrılır; matcher/auth whitelist eşleşmezse login redirect'i özelliği kırar.
+- Yerel `next build`, `.env` içindeki PostHog kişisel anahtarını yükler; source-map upload yalnız `VERCEL=1` veya açık `POSTHOG_SOURCEMAPS_UPLOAD=true` ile etkinleşmelidir. Credentials-only gate production PostHog'a beklenmedik yerel yazma yapar.
 - `AGENTS.md` çok büyüktür ve Codex project-doc byte limitine takılabilir; dosyanın başındaki adapter her oturumda `AI.md` okumayı zorunlu kılar.
 - OneDrive/Google Drive ve Windows file lock/encoding davranışları nedeniyle edit sonrası dosyayı yeniden doğrula.
 

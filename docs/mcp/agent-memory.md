@@ -57,8 +57,15 @@ It searches the workspace, collapses each hit to a heading-and-first-line outlin
 
 Because memories are just pages, they also flow through the rest of the MCP surface: [`get_changes_since`](read-tools.md#get_changes_since) lets a recurring agent sync only new memories, and [`get_related_pages`](read-tools.md#get_related_pages) walks from a memory to the pages it references.
 
+## Memory plus knowledge context
+
+Agent Memory answers **what should survive the conversation**. Knowledge context answers **how a durable page should be retrieved and trusted**. They work together: mark an important decision with a clear description, tags, source, lifecycle state, and review date, then [`prepare_context`](read-tools.md#prepare_context) can rank it for a later task without loading every memory.
+
+An agent-created memory records machine provenance; it does not become human-reviewed merely because an agent saved it. A signed-in member can inspect the page and review that exact revision from the Knowledge context panel. Editing it later makes the old review historical.
+
 ## See also
 
 - [Prompts](prompts.md) — full argument reference for `save-memory` and `recall-context`
 - [Read Tools](read-tools.md) — `get_page` outline mode, `get_related_pages`, `get_changes_since`
 - [Write Tools](write-tools.md) — `create_page`, `create_database`
+- [Context-First MCP](context-first.md) — OKF metadata, trust levels, Smart/Strict, and `contextRunId`

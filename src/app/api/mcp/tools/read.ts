@@ -22,19 +22,22 @@ export function registerReadTools(server: McpServer, ctx: TokenContext) {
       description: 'Build one task-specific, token-budgeted context pack from relevant workspace pages. Ranks lexical matches, prefers human-reviewed OKF knowledge, penalizes stale/deprecated concepts, and adds the top result\'s link-graph neighbors. Use this before multi-page product or coding work instead of many search/get_page calls.',
       inputSchema: {
         task: z.string().min(3).max(2_000).describe('The concrete task or question to gather context for'),
-        maxTokens: z.number().int().min(1_000).max(16_000).optional().default(6_000).describe('Approximate maximum tokens in the returned JSON'),
-        maxConcepts: z.number().int().min(1).max(16).optional().default(8).describe('Maximum page concepts to include'),
+        maxTokens: z.number().int().min(1_000).max(16_000).optional().default(2_000).describe('Approximate maximum tokens in the returned JSON'),
+        maxConcepts: z.number().int().min(1).max(16).optional().default(6).describe('Maximum page concepts to include'),
         trustPolicy: z.enum(['any', 'prefer-human-reviewed', 'human-reviewed-only']).optional().default('prefer-human-reviewed'),
         includeRelated: z.boolean().optional().default(true).describe('Include title/id references from the top concept\'s graph neighborhood'),
       },
       outputSchema: z.object({
-        profile: z.literal('remnus-context-pack-v1'),
+        profile: z.literal('remnus-context-pack-v2'),
         task: z.string(),
         retrieval: z.string(),
         handling: z.string(),
+        policy: z.object({ trustPolicy: z.string(), humanReviewedMeans: z.string() }),
         budgetTokens: z.number(),
         estimatedTokens: z.number(),
         truncated: z.boolean(),
+        contextRunId: z.string().optional(),
+        expiresAt: z.string().optional(),
         concepts: z.array(z.object({
           id: z.string(),
           type: z.string(),
@@ -49,7 +52,7 @@ export function registerReadTools(server: McpServer, ctx: TokenContext) {
     },
     async ({ task, maxTokens, maxConcepts, trustPolicy, includeRelated }) => {
       try {
-        const pack = await prepareContextPack(ctx.workspaceId, { task, maxTokens, maxConcepts, trustPolicy, includeRelated });
+        const pack = await prepareContextPack(ctx.workspaceId, { task, maxTokens, maxConcepts, trustPolicy, includeRelated }, undefined, ctx);
         const text = JSON.stringify(pack);
         await logActivity(ctx, 'prepare_context', 'success', undefined, undefined, text);
         return { content: [{ type: 'text' as const, text }], structuredContent: { ...pack } };

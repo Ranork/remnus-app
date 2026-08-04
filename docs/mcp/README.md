@@ -8,6 +8,7 @@ Remnus MCP is a [Model Context Protocol](https://modelcontextprotocol.io) server
 - Create and update pages, database rows, and entire databases
 - Automate reports, task extraction, and kanban triage with built-in prompts
 - Monitor all agent activity through a structured audit log
+- Prepare compact, OKF-aware task context and optionally require it before MCP writes
 
 ## Endpoint
 
@@ -21,7 +22,7 @@ Always use the `www` host — the apex `remnus.com` redirects to `www.remnus.com
 
 1. Open your workspace → sidebar **AI Agents** button → **Connect editor**
 2. Pick your editor. Most connect with **OAuth** — no token to copy, just approve the consent screen in your browser on first connect. Prefer a token? Expand **Advanced** to mint one.
-3. Ask your agent to list your workspace — see [Getting Started](getting-started.md) for the full walkthrough
+3. Ask your agent to prepare a read-only context pack — see [Getting Started](getting-started.md) for the full walkthrough
 
 ## Documentation
 
@@ -36,3 +37,4 @@ Always use the `www` host — the apex `remnus.com` redirects to `www.remnus.com
 | [Prompts](prompts.md) | 7 built-in prompt templates |
 | [Agent Memory](agent-memory.md) | Save & recall durable memory over MCP |
 | [Token-Efficient Usage](token-efficient-usage.md) | Cut a typical read 80–90% with projection, outline, digest & delta |
+| [Context-first MCP](context-first.md) | Smart/Strict automation, `contextRunId`, trust and client boundaries |

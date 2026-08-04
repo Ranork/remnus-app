@@ -2,6 +2,10 @@
 
 Write tools require a **write-scoped token**. Calling these with a read-scoped token returns an error and makes no changes.
 
+Every write tool also accepts optional `contextRunId`. In a workspace using **Strict context**, actual mutations require a non-expired ID returned by this same agent's `prepare_context` call. Destructive confirmation and normal authorization remain separate requirements. In Manual/Smart mode the field is optional.
+
+`create_page`, `update_page`, and `create_database` additionally accept optional `knowledge` (`conceptType`, `description`, `tags`, `sources`, `status`, `staleAfter`). Agent-created or agent-updated items are recorded as machine-generated drafts; only a signed-in Remnus user can review the exact revision.
+
 ---
 
 ## create_page
@@ -17,6 +21,8 @@ Create a new standalone page or a database row.
 | `parentId` | string | | Parent workspace item ID — creates a nested standalone page |
 | `databaseId` | string | | Database ID — creates a row instead of a standalone page |
 | `properties` | object | | Initial property values for database rows |
+| `knowledge` | object | | OKF-aligned retrieval/lifecycle metadata |
+| `contextRunId` | string | | Context preflight ID (required in Strict mode) |
 
 Pass either `parentId` (standalone page) or `databaseId` (database row), not both.
 
@@ -36,6 +42,8 @@ Update an existing page or database row. Properties are **merged** — existing 
 | `title` | string | | New title |
 | `content` | string | | New markdown content (replaces existing) |
 | `properties` | object | | Properties to merge into the row |
+| `knowledge` | object | | OKF-aligned retrieval/lifecycle metadata |
+| `contextRunId` | string | | Context preflight ID (required in Strict mode) |
 
 **Returns** — `{ updated: true, id }`
 

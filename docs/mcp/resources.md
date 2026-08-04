@@ -14,6 +14,8 @@ Get a compact heuristic report covering orphan concepts, broken references, OKF 
 
 The score is an orientation signal, not a factual-accuracy or security certification.
 
+The report uses native knowledge metadata when it exists: broken links, orphan concepts, lifecycle/freshness state, and exact-current-revision human-review coverage. Imported `human:*` assertions remain external claims and do not increase Remnus's local human-reviewed count. Use the resource to find maintenance work, not to certify that a statement is true.
+
 ---
 
 ## remnus://workspace/{id}/schema

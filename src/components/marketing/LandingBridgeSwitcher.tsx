@@ -1,6 +1,7 @@
 import LandingNav from './LandingNav';
 import LandingHero from './LandingHero';
 import LandingWhy from './LandingWhy';
+import LandingKnowledge from './LandingKnowledge';
 import LandingWhatsInside from './LandingWhatsInside';
 import LandingIntegrations from './LandingIntegrations';
 import LandingSetup from './LandingSetup';
@@ -17,6 +18,7 @@ export default function LandingBridgeSwitcher() {
       <main>
         <LandingHero />
         <LandingWhy />
+        <LandingKnowledge />
         <LandingIntegrations />
         <LandingSetup />
         <LandingWhatsInside />

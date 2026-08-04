@@ -62,15 +62,40 @@ export function analyzeKnowledgeHealth(
   let unverifiedConcepts = 0;
   let staleConcepts = 0;
   let deprecatedConcepts = 0;
+  const nativeByItem = new Map(snapshot.knowledge.map(metadata => [metadata.itemId, metadata]));
+  for (const page of snapshot.standalonePages) {
+    const native = nativeByItem.get(page.itemId);
+    if (!native) continue;
+    governedConcepts++;
+    if (native.trust === 'human-reviewed') humanReviewedConcepts++;
+    if (native.trust === 'unverified') unverifiedConcepts++;
+    if (native.status === 'deprecated') deprecatedConcepts++;
+    if (native.staleAfter) {
+      const staleAt = new Date(native.staleAfter);
+      if (Number.isFinite(staleAt.getTime()) && staleAt.getTime() < now.getTime()) staleConcepts++;
+    }
+  }
   for (const database of snapshot.databases) {
     for (const row of database.rows) {
+      const native = nativeByItem.get(row.id);
+      if (native) {
+        governedConcepts++;
+        if (native.trust === 'human-reviewed') humanReviewedConcepts++;
+        if (native.trust === 'unverified') unverifiedConcepts++;
+        if (native.status === 'deprecated') deprecatedConcepts++;
+        if (native.staleAfter) {
+          const staleAt = new Date(native.staleAfter);
+          if (Number.isFinite(staleAt.getTime()) && staleAt.getTime() < now.getTime()) staleConcepts++;
+        }
+        continue;
+      }
       const raw = rawFrontmatter(database.schema, row.properties);
       if (!raw) continue;
       governedConcepts++;
       const parsed = parseOkfFrontmatter(raw);
       const verified = splitTopLevelEntries(raw).some(entry => entry.key === 'verified');
-      const humanReviewed = splitTopLevelEntries(raw).some(entry => entry.key === 'verified' && /\bby\s*:\s*["']?human:/m.test(entry.block));
-      if (humanReviewed) humanReviewedConcepts++;
+      // Legacy imported frontmatter is an external assertion, not a local
+      // authenticated exact-revision review, so it never increments this count.
       if (!verified) unverifiedConcepts++;
       if (parsed.status?.toLowerCase() === 'deprecated') deprecatedConcepts++;
       if (parsed.staleAfter) {

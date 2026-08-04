@@ -25,6 +25,7 @@ import {
   Lightbulb,
   Brain,
   Gauge,
+  ShieldCheck,
   Wrench,
   Bot,
   SquareKanban,
@@ -59,7 +60,8 @@ export const WIKI_PAGES: WikiPage[] = [
   { slug: 'resources',        file: 'resources.md',        title: 'Resources',          icon: Package,     order: 6 },
   { slug: 'prompts',          file: 'prompts.md',          title: 'Prompts',            icon: Lightbulb,   order: 7 },
   { slug: 'agent-memory',     file: 'agent-memory.md',     title: 'Agent Memory',       icon: Brain,       order: 8 },
-  { slug: 'token-efficient-usage', file: 'token-efficient-usage.md', title: 'Token-Efficient Usage', icon: Gauge, order: 9 },
+  { slug: 'context-first',    file: 'context-first.md',    title: 'Context-First MCP',  icon: ShieldCheck, order: 9 },
+  { slug: 'token-efficient-usage', file: 'token-efficient-usage.md', title: 'Token-Efficient Usage', icon: Gauge, order: 10 },
 ];
 
 // ── Docs (blog, article layout) ────────────────────────────────────────────────
@@ -77,6 +79,15 @@ export type BlogPost = {
 };
 
 export const BLOG_POSTS: BlogPost[] = [
+  {
+    slug: 'okf-context-engine-for-ai-agents',
+    file: 'okf-context-engine-for-ai-agents.md',
+    title: 'How Remnus Uses OKF to Give AI Agents Better Context',
+    description:
+      'How Remnus combines portable OKF knowledge, exact-revision human review, Context Pack v2, and Smart or Strict MCP policies for AI agents.',
+    date: '2026-08-04',
+    icon: ShieldCheck,
+  },
   {
     slug: 'ai-agent-manage-kanban-board',
     file: 'ai-agent-manage-kanban-board.md',
@@ -145,7 +156,7 @@ export const BLOG_POSTS: BlogPost[] = [
     file: 'agent-token-efficiency.md',
     title: 'How Many Tokens Does Your Agent Burn Reading Your Notes?',
     description:
-      'A measured look at what an AI agent spends reading a workspace over MCP — and how field projection, outline mode, the digest, and delta sync cut it 80–90%.',
+      'A measured look at agent workspace reads, plus how projection, outlines, digest, delta sync, and OKF-aware Context Pack v2 control context cost.',
     date: '2026-07-07',
     icon: Gauge,
   },

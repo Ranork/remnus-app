@@ -227,8 +227,8 @@ If your tool is not listed, it almost certainly accepts the standard `mcpServers
 
 ## Verify
 
-Whatever editor you use, confirm the connection with:
+Whatever editor you use, confirm the connection and the context engine with:
 
-> "Use the remnus MCP to list all items in my workspace."
+> "Use Remnus `prepare_context` for: Analyze this workspace's product and technical context. Return `profile`, `estimatedTokens`, `truncated`, `concepts`, `related`, and `warnings`. Change nothing."
 
-A successful response returns your pages and databases. From there the agent can search and read everything, and — with a write-scoped token or write consent — create and update content. See [Authentication](authentication.md) for scopes and rate limits, and [Read Tools](read-tools.md) / [Write Tools](write-tools.md) for the full tool catalog.
+A successful response returns a token-budgeted Context Pack v2 without mutating anything. From there the agent can drill into selected pages and — with a write-scoped token or write consent — create and update content. Smart mode advertises this behavior through MCP session instructions; Strict mode also requires the returned `contextRunId` for actual Remnus mutations. See [Context-First MCP](context-first.md), [Authentication](authentication.md), and the [Read Tools](read-tools.md) / [Write Tools](write-tools.md) reference.

@@ -13,6 +13,7 @@ import { registerPrompts } from './prompts';
 import { registerReadTools } from './tools/read';
 import { registerWriteTools } from './tools/write';
 import type { TokenContext } from './context';
+import { getContextPolicy } from '@/lib/services/knowledge';
 
 // ── Token verification ────────────────────────────────────────────────────────
 
@@ -139,11 +140,14 @@ function withMcpHeader(res: Response): Response {
 // agent has no way to discover they exist. Kept short (well under the ~1-2KB that's reasonable
 // for a system-prompt addition); for the full workspace map, point at the digest resource
 // instead of inlining it here — that scales with workspace size and shouldn't ride on every request.
-function buildInstructions(ctx: TokenContext): string {
+async function buildInstructions(ctx: TokenContext): Promise<string> {
+  const policy = await getContextPolicy(ctx.workspaceId);
   const digestUri = `remnus://workspace/${ctx.workspaceId}/digest`;
   const lines = [
     'This is a Remnus workspace: pages and databases an AI agent can read and, with a write-scoped token, edit directly.',
-    'For a concrete multi-page product or coding task, call prepare_context(task, maxTokens?) first; do not pre-crawl the workspace. It returns a compact trust/freshness-aware pack within the requested budget.',
+    policy.mode === 'manual'
+      ? 'Context policy is manual. Use prepare_context(task, maxTokens?) when the task needs workspace knowledge; avoid pre-crawling the workspace.'
+      : `Context policy is ${policy.mode}. For concrete multi-page product or coding work, call prepare_context first with about ${policy.autoMaxTokens} tokens; reuse its contextRunId for related Remnus writes.`,
     `For broad orientation or an unclear task, read resource ${digestUri} for a compact map (titles, ids, row counts, last-updated).`,
     'Two prompts exist specifically for cross-session memory: recall-context(topic) before starting work, save-memory(content, memory_type) after a decision, preference, or gotcha worth keeping.',
   ];
@@ -151,6 +155,9 @@ function buildInstructions(ctx: TokenContext): string {
     lines.push(
       'Writing: update_page/bulk_update_pages merge properties (partial patches are safe) and also sync `title` into the row\'s title property. delete_page and destructive schema/view changes require confirm: true — omit it first to preview.',
     );
+    if (policy.mode === 'strict') {
+      lines.push('Strict context is enabled: Remnus mutation tools reject calls without a current contextRunId from this same agent and workspace. Authorization and destructive confirmation still apply separately.');
+    }
   }
   return lines.join('\n');
 }
@@ -198,7 +205,7 @@ async function handleMcpRequest(req: Request): Promise<Response> {
   if (!checkRateLimit(ctx.tokenId)) return json({ error: 'Too many requests' }, 429);
 
   // Build and register server capabilities
-  const server = new McpServer({ name: 'remnus-mcp', version: '1.0.0' }, { instructions: buildInstructions(ctx) });
+  const server = new McpServer({ name: 'remnus-mcp', version: '1.1.0' }, { instructions: await buildInstructions(ctx) });
   registerResources(server, ctx);
   registerPrompts(server, ctx);
   registerReadTools(server, ctx);

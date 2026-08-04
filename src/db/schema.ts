@@ -441,6 +441,82 @@ export const pageLinks = sqliteTable('page_links', {
   uniqueIndex('page_links_from_to_kind_idx').on(table.fromId, table.toId, table.linkKind),
 ]);
 
+// Canonical, storage-independent knowledge metadata for every Remnus page,
+// database, and database row. OKF frontmatter is an import/export projection of
+// this model; raw imported assertions remain external until a Remnus user
+// reviews the exact content revision. Migration 0039.
+export const knowledgeMetadata = sqliteTable('knowledge_metadata', {
+  id:                text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  workspaceId:       text('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  itemId:            text('item_id').notNull(),
+  itemType:          text('item_type', { enum: ['page', 'database', 'database_row'] }).notNull(),
+  conceptType:       text('concept_type'),
+  description:       text('description'),
+  tags:              text('tags', { mode: 'json' }).notNull().$type<string[]>().default([]),
+  sources:           text('sources', { mode: 'json' }).notNull().$type<Array<{ resource: string; title?: string }>>().default([]),
+  status:            text('status', { enum: ['draft', 'stable', 'deprecated'] }),
+  staleAfter:        text('stale_after'),
+  ownerUserId:       text('owner_user_id').references(() => users.id, { onDelete: 'set null' }),
+  generatedBy:       text('generated_by'),
+  generatedAt:       integer('generated_at', { mode: 'timestamp' }),
+  externalVerified:  text('external_verified', { mode: 'json' }).notNull().$type<Array<{ by: string; at?: string }>>().default([]),
+  externalFrontmatter: text('external_frontmatter'),
+  createdAt:         integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt:         integer('updated_at', { mode: 'timestamp' }).notNull(),
+}, (table) => [
+  uniqueIndex('knowledge_metadata_workspace_item_unique').on(table.workspaceId, table.itemId, table.itemType),
+  index('knowledge_metadata_workspace_status_idx').on(table.workspaceId, table.status),
+  index('knowledge_metadata_owner_idx').on(table.ownerUserId),
+]);
+
+// A human review is bound to the exact title+content hash. Editing the concept
+// automatically makes the old review historical without mutating it. Imported
+// `verified: human:*` values never create rows here. Migration 0039.
+export const knowledgeReviews = sqliteTable('knowledge_reviews', {
+  id:             text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  metadataId:     text('metadata_id').notNull().references(() => knowledgeMetadata.id, { onDelete: 'cascade' }),
+  reviewerUserId: text('reviewer_user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  contentHash:    text('content_hash').notNull(),
+  reviewedAt:     integer('reviewed_at', { mode: 'timestamp' }).notNull(),
+  revokedAt:      integer('revoked_at', { mode: 'timestamp' }),
+}, (table) => [
+  index('knowledge_reviews_metadata_idx').on(table.metadataId, table.reviewedAt),
+  index('knowledge_reviews_reviewer_idx').on(table.reviewerUserId),
+]);
+
+// Workspace-level context behavior. `smart` is guidance/automation where the
+// client supports it; `strict` additionally requires a recent context run for
+// Remnus MCP mutations. It never replaces authorization or confirmation.
+export const workspaceContextPolicies = sqliteTable('workspace_context_policies', {
+  workspaceId:  text('workspace_id').primaryKey().references(() => workspaces.id, { onDelete: 'cascade' }),
+  mode:         text('mode', { enum: ['manual', 'smart', 'strict'] }).notNull().default('smart'),
+  autoMaxTokens: integer('auto_max_tokens').notNull().default(2000),
+  trustPolicy:  text('trust_policy', { enum: ['any', 'prefer-human-reviewed', 'human-reviewed-only'] }).notNull().default('prefer-human-reviewed'),
+  createdAt:    integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt:    integer('updated_at', { mode: 'timestamp' }).notNull(),
+});
+
+// Opaque task-preflight handles minted by prepare_context. The task itself is
+// not persisted; only hashes and compact audit facts are stored. Migration 0039.
+export const contextRuns = sqliteTable('context_runs', {
+  id:               text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  workspaceId:      text('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  tokenId:          text('token_id').references(() => agentTokens.id, { onDelete: 'cascade' }),
+  oauthTokenId:     text('oauth_token_id').references(() => oauthAccessTokens.id, { onDelete: 'cascade' }),
+  ownerUserId:      text('owner_user_id').references(() => users.id, { onDelete: 'set null' }),
+  taskHash:         text('task_hash').notNull(),
+  conceptSetHash:   text('concept_set_hash').notNull(),
+  knowledgeRevision: text('knowledge_revision').notNull(),
+  trustPolicy:      text('trust_policy').notNull(),
+  estimatedTokens: integer('estimated_tokens').notNull(),
+  expiresAt:        integer('expires_at', { mode: 'timestamp' }).notNull(),
+  createdAt:        integer('created_at', { mode: 'timestamp' }).notNull(),
+}, (table) => [
+  index('context_runs_workspace_created_idx').on(table.workspaceId, table.createdAt),
+  index('context_runs_token_expires_idx').on(table.tokenId, table.expiresAt),
+  index('context_runs_oauth_expires_idx').on(table.oauthTokenId, table.expiresAt),
+]);
+
 // Short-lived, single-use, DB-backed (not stateless-HMAC like the unsubscribe
 // token — a destructive action needs an expiry + a way to mark it consumed)
 // confirmation token for GDPR self-service account deletion. requestAccountDeletion()

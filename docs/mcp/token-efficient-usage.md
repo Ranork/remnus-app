@@ -11,12 +11,14 @@ For multi-page product or coding work, call [`prepare_context`](read-tools.md#pr
 ```json
 {
   "task": "Add a viewer role to workspace invitations",
-  "maxTokens": 6000,
+  "maxTokens": 2000,
   "trustPolicy": "prefer-human-reviewed"
 }
 ```
 
-The result ranks lexical matches, promotes human-reviewed OKF concepts, penalizes stale/deprecated knowledge, and adds compact graph-neighbor references. `estimatedTokens` stays within `maxTokens`; inspect `truncated` and per-concept `contentTruncated` before deciding whether to fetch one full page.
+The result combines BM25 relevance, native OKF-aligned metadata, exact-revision review signals, and compact graph neighbors. `estimatedTokens` stays within `maxTokens`; inspect `truncated`, `selectionReason`, and per-concept `contentTruncated` before deciding whether to fetch one full page. Reuse the returned `contextRunId` for related Remnus writes instead of preparing the same task again.
+
+Do not force this call for greetings, formatting-only requests, or a single known page. That would add tokens instead of saving them. Smart mode targets meaningful product/coding work; Strict mode is an optional governance gate for Remnus mutations.
 
 ## 2. Orient with the digest, not a full crawl
 

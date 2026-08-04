@@ -2,6 +2,7 @@ import { eq } from 'drizzle-orm';
 import { db } from '@/db';
 import { databases, pages, standalonePages, workspaceItems, workspaces } from '@/db/schema';
 import type { OkfWorkspaceSnapshot } from './types';
+import { listKnowledgeCorpus } from '@/lib/services/knowledge';
 
 function safeIso(value: Date | null | undefined): string | null {
   return value instanceof Date && Number.isFinite(value.getTime()) ? value.toISOString() : null;
@@ -15,7 +16,7 @@ export async function getOkfWorkspaceSnapshot(workspaceId: string): Promise<OkfW
     .limit(1);
   if (!workspace) throw new Error('Workspace not found');
 
-  const [itemRows, standaloneRows, databaseRows, pageRows] = await Promise.all([
+  const [itemRows, standaloneRows, databaseRows, pageRows, knowledgeRows] = await Promise.all([
     db
       .select({
         id: workspaceItems.id,
@@ -66,6 +67,7 @@ export async function getOkfWorkspaceSnapshot(workspaceId: string): Promise<OkfW
       .innerJoin(databases, eq(pages.databaseId, databases.id))
       .innerJoin(workspaceItems, eq(databases.itemId, workspaceItems.id))
       .where(eq(workspaceItems.workspaceId, workspaceId)),
+    listKnowledgeCorpus(workspaceId),
   ]);
 
   const rowsByDatabase = new Map<string, typeof pageRows>();
@@ -94,5 +96,20 @@ export async function getOkfWorkspaceSnapshot(workspaceId: string): Promise<OkfW
           updatedAt: safeIso(row.updatedAt),
         })),
     })),
+    knowledge: knowledgeRows
+      .filter(item => item.metadata.id)
+      .map(item => ({
+        itemId: item.id,
+        itemType: item.itemType,
+        ...(item.metadata.conceptType ? { conceptType: item.metadata.conceptType } : {}),
+        ...(item.metadata.description ? { description: item.metadata.description } : {}),
+        tags: item.metadata.tags,
+        sources: item.metadata.sources,
+        ...(item.metadata.status ? { status: item.metadata.status } : {}),
+        ...(item.metadata.staleAfter ? { staleAfter: item.metadata.staleAfter } : {}),
+        trust: item.metadata.trust,
+        ...(item.metadata.generatedBy ? { generatedBy: item.metadata.generatedBy } : {}),
+        ...(item.metadata.reviewedAt ? { reviewedAt: item.metadata.reviewedAt } : {}),
+      })),
   };
 }

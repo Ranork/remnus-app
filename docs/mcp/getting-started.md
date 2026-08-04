@@ -84,9 +84,11 @@ Manage and revoke tokens (PAT and OAuth) any time from the **AI Agents** panel. 
 
 Ask your AI client:
 
-> "Use the remnus MCP to list all items in my workspace."
+> "Use Remnus `prepare_context` for: Analyze this workspace's product and technical context. Return `profile`, `estimatedTokens`, `truncated`, `concepts`, `related`, and `warnings`. Change nothing."
 
-A successful response returns a JSON list of your pages and databases.
+A successful response identifies `remnus-context-pack-v2`, stays within its token budget, and returns a ranked set of relevant concepts without changing the workspace. This verifies transport, authentication, tool discovery, retrieval, and the workspace's active context policy in one safe call.
+
+The default **Smart** policy tells compatible clients to use this flow automatically for meaningful multi-page tasks while skipping trivial requests. **Strict** can additionally require the returned `contextRunId` for Remnus write tools. Configure the policy under **Workspace Settings → Portability** and read [Context-First MCP](context-first.md) before enabling Strict.
 
 ## Rate limits
 

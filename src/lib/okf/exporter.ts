@@ -294,6 +294,25 @@ export function validateOkfBundle(files: OkfBundleFile[]): OkfValidationReport {
 export async function buildOkfBundle(snapshot: OkfWorkspaceSnapshot, exportedAt = new Date().toISOString()): Promise<OkfBundle> {
   const pathById = new Map<string, string>();
   const databaseByItem = new Map(snapshot.databases.map(database => [database.itemId, database]));
+  const knowledgeByItem = new Map(snapshot.knowledge.map(metadata => [`${metadata.itemType}:${metadata.itemId}`, metadata]));
+  const knowledgeFields = (itemType: 'page' | 'database' | 'database_row', itemId: string) => {
+    const metadata = knowledgeByItem.get(`${itemType}:${itemId}`);
+    if (!metadata) return {};
+    const verified = metadata.trust === 'human-reviewed'
+      ? { by: 'human:remnus', at: metadata.reviewedAt }
+      : metadata.trust === 'machine-confirmed'
+        ? { by: metadata.generatedBy ?? 'agent:remnus' }
+        : undefined;
+    return {
+      ...(metadata.conceptType ? { type: metadata.conceptType } : {}),
+      ...(metadata.description ? { description: metadata.description } : {}),
+      ...(metadata.tags.length ? { tags: metadata.tags } : {}),
+      ...(metadata.sources.length ? { sources: metadata.sources } : {}),
+      ...(metadata.status ? { status: metadata.status } : {}),
+      ...(metadata.staleAfter ? { stale_after: metadata.staleAfter } : {}),
+      ...(verified ? { verified } : {}),
+    };
+  };
 
   for (const item of snapshot.items) {
     if (item.type === 'page') pathById.set(item.id, `pages/${conceptFilename(item.title, item.id)}`);
@@ -320,6 +339,7 @@ export async function buildOkfBundle(snapshot: OkfWorkspaceSnapshot, exportedAt 
         type: 'Remnus Page',
         title: item.title,
         description: descriptionFrom(body),
+        ...knowledgeFields('page', item.id),
         'x-remnus': {
           profile_version: REMNUS_OKF_PROFILE_VERSION,
           stable_id: item.id,
@@ -340,6 +360,7 @@ export async function buildOkfBundle(snapshot: OkfWorkspaceSnapshot, exportedAt 
       type: 'Remnus Database',
       title: database.name,
       description: `Structured Remnus database with ${database.rows.length} row(s).`,
+      ...knowledgeFields('database', item.id),
       'x-remnus': {
         profile_version: REMNUS_OKF_PROFILE_VERSION,
         stable_id: database.id,
@@ -373,6 +394,7 @@ export async function buildOkfBundle(snapshot: OkfWorkspaceSnapshot, exportedAt 
         tags,
         status,
         stale_after: typeof staleAfter === 'string' ? staleAfter : importedFields?.staleAfter,
+        ...knowledgeFields('database_row', row.id),
         'x-remnus': {
           profile_version: REMNUS_OKF_PROFILE_VERSION,
           stable_id: row.id,
