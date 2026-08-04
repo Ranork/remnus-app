@@ -1,6 +1,6 @@
 # Remnus — Agent Primer
 
-> Bu metin, herhangi bir AI agent oturumuna "Remnus nedir?" sorusuna derinlemesine ve doğru cevap verebilmesi için context olarak verilebilecek bir prompt parçasıdır. Kaynak: `remnus-app` reposundaki `README.md`, `AGENTS.md`, `docs/mcp/*`, `docs/blog/*`, `server.json` (2026-07-29 itibarıyla). Sürüm: `remnus-app@0.1.15`.
+> Bu metin, herhangi bir AI agent oturumuna "Remnus nedir?" sorusuna derinlemesine ve doğru cevap verebilmesi için context olarak verilebilecek bir prompt parçasıdır. Kaynak: `remnus-app` reposundaki `README.md`, `AGENTS.md`, `docs/mcp/*`, `docs/blog/*`, `server.json` (2026-08-04 itibarıyla). Sürüm: `remnus-app@0.1.17`.
 >
 > Bu dosya `docs/mcp/*` ve `docs/blog/*` içerik pipeline'ının dışındadır (`src/lib/content/manifest.ts` içinde kayıtlı değildir), bu yüzden `/wiki` veya `/docs` altında otomatik olarak yayınlanmaz — düz bir agent-context referans dosyasıdır.
 
@@ -16,8 +16,9 @@ Geleneksel araçlar (Notion, Obsidian, vb.) sadece *insanlar* için tasarlanmı�
 Pratikte bu vizyon şu anlama gelir:
 *   **Bir "Notion Alternatifi" Değildir:** Amacı insan-insan işbirliğini optimize etmek değil; kod yazan, araştırma yapan veya task yöneten AI ajanları (Cursor, Claude, Windsurf) ile insan takım üyelerini **ortak bir bağlamda (Shared Context)** buluşturmaktır.
 *   **Opaque (Kapalı Kutu) Hafıza Yerine Şeffaf Hafıza:** Agent memory bir "vector store" (vektör veritabanı) karadeliği değildir. Ajanın öğrendiği, kaydettiği her bilgi **insan tarafından okunabilir, düzeltilebilir ve silinebilir sıradan sayfalardan** oluşur.
-*   **First-Class Token ve Değiştirilemez Denetim (Audit Log):** İnsan oturumları üzerine yama yapılmış yetkiler yoktur. Agent token'ları (OAuth/PAT) birincil kimliklerdir. Ajanın okuduğu veya yazdığı *her bir satır veri*, değiştirilemez bir **audit log (denetim günlüğü)** olarak kaydedilir. İnsan takımı ajana %100 güvenir çünkü ne yaptığını harfi harfine denetleyebilir.
+*   **First-Class Token ve Atfedilebilir Denetim (Audit Log):** İnsan oturumları üzerine yama yapılmış yetkiler yoktur. Agent token'ları (OAuth/PAT) birincil kimliklerdir. Her MCP tool çağrısında aktör, işlem, durum, hedef, süre ve yanıt boyutu kaydedilir; takım ajan aktivitesini inceleyebilir.
 *   **Yapılandırılmış (Structured) Yanıtlar:** Flattened (düz) metin export'ları yerine ajanlara; kolon tipleri, şemalar ve select-option'ları korunmuş tipli (typed) veriler döner.
+*   **OKF-Native Context:** Bilgi tür, açıklama, etiket, kaynak, yaşam döngüsü, güncellik, provenance ve tam revizyona bağlı insan onayı taşıyabilir. Ajan tüm workspace'i taramak yerine açık bir token bütçesi içinde en ilgili görev bağlamını alır.
 
 ## 3. Ürün modeli
 
@@ -28,7 +29,19 @@ Pratikte bu vizyon şu anlama gelir:
 *   Kritik tasarım kararı: **Her database satırı aynı zamanda bir sayfadır**. Bir kanban kartının hem ajanların filtreleyebileceği tipli (typed) property'leri, hem de uzun format markdown içeriği (body) vardır.
 *   Veri modeli EAV değil, **JSON Column Pattern** ile tutulur (dinamik property'ler `schema`/`properties` JSON kolonlarında).
 
-## 4. MCP Sunucusu — Teknik Yüzey
+## 4. OKF Bilgisi ve Context Pack v2
+
+Open Knowledge Format (OKF) v0.2, Remnus'un deneysel içe/dışa aktarma adaptörüdür; ikinci bir kanonik veri deposu değildir. Native `knowledge_metadata` ve tam revizyona bağlı `knowledge_reviews`, sıradan sayfalara ve veritabanı satırlarına bağlı kalır. İçe aktarılan insan beyanları, giriş yapmış bir Remnus üyesi mevcut başlık ve gövdeyi inceleyene kadar `external-human-asserted` sayılır.
+
+`prepare_context`; BM25 ilgisi, native meta veri, güncellik, güven ve sayfa bağlantı grafiğini birleştirir. Sıralanmış kavramlar, seçim nedenleri, uyarılar, yaklaşık token kullanımı ve ajana bağlı 30 dakikalık bir `contextRunId` döndürür.
+
+- **Manual:** Bağlam yalnızca istendiğinde hazırlanır.
+- **Smart (varsayılan):** Uyumlu istemcilere anlamlı çok-sayfalı işlerde bağlam hazırlaması, basit isteklerde atlaması söylenir.
+- **Strict:** Gerçek Remnus MCP yazmaları aynı ajanın güncel `contextRunId` değerini de gerektirir.
+
+Strict; write scope, yetkilendirme veya yıkıcı işlem onayının yerini almaz. Bir MCP sunucusu kodlama istemcisinin yerel dosya, shell veya Git araçlarını kontrol edemez.
+
+## 5. MCP Sunucusu — Teknik Yüzey
 
 **Endpoint:** `https://www.remnus.com/api/mcp` (Her zaman `www` host'u kullanılmalı). Modern **Streamable HTTP** transport kullanılır (stateless — her çağrı tek bir HTTP isteği). Sunucu ayrı bir sidecar değildir; `/api/mcp` doğrudan Remnus web uygulamasının çekirdeğidir.
 
@@ -43,7 +56,7 @@ Pratikte bu vizyon şu anlama gelir:
 
 | Tool | Scope | Ne Yapar (Ajanlar İçin) |
 |---|---|---|
-| `prepare_context` | read | Açık bir token bütçesi içinde güven ve güncellik farkındalıklı görev bağlamı hazırlar |
+| `prepare_context` | read | Açık token bütçesi içinde Context Pack v2 ve kısa ömürlü ön-kontrol kimliği hazırlar |
 | `search_workspace` | read | Sayfalar ve database'ler üzerinde semantik/full-text arama |
 | `list_workspace` | read | Tüm workspace hiyerarşisinde gezinme |
 | `get_page` | read | ID ile sayfa/satır çekme (`mode: "outline"` ile token tasarrufu) |
@@ -74,39 +87,39 @@ Ajanların hızlıca oryantasyon sağlaması için URI üzerinden abone olabildi
 ### 7 MCP Prompt (Yerleşik Ajan Şablonları)
 Sunucu tarafında barınan komutlar: `summarize-page`, `weekly-status-report`, `kanban-triage`, `extract-tasks`, `search-and-create`, `save-memory` (Şeffaf hafıza yazma), `recall-context` (Link-graph destekli hafıza çağırma).
 
-## 5. Platformlar & Dağıtım
+## 6. Platformlar & Dağıtım
 
 *   **Desteklenen Ajan/İstemciler:** Claude Code, Claude Desktop (mcp-remote bridge veya standart config), Cursor, VS Code, Codex, Windsurf, Continue, Antigravity, Cline, Zed ve MCP-uyumlu her sistem. Otomatik keşif için resmi MCP Registry ve Smithery'de yayındadır.
 *   **İnsan Arayüzleri:** Web (Next.js 16 App Router), Masaüstü (Tauri v2 Rust shell), Mobil (Capacitor v8, iOS+Android), PWA.
 *   **Self-Host:** Lokal CLI, Docker Compose veya Vercel/Railway.
 
-## 6. Teknoloji Yığını (Özet)
+## 7. Teknoloji Yığını (Özet)
 *   Next.js 16.2.6, React 19.2, TypeScript 5.
 *   SQLite (`@libsql/client`, Turso) + Drizzle ORM.
 *   Auth.js v5 + RFC 7591 dynamic client registration sunucusu.
 *   Tiptap v3 (Rich text editör), TanStack Query, Tailwind CSS.
 *   **Lisans: AGPL-3.0** (Açık kaynak; modifikasyon serbest).
 
-## 7. Dil Desteği
+## 8. Dil Desteği
 English (Varsayılan), Türkçe, हिन्दी, Español, Français, Deutsch, 中文, Русский.
 
-## 8. Fiyatlandırma Modeli (Özet)
+## 9. Fiyatlandırma Modeli (Özet)
 Planlar insan sayısından ziyade ajan yoğunluğuna göre ölçeklenir: **Free / Startup / Professional / Enterprise**. Temel ayrım noktaları Agent (Token) sayısı, API Rate Limitleri ve Audit-Log tutma süreleri (retention). Ücretsiz planda bile tam kapsamlı MCP, audit log ve agent auth erişimi mevcuttur.
 
-## 9. Tipik Kullanım Senaryoları (Human-Agent Collab)
+## 10. Tipik Kullanım Senaryoları (Human-Agent Collab)
 
 1.  **Otonom Ajan Hafızası (Shared Memory):** Ajanın proje kural setlerini, preference'ları ve alınan kararları (Decision Records) Remnus tablosuna kaydetmesi, insanın bunları onaylayıp düzenlemesi.
 2.  **Agentic Yazılım Geliştirme:** Cursor veya Cline gibi bir kodlama ajanının Remnus'taki Kanban tablosunu okuyarak blocker'ları görmesi, kodu yazdıktan sonra Remnus API'si ile task statüsünü "Done"a çekmesi.
 3.  **Otomatik Durum Raporlama:** Bir analiz ajanının gece çalışarak workspace'teki tüm değişiklikleri (`get_changes_since`) okuyup, sabah insan takımı için haftalık özet (`weekly-status-report`) sayfası oluşturması.
 4.  **Güvenli Araştırma:** Ajanın dış dünyadan (web) topladığı verileri, tipli bir Remnus veritabanına doğrudan yapılandırılmış veri (structured data) olarak yığması.
 
-## 10. Hızlı Referans
+## 11. Hızlı Referans
 
 | Alan | Değer |
 |---|---|
 | Kategori | Human-Agent Collaborative Workspace |
 | MCP endpoint | `https://www.remnus.com/api/mcp` |
-| Tool / Resource / Prompt | 19 / 5 / 7 |
+| Tool / Resource / Prompt | 20 / 6 / 7 |
 | Auth Modeli | Agent-First: OAuth 2.1 + PKCE, PAT |
 | Güvenlik/Güven | Tam Kapsamlı Workspace Audit Log |
 | Lisans | AGPL-3.0 |
@@ -114,4 +127,4 @@ Planlar insan sayısından ziyade ajan yoğunluğuna göre ölçeklenir: **Free 
 
 ---
 
-Bu doküman `remnus_app` MCP'ye canlı bağlanmadan, tamamen repodaki kaynaklardan derlendi. İleride tool/resource/prompt sayıları değişirse (`README.md` / `docs/mcp/*.md` güncellenirse) bu metnin de senkron tutulması gerekir — canonical kaynak her zaman kod ve dokümantasyondur.
+Tool/resource/prompt sayıları `README.md`, `docs/mcp/*.md` ve çalışan MCP sunucusuyla senkron tutulmalıdır. Kanonik kaynak her zaman çalışan kod ve güncel dokümantasyondur.

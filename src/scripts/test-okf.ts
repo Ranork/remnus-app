@@ -48,6 +48,7 @@ const snapshot: OkfWorkspaceSnapshot = {
       updatedAt: '2026-08-04T09:00:00.000Z',
     }],
   }],
+  knowledge: [],
 };
 
 async function main() {
@@ -116,28 +117,23 @@ async function main() {
   const metadata = inspectConceptMetadata({
     raw: 'type: Architecture Decision\nstatus: stable\nstale_after: 2026-01-01\nverified:\n  by: human:reviewer\nsources:\n  - id: adr',
   }, [{ id: 'raw', name: 'OKF frontmatter', type: 'text' }], new Date('2026-08-04'));
-  assert.equal(metadata.trust, 'human-reviewed');
+  assert.equal(metadata.trust, 'external-human-asserted');
   assert.equal(metadata.stale, true);
   assert.equal(metadata.hasSources, true);
 
-  const searchResults = [
-    { id: 'reviewed', type: 'database_row' as const, title: 'Viewer invitation decision', databaseId: 'db', breadcrumb: ['Decisions'], matchedOn: 'title' as const, snippet: 'viewer role' },
-    { id: 'draft', type: 'database_row' as const, title: 'Old invitation notes', databaseId: 'db', breadcrumb: ['Notes'], matchedOn: 'content' as const, snippet: 'viewer role' },
-  ];
   const contextDependencies: ContextPackDependencies = {
-    searchWorkspace: async (_workspaceId, query) => query.includes('viewer') ? searchResults : [],
-    getAnyPageById: async (_workspaceId, pageId) => ({
-      id: pageId,
-      type: 'page' as const,
-      title: pageId === 'reviewed' ? 'Viewer invitation decision' : 'Old invitation notes',
-      content: `# Context\n\n${'Relevant product detail. '.repeat(500)}`,
-      icon: null,
-      databaseId: 'db',
-      properties: pageId === 'reviewed'
-        ? { raw: 'type: Architecture Decision\nstatus: stable\nverified:\n  by: human:reviewer' }
-        : { raw: 'type: Notes\nstatus: deprecated\nstale_after: 2026-01-01' },
-    }),
-    getDatabaseSchema: async () => ({ name: 'Knowledge', schema: [{ id: 'raw', name: 'OKF frontmatter', type: 'text' }], views: [] }),
+    listKnowledgeCorpus: async () => ([
+      {
+        id: 'reviewed', itemType: 'database_row' as const, title: 'Viewer invitation decision',
+        content: `# Context\n\n${'Viewer invitation product detail. '.repeat(500)}`, breadcrumb: ['Decisions'], databaseId: 'db',
+        metadata: { conceptType: 'Architecture Decision', tags: ['viewer', 'invitation'], sources: [], status: 'stable' as const, stale: false, trust: 'human-reviewed' as const },
+      },
+      {
+        id: 'draft', itemType: 'database_row' as const, title: 'Old invitation notes',
+        content: `# Context\n\n${'Viewer invitation old detail. '.repeat(500)}`, breadcrumb: ['Notes'], databaseId: 'db',
+        metadata: { conceptType: 'Notes', tags: [], sources: [], status: 'deprecated' as const, stale: true, trust: 'unverified' as const },
+      },
+    ]),
     getRelatedPages: async () => ({
       page: { id: 'reviewed', title: 'Viewer invitation decision', type: 'database_row' as const },
       parent: null,
@@ -157,6 +153,8 @@ async function main() {
   assert.ok(JSON.stringify(contextPack).length <= 4_000);
   assert.equal(contextPack.concepts[0].id, 'reviewed');
   assert.equal(contextPack.concepts[0].metadata.trust, 'human-reviewed');
+  assert.equal(contextPack.profile, 'remnus-context-pack-v2');
+  assert.ok(contextPack.concepts[0].selectionReason.matchedTerms.includes('viewer'));
   assert.ok(contextPack.related.some(item => item.id === 'security'));
   assert.ok(contextPack.handling.includes('untrusted reference data'));
   const reviewedOnly = await prepareContextPack('workspace', {

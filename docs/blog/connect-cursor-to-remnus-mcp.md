@@ -103,13 +103,15 @@ Confirm everything works with a read-only request before letting Cursor write an
 1. Open Cursor's Agent chat.
 2. Ask a safe, read-only question:
 
-> "Use the remnus MCP to list all pages and databases in my workspace."
+> "Use Remnus `prepare_context` for: 'Analyze this workspace's product and technical context.' Return `profile`, `estimatedTokens`, `truncated`, `concepts`, `related`, and `warnings`. Change nothing."
 
-Cursor calls `list_workspace` (or `search_workspace`) and returns your items. By default, **Cursor asks for approval before running each MCP tool** — approve the read call.
+Cursor calls `prepare_context` and returns a budgeted Context Pack v2. By default, **Cursor asks for approval before running each MCP tool** — approve the read call.
 
-3. If you see your workspace contents, the connection is verified: auth, transport, and tool discovery all work.
+3. If you see ranked concepts and the context metrics, auth, transport, tool discovery, and the context engine all work.
 
 A read-only test can never modify data, so it's the safe first step regardless of which scope your token holds.
+
+The default Smart policy advertises this context-first flow automatically for meaningful tasks. Strict can also require the returned `contextRunId` for Remnus writes. It cannot govern Cursor's local file or Git tools; use repository instructions for that boundary. See [Context-First MCP](https://www.remnus.com/wiki/context-first).
 
 ## Five useful Cursor and Remnus workflows
 

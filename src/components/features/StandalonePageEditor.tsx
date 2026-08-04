@@ -13,6 +13,7 @@ import SaveStatus, { type SaveState } from './SaveStatus';
 import ShareModal from '@/components/share/ShareModal';
 import { PageMarkdownDialog } from './PageMarkdownDialog';
 import PageBacklinksPanel from './PageBacklinksPanel';
+import KnowledgeContextPanel from './KnowledgeContextPanel';
 import { useTabNav } from '@/components/providers/TabsContext';
 import { tabKeys } from './tabs/keys';
 import type { WorkspaceItemRow } from '@/lib/actions/workspace';
@@ -325,6 +326,7 @@ export default function StandalonePageEditor({
         onImmediateSave={saveContent}
       />
 
+      <KnowledgeContextPanel workspaceId={item.workspaceId} pageId={item.id} />
       <PageBacklinksPanel workspaceId={item.workspaceId} pageId={item.id} />
     </div>
   );

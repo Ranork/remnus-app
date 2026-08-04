@@ -111,11 +111,17 @@ In the Codex terminal UI, `/mcp` shows active servers. The IDE extension exposes
 
 Then start with a read-only prompt:
 
-> Use the remnus MCP to list the pages and databases in my workspace. Do not create, update, move, or delete anything.
+> Use Remnus `prepare_context` for: "Analyze this workspace's product and technical context." Return `profile`, `estimatedTokens`, `truncated`, `concepts`, `related`, and `warnings`. Do not create, update, move, or delete anything.
 
-Codex should call a read tool such as `list_workspace` and return workspace items. This verifies transport, authentication, tool discovery, and workspace selection without changing data.
+Codex should call `prepare_context` and return a budgeted `remnus-context-pack-v2` response. This verifies transport, authentication, tool discovery, workspace selection, and the context engine without changing data.
 
 If the connection has `write` scope, the prompt still matters: scope defines what is permitted, while the task instruction defines what Codex should do now.
+
+### Make context-first the normal project workflow
+
+Remnus advertises the workspace's Manual, Smart, or Strict policy in MCP session instructions. Smart asks compatible agents to prepare context for meaningful product and multi-file work; Strict additionally rejects Remnus writes without the same actor's current `contextRunId`.
+
+An MCP server cannot block Codex's local filesystem, shell, or Git tools. To apply the same habit before repository edits, copy the project's `integrations/context-first/AGENTS.snippet.md` rule into the repository's `AGENTS.md`. Keep repository safety rules there and changing requirements in Remnus. See [Context-First MCP](https://www.remnus.com/wiki/context-first) for the exact boundary.
 
 ## Practical workflows
 

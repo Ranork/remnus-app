@@ -29,9 +29,15 @@ Authorization: Bearer rmns_xxxxxxxxxxxxxxxx
 | Scope | Permitted tools |
 |---|---|
 | `read` | `prepare_context`, `search_workspace`, `list_workspace`, `get_page`, `get_database_schema`, `query_database`, `list_members`, `query_audit_log`, `get_changes_since`, `get_related_pages` |
-| `write` | All read tools + `create_page`, `update_page`, `bulk_update_pages`, `delete_page`, `move_item`, `create_database`, `update_database_schema` |
+| `write` | All read tools + `create_page`, `update_page`, `bulk_update_pages`, `delete_page`, `move_item`, `create_database`, `update_database_schema`, `create_database_view`, `update_database_view`, `delete_database_view` |
 
 Calling a write tool with a read-scoped token returns an error and makes no changes.
+
+## Context policy and write authorization
+
+Context policy is separate from authentication. Manual and Smart workspaces accept normal authorized mutations, with `contextRunId` available as optional provenance. A Strict workspace additionally requires a current `contextRunId` returned by the same PAT or OAuth connection's [`prepare_context`](read-tools.md#prepare_context) call.
+
+The preflight never upgrades permissions: a read-scoped actor still cannot write, a different actor cannot reuse the run, and destructive operations still require their explicit confirmation. See [Context-First MCP](context-first.md) for the full boundary.
 
 ## Token expiry
 

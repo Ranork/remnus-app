@@ -9,6 +9,7 @@ import { rewriteImportedConceptLinks } from '@/lib/okf/importLinks';
 import { normalizeArchivePath } from '@/lib/okf/paths';
 import type { ParsedOkfConcept } from '@/lib/okf/types';
 import { createDatabaseInWorkspace, createPageInWorkspace, updatePageById } from '@/lib/services/workspace';
+import { recordImportedKnowledge } from '@/lib/services/knowledge';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;
@@ -40,7 +41,7 @@ function validateConcept(value: unknown): value is ParsedOkfConcept {
   if (concept.resource !== undefined && !safeText(concept.resource, 4_096)) return false;
   if (concept.status !== undefined && !safeText(concept.status, 256)) return false;
   if (concept.staleAfter !== undefined && !safeText(concept.staleAfter, 256)) return false;
-  if (!['unverified', 'machine-confirmed', 'human-reviewed'].includes(String(concept.trustTier))) return false;
+  if (!['unverified', 'machine-confirmed', 'external-human-asserted'].includes(String(concept.trustTier))) return false;
   if (/<script\b|<iframe\b|javascript\s*:|\bon\w+\s*=/i.test(concept.content)) return false;
   return true;
 }
@@ -88,7 +89,7 @@ export async function POST(request: NextRequest) {
         { name: t('okfColumnTags'), type: 'multi_select', options: [...new Set(payload.concepts.flatMap(concept => concept.tags))].slice(0, 500) },
         { name: t('okfColumnResource'), type: 'url' },
         { name: t('okfColumnStaleAfter'), type: 'date' },
-        { name: t('okfColumnTrust'), type: 'select', options: ['unverified', 'machine-confirmed', 'human-reviewed'] },
+        { name: t('okfColumnTrust'), type: 'select', options: ['unverified', 'machine-confirmed', 'external-human-asserted'] },
         { name: t('okfColumnPath'), type: 'text' },
         { name: t('okfColumnFrontmatter'), type: 'text' },
       ],
@@ -115,6 +116,18 @@ export async function POST(request: NextRequest) {
         },
       });
       targetsByPath.set(concept.path.toLowerCase(), { id: result.id, title: concept.title });
+      await recordImportedKnowledge(workspaceId, result.id, {
+        conceptType: concept.type,
+        description: concept.description,
+        tags: concept.tags,
+        sources: concept.resource ? [{ resource: concept.resource }] : [],
+        status: concept.status && ['draft', 'stable', 'deprecated'].includes(concept.status.toLowerCase())
+          ? concept.status.toLowerCase() as 'draft' | 'stable' | 'deprecated'
+          : undefined,
+        staleAfter: concept.staleAfter,
+        trustTier: concept.trustTier,
+        frontmatterRaw: concept.frontmatterRaw,
+      });
     }
 
     let rewrittenLinks = 0;

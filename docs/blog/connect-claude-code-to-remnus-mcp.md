@@ -135,9 +135,11 @@ claude mcp get remnus
 
 **4. Run a safe read.** Ask Claude Code:
 
-> "Use the remnus MCP to list all items in my workspace."
+> "Use Remnus `prepare_context` for: 'Analyze this workspace's product and technical context.' Return `profile`, `estimatedTokens`, `truncated`, `concepts`, `related`, and `warnings`. Change nothing."
 
-A successful response returns your pages and databases. If that works, the connection is real — auth, transport, and tool discovery are all confirmed.
+A successful response returns a token-budgeted Context Pack v2. If that works, auth, transport, tool discovery, retrieval, and the active context policy are all confirmed without changing anything.
+
+**Make it automatic.** Smart mode advertises the context-first flow in MCP session instructions, while Strict mode requires the returned `contextRunId` for actual Remnus writes. To extend the rule to Claude Code's local file and Git tools, add the open-source `integrations/context-first/CLAUDE.snippet.md` text to the repository's `CLAUDE.md`. An MCP server cannot enforce local-tool policy by itself. Read the [Context-First MCP guide](https://www.remnus.com/wiki/context-first) for details.
 
 ## Useful first workflows
 
@@ -153,7 +155,7 @@ These map to real Remnus tools, documented in [Read Tools](https://www.remnus.co
 
 **Save a project decision.** *"Create a page under Decisions recording that we chose OAuth as the default MCP auth method, with the reasoning and today's date."* This is what turns a one-off conversation into context the next session can find — the pattern described in [How to Give Claude Code Persistent Memory and a Shared Workspace](https://www.remnus.com/docs/claude-code-persistent-memory-workspace).
 
-Remnus also exposes MCP **resources** (`remnus://…` URIs) for cheap read-only context and five **prompt** templates, including `weekly-status-report` and `kanban-triage`.
+Remnus also exposes six MCP **resources** (`remnus://…` URIs) for cheap read-only context and seven **prompt** templates, including `weekly-status-report`, `kanban-triage`, `save-memory`, and `recall-context`.
 
 ## Recommended permission model
 

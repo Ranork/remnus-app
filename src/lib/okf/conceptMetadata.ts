@@ -1,6 +1,6 @@
 import { parseOkfFrontmatter, splitTopLevelEntries } from './frontmatter';
 
-export type ConceptTrust = 'human-reviewed' | 'machine-confirmed' | 'unverified' | 'unspecified';
+export type ConceptTrust = 'human-reviewed' | 'external-human-asserted' | 'machine-confirmed' | 'unverified' | 'unspecified';
 
 export interface ConceptMetadata {
   type?: string;
@@ -46,8 +46,11 @@ export function inspectConceptMetadata(
 
   const scalarValues = Object.values(named).filter((value): value is string => typeof value === 'string');
   const trustValue = scalarValues.find(value => ['human-reviewed', 'machine-confirmed', 'unverified'].includes(value.toLowerCase()))?.toLowerCase();
-  const trust: ConceptTrust = verified && /\bby\s*:\s*["']?human:/m.test(verified)
-    ? 'human-reviewed'
+  // Imported OKF is data supplied by an external bundle. A `human:*` assertion
+  // is useful provenance, but it is not an authenticated Remnus review. Native
+  // reviews are stored separately and bound to the exact content hash.
+  const trust: ConceptTrust = verified && /["']?by["']?\s*:\s*["']?human:/m.test(verified)
+    ? 'external-human-asserted'
     : verified
       ? 'machine-confirmed'
       : trustValue === 'human-reviewed' || trustValue === 'machine-confirmed' || trustValue === 'unverified'

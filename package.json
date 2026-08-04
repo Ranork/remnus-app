@@ -8,6 +8,8 @@
     "build": "npx tsx src/db/migrate.ts && next build",
     "start": "next start",
     "lint": "eslint",
+    "test:okf": "npx tsx src/scripts/test-okf.ts",
+    "bench:context": "npx tsx src/scripts/benchmark-context-pack.ts",
     "sync:accessibility-widget": "node scripts/sync-accessibility-widget.mjs",
     "db:migrate": "npx tsx src/db/migrate.ts",
     "db:setup": "npx tsx src/db/setup.ts",

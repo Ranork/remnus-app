@@ -12,6 +12,7 @@ export default async function LandingFooter() {
       headHref: '/wiki',
       links: [
         { label: t('bridgeFooterProtocolMcp'),      href: '/wiki' },
+        { label: t('bridgeFooterProtocolContext'),  href: '/wiki/context-first' },
         { label: t('bridgeFooterProtocolSdk'),       href: '/wiki/getting-started' },
         { label: t('bridgeFooterProtocolConnect'),   href: '/wiki/connect-editors' },
         { label: t('bridgeFooterProtocolTools'),     href: '/wiki/read-tools' },
@@ -22,6 +23,7 @@ export default async function LandingFooter() {
       head: t('bridgeFooterCompanyBlog'),
       headHref: '/docs',
       links: [
+        { label: 'OKF Context Engine',        href: '/docs/okf-context-engine-for-ai-agents' },
         { label: 'How I Built Remnus',        href: '/docs/how-i-built-mcp-native' },
         { label: 'Remnus vs Notion MCP',      href: '/docs/remnus-vs-notion-mcp' },
         { label: 'MCP-Native vs Integrated',  href: '/docs/mcp-native-vs-integrated' },
@@ -63,6 +65,25 @@ export default async function LandingFooter() {
             <p className="text-[13.5px] text-dim leading-[1.55] max-w-55">
               {t('bridgeFooterTagline')}
             </p>
+            {/* Remotely served SVG badge — next/image would need a remotePatterns
+                entry and buys nothing for a vector asset, so it stays a plain <img>. */}
+            <a
+              href="https://scoutforge.net/apps/remnus?ref=badge"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex w-fit opacity-90 hover:opacity-100 transition-opacity duration-150"
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="https://scoutforge.net/badge/remnus/image?theme=dark&size=default"
+                alt="Remnus on Scout Forge"
+                width={300}
+                height={72}
+                loading="lazy"
+                decoding="async"
+                className="h-10 w-auto"
+              />
+            </a>
             <span className="font-mono text-[11px] text-dimmer mt-auto">
               {t('bridgeFooterCopyright', { year })}
             </span>
@@ -97,7 +118,7 @@ export default async function LandingFooter() {
         </div>
       </div>
 
-      {/* Bottom strip: Akatron Network attribution + Scout Forge listing badge */}
+      {/* Bottom strip: Akatron Network attribution */}
       <div className="border-t border-neutral-800 px-4 py-5 flex flex-wrap items-center justify-center gap-3">
         <a
           href="https://akatron.net"
@@ -109,25 +130,6 @@ export default async function LandingFooter() {
           {t.rich('bridgeFooterCraftedBy', {
             b: (chunks) => <span className="font-semibold text-neutral-100">{chunks}</span>,
           })}
-        </a>
-        {/* Remotely served SVG badge — next/image would need a remotePatterns
-            entry and buys nothing for a vector asset, so it stays a plain <img>. */}
-        <a
-          href="https://scoutforge.net/apps/remnus?ref=badge"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="inline-flex opacity-90 hover:opacity-100 transition-opacity duration-150"
-        >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="https://scoutforge.net/badge/remnus/image?theme=dark&size=default"
-            alt="Remnus on Scout Forge"
-            width={300}
-            height={72}
-            loading="lazy"
-            decoding="async"
-            className="h-10 w-auto"
-          />
         </a>
       </div>
     </footer>

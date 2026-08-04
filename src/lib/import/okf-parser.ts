@@ -139,8 +139,8 @@ export async function parseOkfBundle(input: ArrayBuffer | Uint8Array, filename =
       tags: parsed.tags ?? [],
       status: parsed.status,
       staleAfter: parsed.staleAfter,
-      trustTier: verifiedBlock && /\bby\s*:\s*["']?human:/m.test(verifiedBlock)
-        ? 'human-reviewed'
+      trustTier: verifiedBlock && /["']?by["']?\s*:\s*["']?human:/m.test(verifiedBlock)
+        ? 'external-human-asserted'
         : verifiedBlock
           ? 'machine-confirmed'
           : 'unverified',

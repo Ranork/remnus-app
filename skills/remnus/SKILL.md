@@ -29,7 +29,7 @@ Column types: `text` | `number` | `select` | `multi_select` | `date` | `datetime
 ## Tools at a glance
 
 **Read (safe, always allowed):**
-- `prepare_context` — start multi-page product/coding work with a task-specific, token-budgeted context pack; prefers reviewed/fresh knowledge.
+- `prepare_context` — start meaningful multi-page product/coding work with Context Pack v2; returns a token-budgeted, reviewed/fresh pack and a short-lived `contextRunId`.
 - `search_workspace` — find pages/databases by title. Your usual entry point.
 - `list_workspace` — list items, optionally under a `parentId`. Paginated.
 - `get_page` — full content of a page or row by ID. Auto-detects type.
@@ -81,7 +81,7 @@ These only *fetch and format* — the actual writing/analysis is yours. If a cli
 ## Core rules — do not skip these
 
 ### 1. Inspect before you act
-For multi-page product or coding work, start with `prepare_context`; it avoids repeated reads and respects the requested token budget. For a single known item, don't guess IDs or column names: start from `search_workspace` or `list_workspace`, and run `get_database_schema` before `query_database` / before writing rows. You need real column IDs and exact `select` option strings.
+For meaningful multi-page product or coding work, start with `prepare_context` (normally 2,000 tokens) and reuse its `contextRunId` on related writes. Do not call it for greetings, formatting-only work, or a single known page. If a write returns `CONTEXT_REQUIRED`, prepare the concrete task and retry once with the returned ID. For a single known item, don't guess IDs or column names: start from `search_workspace` or `list_workspace`, and run `get_database_schema` before `query_database` / before writing rows. You need real column IDs and exact `select` option strings.
 
 ### 2. `update_page` MERGES properties — it never replaces
 Passing `properties: { status: "Done" }` changes only `status`; every other property is untouched. To *clear* a field, set it explicitly to `null`/`""`. Never re-send the whole property bag thinking you must preserve it — you don't, and doing so risks clobbering changes made since you read.
@@ -110,7 +110,7 @@ Updating several rows (e.g. "mark all done")? Build one `bulk_update_pages` call
 
 ## Common recipes
 
-**"Implement feature X using our product decisions"** → `prepare_context` with the concrete task and a suitable `maxTokens` budget → `get_page` only for related IDs whose full detail is still needed.
+**"Implement feature X using our product decisions"** → `prepare_context` with the concrete task and a suitable `maxTokens` budget → keep `contextRunId` → `get_page` only for related IDs whose full detail is still needed → pass `contextRunId` to Remnus writes.
 
 **"Find X and show me"** → `search_workspace` → `get_page` on the best hit.
 

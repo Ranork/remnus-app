@@ -1,6 +1,6 @@
 # How Many Tokens Does Your Agent Burn Reading Your Notes?
 
-Every time an AI agent reads your workspace, it pays for it — in tokens, latency, and context window. A naive agent that re-reads everything on every turn burns its budget on plumbing before it does any thinking. This post measures what that actually costs on a real Remnus workspace, and shows how four MCP features — field projection, outline mode, the workspace digest, and delta sync — cut the bill by 80–90%.
+Every time an AI agent reads your workspace, it pays for it — in tokens, latency, and context window. A naive agent that re-reads everything on every turn burns its budget on plumbing before it does any thinking. This post measures what that actually costs on a real Remnus workspace, and shows how field projection, outline mode, the workspace digest, and delta sync cut the bill by 80–90%. It then explains how the newer OKF-aware Context Pack v2 composes those ideas around a concrete task.
 
 All numbers below were measured against a real seeded Remnus workspace with a reproducible script (`src/scripts/bench-tokens.ts`). Token counts use the common `chars ÷ 4` approximation — treat them as ratios, not exact billing. The point isn't the absolute figures; it's how much of a read is avoidable.
 
@@ -62,6 +62,24 @@ The agent gets the whole map for the price of a single small page, then spends i
 
 A recurring agent — a daily standup summary, a memory refresh — doesn't need to re-crawl the workspace every run. `get_changes_since` returns a compact, chronological feed of only what was created, updated, or deleted since a timestamp or cursor. The first call bootstraps; every call after that returns just the delta. For an agent that runs every hour against a workspace that changed twice, that's two entries instead of the entire tree.
 
+## Ask for the task, not the workspace
+
+The reads above are precise primitives, but an agent still has to decide how to compose them. [`prepare_context`](/wiki/read-tools#prepare_context) moves that first retrieval decision into Remnus. Give it a concrete task and a token budget; Context Pack v2 ranks titles, descriptions, tags, bodies, trust, freshness, and the page-link graph, then returns only the selected excerpts and compact related references.
+
+```json
+{
+  "task": "Add viewer-role support to workspace invitations",
+  "maxTokens": 2000,
+  "maxConcepts": 6,
+  "trustPolicy": "prefer-human-reviewed",
+  "includeRelated": true
+}
+```
+
+The response reports `estimatedTokens`, `truncated`, a `selectionReason` for each concept, and warnings before the agent decides whether one full-page follow-up is necessary. Smart mode advertises this flow for meaningful multi-page work; Strict mode can require its short-lived `contextRunId` before Remnus mutations.
+
+The repository's `npm run bench:context` fixture checks ranking and budget behavior on synthetic data. Keep that result separate from the real-workspace measurements in this article: it is a regression test, not evidence of customer-wide savings.
+
 ## Putting it together
 
 Consider an agent that starts a session, orients itself, checks the board, and reads one relevant page. Naively — read every body to orient, full board query, full page:
@@ -88,4 +106,4 @@ Same work, **~84% fewer tokens** — and that's before delta sync removes the re
 
 ## Try it
 
-The token-efficient reads are all available to any connected agent — no flags to turn on beyond passing `fields`, `mode: "outline"`, or reading the digest. The full best-practice guide is in [Token-Efficient Usage](/wiki/token-efficient-usage), and the tool reference is in [Read Tools](/wiki/read-tools). Connect an agent from the **AI Agents** panel in your workspace and watch the numbers in the usage meter.
+The token-efficient reads are all available to any connected agent. Use `prepare_context` for a substantive multi-page task; use `fields`, `mode: "outline"`, the digest, or delta sync when you already know the narrower read shape you need. Do not prepare a context pack for greetings or one known page — that adds cost instead of removing it. The full best-practice guides are [Context-First MCP](/wiki/context-first) and [Token-Efficient Usage](/wiki/token-efficient-usage). Connect an agent from the **AI Agents** panel and watch the numbers in the usage meter.

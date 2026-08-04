@@ -22,16 +22,25 @@ Remnus is the Human-Agent Collaborative Workspace, built around the [Model Conte
 
 **Unlike Notion's MCP integration**, Remnus is designed for headless, CI/CD, and coding agent workflows from day one.
 
+## OKF-native context, not a workspace dump
+
+Remnus uses Open Knowledge Format (OKF) ideas as a portable knowledge contract. Pages can carry descriptions, types, tags, sources, lifecycle state, freshness dates, and revision-bound review signals. OKF v0.2 import/export is the interchange layer; the editable Remnus workspace remains canonical.
+
+The `prepare_context` MCP tool turns a concrete task into Context Pack v2: a token-budgeted set of concepts ranked by BM25 relevance, native metadata, page links, freshness, and trust. **Smart** mode advertises this context-first flow automatically for meaningful work. **Strict** mode additionally requires the same agent's short-lived `contextRunId` before Remnus MCP mutations.
+
+This does not let an MCP server control local files, shell commands, or Git. Repository-level enforcement uses the supplied [`AGENTS.md` and `CLAUDE.md` snippets](integrations/context-first/README.md). Read the public [Context-First MCP guide](https://www.remnus.com/wiki/context-first) and the implementation story, [How Remnus Uses OKF to Give AI Agents Better Context](https://www.remnus.com/docs/okf-context-engine-for-ai-agents).
+
 ## Features
 
 - **Pages** — Markdown editor with slash commands, nested sub-pages, and icons
 - **Databases** — Customizable columns, Table / Kanban / Calendar views, filters, sorts
 - **MCP Server** — 20 tools + 6 resources + 7 prompts over stateless Streamable HTTP
+- **OKF-native context** — Portable knowledge metadata, exact-revision reviews, Context Pack v2, and Smart/Strict MCP policies
 - **Agent auth** — One-click OAuth 2.1 + PKCE (RFC 7591 dynamic registration) for editors, or scoped read/write personal access tokens for headless agents
 - **Multi-workspace** — Invite members, role-based access (owner / member / viewer)
 - **Desktop app** — Tauri v2 shell for Windows, macOS, Linux
 - **Mobile** — Capacitor v8 for iOS and Android (loads remnus.com)
-- **i18n** — English, Türkçe, Español, Français, Deutsch, हिन्दी
+- **i18n** — English, Türkçe, हिन्दी, Español, Français, Deutsch, 中文, Русский
 
 ## Quick Start — Self-host
 
@@ -122,7 +131,7 @@ Swap `--client` for `cursor`, `vscode`, `codex`, `windsurf`, etc. Either way, th
 
 | Tool | Scope | Description |
 |------|-------|-------------|
-| `prepare_context` | read | Build a task-specific, trust-aware context pack within a token budget |
+| `prepare_context` | read | Build Context Pack v2 (BM25 + OKF metadata + graph) and return a short-lived `contextRunId` |
 | `search_workspace` | read | Full-text search across pages and databases |
 | `list_workspace` | read | List sidebar items with pagination |
 | `get_page` | read | Get a page or database row by ID |

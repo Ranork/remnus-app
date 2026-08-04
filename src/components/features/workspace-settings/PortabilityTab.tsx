@@ -1,8 +1,10 @@
 'use client';
 
-import { useState } from 'react';
-import { Activity, Archive, CheckCircle, Download, FileText, Loader2, RefreshCw, ShieldCheck } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Activity, Archive, BrainCircuit, CheckCircle, Download, FileText, Loader2, RefreshCw, ShieldCheck } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { getWorkspaceContextPolicy, updateWorkspaceContextPolicy } from '@/lib/actions/knowledge';
+import type { ContextPolicy } from '@/lib/services/knowledge';
 
 interface PortabilityTabProps {
   workspaceId: string;
@@ -43,6 +45,32 @@ export default function PortabilityTab({ workspaceId, workspaceName }: Portabili
   const [result, setResult] = useState<ExportResult | null>(null);
   const [health, setHealth] = useState<HealthReport | null>(null);
   const [isScanning, setIsScanning] = useState(false);
+  const [contextPolicy, setContextPolicy] = useState<ContextPolicy>({ mode: 'smart', autoMaxTokens: 2000, trustPolicy: 'prefer-human-reviewed' });
+  const [policyBusy, setPolicyBusy] = useState<'load' | 'save' | null>('load');
+  const [policySaved, setPolicySaved] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    getWorkspaceContextPolicy(workspaceId)
+      .then(policy => { if (!cancelled) setContextPolicy(policy); })
+      .catch(() => { if (!cancelled) setError(t('contextPolicyLoadFailed')); })
+      .finally(() => { if (!cancelled) setPolicyBusy(null); });
+    return () => { cancelled = true; };
+  }, [workspaceId, t]);
+
+  async function saveContextPolicy() {
+    setPolicyBusy('save');
+    setPolicySaved(false);
+    setError('');
+    try {
+      setContextPolicy(await updateWorkspaceContextPolicy(workspaceId, contextPolicy));
+      setPolicySaved(true);
+    } catch {
+      setError(t('contextPolicySaveFailed'));
+    } finally {
+      setPolicyBusy(null);
+    }
+  }
 
   async function scanHealth() {
     setIsScanning(true);
@@ -154,6 +182,51 @@ export default function PortabilityTab({ workspaceId, workspaceName }: Portabili
           </div>
         )}
         {health && <p className="text-[10px] text-neutral-600">{t('portabilityHealthMethod')}</p>}
+      </div>
+
+      <div className="space-y-4 border-b border-neutral-800 pb-5">
+        <div className="flex items-start gap-3">
+          <BrainCircuit size={17} className="mt-0.5 shrink-0 text-blue-400" />
+          <div>
+            <p className="text-sm font-semibold text-neutral-200">{t('contextPolicyTitle')}</p>
+            <p className="mt-1 text-xs text-neutral-500">{t('contextPolicyDesc')}</p>
+          </div>
+        </div>
+        {policyBusy === 'load' ? <Loader2 size={14} className="animate-spin text-neutral-500" /> : (
+          <>
+            <div className="grid gap-px border border-neutral-800 bg-neutral-800 sm:grid-cols-3">
+              {(['manual', 'smart', 'strict'] as const).map(mode => (
+                <button key={mode} type="button" onClick={() => { setPolicySaved(false); setContextPolicy(current => ({ ...current, mode })); }} className={`bg-neutral-900 p-3 text-left transition-colors hover:bg-neutral-850 cursor-pointer ${contextPolicy.mode === mode ? 'text-blue-300 ring-1 ring-inset ring-blue-500' : 'text-neutral-400'}`}>
+                  <span className="block text-xs font-semibold">{t(`contextPolicyMode.${mode}.title`)}</span>
+                  <span className="mt-1 block text-[10px] leading-relaxed text-neutral-500">{t(`contextPolicyMode.${mode}.desc`)}</span>
+                </button>
+              ))}
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="space-y-1 text-[11px] text-neutral-500">
+                <span>{t('contextPolicyBudget')}</span>
+                <select value={contextPolicy.autoMaxTokens} onChange={event => setContextPolicy(current => ({ ...current, autoMaxTokens: Number(event.target.value) }))} className="w-full border-b border-neutral-700 bg-neutral-900 px-1 py-1.5 text-xs text-neutral-200 outline-none">
+                  <option value={1000}>1,000</option><option value={2000}>2,000</option><option value={4000}>4,000</option><option value={6000}>6,000</option>
+                </select>
+              </label>
+              <label className="space-y-1 text-[11px] text-neutral-500">
+                <span>{t('contextPolicyTrust')}</span>
+                <select value={contextPolicy.trustPolicy} onChange={event => setContextPolicy(current => ({ ...current, trustPolicy: event.target.value as ContextPolicy['trustPolicy'] }))} className="w-full border-b border-neutral-700 bg-neutral-900 px-1 py-1.5 text-xs text-neutral-200 outline-none">
+                  <option value="any">{t('contextPolicyTrustAny')}</option>
+                  <option value="prefer-human-reviewed">{t('contextPolicyTrustPrefer')}</option>
+                  <option value="human-reviewed-only">{t('contextPolicyTrustOnly')}</option>
+                </select>
+              </label>
+            </div>
+            <div className="flex items-center gap-3">
+              <button type="button" onClick={saveContextPolicy} disabled={!!policyBusy} className="inline-flex items-center gap-1.5 bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-500 disabled:opacity-50 cursor-pointer">
+                {policyBusy === 'save' ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle size={12} />}{t('contextPolicySave')}
+              </button>
+              {policySaved && <span className="text-[10px] text-green-300">{t('contextPolicySaved')}</span>}
+            </div>
+            <p className="text-[10px] leading-relaxed text-neutral-600">{t('contextPolicySecurity')}</p>
+          </>
+        )}
       </div>
 
       <div className="flex flex-wrap items-center gap-3">

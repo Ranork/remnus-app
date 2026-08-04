@@ -51,6 +51,19 @@ export interface OkfWorkspaceSnapshot {
   items: OkfWorkspaceItemSnapshot[];
   standalonePages: OkfStandalonePageSnapshot[];
   databases: OkfDatabaseSnapshot[];
+  knowledge: Array<{
+    itemId: string;
+    itemType: OkfSubjectKind;
+    conceptType?: string;
+    description?: string;
+    tags: string[];
+    sources: Array<{ resource: string; title?: string }>;
+    status?: 'draft' | 'stable' | 'deprecated';
+    staleAfter?: string;
+    trust: 'human-reviewed' | 'external-human-asserted' | 'machine-confirmed' | 'unverified';
+    generatedBy?: string;
+    reviewedAt?: string;
+  }>;
 }
 
 export interface OkfBundleFile {
@@ -118,7 +131,7 @@ export interface ParsedOkfConcept {
   tags: string[];
   status?: string;
   staleAfter?: string;
-  trustTier: 'unverified' | 'machine-confirmed' | 'human-reviewed';
+  trustTier: 'unverified' | 'machine-confirmed' | 'external-human-asserted';
 }
 
 export interface OkfImportPreview {
