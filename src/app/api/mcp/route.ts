@@ -1,5 +1,5 @@
 export const runtime = 'nodejs';
-export const maxDuration = 300;
+export const maxDuration = 60;
 
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js';
@@ -13,35 +13,6 @@ import { registerPrompts } from './prompts';
 import { registerReadTools } from './tools/read';
 import { registerWriteTools } from './tools/write';
 import type { TokenContext } from './context';
-
-// ── SSE connection store (stateful SSE transport for Cursor / Windsurf / Continue) ──
-
-const activeSseConnections = new Map<string, {
-  controller: ReadableStreamDefaultController;
-  encoder: TextEncoder;
-}>();
-
-class SseCustomTransport {
-  onclose?: () => void;
-  onerror?: (error: Error) => void;
-  onmessage?: (message: unknown) => void;
-
-  constructor(
-    private controller: ReadableStreamDefaultController,
-    private encoder: TextEncoder,
-  ) {}
-
-  async start() {}
-  async close() { this.onclose?.(); }
-
-  async send(message: unknown) {
-    try {
-      this.controller.enqueue(this.encoder.encode(`event: message\ndata: ${JSON.stringify(message)}\n\n`));
-    } catch (err) {
-      this.onerror?.(err as Error);
-    }
-  }
-}
 
 // ── Token verification ────────────────────────────────────────────────────────
 
@@ -205,22 +176,6 @@ async function handleMcpRequest(req: Request): Promise<Response> {
 
   if (!checkRateLimit(ctx.tokenId)) return json({ error: 'Too many requests' }, 429);
 
-  // Standard SSE GET (Cursor, Windsurf, Continue, Antigravity)
-  if (req.method === 'GET' && req.headers.get('accept')?.includes('text/event-stream')) {
-    const sessionId = crypto.randomUUID();
-    const encoder = new TextEncoder();
-    const stream = new ReadableStream({
-      start(controller) {
-        activeSseConnections.set(sessionId, { controller, encoder });
-        controller.enqueue(encoder.encode(`event: endpoint\ndata: /api/mcp?sessionId=${sessionId}\n\n`));
-      },
-      cancel() { activeSseConnections.delete(sessionId); },
-    });
-    return new Response(stream, {
-      headers: { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache, no-transform', 'Connection': 'keep-alive', ...MCP_HEADERS },
-    });
-  }
-
   // Build and register server capabilities
   const server = new McpServer({ name: 'remnus-mcp', version: '1.0.0' }, { instructions: buildInstructions(ctx) });
   registerResources(server, ctx);
@@ -228,24 +183,12 @@ async function handleMcpRequest(req: Request): Promise<Response> {
   registerReadTools(server, ctx);
   registerWriteTools(server, ctx);
 
-  // SSE POST (sessionId-based stateful)
-  const sessionId = reqUrl.searchParams.get('sessionId');
-  if (sessionId) {
-    const conn = activeSseConnections.get(sessionId);
-    if (!conn) return json({ error: 'Session expired' }, 404);
-
-    const transport = new SseCustomTransport(conn.controller, conn.encoder);
-    await server.connect(transport);
-
-    let message: unknown;
-    try { message = await req.clone().json(); } catch {
-      return json({ error: 'Invalid JSON' }, 400);
-    }
-    if (transport.onmessage) transport.onmessage(message);
-    return new Response(null, { status: 202, headers: MCP_HEADERS });
-  }
-
-  // Streamable HTTP (Claude Code — stateless)
+  // Streamable HTTP (stateless) — the only transport we support. The previous
+  // hand-rolled stateful SSE branch (for Cursor/Windsurf/Continue/Antigravity)
+  // never closed its stream server-side, so it idled until Vercel force-killed
+  // it at maxDuration, over and over, per reconnect — the dominant Fluid Compute
+  // cost driver. Audit log showed zero real tool calls through that path, so it
+  // was removed rather than bounded.
   const transport = new WebStandardStreamableHTTPServerTransport({
     sessionIdGenerator: undefined,
     enableJsonResponse: true,

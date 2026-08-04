@@ -92,9 +92,6 @@ A successful response returns a JSON list of your pages and databases.
 
 The MCP endpoint allows **60 requests per minute** per token. Exceeding this limit returns a `429` response.
 
-## Transport modes
+## Transport
 
-| Mode | When to use |
-|---|---|
-| Streamable HTTP | Default — one HTTP request per tool call, stateless |
-| SSE | Persistent connection — lower latency for high-frequency calls |
+The endpoint speaks **Streamable HTTP** — one HTTP request per tool call, stateless. This is the transport the current MCP spec recommends for remote servers, and what every actively-maintained MCP client (Claude, Cursor, Windsurf, Continue, Antigravity, and others) uses by default.
