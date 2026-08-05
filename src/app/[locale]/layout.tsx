@@ -10,6 +10,7 @@ import { PostHogProvider } from '@/components/providers/PostHogProvider';
 import PostHogPageView from '@/components/providers/PostHogPageView';
 import PostHogIdentify from '@/components/providers/PostHogIdentify';
 import AttributionCapture from '@/components/providers/AttributionCapture';
+import PendingGiftToast from '@/components/providers/PendingGiftToast';
 import { ConsentProvider } from '@/components/providers/ConsentContext';
 import CookieConsentBanner from '@/components/features/CookieConsentBanner';
 import PwaInstallCapture from '@/components/providers/PwaInstallCapture';
@@ -106,6 +107,9 @@ export default async function LocaleLayout({
           >
             {children}
             <CookieConsentBanner />
+            {/* useTranslations needs the provider above — AttributionCapture
+                doesn't use i18n so it stays outside, this does. */}
+            {!sessionUser && <PendingGiftToast />}
           </ConsentProvider>
         </NextIntlClientProvider>
       </PostHogProvider>

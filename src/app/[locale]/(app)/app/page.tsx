@@ -41,6 +41,12 @@ export default async function AppRedirectPage({
     redirect(`/invite/${pendingInvite}`);
   }
 
+  // Same priority for a pending Prospect Invite (gift-signup) claim.
+  const pendingProspectInvite = (await cookies()).get('pending_prospect_invite')?.value;
+  if (pendingProspectInvite) {
+    redirect(`/welcome/${pendingProspectInvite}`);
+  }
+
   // Preserve the post-checkout flag through the redirect so the success modal can show.
   const sp = await searchParams;
   const suffix = sp?.billing === 'success' ? '?billing=success' : '';

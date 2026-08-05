@@ -4,7 +4,7 @@ import { getAllUsers } from '@/lib/actions/auth';
 import { getEngagementOverview, getActivationFunnel } from '@/lib/actions/analytics';
 import { getDemoFeedback } from '@/lib/actions/demoFeedback';
 import Link from 'next/link';
-import { Shield, Users, TrendingUp, MonitorPlay, Share2, Workflow, MessageCircle, Mail, Laptop, Download } from 'lucide-react';
+import { Shield, Users, TrendingUp, MonitorPlay, Share2, Workflow, MessageCircle, Mail, Gift, Laptop, Download } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import AdminUsersTable from '@/components/features/AdminUsersTable';
 import { SignupTrendChart } from '@/components/features/admin/AdminCharts';
@@ -147,7 +147,12 @@ export default async function AdminPage() {
   const session = await auth();
   if (!session?.user || session.user.role !== 'admin') redirect('/login');
 
-  const [t, tMailing, locale] = await Promise.all([getTranslations('Admin'), getTranslations('Mailing'), getLocale()]);
+  const [t, tMailing, tProspectInvites, locale] = await Promise.all([
+    getTranslations('Admin'),
+    getTranslations('Mailing'),
+    getTranslations('ProspectInvites'),
+    getLocale(),
+  ]);
 
   const [usersResult, engagement, funnel, demoFeedback] = await Promise.all([
     getAllUsers(),
@@ -177,13 +182,22 @@ export default async function AdminPage() {
       subtitle={t('panelSubtitle')}
       widthLabels={{ narrow: t('widthNarrow'), wide: t('widthWide'), full: t('widthFull') }}
       headerActions={
-        <Link
-          href="/admin/mailing"
-          className="flex items-center gap-2 rounded-lg border border-neutral-800 px-3.5 py-2 text-xs font-medium text-neutral-300 transition-colors hover:border-neutral-700 hover:bg-neutral-800/40"
-        >
-          <Mail size={14} className="text-blue-400" />
-          {tMailing('title')}
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/admin/prospect-invites"
+            className="flex items-center gap-2 rounded-lg border border-neutral-800 px-3.5 py-2 text-xs font-medium text-neutral-300 transition-colors hover:border-neutral-700 hover:bg-neutral-800/40"
+          >
+            <Gift size={14} className="text-blue-400" />
+            {tProspectInvites('title')}
+          </Link>
+          <Link
+            href="/admin/mailing"
+            className="flex items-center gap-2 rounded-lg border border-neutral-800 px-3.5 py-2 text-xs font-medium text-neutral-300 transition-colors hover:border-neutral-700 hover:bg-neutral-800/40"
+          >
+            <Mail size={14} className="text-blue-400" />
+            {tMailing('title')}
+          </Link>
+        </div>
       }
     >
         {/* Hero KPI cluster */}
