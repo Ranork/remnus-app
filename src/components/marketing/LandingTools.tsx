@@ -22,6 +22,7 @@ const TOOLS = [
   { scope: 'read',  tool: 'search_workspace' },
   { scope: 'read',  tool: 'list_workspace' },
   { scope: 'read',  tool: 'get_page' },
+  { scope: 'read',  tool: 'get_pages' },
   { scope: 'read',  tool: 'get_database_schema' },
   { scope: 'read',  tool: 'query_database' },
   { scope: 'read',  tool: 'list_members' },
@@ -59,7 +60,7 @@ const PROMPTS = [
   { name: 'recall-context' },
 ] as const;
 
-// Curated highlights shown as cards on the landing page — the full 20-tool
+// Curated highlights shown as cards on the landing page — the full 21-tool
 // reference table lives at /wiki/read-tools. Picked to span discovery, query,
 // live sync, creation, bulk ops, and schema control (3 read + 3 write).
 const FLAGSHIP_TOOLS = [

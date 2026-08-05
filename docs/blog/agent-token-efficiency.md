@@ -45,6 +45,12 @@ On a ~2,600-character build log page:
 
 The agent skims first, then fetches the full body only for the pages the outline shows are relevant — instead of paying full price to discover a page wasn't.
 
+## Fetch a known list in one round trip
+
+> **Update (2026-08-05):** added `get_pages`, a batch counterpart to `get_page`.
+
+Once `search_workspace`, `get_related_pages`, or `get_changes_since` has already handed back the specific IDs an agent needs — sometimes spanning several databases or mixing standalone pages with database rows — reading them one at a time means one `get_page` round trip per ID. `get_pages` takes the same known list (up to 50 IDs, same `mode: "outline"` | `"full"` as `get_page`) and returns them in a single call. One missing or inaccessible ID doesn't fail the batch; each result reports its own `ok`/`error`. For rows that all live in one database, `query_database` with `filters`/`fields` is still the cheaper single-query path — `get_pages` is for the ID list that doesn't fit that shape.
+
 ## Orient in one line per item
 
 Before an agent can do anything useful it has to know what's in the workspace. The naive move is to list everything and read each page. The `remnus://workspace/{id}/digest` resource returns a compact one-line-per-item map — titles, types, ids, row counts, last-updated — in a single read.

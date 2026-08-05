@@ -135,6 +135,7 @@ Swap `--client` for `cursor`, `vscode`, `codex`, `windsurf`, etc. Either way, th
 | `search_workspace` | read | Full-text search across pages and databases |
 | `list_workspace` | read | List sidebar items with pagination |
 | `get_page` | read | Get a page or database row by ID |
+| `get_pages` | read | Get multiple pages/rows by ID in one call (batch `get_page`) |
 | `get_database_schema` | read | Get column schema of a database |
 | `query_database` | read | Query rows with filters and pagination |
 | `list_members` | read | List workspace members with roles |

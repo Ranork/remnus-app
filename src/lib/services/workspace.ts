@@ -463,12 +463,23 @@ export async function queryDatabaseRows(
   // Push property filters into SQL using json_extract so limit is applied after filtering.
   // Handles both scalar fields (select, text, number) and array fields (multi_select)
   // by checking both direct equality and json_each membership in one condition.
+  //
+  // The two branches need DIFFERENT JSON accessors, not the same one twice:
+  // json_extract (and ->>) DEQUOTES scalar leaf values ('"Done"' -> Done), which is
+  // exactly what the equality branch wants (compares against a plain JS string param).
+  // But feeding that same dequoted text into json_each() breaks — json_each requires
+  // well-formed JSON, and a bare `Done` isn't valid JSON, so SQLite throws
+  // "SQLITE_ERROR: malformed JSON" for every scalar-column filter (status/select/text/
+  // number). Array values are unaffected (json_extract doesn't dequote arrays), which is
+  // why multi_select filters ({"col_tags": ["Bug"]}) always worked and this went unnoticed.
+  // Fix: use the `->` operator for the json_each argument — it preserves JSON encoding
+  // (returns '"Done"', still valid JSON) instead of dequoting.
   const filterConditions = filters
     ? Object.entries(filters).map(([key, value]) =>
         sql`(
           json_extract(${pages.properties}, ${'$.' + key}) = ${value}
           OR EXISTS (
-            SELECT 1 FROM json_each(json_extract(${pages.properties}, ${'$.' + key}))
+            SELECT 1 FROM json_each(${pages.properties} -> ${'$.' + key})
             WHERE value = ${value}
           )
         )`,
@@ -787,6 +798,20 @@ export async function getAnyPageById(workspaceId: string, pageId: string) {
 
   // Fall back to DB row (pages table)
   return getDatabasePageById(workspaceId, pageId);
+}
+
+// Batch counterpart to getAnyPageById, for a specific known list of IDs (e.g. from
+// search_workspace, get_related_pages, or get_changes_since) that may span multiple
+// databases or mix standalone pages with database rows. Deliberately uses allSettled
+// (not all, unlike bulkUpdatePages) — a read batch shouldn't lose every other id just
+// because one is deleted/inaccessible; each entry reports its own ok/error instead.
+export async function getPagesByIds(workspaceId: string, pageIds: string[]) {
+  const settled = await Promise.allSettled(pageIds.map(id => getAnyPageById(workspaceId, id)));
+  return settled.map((r, i) =>
+    r.status === 'fulfilled'
+      ? { id: pageIds[i], ok: true as const, page: r.value }
+      : { id: pageIds[i], ok: false as const, error: String(r.reason) },
+  );
 }
 
 // ── Related pages (link graph) ────────────────────────────────────────────────

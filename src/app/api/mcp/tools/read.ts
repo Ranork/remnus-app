@@ -6,6 +6,7 @@ import {
   listWorkspaceMembers,
   queryAuditLog,
   getAnyPageById,
+  getPagesByIds,
   getDatabaseSchema,
   queryDatabaseRows,
   buildContentOutline,
@@ -166,6 +167,42 @@ export function registerReadTools(server: McpServer, ctx: TokenContext) {
         return { content: [{ type: 'text' as const, text }], structuredContent: payload };
       } catch (err) {
         await logActivity(ctx, 'get_page', 'error', 'page', pageId);
+        return { content: [{ type: 'text' as const, text: `Error: ${String(err)}` }], isError: true };
+      }
+    },
+  );
+
+  server.registerTool(
+    'get_pages',
+    {
+      description: 'Get multiple workspace pages or database rows by ID in one call — for a specific, already-known, possibly mixed list of IDs (e.g. from search_workspace, get_related_pages, or get_changes_since). One missing/inaccessible ID does not fail the batch — check each entry\'s "ok" field. For many rows that share one database, prefer query_database with filters/fields instead of this — it is one query, not N lookups.',
+      inputSchema: {
+        pageIds: z.array(z.string()).min(1).max(50).describe('Page/row IDs to fetch (max 50)'),
+        mode: z.enum(['full', 'outline']).optional().default('full').describe('Same as get_page — "outline" collapses each body to headings + first line per section'),
+      },
+      outputSchema: z.object({
+        results: z.array(z.object({
+          id: z.string(),
+          ok: z.boolean(),
+          page: z.any().optional().describe('Present when ok is true — same shape as get_page\'s output'),
+          error: z.string().optional().describe('Present when ok is false'),
+        }).passthrough()),
+      }),
+      annotations: { title: 'Get pages by ID', readOnlyHint: true, openWorldHint: false },
+    },
+    async ({ pageIds, mode }) => {
+      try {
+        const results = await getPagesByIds(ctx.workspaceId, pageIds);
+        const shaped = results.map(r =>
+          r.ok && r.page && mode === 'outline' && r.page.content
+            ? { ...r, page: { ...r.page, content: buildContentOutline(r.page.content), mode: 'outline', fullContentChars: r.page.content.length } }
+            : r,
+        );
+        const text = JSON.stringify({ results: shaped });
+        await logActivity(ctx, 'get_pages', 'success', undefined, undefined, text);
+        return { content: [{ type: 'text' as const, text }], structuredContent: { results: shaped } };
+      } catch (err) {
+        await logActivity(ctx, 'get_pages', 'error');
         return { content: [{ type: 'text' as const, text: `Error: ${String(err)}` }], isError: true };
       }
     },

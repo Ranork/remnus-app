@@ -48,11 +48,11 @@ Strict does not replace write scope, authorization, or destructive confirmation,
 ### Authentication and security boundaries
 *   **OAuth 2.1 + PKCE (S256)** — the recommended path. Dynamic client registration (`POST /api/oauth/register`). Access tokens last 1 hour, refresh tokens 30 days. The human user (owner) sets the agent's read/write permissions on the consent screen.
 *   **Personal Access Token (PAT)** — for headless/CI or custom agents, minted by workspace **owners**.
-*   **Scopes:** `read` (10 tools) and `write` (all tools). A write call with a read-scoped token is blocked instantly.
+*   **Scopes:** `read` (11 tools) and `write` (all tools). A write call with a read-scoped token is blocked instantly.
 *   **Rate limit:** 60 requests/minute per token.
 *   **Traceability (audit log):** every tool call (which page was read, which property changed) is written to the workspace audit log.
 
-### 20 MCP tools (agent capabilities)
+### 21 MCP tools (agent capabilities)
 
 | Tool | Scope | What it does (for agents) |
 |---|---|---|
@@ -60,6 +60,7 @@ Strict does not replace write scope, authorization, or destructive confirmation,
 | `search_workspace` | read | Semantic/full-text search across pages and databases |
 | `list_workspace` | read | Navigate the entire workspace hierarchy |
 | `get_page` | read | Fetch a page/row by ID (`mode: "outline"` to save tokens) |
+| `get_pages` | read | Fetch multiple pages/rows by ID in one call — a known, possibly cross-database ID list |
 | `get_database_schema` | read | Learn a database's column types and rules |
 | `query_database` | read | Query rows SQL-style with filters and sorting |
 | `list_members` | read | List the team's human and machine members |
