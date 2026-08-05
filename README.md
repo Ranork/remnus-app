@@ -34,7 +34,7 @@ This does not let an MCP server control local files, shell commands, or Git. Rep
 
 - **Pages** — Markdown editor with slash commands, nested sub-pages, and icons
 - **Databases** — Customizable columns, Table / Kanban / Calendar views, filters, sorts
-- **MCP Server** — 20 tools + 6 resources + 7 prompts over stateless Streamable HTTP
+- **MCP Server** — 21 tools + 6 resources + 7 prompts over stateless Streamable HTTP
 - **OKF-native context** — Portable knowledge metadata, exact-revision reviews, Context Pack v2, and Smart/Strict MCP policies
 - **Agent auth** — One-click OAuth 2.1 + PKCE (RFC 7591 dynamic registration) for editors, or scoped read/write personal access tokens for headless agents
 - **Multi-workspace** — Invite members, role-based access (owner / member / viewer)

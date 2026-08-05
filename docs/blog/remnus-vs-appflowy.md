@@ -34,7 +34,7 @@ This is the actual fork in the road, and it is a bigger one than the workspace f
 | Database view types | 3 (Grid, Board, Calendar) | 3 (table, kanban, calendar) |
 | Cross-database relations/rollups | Yes | Not currently |
 | Native offline mode | Yes, local-first by architecture | Online-first apps, no full offline editing yet |
-| Native MCP server (agent connects in) | No, an open feature request (GitHub issue #8043, opened June 2025) remains unresolved | Yes, first-party, 20 tools |
+| Native MCP server (agent connects in) | No, an open feature request (GitHub issue #8043, opened June 2025) remains unresolved | Yes, first-party, 21 tools |
 | MCP client (workspace connects out to other tools) | Yes, AppFlowy's own AI assistant can call external MCP servers | Not applicable, Remnus is built to be the server agents connect to |
 | Unofficial/community MCP access | Third-party wrappers (e.g. on Zapier, PulseMCP) exist around the AppFlowy Cloud REST API, not maintained by the core team | Not applicable |
 | Works with the offline desktop app | No, community MCP wrappers need AppFlowy Cloud; the local desktop database isn't API accessible | Not applicable, Remnus is cloud native |
@@ -53,7 +53,7 @@ AppFlowy has built AI directly into its editor: an AI chat assistant, writing he
 
 There are community-built MCP servers that wrap the AppFlowy Cloud REST API (listed on directories like PulseMCP and Zapier's MCP catalog), built by individual contributors rather than the AppFlowy team. They also only work against AppFlowy Cloud, since the plain offline desktop app keeps notes in a local binary format that isn't reachable over an API at all.
 
-Remnus was built the opposite way: the MCP server is the first-party interface, live from the start, with 20 tools split 10 read and 10 write, plus 6 resource templates and 7 prompt templates, maintained by the same team that builds the product.
+Remnus was built the opposite way: the MCP server is the first-party interface, live from the start, with 21 tools split 11 read and 10 write, plus 6 resource templates and 7 prompt templates, maintained by the same team that builds the product.
 
 ### Authentication and headless agents
 
@@ -65,7 +65,7 @@ Remnus ships two supported paths out of the box: OAuth 2.1 with PKCE for editors
 
 AppFlowy's Free plan covers 2 members, 5 GB storage, 10 AI chat responses and 2 AI images a month. Pro is $10 per user per month billed annually (or $12.50 billed monthly), covering up to 50 members, unlimited storage, and unlimited AI responses. Two add-ons layer on top: AI MAX at $8/user/month unlocks larger models and unlimited image generation, and Vault at $6/user/month runs AI locally for privacy. All of that pricing is about AppFlowy's own built-in AI assistant, since there is no native MCP surface to meter separately.
 
-Remnus prices flat per workspace owner rather than per seat: Free at $0, Startup at $10 a month, Professional at $29 a month, Enterprise custom. The full 14-tool MCP surface works identically on every tier, Free included. For a 5-person team, that is a flat $10 or $29 a month on Remnus against AppFlowy Pro's per-seat $50-62.50 a month for the same headcount, though the two products are not charging for the same thing: AppFlowy's price buys a mature editor and built-in AI chat, Remnus's buys agent seats and MCP capability on top of a newer editor.
+Remnus prices flat per workspace owner rather than per seat: Free at $0, Startup at $10 a month, Professional at $29 a month, Enterprise custom. The full 21-tool MCP surface works identically on every tier, Free included. For a 5-person team, that is a flat $10 or $29 a month on Remnus against AppFlowy Pro's per-seat $50-62.50 a month for the same headcount, though the two products are not charging for the same thing: AppFlowy's price buys a mature editor and built-in AI chat, Remnus's buys agent seats and MCP capability on top of a newer editor.
 
 ### Audit trails
 
