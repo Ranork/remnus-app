@@ -186,6 +186,11 @@ export const prospectInvites = sqliteTable('prospect_invites', {
   linkExpiresAt:   integer('link_expires_at', { mode: 'timestamp' }), // deadline to CLAIM the link, not the gift
   createdBy:       text('created_by').references(() => users.id, { onDelete: 'set null' }),
   createdAt:       integer('created_at', { mode: 'timestamp' }).notNull(),
+  // Funnel tracking (migration 0041) — recorded from the public claim page's
+  // read path (getProspectInviteByToken), best-effort/fire-and-forget so a
+  // tracking write never slows down or breaks the page render.
+  firstOpenedAt:   integer('first_opened_at', { mode: 'timestamp' }), // first /welcome/[token] view, nullable until then
+  openCount:       integer('open_count').notNull().default(0),       // total views, including repeats
   claimedAt:       integer('claimed_at', { mode: 'timestamp' }),
   claimedByUserId: text('claimed_by_user_id').references(() => users.id, { onDelete: 'set null' }),
   revertedAt:      integer('reverted_at', { mode: 'timestamp' }),    // when the cron rolled the gift back to Free

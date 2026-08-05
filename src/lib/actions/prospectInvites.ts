@@ -12,7 +12,7 @@
 
 import { db } from '@/db';
 import { prospectInvites, users } from '@/db/schema';
-import { eq, desc } from 'drizzle-orm';
+import { eq, desc, gte, sql } from 'drizzle-orm';
 import { auth } from '@/auth';
 import { getCurrentUser } from '@/lib/auth/session';
 import { getTranslations } from 'next-intl/server';
@@ -52,6 +52,8 @@ export interface ProspectInviteSummary {
   giftDays: number;
   linkExpiresAt: Date | null;
   createdAt: Date;
+  firstOpenedAt: Date | null;
+  openCount: number;
   claimedAt: Date | null;
   claimedByEmail: string | null;
   revertedAt: Date | null;
@@ -61,7 +63,7 @@ export interface ProspectInviteSummary {
 
 export interface ProspectInvitesOverview {
   invites: ProspectInviteSummary[];
-  counts: { total: number; pending: number; active: number; reverted: number; linkExpired: number };
+  counts: { total: number; opened: number; pending: number; active: number; reverted: number; linkExpired: number };
 }
 
 function deriveStatus(row: { linkExpiresAt: Date | null; claimedAt: Date | null; revertedAt: Date | null }): ProspectInviteStatus {
@@ -71,10 +73,16 @@ function deriveStatus(row: { linkExpiresAt: Date | null; claimedAt: Date | null;
   return 'pending';
 }
 
-export async function getProspectInvitesOverview(): Promise<ProspectInvitesOverview> {
+/**
+ * @param sinceMs When set (epoch ms), scopes both the list and the counts to
+ * invites CREATED on/after this instant — e.g. to see the funnel since a
+ * specific campaign batch. Omit for the all-time view. Mirrors
+ * getActivationFunnel's sinceMs param/UX (AdminActivationFunnel.tsx).
+ */
+export async function getProspectInvitesOverview(sinceMs?: number): Promise<ProspectInvitesOverview> {
   await assertAdmin();
 
-  const rows = await db
+  const query = db
     .select({
       id: prospectInvites.id,
       token: prospectInvites.token,
@@ -87,6 +95,8 @@ export async function getProspectInvitesOverview(): Promise<ProspectInvitesOverv
       giftDays: prospectInvites.giftDays,
       linkExpiresAt: prospectInvites.linkExpiresAt,
       createdAt: prospectInvites.createdAt,
+      firstOpenedAt: prospectInvites.firstOpenedAt,
+      openCount: prospectInvites.openCount,
       claimedAt: prospectInvites.claimedAt,
       claimedByEmail: users.email,
       revertedAt: prospectInvites.revertedAt,
@@ -95,9 +105,12 @@ export async function getProspectInvitesOverview(): Promise<ProspectInvitesOverv
     .leftJoin(users, eq(prospectInvites.claimedByUserId, users.id))
     .orderBy(desc(prospectInvites.createdAt));
 
-  const counts = { total: rows.length, pending: 0, active: 0, reverted: 0, linkExpired: 0 };
+  const rows = sinceMs != null ? await query.where(gte(prospectInvites.createdAt, new Date(sinceMs))) : await query;
+
+  const counts = { total: rows.length, opened: 0, pending: 0, active: 0, reverted: 0, linkExpired: 0 };
   const invites: ProspectInviteSummary[] = rows.map((r) => {
     const status = deriveStatus(r);
+    if (r.firstOpenedAt) counts.opened++;
     if (status === 'pending') counts.pending++;
     else if (status === 'active') counts.active++;
     else if (status === 'reverted') counts.reverted++;
@@ -275,9 +288,29 @@ export interface PublicProspectInvite {
   daysUntilLinkExpiry: number | null;
 }
 
+// Funnel tracking (migration 0041) — best-effort, fire-and-forget so a write
+// hiccup never slows down or breaks the claim page's render. openCount always
+// increments; firstOpenedAt is set only the first time (checked here in JS,
+// not via a raw SQL literal, so it's a normal Date write like every other
+// timestamp column in this file — no risk of bypassing Drizzle's ms/seconds
+// handling with a hand-rolled epoch value).
+async function recordProspectInviteOpen(id: string, alreadyOpened: boolean): Promise<void> {
+  // Inlined rather than built up via an intermediate typed object: $inferInsert
+  // types openCount as a plain number, which rejects the SQL<unknown> fragment
+  // even though Drizzle's own .set() signature accepts it at the call site.
+  if (alreadyOpened) {
+    await db.update(prospectInvites).set({ openCount: sql`${prospectInvites.openCount} + 1` }).where(eq(prospectInvites.id, id));
+  } else {
+    await db.update(prospectInvites).set({ openCount: sql`${prospectInvites.openCount} + 1`, firstOpenedAt: new Date() }).where(eq(prospectInvites.id, id));
+  }
+}
+
 export async function getProspectInviteByToken(token: string, viewerUserId?: string | null): Promise<PublicProspectInvite | null> {
   const [row] = await db.select().from(prospectInvites).where(eq(prospectInvites.token, token)).limit(1);
   if (!row) return null;
+
+  recordProspectInviteOpen(row.id, !!row.firstOpenedAt).catch(() => {});
+
   const daysUntilLinkExpiry = row.linkExpiresAt
     ? Math.max(0, Math.ceil((row.linkExpiresAt.getTime() - Date.now()) / (24 * 60 * 60 * 1000)))
     : null;

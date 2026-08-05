@@ -161,11 +161,12 @@ export default function InviteStatusTable({
 
   return (
     <div className="overflow-x-auto rounded-xl border border-neutral-800 bg-neutral-900">
-      <table className="w-full min-w-[760px] text-left text-xs">
+      <table className="w-full min-w-[860px] text-left text-xs">
         <thead>
           <tr className="border-b border-neutral-800 text-[10.5px] uppercase tracking-wider text-neutral-500">
             <th className="px-4 py-2.5 font-medium">{t('colApp')}</th>
             <th className="px-4 py-2.5 font-medium">{t('colStatus')}</th>
+            <th className="px-4 py-2.5 font-medium">{t('colOpened')}</th>
             <th className="px-4 py-2.5 font-medium">{t('colGift')}</th>
             <th className="px-4 py-2.5 font-medium">{t('colCreated')}</th>
             <th className="px-4 py-2.5 font-medium">{t('colClaimedBy')}</th>
@@ -192,6 +193,9 @@ export default function InviteStatusTable({
                     <span className={`inline-block rounded-full px-2 py-0.5 text-[11px] ${STATUS_STYLE[invite.status]}`}>
                       {t(STATUS_LABEL_KEYS[invite.status])}
                     </span>
+                  </td>
+                  <td className="whitespace-nowrap px-4 py-2.5 tabular-nums text-neutral-400">
+                    {invite.openCount > 0 ? t('openedCount', { count: invite.openCount }) : '—'}
                   </td>
                   <td className="whitespace-nowrap px-4 py-2.5 text-neutral-400">
                     {t('giftCell', { days: invite.giftDays, tier: invite.giftTier === 'professional' ? tBilling('tier_professional') : tBilling('tier_startup') })}
@@ -246,7 +250,7 @@ export default function InviteStatusTable({
 
                 {isEditing && edit && (
                   <tr className="border-b border-neutral-850 bg-neutral-850/40 last:border-0">
-                    <td colSpan={6} className="px-4 py-3">
+                    <td colSpan={7} className="px-4 py-3">
                       <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                         <input value={edit.appName} onChange={(e) => setEdit({ ...edit, appName: e.target.value })} placeholder={t('appNameLabel')} className={inputCls} />
                         <input value={edit.appLogoUrl} onChange={(e) => setEdit({ ...edit, appLogoUrl: e.target.value })} placeholder={t('appLogoUrlLabel')} className={inputCls} />
@@ -277,7 +281,7 @@ export default function InviteStatusTable({
 
                 {isConfirming && (
                   <tr className="border-b border-neutral-850 bg-red-500/5 last:border-0">
-                    <td colSpan={6} className="px-4 py-3">
+                    <td colSpan={7} className="px-4 py-3">
                       <div className="flex flex-wrap items-center justify-between gap-3">
                         <p className="text-xs text-red-300">
                           {confirm.action === 'revoke' ? t('confirmRevokeText') : t('confirmDeleteText')}
