@@ -165,6 +165,33 @@ export const workspaceInvites = sqliteTable('workspace_invites', {
   uniqueIndex('workspace_invites_token_unique').on(table.token),
   index('workspace_invites_workspace_id_idx').on(table.workspaceId),
   index('workspace_invites_email_idx').on(table.email),
+])
+
+// Prospect invites — personalized, single-use gift-signup links for outreach
+// campaigns (e.g. Scout Forge). Distinct from `workspace_invites`: this invites
+// a NEW prospect into a fresh account (not into an existing workspace) and
+// carries an editable snapshot of a Scout Forge app's public info alongside a
+// time-boxed plan grant. Status is derived (pending/link_expired/active/reverted),
+// not stored. Migration 0040.
+export const prospectInvites = sqliteTable('prospect_invites', {
+  id:              text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  token:           text('token').notNull(),                          // bearer secret in /welcome/[token]
+  appIdstr:        text('app_idstr').notNull(),                      // Scout Forge slug — source for re-fetch
+  appName:         text('app_name').notNull(),                       // editable snapshot
+  appLogoUrl:      text('app_logo_url'),                             // editable snapshot, nullable
+  appTagline:      text('app_tagline'),                              // editable snapshot (shortDescription)
+  appUrl:          text('app_url'),                                  // nullable, app's own site (context only)
+  giftTier:        text('gift_tier').notNull().default('startup'),   // PlanTier: 'startup' | 'professional'
+  giftDays:        integer('gift_days').notNull().default(30),
+  linkExpiresAt:   integer('link_expires_at', { mode: 'timestamp' }), // deadline to CLAIM the link, not the gift
+  createdBy:       text('created_by').references(() => users.id, { onDelete: 'set null' }),
+  createdAt:       integer('created_at', { mode: 'timestamp' }).notNull(),
+  claimedAt:       integer('claimed_at', { mode: 'timestamp' }),
+  claimedByUserId: text('claimed_by_user_id').references(() => users.id, { onDelete: 'set null' }),
+  revertedAt:      integer('reverted_at', { mode: 'timestamp' }),    // when the cron rolled the gift back to Free
+}, (table) => [
+  uniqueIndex('prospect_invites_token_unique').on(table.token),
+  index('prospect_invites_app_idstr_idx').on(table.appIdstr),
 ]);
 
 // ── MCP Agent Tokens ──────────────────────────────────────────────────────────

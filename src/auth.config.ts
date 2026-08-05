@@ -45,6 +45,9 @@ export const authConfig: NextAuthConfig = {
       const isOAuthPage = cleanPath.startsWith('/oauth/');
       const isStripeWebhook = cleanPath.startsWith('/api/webhooks/stripe');
       const isInvite = cleanPath.startsWith('/invite/');
+      // Prospect Invites (outreach gift-signup links) — distinct route from
+      // /invite/, same public-then-branches-on-session pattern.
+      const isProspectWelcome = cleanPath.startsWith('/welcome/');
       const isHealthCheck = cleanPath.startsWith('/api/health');
       // Asset download proxy: the desktop app opens downloads in the system
       // browser (so its download UI + "show in folder" work), and that browser
@@ -60,7 +63,7 @@ export const authConfig: NextAuthConfig = {
         cleanPath.startsWith('/api/unsubscribe') ||
         cleanPath.startsWith('/api/cron') ||
         cleanPath.startsWith('/api/webhooks/ses');
-      if (isApiAuth || isMcpRoute || isPublicAsset || isTauriEntry || isClientActivate || isOAuthApi || isWellKnown || isOAuthPage || isStripeWebhook || isInvite || isHealthCheck || isDownloadProxy || isMailingPublic) return true;
+      if (isApiAuth || isMcpRoute || isPublicAsset || isTauriEntry || isClientActivate || isOAuthApi || isWellKnown || isOAuthPage || isStripeWebhook || isInvite || isProspectWelcome || isHealthCheck || isDownloadProxy || isMailingPublic) return true;
 
       // Public marketing pages (pricing, contact) are always accessible
       if (isPublicMarketingRoute) return true;

@@ -7,7 +7,7 @@ import { getCurrentUser } from '@/lib/auth/session';
 import { getTranslations } from 'next-intl/server';
 import { stripe, priceIdForTier } from '@/lib/stripe';
 import { syncSubscriptionForCustomer } from '@/lib/billing/sync';
-import { getOwnerUsage, getOwnerPlan, countSeats, resolveBillingOwner } from '@/lib/services/billing';
+import { getOwnerUsage, getOwnerPlan, countSeats, resolveBillingOwner, setOwnerPlanTier } from '@/lib/services/billing';
 import { isPlanTier, type PlanTier } from '@/lib/billing/plans';
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
@@ -175,24 +175,9 @@ export async function adminSetUserPlan(
   if (admin.role !== 'admin') return { error: t('adminRequired') };
   if (!isPlanTier(tier)) return { error: t('billingInvalidTier') };
 
-  const [row] = await db.select().from(subscriptions).where(eq(subscriptions.ownerUserId, userId)).limit(1);
-  if (row?.stripeSubscriptionId) return { error: t('billingStripeManaged') };
+  const result = await setOwnerPlanTier(userId, tier);
+  if (!result.ok) return { error: t(result.error) };
 
-  const now = new Date();
-  if (row) {
-    await db
-      .update(subscriptions)
-      .set({ tier, status: 'active', updatedAt: now })
-      .where(eq(subscriptions.ownerUserId, userId));
-  } else {
-    await db.insert(subscriptions).values({
-      ownerUserId: userId,
-      tier,
-      status: 'active',
-      createdAt: now,
-      updatedAt: now,
-    });
-  }
   revalidatePath('/admin');
   return { ok: true };
 }

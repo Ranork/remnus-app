@@ -425,6 +425,29 @@
   color: #0f766e;
 }
 
+/* Prospect Invites gift toast (PendingGiftToast) — same gold accent + glow
+   technique as setup-strip-* above, but this component isn't scoped under
+   .marketing-site (it's a standalone floating toast, styled dark by
+   default like /login), so it needs its own explicit light-mode tuning
+   rather than inheriting the marketing remap. A `color-mix` at the same
+   percentage the dark version uses reads as a barely-there wash against a
+   near-white card, so light mode gets its own hand-picked pale-gold/
+   dark-gold pairing instead — same principle as setup-strip-icon's #e8f7f4/
+   #0f766e pairing above, just gold instead of teal. */
+[data-theme="catppuccin"] .pending-gift-toast {
+  border-color: #e3cb85 !important;
+}
+[data-theme="catppuccin"] .pending-gift-toast-glow {
+  background: radial-gradient(220px circle at 12% 20%, rgba(210, 179, 80, 0.22), transparent 70%) !important;
+}
+[data-theme="catppuccin"] .pending-gift-toast-icon {
+  background: #faf1da !important;
+  border: 1px solid #f0dfa8;
+}
+[data-theme="catppuccin"] .pending-gift-toast-icon svg {
+  color: #8a6d1f !important;
+}
+
 [data-theme="catppuccin"] .marketing-site .marketing-download-card {
   background: #ffffff !important;
   border-color: #e2e8f0;

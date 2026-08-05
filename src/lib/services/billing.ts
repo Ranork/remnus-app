@@ -49,6 +49,38 @@ export async function getOwnerPlan(ownerId: string): Promise<ResolvedPlan> {
   return { tier, status: row?.status ?? 'active', limits };
 }
 
+export type SetPlanTierResult = { ok: true } | { ok: false; error: 'billingStripeManaged' };
+
+/**
+ * Upserts a billing owner's subscription tier. Refuses to touch a
+ * Stripe-managed subscription (has a stripeSubscriptionId) — that plan is
+ * governed by the Stripe webhook, not a direct write. Shared core for
+ * `adminSetUserPlan` (manual admin override, actions/billing.ts) and the
+ * Prospect Invites gift grant/revert flow (claim + the daily expiry cron) —
+ * one code path for "set someone's tier," not two.
+ */
+export async function setOwnerPlanTier(ownerId: string, tier: PlanTier): Promise<SetPlanTierResult> {
+  const [row] = await db.select().from(subscriptions).where(eq(subscriptions.ownerUserId, ownerId)).limit(1);
+  if (row?.stripeSubscriptionId) return { ok: false, error: 'billingStripeManaged' };
+
+  const now = new Date();
+  if (row) {
+    await db
+      .update(subscriptions)
+      .set({ tier, status: 'active', updatedAt: now })
+      .where(eq(subscriptions.ownerUserId, ownerId));
+  } else {
+    await db.insert(subscriptions).values({
+      ownerUserId: ownerId,
+      tier,
+      status: 'active',
+      createdAt: now,
+      updatedAt: now,
+    });
+  }
+  return { ok: true };
+}
+
 /** The billing owner for a workspace (explicit column, falling back to earliest owner member). */
 export async function resolveBillingOwner(workspaceId: string): Promise<string | null> {
   const [ws] = await db
