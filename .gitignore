@@ -85,3 +85,4 @@ email-previews/
 # Local AI task state and handoff snapshot
 /.ai/CURRENT_TASK.md
 /.ai/HANDOFF.generated.md
+/scripts/marketing/
