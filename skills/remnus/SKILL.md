@@ -33,6 +33,7 @@ Column types: `text` | `number` | `select` | `multi_select` | `date` | `datetime
 - `search_workspace` — find pages/databases by title. Your usual entry point.
 - `list_workspace` — list items, optionally under a `parentId`. Paginated.
 - `get_page` — full content of a page or row by ID. Auto-detects type.
+- `get_pages` — batch `get_page`: a specific known ID list (max 50), possibly across databases/types. One bad ID doesn't fail the rest — check each result's `ok`. For many rows in one database, prefer `query_database` instead.
 - `get_database_schema` — columns only, no rows. Cheap; call before querying.
 - `query_database` — schema + rows, with optional `filters`. Paginated.
 - `list_members` — workspace members and roles.
@@ -117,6 +118,8 @@ Updating several rows (e.g. "mark all done")? Build one `bulk_update_pages` call
 **"What's in my Tasks database?"** → `search_workspace` (or `list_workspace`) to get the DB id → `get_database_schema` → `query_database` (filter/paginate as needed).
 
 **"Mark these tasks done" / bulk edits** → `get_database_schema` for the status column id and the "Done" option string → `query_database` to resolve row IDs → one `bulk_update_pages`.
+
+**"Read these N specific pages/rows"** (IDs already known, e.g. from a prior `search_workspace`/`get_related_pages`/`get_changes_since`, possibly across databases) → one `get_pages` call instead of a `get_page` loop. If they all share one database, `query_database` with `filters`/`fields` is cheaper still.
 
 **"Add a new task"** → resolve the database id → `get_database_schema` for property keys → `create_page` with `databaseId` + `properties`.
 

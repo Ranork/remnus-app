@@ -48,11 +48,11 @@ Strict; write scope, yetkilendirme veya yıkıcı işlem onayının yerini almaz
 ### Kimlik Doğrulama ve Güvenlik Sınırları
 *   **OAuth 2.1 + PKCE (S256)** — Önerilen yol. Dynamic client registration (`POST /api/oauth/register`). Access token 1 saat, refresh token 30 gün. İnsan kullanıcı (owner) consent ekranında ajanın read/write yetkilerini belirler.
 *   **Personal Access Token (PAT)** — Headless/CI veya özel ajanlar için, workspace **owner**'ları tarafından üretilir.
-*   **Scope'lar:** `read` (10 tool) ve `write` (tüm tool'lar). Read-scoped token ile write çağrısı anında bloklanır.
+*   **Scope'lar:** `read` (11 tool) ve `write` (tüm tool'lar). Read-scoped token ile write çağrısı anında bloklanır.
 *   **Rate limit:** Token başına dakikada 60 istek.
 *   **İzlenebilirlik (Audit Log):** Her tool çağrısı (hangi sayfa okundu, hangi property değiştirildi) workspace audit log'una yazılır.
 
-### 20 MCP Tool (Ajanların Yetenekleri)
+### 21 MCP Tool (Ajanların Yetenekleri)
 
 | Tool | Scope | Ne Yapar (Ajanlar İçin) |
 |---|---|---|
@@ -60,6 +60,7 @@ Strict; write scope, yetkilendirme veya yıkıcı işlem onayının yerini almaz
 | `search_workspace` | read | Sayfalar ve database'ler üzerinde semantik/full-text arama |
 | `list_workspace` | read | Tüm workspace hiyerarşisinde gezinme |
 | `get_page` | read | ID ile sayfa/satır çekme (`mode: "outline"` ile token tasarrufu) |
+| `get_pages` | read | Bilinen, veritabanları arası olabilen bir ID listesini tek çağrıda çekme |
 | `get_database_schema` | read | Yapılandırılmış bir database'in kolon tiplerini ve kurallarını öğrenme |
 | `query_database` | read | Filtreleme ve sıralama ile satırları SQL-vari şekilde sorgulama |
 | `list_members` | read | Takımdaki insan ve makine üyelerini listeleme |

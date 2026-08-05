@@ -62,7 +62,14 @@ For anything recurring — a daily report, a memory refresh, a watcher — use [
 
 After a search or a change feed surfaces a page, call [get_related_pages](read-tools.md#get_related_pages) before pulling bodies. It returns the page's parent, children, outgoing links, backlinks, and same-database siblings — titles and ids only — so you can see the context around a page and `get_page` only the neighbors you actually need.
 
-## 7. Let prompts assemble context for you
+## 7. Batch a known ID list with get_pages
+
+Once `search_workspace`, `get_related_pages`, or `get_changes_since` has given you the specific IDs you need — possibly spanning several databases or mixing pages with rows — fetch them in one round-trip with [get_pages](read-tools.md#get_pages) instead of one `get_page` per ID. A single bad ID doesn't drop the rest of the batch; check each result's `ok` field.
+
+- **Do:** `get_pages({ pageIds: [...] })` for a handful of specific, already-known IDs.
+- **Avoid:** looping `get_page` one ID at a time, or reaching for `get_pages` when the rows all share one database — `query_database` with `filters`/`fields` is a single query there.
+
+## 8. Let prompts assemble context for you
 
 The [`recall-context`](prompts.md#recall-context) prompt bundles all of the above: it searches a topic, collapses each hit to an outline, and appends the top match's link-graph neighborhood — in one message, instead of many `search_workspace` + `get_page` round-trips. Pair it with [`save-memory`](prompts.md#save-memory) to give a long-running agent a workspace-backed memory. See [Agent Memory](agent-memory.md).
 

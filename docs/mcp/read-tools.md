@@ -1,6 +1,6 @@
 # Read Tools
 
-All 10 read tools are available to every token regardless of scope.
+All 11 read tools are available to every token regardless of scope.
 
 ---
 
@@ -82,6 +82,23 @@ Get the content of a workspace page or database row. Auto-detects the type — n
 **Returns** — `{ id, title, content, properties, type }`. In outline mode the response also carries `mode: "outline"` and `fullContentChars` (the size of the full body), so you can decide whether a `"full"` re-fetch is worth it.
 
 **Token tip** — on long pages, skim with `mode: "outline"` first (typically 80–90% smaller), then fetch `"full"` only when the outline shows the page is relevant.
+
+---
+
+## get_pages
+
+Batch version of `get_page` — fetch a specific, already-known list of page/row IDs in one call, for example IDs returned by `search_workspace`, `get_related_pages`, or `get_changes_since`. IDs can span multiple databases or mix standalone pages with database rows.
+
+**Parameters**
+
+| Parameter | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `pageIds` | string[] | ✓ | | Page/row IDs to fetch (max 50) |
+| `mode` | `"full"` \| `"outline"` | | `"full"` | Same as `get_page` — applied to every fetched page |
+
+**Returns** — `{ results: [{ id, ok, page?, error? }] }`. One missing or inaccessible ID does **not** fail the whole call — check each entry's `ok` field; `page` is present when `ok` is `true` (same shape as `get_page`'s return value), `error` when it's `false`.
+
+**When to use this vs. `query_database`** — if the rows you want all live in one database, `query_database` with `filters`/`fields` is a single query and is cheaper than N lookups. Reach for `get_pages` when the IDs are already known and don't share one database (or mix page/database-row types).
 
 ---
 
