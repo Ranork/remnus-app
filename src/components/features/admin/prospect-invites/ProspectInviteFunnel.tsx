@@ -1,27 +1,25 @@
 'use client';
 
+// Created → Opened → Claimed funnel for outreach invites. Mirrors
+// AdminActivationFunnel.tsx's exact composition (date-filter chip/input +
+// shared FunnelList) — same UX for "since date" narrowing, just scoped to
+// getProspectInvitesOverview(sinceMs) instead of getActivationFunnel(sinceMs).
+
 import { useEffect, useState, useTransition } from 'react';
 import { useTranslations } from 'next-intl';
-import { getActivationFunnel } from '@/lib/actions/analytics';
-import type { ActivationFunnel } from '@/lib/actions/analytics';
-import FunnelList from './FunnelList';
+import { getProspectInvitesOverview, type ProspectInvitesOverview } from '@/lib/actions/prospectInvites';
+import FunnelList from '../FunnelList';
 
-/**
- * Activation funnel card. Renders the all-time funnel computed server-side
- * (`initialFunnel`) by default, and lets the admin narrow it to signups
- * on/after a chosen date — e.g. to see conversion since an onboarding change —
- * by re-calling `getActivationFunnel(sinceMs)` client-side.
- */
-export default function AdminActivationFunnel({ initialFunnel }: { initialFunnel: ActivationFunnel }) {
-  const t = useTranslations('Admin');
+export default function ProspectInviteFunnel({ initialCounts }: { initialCounts: ProspectInvitesOverview['counts'] }) {
+  const t = useTranslations('ProspectInvites');
   const [sinceDate, setSinceDate] = useState(''); // yyyy-mm-dd from <input type="date">; '' = all time
-  const [funnel, setFunnel] = useState(initialFunnel);
+  const [counts, setCounts] = useState(initialCounts);
   const [isPending, startTransition] = useTransition();
   const today = new Date().toISOString().slice(0, 10);
 
   useEffect(() => {
     if (sinceDate === '') {
-      setFunnel(initialFunnel);
+      setCounts(initialCounts);
       return;
     }
     const sinceMs = new Date(`${sinceDate}T00:00:00`).getTime();
@@ -29,18 +27,20 @@ export default function AdminActivationFunnel({ initialFunnel }: { initialFunnel
 
     let alive = true;
     startTransition(() => {
-      getActivationFunnel(sinceMs)
-        .then((f) => {
-          if (alive) setFunnel(f);
+      getProspectInvitesOverview(sinceMs)
+        .then((o) => {
+          if (alive) setCounts(o.counts);
         })
         .catch(() => {
-          if (alive) setFunnel(initialFunnel);
+          if (alive) setCounts(initialCounts);
         });
     });
     return () => {
       alive = false;
     };
-  }, [sinceDate, initialFunnel]);
+  }, [sinceDate, initialCounts]);
+
+  const claimed = counts.active + counts.reverted;
 
   return (
     <div className="flex flex-1 flex-col gap-3">
@@ -61,16 +61,16 @@ export default function AdminActivationFunnel({ initialFunnel }: { initialFunnel
             value={sinceDate}
             max={today}
             onChange={(e) => setSinceDate(e.target.value)}
-            className="rounded-md border border-neutral-800 bg-neutral-850 px-2 py-1 text-[11px] text-neutral-200 [color-scheme:dark]"
+            className="rounded-md border border-neutral-800 bg-neutral-850 px-2 py-1 text-[11px] text-neutral-200 scheme-dark"
           />
         </label>
         {isPending && <span className="text-neutral-600">…</span>}
       </div>
       <FunnelList
         stages={[
-          { label: t('funnelSignup'), count: funnel.signups },
-          { label: t('funnelConnected'), count: funnel.connected },
-          { label: t('funnelActivated'), count: funnel.activated },
+          { label: t('funnelCreated'), count: counts.total },
+          { label: t('funnelOpened'), count: counts.opened },
+          { label: t('funnelClaimed'), count: claimed },
         ]}
       />
     </div>

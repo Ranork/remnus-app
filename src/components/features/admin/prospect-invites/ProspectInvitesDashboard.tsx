@@ -7,11 +7,12 @@
 
 import { useCallback, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { Gift, Clock, CheckCircle2, RotateCcw } from 'lucide-react';
+import { Gift, Clock, CheckCircle2, RotateCcw, Workflow } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { getProspectInvitesOverview, type ProspectInvitesOverview } from '@/lib/actions/prospectInvites';
 import InviteManager from './InviteManager';
 import InviteStatusTable from './InviteStatusTable';
+import ProspectInviteFunnel from './ProspectInviteFunnel';
 
 function StatCard({
   icon: Icon,
@@ -76,6 +77,14 @@ export default function ProspectInvitesDashboard({ initial }: { initial: Prospec
         <StatCard icon={CheckCircle2} accent="green" label={t('statActive')} value={overview.counts.active} />
         <StatCard icon={RotateCcw} accent="neutral" label={t('statReverted')} value={overview.counts.reverted} />
       </div>
+
+      {/* Funnel */}
+      <section>
+        <SectionHeader icon={Workflow} title={t('funnelSection')} hint={t('funnelSectionHint')} />
+        <div className="flex flex-col rounded-xl border border-neutral-800 bg-neutral-900 px-5 py-4">
+          <ProspectInviteFunnel initialCounts={overview.counts} />
+        </div>
+      </section>
 
       {/* Composer */}
       <section>
