@@ -4,6 +4,7 @@ Thoughts on open source, AI-native tooling, and building in public.
 
 ## Posts
 
+- [Why Coding Agents Forget Your Project Between Sessions](/docs/why-coding-agents-forget-your-project) — Session boundaries, context selection, repository scope, and unstructured docs, plus a layered context system: instructions, documentation, task database, decision log, RAG, and persistent memory.
 - [How to Let an AI Agent Manage Your Kanban Board](/docs/ai-agent-manage-kanban-board) — Safe agent-assisted kanban triage, structured task updates, human approval gates, reusable prompts, and MCP workflows.
 - [AI Agent Project Management: The Complete Guide](/docs/ai-agent-project-management-guide) — A practical framework for agent-ready tasks, human approval gates, kanban workflows, project lifecycles, permissions, memory, and auditability.
 - [How to Connect OpenAI Codex to Remnus with MCP](/docs/connect-openai-codex-to-remnus-mcp) — Verified Codex CLI and config.toml setup, OAuth vs personal access tokens, shared-workspace workflows, AGENTS.md boundaries, and troubleshooting.
