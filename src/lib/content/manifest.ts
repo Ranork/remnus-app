@@ -30,6 +30,7 @@ import {
   Bot,
   SquareKanban,
   Scale,
+  History,
 } from 'lucide-react';
 import { NotionMark, AppFlowyMark, AffineMark, ObsidianMark } from '@/components/docs/CompetitorMark';
 
@@ -79,6 +80,15 @@ export type BlogPost = {
 };
 
 export const BLOG_POSTS: BlogPost[] = [
+  {
+    slug: 'why-coding-agents-forget-your-project',
+    file: 'why-coding-agents-forget-your-project.md',
+    title: 'Why Coding Agents Forget Your Project Between Sessions',
+    description:
+      'Why Claude Code, Cursor, and Codex lose project context between sessions, and how instruction files, documentation, task tracking, and memory combine into a context system that actually persists.',
+    date: '2026-08-07',
+    icon: History,
+  },
   {
     slug: 'okf-context-engine-for-ai-agents',
     file: 'okf-context-engine-for-ai-agents.md',
