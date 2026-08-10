@@ -229,7 +229,8 @@ export type TrafficSourcesData = {
    * `extractURLParameter`. Empty when nobody has landed with a tagged link yet.
    */
   campaigns: { tag: string; visitors: number; views: number }[];
-  days: number;
+  /** Rolling window in days that produced this data, or `'all'` for no time filter. */
+  days: number | 'all';
   /** False when the PostHog read creds are missing — card shows an "unavailable" state. */
   available: boolean;
 };
@@ -255,13 +256,18 @@ function classifyChannel(domain: string): TrafficChannel {
  * ($pageview + $referring_domain) — the top-of-funnel counterpart to the
  * DB-based activation funnel. Covers ALL visitors, not just signups. Admin-only.
  *
+ * @param days Rolling window in days, or `'all'` for no time filter (every
+ * `$pageview` PostHog has retained). Defaults to 30.
+ *
  * Internal navigations (referrer on our own domain) are filtered out so this
  * reflects real entry sources. Returns `available: false` when PostHog read creds
  * aren't configured (local dev / forks) or the query fails.
  */
-export async function getTrafficSources(days = 30): Promise<TrafficSourcesData> {
+export async function getTrafficSources(days: number | 'all' = 30): Promise<TrafficSourcesData> {
   await assertAdmin();
-  const window = Math.max(1, Math.min(365, Math.floor(days)));
+  const isAll = days === 'all';
+  const window = isAll ? null : Math.max(1, Math.min(365, Math.floor(days)));
+  const timeClause = isAll ? '' : `AND timestamp > now() - INTERVAL ${window} DAY`;
   const [rows, campaignRows] = await Promise.all([
     runHogQL<[string, number, number]>(`
       SELECT
@@ -270,7 +276,7 @@ export async function getTrafficSources(days = 30): Promise<TrafficSourcesData> 
         count() AS views
       FROM events
       WHERE event = '$pageview'
-        AND timestamp > now() - INTERVAL ${window} DAY
+        ${timeClause}
         AND properties.$pathname = '/'
         AND coalesce(properties.$referring_domain, '') NOT ILIKE '%remnus%'
       GROUP BY domain
@@ -292,7 +298,7 @@ export async function getTrafficSources(days = 30): Promise<TrafficSourcesData> 
         count() AS views
       FROM events
       WHERE event = '$pageview'
-        AND timestamp > now() - INTERVAL ${window} DAY
+        ${timeClause}
         AND properties.$pathname = '/'
       GROUP BY tag
       ORDER BY visitors DESC
@@ -300,7 +306,7 @@ export async function getTrafficSources(days = 30): Promise<TrafficSourcesData> 
     `),
   ]);
   if (rows == null) {
-    return { channels: [], domains: [], campaigns: [], days: window, available: false };
+    return { channels: [], domains: [], campaigns: [], days: isAll ? 'all' : (window as number), available: false };
   }
 
   const channelTotals = new Map<TrafficChannel, number>();
@@ -325,7 +331,7 @@ export async function getTrafficSources(days = 30): Promise<TrafficSourcesData> 
       views: Number(views) || 0,
     }));
 
-  return { channels, domains, campaigns, days: window, available: true };
+  return { channels, domains, campaigns, days: isAll ? 'all' : (window as number), available: true };
 }
 
 export type TrafficTrendPoint = {
