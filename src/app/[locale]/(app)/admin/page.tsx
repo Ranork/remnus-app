@@ -3,6 +3,7 @@ import { auth } from '@/auth';
 import { getAllUsers } from '@/lib/actions/auth';
 import { getEngagementOverview, getActivationFunnel } from '@/lib/actions/analytics';
 import { getDemoFeedback } from '@/lib/actions/demoFeedback';
+import { getProspectInvitesOverview } from '@/lib/actions/prospectInvites';
 import Link from 'next/link';
 import { Shield, Users, TrendingUp, MonitorPlay, Share2, Workflow, MessageCircle, Mail, Gift, Laptop, Download } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
@@ -11,6 +12,7 @@ import { SignupTrendChart } from '@/components/features/admin/AdminCharts';
 import AdminTrafficSources from '@/components/features/admin/AdminTrafficSources';
 import AdminDesktopStats from '@/components/features/admin/AdminDesktopStats';
 import AdminActivationFunnel from '@/components/features/admin/AdminActivationFunnel';
+import ProspectInviteFunnel from '@/components/features/admin/prospect-invites/ProspectInviteFunnel';
 import AdminShell from '@/components/features/admin/AdminShell';
 import { formatDuration } from '@/components/features/admin/format';
 import { getTranslations, getLocale } from 'next-intl/server';
@@ -154,10 +156,11 @@ export default async function AdminPage() {
     getLocale(),
   ]);
 
-  const [usersResult, engagement, funnel, demoFeedback] = await Promise.all([
+  const [usersResult, engagement, funnel, prospectOverview, demoFeedback] = await Promise.all([
     getAllUsers(),
     getEngagementOverview(),
     getActivationFunnel(),
+    getProspectInvitesOverview(),
     getDemoFeedback(),
   ]);
 
@@ -247,12 +250,21 @@ export default async function AdminPage() {
               </div>
             </section>
 
-            <section className="flex flex-1 flex-col">
-              <SectionHeader icon={Workflow} title={t('activationFunnel')} hint={t('activationFunnelHint')} />
-              <div className="flex flex-1 flex-col rounded-xl border border-neutral-800 bg-neutral-900 px-5 py-4">
-                <AdminActivationFunnel initialFunnel={funnel} />
-              </div>
-            </section>
+            <div className="grid flex-1 grid-cols-1 gap-6 sm:grid-cols-2">
+              <section className="flex flex-col">
+                <SectionHeader icon={Workflow} title={t('activationFunnel')} hint={t('activationFunnelHint')} />
+                <div className="flex flex-1 flex-col rounded-xl border border-neutral-800 bg-neutral-900 px-5 py-4">
+                  <AdminActivationFunnel initialFunnel={funnel} />
+                </div>
+              </section>
+
+              <section className="flex flex-col">
+                <SectionHeader icon={Workflow} title={t('prospectInviteFunnel')} hint={t('prospectInviteFunnelHint')} />
+                <div className="flex flex-1 flex-col rounded-xl border border-neutral-800 bg-neutral-900 px-5 py-4">
+                  <ProspectInviteFunnel initialCounts={prospectOverview.counts} />
+                </div>
+              </section>
+            </div>
           </div>
 
           <section className="flex flex-col">

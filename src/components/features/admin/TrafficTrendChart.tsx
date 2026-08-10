@@ -2,15 +2,22 @@
 
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
-import { BarChart3, LineChart as LineChartIcon, ChevronDown } from 'lucide-react';
+import { BarChart3, LineChart as LineChartIcon, Layers, ChevronDown } from 'lucide-react';
 import type { TrafficChannel, TrafficTrendPoint } from '@/lib/actions/analytics';
 
 /**
  * Weekly/monthly traffic trend — a proper axis'd chart (not the old fixed-div
- * bars) with a bar/line view toggle and a source selector (all channels, one
- * channel, all campaign tags, or one `?ref=`/`?utm_source=` tag). Rendered in
- * SVG, measured against the card's actual width via ResizeObserver so bars
- * and gridlines stay crisp at any admin-panel width.
+ * bars) with a bar/line/stacked view toggle and a source selector (all
+ * channels, one channel, all campaign tags, or one `?ref=`/`?utm_source=`
+ * tag). Rendered in SVG, measured against the card's actual width via
+ * ResizeObserver so bars and gridlines stay crisp at any admin-panel width.
+ *
+ * The "stacked" view is a variation on Total Traffic only (see
+ * AdminTrafficSources.tsx, which hides its toggle button once a different
+ * source is picked): instead of the flat neutral total line/bars, it renders
+ * the SAME total broken down into its 4 channels as a stacked area chart
+ * (cumulative baseline-anchored layers, each channel's own validated color),
+ * so an admin can see composition-over-time without leaving the default tab.
  *
  * Categorical palette (channels: 4 slots; campaigns: the next 4 slots of the
  * same 8-hue reference set) — validated against the admin card's bg-neutral-900
@@ -123,8 +130,8 @@ export function TrafficTrendChart({
   rangeOptions: number[];
   onRangeChangeAction: (range: number) => void;
   campaignTags: string[];
-  viewMode: 'bar' | 'line';
-  onViewModeChangeAction: (v: 'bar' | 'line') => void;
+  viewMode: 'bar' | 'line' | 'stacked';
+  onViewModeChangeAction: (v: 'bar' | 'line' | 'stacked') => void;
   source: SourceValue;
   onSourceChangeAction: (v: SourceValue) => void;
 }) {
@@ -145,10 +152,16 @@ export function TrafficTrendChart({
   );
 
   const isCampaignFamily = source.startsWith('campaign:');
-  const isMulti = source === 'channel:all' || source === 'campaign:all';
+  const isStacked = viewMode === 'stacked';
+  // The stacked view always breaks the total down by channel — it's only
+  // ever shown while `source === 'total'` (the toggle button is hidden
+  // otherwise), so this substitution never conflicts with an explicit
+  // channel/campaign pick.
+  const seriesSource: SourceValue = isStacked ? 'channel:all' : source;
+  const isMulti = seriesSource === 'channel:all' || seriesSource === 'campaign:all';
 
   const series = useMemo(() => {
-    return seriesDefsFor(source, campaignTags).map((s) => ({
+    return seriesDefsFor(seriesSource, campaignTags).map((s) => ({
       ...s,
       label: s.type === 'total' ? t('trafficSourceTotal') : s.type === 'channel' ? channelLabel[s.channel!] : s.tag!,
       color:
@@ -161,13 +174,13 @@ export function TrafficTrendChart({
         s.type === 'total' ? d.visitors : s.type === 'channel' ? d.channels[s.channel!] : (d.campaigns[s.tag!] ?? 0),
       ),
     }));
-  }, [source, campaignTags, data, channelLabel, t]);
+  }, [seriesSource, campaignTags, data, channelLabel, t]);
 
   const totals = series.map((s) => s.values.reduce((a, b) => a + b, 0));
   const grandTotal = totals.reduce((a, b) => a + b, 0);
   const perBucketSum = data.map((_, i) => series.reduce((s, ser) => s + ser.values[i], 0));
   const perBucketMax = data.map((_, i) => Math.max(0, ...series.map((ser) => ser.values[i])));
-  const scaleBasis = viewMode === 'bar' ? perBucketSum : perBucketMax;
+  const scaleBasis = viewMode === 'bar' || isStacked ? perBucketSum : perBucketMax;
   const niceMax = niceCeil(Math.max(1, ...scaleBasis));
 
   const fmt = new Intl.DateTimeFormat(locale, {
@@ -224,6 +237,36 @@ export function TrafficTrendChart({
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [viewMode, series, data, niceMax, plotHeight, baselineY, slot, width, isMulti]);
+
+  // Baseline-anchored stacked areas — each channel's cumulative slice on top
+  // of the last, so the outer envelope always traces the same grand total the
+  // flat "line"/"bar" total views show. A 2px surface-colored seam is drawn
+  // along each internal boundary (mark spec: "surface gap between fills"),
+  // matching the 2px gap barSegments already uses between stacked bar segments.
+  const stacked = useMemo(() => {
+    if (!isStacked || width === 0) return { layers: [] as { key: string; color: string; path: string }[], seams: [] as string[] };
+    const cum = new Array(data.length).fill(0);
+    const layers: { key: string; color: string; path: string }[] = [];
+    const seams: string[] = [];
+    series.forEach((s, idx) => {
+      const topPts: (readonly [number, number])[] = [];
+      const bottomPts: (readonly [number, number])[] = [];
+      for (let i = 0; i < data.length; i++) {
+        const bottom = cum[i];
+        const top = bottom + s.values[i];
+        topPts.push([xCenter(i), yFor(top)]);
+        bottomPts.push([xCenter(i), yFor(bottom)]);
+        cum[i] = top;
+      }
+      const topPath = smoothPath(topPts);
+      const lastBottom = bottomPts[bottomPts.length - 1];
+      const bottomReturn = smoothPath([...bottomPts].reverse()).replace(/^M/, 'L');
+      layers.push({ key: s.key, color: s.color, path: `${topPath} L${lastBottom[0]},${lastBottom[1]} ${bottomReturn} Z` });
+      if (idx < series.length - 1) seams.push(topPath);
+    });
+    return { layers, seams };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isStacked, series, data, niceMax, plotHeight, baselineY, slot, width]);
 
   if (data.length === 0) return null;
 
@@ -304,6 +347,19 @@ export function TrafficTrendChart({
           >
             <LineChartIcon size={13} />
           </button>
+          {source === 'total' && (
+            <button
+              type="button"
+              onClick={() => onViewModeChangeAction('stacked')}
+              title={t('trafficViewStacked')}
+              aria-pressed={viewMode === 'stacked'}
+              className={`rounded p-1 transition-colors cursor-pointer ${
+                viewMode === 'stacked' ? 'bg-neutral-800 text-neutral-100' : 'text-neutral-500 hover:text-neutral-300'
+              }`}
+            >
+              <Layers size={13} />
+            </button>
+          )}
         </div>
       </div>
 
@@ -380,7 +436,18 @@ export function TrafficTrendChart({
                     style={{ transition: 'opacity 100ms' }}
                   />
                 ))
-              : linePaths.map((lp, lineIndex) => (
+              : isStacked
+                ? (
+                    <>
+                      {stacked.layers.map((layer) => (
+                        <path key={layer.key} d={layer.path} fill={layer.color} fillOpacity={0.62} stroke="none" />
+                      ))}
+                      {stacked.seams.map((seam, i) => (
+                        <path key={i} d={seam} fill="none" stroke="#21252b" strokeWidth={2} />
+                      ))}
+                    </>
+                  )
+                : linePaths.map((lp, lineIndex) => (
                   <g key={lp.key}>
                     {lp.area && <path d={lp.area} fill={`url(#traffic-area-${lineIndex})`} stroke="none" />}
                     <path d={lp.d} fill="none" stroke={lp.color} strokeWidth={7} strokeOpacity={0.08} strokeLinecap="round" />

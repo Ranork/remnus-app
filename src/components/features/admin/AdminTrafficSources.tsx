@@ -6,10 +6,11 @@ import { getTrafficSources, getTrafficTrend } from '@/lib/actions/analytics';
 import type { TrafficSourcesData, TrafficChannel, TrafficTrendData } from '@/lib/actions/analytics';
 import { TrafficTrendChart } from './TrafficTrendChart';
 
-type Tab = 'sources' | 'daily' | 'weekly' | 'monthly';
-type TrendViewMode = 'bar' | 'line';
+type Tab = 'daily' | 'weekly' | 'monthly' | 'sources';
+type TrendViewMode = 'bar' | 'line' | 'stacked';
 type TrendSource = 'total' | 'channel:all' | `channel:${TrafficChannel}` | 'campaign:all' | `campaign:${string}`;
 type TrendGranularity = 'day' | 'week' | 'month';
+type SourcesRange = 1 | 7 | 30 | 'all';
 
 const RANGE_OPTIONS: Record<TrendGranularity, number[]> = {
   day: [30, 90, 365],
@@ -17,49 +18,71 @@ const RANGE_OPTIONS: Record<TrendGranularity, number[]> = {
   month: [12, 24, 36],
 };
 
+const SOURCES_RANGE_OPTIONS: SourcesRange[] = [1, 7, 30, 'all'];
+
 /**
  * Landing-traffic card. Self-fetches from PostHog (via the `getTrafficSources`
  * + `getTrafficTrend` server actions) on mount so a slow/failed PostHog Query
- * API call never blocks the admin page's server render. Tabbed: "Sources"
- * (channel-type summary, per-referring-domain breakdown, campaign tags) plus
- * "Daily"/"Weekly"/"Monthly" visitor trends sharing the same card.
+ * API call never blocks the admin page's server render. Tabbed: "Daily"/
+ * "Weekly"/"Monthly" visitor trends first (the default view on page load),
+ * then "Sources" (channel-type summary, per-referring-domain breakdown,
+ * campaign tags) last — its own time-range picker (today/7d/30d/all time),
+ * independent of the trend tabs' day/week/month range pickers.
  */
 export default function AdminTrafficSources() {
   const t = useTranslations('Admin');
-  const [tab, setTab] = useState<Tab>('sources');
+  const [tab, setTab] = useState<Tab>('daily');
   const [data, setData] = useState<TrafficSourcesData | null>(null);
   const [trend, setTrend] = useState<TrafficTrendData | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [trendLoading, setTrendLoading] = useState(true);
+  const [sourcesLoading, setSourcesLoading] = useState(true);
+  const [sourcesRange, setSourcesRange] = useState<SourcesRange>(30);
   // Lifted up (rather than local to TrafficTrendChart) so the chosen view/source
   // survives switching away to the Sources tab and back within the same session.
   const [trendView, setTrendView] = useState<TrendViewMode>('line');
-  const [trendSource, setTrendSource] = useState<TrendSource>('channel:all');
+  const [trendSource, setTrendSource] = useState<TrendSource>('total');
   const [trendRanges, setTrendRanges] = useState<Record<TrendGranularity, number>>({ day: 30, week: 12, month: 12 });
 
+  // Trend (daily/weekly/monthly) fetches once on mount — its own 365-day/
+  // 52-week/36-month windows are computed server-side in one shot, independent
+  // of the Sources tab's range.
   useEffect(() => {
     let alive = true;
-    Promise.all([getTrafficSources(), getTrafficTrend()])
-      .then(([d, tr]) => {
-        if (!alive) return;
-        setData(d);
-        setTrend(tr);
+    getTrafficTrend()
+      .then((tr) => {
+        if (alive) setTrend(tr);
       })
       .catch(() => {
-        if (!alive) return;
-        setData(null);
-        setTrend(null);
+        if (alive) setTrend(null);
       })
-      .finally(() => alive && setLoading(false));
+      .finally(() => alive && setTrendLoading(false));
     return () => {
       alive = false;
     };
   }, []);
 
+  // Sources tab re-fetches whenever its own range picker changes.
+  useEffect(() => {
+    let alive = true;
+    setSourcesLoading(true);
+    getTrafficSources(sourcesRange)
+      .then((d) => {
+        if (alive) setData(d);
+      })
+      .catch(() => {
+        if (alive) setData(null);
+      })
+      .finally(() => alive && setSourcesLoading(false));
+    return () => {
+      alive = false;
+    };
+  }, [sourcesRange]);
+
   const tabs: { id: Tab; label: string }[] = [
-    { id: 'sources', label: t('trafficTabSources') },
     { id: 'daily', label: t('trafficTabDaily') },
     { id: 'weekly', label: t('trafficTabWeekly') },
     { id: 'monthly', label: t('trafficTabMonthly') },
+    { id: 'sources', label: t('trafficTabSources') },
   ];
 
   const tabStrip = (
@@ -81,15 +104,44 @@ export default function AdminTrafficSources() {
     </div>
   );
 
-  if (loading)
-    return (
-      <div>
-        {tabStrip}
-        <p className="text-xs text-neutral-500">{t('trafficLoading')}</p>
-      </div>
-    );
+  const sourcesRangeLabel = (range: SourcesRange) =>
+    range === 'all'
+      ? t('trafficRangeAllTime')
+      : range === 1
+        ? t('trafficRangeToday')
+        : range === 7
+          ? t('trafficRangeLast7Days')
+          : t('trafficRangeLast30Days');
+
+  const sourcesRangeStrip = (
+    <div className="mb-3 flex items-center gap-0.5 self-start rounded-md border border-neutral-800 bg-neutral-900 p-0.5">
+      {SOURCES_RANGE_OPTIONS.map((option) => (
+        <button
+          key={String(option)}
+          type="button"
+          onClick={() => setSourcesRange(option)}
+          aria-pressed={sourcesRange === option}
+          className={`rounded px-2 py-1 text-[10px] font-medium transition-colors cursor-pointer ${
+            sourcesRange === option
+              ? 'bg-neutral-800 text-neutral-100'
+              : 'text-neutral-500 hover:bg-neutral-800/50 hover:text-neutral-300'
+          }`}
+        >
+          {sourcesRangeLabel(option)}
+        </button>
+      ))}
+    </div>
+  );
 
   if (tab === 'daily' || tab === 'weekly' || tab === 'monthly') {
+    if (trendLoading)
+      return (
+        <div>
+          {tabStrip}
+          <p className="text-xs text-neutral-500">{t('trafficLoading')}</p>
+        </div>
+      );
+
     const granularity: TrendGranularity = tab === 'daily' ? 'day' : tab === 'weekly' ? 'week' : 'month';
     const range = trendRanges[granularity];
     const allPoints = tab === 'daily' ? trend?.daily : tab === 'weekly' ? trend?.weekly : trend?.monthly;
@@ -112,17 +164,34 @@ export default function AdminTrafficSources() {
             viewMode={trendView}
             onViewModeChangeAction={setTrendView}
             source={trendSource}
-            onSourceChangeAction={setTrendSource}
+            onSourceChangeAction={(nextSource) => {
+              setTrendSource(nextSource);
+              // The "stacked" variation only makes sense against Total Traffic
+              // (see AdminTrafficSources.tsx) — fall back to the line view if
+              // the admin picks a different source while it's active.
+              setTrendView((view) => (nextSource !== 'total' && view === 'stacked' ? 'line' : view));
+            }}
           />
         )}
       </div>
     );
   }
 
+  // tab === 'sources'
+  if (sourcesLoading)
+    return (
+      <div>
+        {tabStrip}
+        {sourcesRangeStrip}
+        <p className="text-xs text-neutral-500">{t('trafficLoading')}</p>
+      </div>
+    );
+
   if (!data || !data.available)
     return (
       <div>
         {tabStrip}
+        {sourcesRangeStrip}
         <p className="text-xs text-neutral-500">{t('trafficUnavailable')}</p>
       </div>
     );
@@ -130,6 +199,7 @@ export default function AdminTrafficSources() {
     return (
       <div>
         {tabStrip}
+        {sourcesRangeStrip}
         <p className="text-xs text-neutral-500">{t('trafficEmpty')}</p>
       </div>
     );
@@ -151,6 +221,7 @@ export default function AdminTrafficSources() {
   return (
     <div className="flex flex-col gap-4">
       {tabStrip}
+      {sourcesRangeStrip}
       {/* Channel-type summary */}
       <div className="flex flex-wrap gap-2">
         {data.channels.map((c) => {
