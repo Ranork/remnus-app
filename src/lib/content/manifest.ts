@@ -31,6 +31,7 @@ import {
   SquareKanban,
   Scale,
   History,
+  Layers,
 } from 'lucide-react';
 import { NotionMark, AppFlowyMark, AffineMark, ObsidianMark } from '@/components/docs/CompetitorMark';
 
@@ -80,6 +81,15 @@ export type BlogPost = {
 };
 
 export const BLOG_POSTS: BlogPost[] = [
+  {
+    slug: 'ai-agent-memory-vs-rag-vs-context-window',
+    file: 'ai-agent-memory-vs-rag-vs-context-window.md',
+    title: 'AI Agent Memory vs RAG vs Context Windows',
+    description:
+      'A technical comparison of context windows, retrieval-augmented generation, and persistent agent memory: primary-source definitions, a direct comparison table, and where to store what in a real project.',
+    date: '2026-08-10',
+    icon: Layers,
+  },
   {
     slug: 'why-coding-agents-forget-your-project',
     file: 'why-coding-agents-forget-your-project.md',
