@@ -91,3 +91,4 @@ email-previews/
 # The template/structure that generates them (.ai/STATUS_REPORT.template.md) stays tracked.
 /.ai/status-reports/
 /REMNUS_DURUM_RAPORU_*.md
+REMNUS_OKF_CONTEXT_ENGINE_REVIEW.md
