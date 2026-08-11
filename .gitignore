@@ -86,3 +86,8 @@ email-previews/
 /.ai/CURRENT_TASK.md
 /.ai/HANDOFF.generated.md
 /scripts/marketing/
+
+# Internal status reports (local only — contain revenue/cost/outreach data, never for GitHub).
+# The template/structure that generates them (.ai/STATUS_REPORT.template.md) stays tracked.
+/.ai/status-reports/
+/REMNUS_DURUM_RAPORU_*.md
