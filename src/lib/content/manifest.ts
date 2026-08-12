@@ -82,6 +82,15 @@ export type BlogPost = {
 
 export const BLOG_POSTS: BlogPost[] = [
   {
+    slug: 'run-headless-ai-agents-with-mcp',
+    file: 'run-headless-ai-agents-with-mcp.md',
+    title: 'How to Run Headless AI Agents Without Login Prompts',
+    description:
+      'A practical, verified guide to authenticating headless AI agents against a Remnus workspace: OAuth vs personal access tokens, secure token storage, minimum-permission scopes, and a real headless Claude Code example.',
+    date: '2026-08-12',
+    icon: KeyRound,
+  },
+  {
     slug: 'ai-agent-memory-vs-rag-vs-context-window',
     file: 'ai-agent-memory-vs-rag-vs-context-window.md',
     title: 'AI Agent Memory vs RAG vs Context Windows',
