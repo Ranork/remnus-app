@@ -1510,11 +1510,13 @@
     "sec1Title": "1. Veri Toplama ve Saklama",
     "sec1Body": "Oluşturduğunuz tüm çalışma alanları, sayfalar ve veritabanı içerikleri, bulut altyapımızdaki yüksek güvenlikli veritabanlarında şifrelenmiş olarak saklanır. Üçüncü taraf sağlayıcılar (Google, GitHub vb.) üzerinden gerçekleştirdiğiniz kimlik doğrulama işlemlerinde yalnızca temel profil bilgileriniz (ad, e-posta) işlenir. Verileriniz hiçbir koşulda üçüncü şahıslara satılmaz veya paylaşılmaz.",
     "sec2Title": "2. Yapay Zeka (AI) ve MCP Entegrasyonu",
-    "sec2Body": "Çalışma alanınız için ürettiğiniz erişim anahtarları (MCP Tokens), yapay zeka ajanlarının belirlediğiniz yetki sınırları (Salt-Okunur veya Okuma/Yazma) dahilinde verilerinize erişmesini sağlar. Yapay zeka ajanları tarafından gerçekleştirilen tüm işlemler sistem denetim günlüklerinde (audit logs) geriye dönük olarak kayıt altına alınır.",
+    "sec2Body": "Çalışma alanınız için ürettiğiniz erişim anahtarları (MCP Tokens), yapay zeka ajanlarının belirlediğiniz yetki sınırları (Salt-Okunur veya Okuma/Yazma) dahilinde verilerinize erişmesini sağlar. Yapay zeka ajanları tarafından gerçekleştirilen tüm işlemler sistem denetim günlüklerinde kayıt altına alınır ve planınızın denetim günlüğü saklama süresine göre tutulur (aşağıdaki Veri Saklama bölümüne bakın).",
     "sec3Title": "3. Veri Güvenliği",
     "sec3Body": "Verilerinizin güvenliği için endüstri standardı şifreleme protokolleri ve güvenli oturum yönetim sistemleri kullanılmaktadır. Kullanıcı şifreleri ve hassas kimlik doğrulama verileri güçlü şifreleme algoritmalarıyla korunmaktadır.",
     "sec4Title": "4. İletişim",
-    "sec4Body": "Gizlilik politikamız ve veri güvenliği uygulamalarımız hakkında her türlü soru ve talebiniz için bizimle info@akatron.net adresi üzerinden resmi olarak iletişime geçebilirsiniz."
+    "sec4Body": "Gizlilik politikamız ve veri güvenliği uygulamalarımız hakkında her türlü soru ve talebiniz için bizimle info@akatron.net adresi üzerinden resmi olarak iletişime geçebilirsiniz.",
+    "sec5Title": "5. Veri Saklama",
+    "sec5Body": "Çalışma alanlarınız, sayfalarınız ve veritabanı içerikleriniz, hesabınız veya çalışma alanınız var olduğu sürece saklanır; bir çalışma alanını sildiğinizde veya hesabınızı kapattığınızda silinir. Denetim günlüğü saklama süresi planınıza göre değişir: Free planında 7 gün, Startup'ta 30 gün, Professional'da 90 gün ve Enterprise'da 365 gün — güncel değerler fiyatlandırma sayfamızda yer alır."
   },
   "Updater": {
     "availableTitle": "Güncelleme Mevcut",

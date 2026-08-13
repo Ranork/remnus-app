@@ -3,11 +3,11 @@
   "name": "remnus",
   "display_name": "Remnus",
   "version": "1.0.0",
-  "description": "Read and write your Remnus workspace — pages, databases, kanban boards — directly from Claude.",
+  "description": "Read and write your Remnus workspace, pages, databases, kanban boards, directly from Claude.",
   "long_description": "Remnus is the MCP-native Human-Agent Collaborative Workspace. This extension connects Claude Desktop to your Remnus workspace over a secure remote MCP server. Sign in once with OAuth (no token to paste) and Claude can search, read, create, and update your pages and database rows. Self-hosters can point the extension at their own instance via the configuration field.",
   "author": {
     "name": "Remnus",
-    "url": "https://remnus.com"
+    "url": "https://github.com/Ranork"
   },
   "homepage": "https://remnus.com",
   "documentation": "https://remnus.com/docs/mcp",
@@ -34,22 +34,29 @@
       "sensitive": false
     }
   },
-  "tools_generated": true,
+  "tools_generated": false,
   "tools": [
-    { "name": "search_workspace", "description": "Search pages and databases in your workspace by title." },
-    { "name": "list_workspace", "description": "List workspace items (pages and databases)." },
-    { "name": "get_page", "description": "Get the full content of a page or database row." },
-    { "name": "get_database_schema", "description": "Get a database's column schema." },
-    { "name": "query_database", "description": "Query a database's rows, with optional filters." },
-    { "name": "list_members", "description": "List the members of a workspace." },
-    { "name": "query_audit_log", "description": "Query the agent activity audit log." },
-    { "name": "create_page", "description": "Create a new page or database row." },
-    { "name": "update_page", "description": "Update a page or database row (merges properties)." },
-    { "name": "bulk_update_pages", "description": "Update multiple database rows at once." },
-    { "name": "delete_page", "description": "Delete a page or database row." },
-    { "name": "move_item", "description": "Move/reparent a workspace item." },
+    { "name": "prepare_context", "description": "Build one task-specific, token-budgeted context pack from relevant workspace pages. Ranks lexical matches, prefers human-reviewed OKF knowledge, penalizes stale/deprecated concepts, and adds the top result's link-graph neighbors. Use this before multi-page product or coding work instead of many search/get_page calls." },
+    { "name": "search_workspace", "description": "Search the workspace by title and content. Matches standalone pages, databases, and database rows (each row is a page) on their title or body text. Use it to locate an item before reading or updating it." },
+    { "name": "list_workspace", "description": "List workspace items (pages and databases). Optionally filter by parent. Supports cursor-based pagination." },
+    { "name": "get_page", "description": "Get content of a workspace page or database row by its ID. Auto-detects the type, no flags needed. Supports an outline mode for a token-cheap skim before fetching the full content." },
+    { "name": "get_pages", "description": "Get multiple workspace pages or database rows by ID in one call, for a specific, already-known, possibly mixed list of IDs. One missing/inaccessible ID does not fail the batch." },
+    { "name": "get_database_schema", "description": "Get the column schema and saved views of a database, without fetching any rows." },
+    { "name": "query_audit_log", "description": "Query the MCP agent activity audit log for this workspace. Supports filtering by tool name, status, and date range." },
+    { "name": "list_members", "description": "List all members of the workspace with their roles and join dates." },
+    { "name": "query_database", "description": "Get schema and rows of a database. Row markdown bodies are not included by default. Optionally filter rows by property values and project with fields to fetch only needed columns." },
+    { "name": "get_changes_since", "description": "Get a compact list of everything that changed in the workspace since a given time or a previous call's cursor, pages/databases edited, rows edited, and items deleted. Built for recurring agents to sync incrementally." },
+    { "name": "get_related_pages", "description": "Get a page's knowledge-graph neighborhood in one compact call: parent, child pages, outgoing links, backlinks, and sibling rows for database rows." },
+    { "name": "create_page", "description": "Create a new standalone page (nested via parentId) or a database row (via databaseId)." },
+    { "name": "update_page", "description": "Update a page or database row. Only the fields you pass are changed; row properties are merged, not replaced." },
+    { "name": "bulk_update_pages", "description": "Update multiple pages or database rows in one call, same merge semantics as update_page per entry." },
+    { "name": "delete_page", "description": "Delete a workspace page, database, or database row. Requires confirm: true to execute." },
+    { "name": "move_item", "description": "Move a sidebar item (page or database) to a new parent within the workspace." },
     { "name": "create_database", "description": "Create a new database with a custom schema." },
-    { "name": "update_database_schema", "description": "Add or remove database columns." }
+    { "name": "update_database_schema", "description": "Add or remove columns from a database schema. Removing columns is destructive and requires confirm: true." },
+    { "name": "create_database_view", "description": "Add a new saved view (table, kanban, or calendar) to a database." },
+    { "name": "update_database_view", "description": "Rename a database view, change its icon, or patch fields within its existing config." },
+    { "name": "delete_database_view", "description": "Delete a saved view from a database. Requires confirm: true. A database must always keep at least one view." }
   ],
   "compatibility": {
     "claude_desktop": ">=0.10.0",

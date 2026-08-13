@@ -1489,11 +1489,13 @@
     "sec1Title": "1. Recopilación y almacenamiento de datos",
     "sec1Body": "Todos los espacios de trabajo, páginas y contenidos de bases de datos que cree se almacenan de forma segura en nuestras bases de datos en la nube cifradas. La autenticación a través de proveedores externos (Google, GitHub, etc.) solo procesa información de perfil básica (nombre, correo electrónico). Sus datos nunca se venden ni se comparten bajo ninguna circunstancia.",
     "sec2Title": "2. Integración de IA y MCP",
-    "sec2Body": "Los tokens de acceso (MCP Tokens) que genera otorgan a los agentes de IA acceso a su espacio de trabajo estrictamente dentro de los límites definidos (Solo lectura o Lectura y escritura). Todas las operaciones realizadas se registran en los registros de auditoría del sistema.",
+    "sec2Body": "Los tokens de acceso (MCP Tokens) que genera otorgan a los agentes de IA acceso a su espacio de trabajo estrictamente dentro de los límites definidos (Solo lectura o Lectura y escritura). Todas las operaciones realizadas se registran en los registros de auditoría del sistema y se conservan según el período de retención de auditoría de su plan (consulte Retención de datos a continuación).",
     "sec3Title": "3. Seguridad de los datos",
     "sec3Body": "Sus datos están protegidos mediante protocolos de cifrado estándar de la industria y gestión de sesiones segura. Las contraseñas y datos de autenticación se protegen con algoritmos criptográficos robustos.",
     "sec4Title": "4. Contacto",
-    "sec4Body": "Para cualquier consulta oficial sobre esta política o nuestras prácticas de protección de datos, contáctenos en info@akatron.net."
+    "sec4Body": "Para cualquier consulta oficial sobre esta política o nuestras prácticas de protección de datos, contáctenos en info@akatron.net.",
+    "sec5Title": "5. Retención de datos",
+    "sec5Body": "Sus espacios de trabajo, páginas y contenidos de bases de datos se conservan mientras su cuenta o espacio de trabajo exista, y se eliminan cuando elimina un espacio de trabajo o cierra su cuenta. La retención de los registros de auditoría depende de su plan: 7 días en Free, 30 días en Startup, 90 días en Professional y 365 días en Enterprise, según se indica en nuestra página de precios."
   },
   "Updater": {
     "availableTitle": "Actualización disponible",

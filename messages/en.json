@@ -1510,11 +1510,13 @@
     "sec1Title": "1. Data Collection & Storage",
     "sec1Body": "All workspaces, pages, and database contents you create are stored securely in our encrypted cloud databases. Authentication via third-party providers (Google, GitHub, etc.) only processes basic profile information (name, email). Your data is never sold or shared under any circumstances.",
     "sec2Title": "2. AI & MCP Integration",
-    "sec2Body": "The access tokens (MCP Tokens) you generate grant AI agents permission to access your workspace strictly within the scopes you define (Read-only or Read & Write). All operations executed by AI agents are permanently logged in system audit trails.",
+    "sec2Body": "The access tokens (MCP Tokens) you generate grant AI agents permission to access your workspace strictly within the scopes you define (Read-only or Read & Write). All operations executed by AI agents are logged in system audit trails, retained according to your plan's audit log window (see Data Retention below).",
     "sec3Title": "3. Data Security",
     "sec3Body": "Your data is protected using industry-standard encryption protocols and secure session management. Password credentials and sensitive authentication tokens are guarded using strong cryptographic hashing algorithms.",
     "sec4Title": "4. Contact Us",
-    "sec4Body": "For any official inquiries or questions regarding this privacy policy and our data protection practices, please contact us at info@akatron.net."
+    "sec4Body": "For any official inquiries or questions regarding this privacy policy and our data protection practices, please contact us at info@akatron.net.",
+    "sec5Title": "5. Data Retention",
+    "sec5Body": "Your workspaces, pages, and database content are retained for as long as your account or workspace exists, and are deleted when you delete a workspace or close your account. Audit log retention depends on your plan: 7 days on Free, 30 days on Startup, 90 days on Professional, and 365 days on Enterprise, as shown on our pricing page."
   },
   "Updater": {
     "availableTitle": "Update Available",

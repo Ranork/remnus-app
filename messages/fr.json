@@ -1489,11 +1489,13 @@
     "sec1Title": "1. Collecte et stockage des données",
     "sec1Body": "Tous les espaces de travail, pages et bases de données que vous créez sont stockés en toute sécurité dans nos bases de données cloud chiffrées. L'authentification via des tiers (Google, GitHub, etc.) ne traite que les informations de profil de base (nom, e-mail). Vos données ne sont en aucun cas vendues ou partagées.",
     "sec2Title": "2. Intégration IA & MCP",
-    "sec2Body": "Les jetons d'accès (MCP Tokens) que vous générez autorisent les agents IA à accéder à votre espace de travail strictement dans les limites définies (Lecture seule ou Lecture & Écriture). Toutes les opérations effectuées par les agents IA sont enregistrées dans les journaux d'audit du système.",
+    "sec2Body": "Les jetons d'accès (MCP Tokens) que vous générez autorisent les agents IA à accéder à votre espace de travail strictement dans les limites définies (Lecture seule ou Lecture & Écriture). Toutes les opérations effectuées par les agents IA sont enregistrées dans les journaux d'audit du système et conservées selon la durée de rétention des journaux d'audit de votre offre (voir Conservation des données ci-dessous).",
     "sec3Title": "3. Sécurité des données",
     "sec3Body": "Vos données sont protégées par des protocoles de chiffrement conformes aux normes de l'industrie et par une gestion de session sécurisée. Les mots de passe et données d'authentification sont protégés par des algorithmes de hachage cryptographique robustes.",
     "sec4Title": "4. Contact",
-    "sec4Body": "Pour toute question officielle concernant cette politique ou nos pratiques de protection des données, veuillez nous contacter à info@akatron.net."
+    "sec4Body": "Pour toute question officielle concernant cette politique ou nos pratiques de protection des données, veuillez nous contacter à info@akatron.net.",
+    "sec5Title": "5. Conservation des données",
+    "sec5Body": "Vos espaces de travail, pages et contenus de bases de données sont conservés tant que votre compte ou votre espace de travail existe, et sont supprimés lorsque vous supprimez un espace de travail ou clôturez votre compte. La durée de conservation des journaux d'audit dépend de votre offre : 7 jours pour Free, 30 jours pour Startup, 90 jours pour Professional et 365 jours pour Enterprise, comme indiqué sur notre page tarifaire."
   },
   "Updater": {
     "availableTitle": "Mise à jour disponible",

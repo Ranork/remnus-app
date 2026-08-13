@@ -1489,11 +1489,13 @@
     "sec1Title": "1. Datenerhebung & Speicherung",
     "sec1Body": "Alle von Ihnen erstellten Workspaces, Seiten und Datenbankinhalte werden sicher in unseren verschlüsselten Cloud-Datenbanken gespeichert. Bei der Authentifizierung über Drittanbieter (Google, GitHub usw.) werden nur grundlegende Profilinformationen (Name, E-Mail) verarbeitet. Ihre Daten werden unter keinen Umständen verkauft oder an Dritte weitergegeben.",
     "sec2Title": "2. KI- & MCP-Integration",
-    "sec2Body": "Die von Ihnen generierten Zugriffstoken (MCP-Token) gewähren KI-Agenten Zugriff auf Ihren Workspace ausschließlich im Rahmen der von Ihnen definierten Berechtigungen (Nur Lesen oder Lesen & Schreiben). Alle von KI-Agenten ausgeführten Aktionen werden transparent in System-Audit-Logs protokolliert.",
+    "sec2Body": "Die von Ihnen generierten Zugriffstoken (MCP-Token) gewähren KI-Agenten Zugriff auf Ihren Workspace ausschließlich im Rahmen der von Ihnen definierten Berechtigungen (Nur Lesen oder Lesen & Schreiben). Alle von KI-Agenten ausgeführten Aktionen werden in System-Audit-Logs protokolliert und gemäß der Audit-Log-Aufbewahrungsdauer Ihres Plans gespeichert (siehe Datenaufbewahrung unten).",
     "sec3Title": "3. Datensicherheit",
     "sec3Body": "Ihre Daten werden durch branchenübliche Verschlüsselungsprotokolle und sicheres Sitzungsmanagement geschützt. Passwörter und sensible Authentifizierungsdaten werden mit starken kryptografischen Algorithmen gesichert.",
     "sec4Title": "4. Kontakt",
-    "sec4Body": "Bei offiziellen Fragen zu dieser Erklärung oder unseren Datenschutzpraktiken wenden Sie sich bitte an info@akatron.net."
+    "sec4Body": "Bei offiziellen Fragen zu dieser Erklärung oder unseren Datenschutzpraktiken wenden Sie sich bitte an info@akatron.net.",
+    "sec5Title": "5. Datenaufbewahrung",
+    "sec5Body": "Ihre Workspaces, Seiten und Datenbankinhalte werden aufbewahrt, solange Ihr Konto oder Workspace besteht, und gelöscht, sobald Sie einen Workspace löschen oder Ihr Konto schließen. Die Aufbewahrungsdauer der Audit-Logs richtet sich nach Ihrem Plan: 7 Tage bei Free, 30 Tage bei Startup, 90 Tage bei Professional und 365 Tage bei Enterprise, wie auf unserer Preisseite angegeben."
   },
   "Updater": {
     "availableTitle": "Update verfügbar",

@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 import MarketingShell from '@/components/marketing/MarketingShell';
-import { Shield, Eye, Lock, Mail } from 'lucide-react';
+import { Shield, Eye, Lock, Mail, Clock } from 'lucide-react';
 import { METADATA_BASE_URL, DEFAULT_OG_IMAGE, DEFAULT_TWITTER_IMAGE } from '@/lib/metadata';
 
 export const metadata: Metadata = {
@@ -48,6 +48,11 @@ export default async function PrivacyPage() {
       icon: Mail,
       title: t('sec4Title'),
       body: t('sec4Body'),
+    },
+    {
+      icon: Clock,
+      title: t('sec5Title'),
+      body: t('sec5Body'),
     },
   ];
 
