@@ -464,7 +464,7 @@ const PageEditor = forwardRef<PageEditorHandle, PageEditorProps>(function PageEd
             editedAt={initialPage.agentEditedAt}
             className="p-1 rounded-md"
           />
-          <span className="text-[10px] text-neutral-600 select-none">{t('agentEditedLabel')}</span>
+          <span className="text-[10px] text-neutral-600 select-none">{tDb('agentEditedLabel')}</span>
         </div>
       )}
 
