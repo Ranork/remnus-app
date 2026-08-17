@@ -58,7 +58,7 @@ export default function KanbanBoard({
   groupOrder: string[];
   onGroupOrderChange: (order: string[]) => void;
   onCardClick: (pageId: string) => void;
-  onCardMove: (pageId: string, targetGroupId: string, targetPageId?: string) => void;
+  onCardMove: (pageId: string, targetGroupId: string, targetPageId?: string, position?: 'before' | 'after') => void;
   onDeletePage: (pageId: string) => void;
   onDuplicatePage: (pageId: string) => void;
   hasSorts: boolean;
@@ -153,6 +153,7 @@ export default function KanbanBoard({
   // Card dragging states
   const [draggedCardId, setDraggedCardId] = useState<string | null>(null);
   const [dragOverCardId, setDragOverCardId] = useState<string | null>(null);
+  const [dragOverPosition, setDragOverPosition] = useState<'before' | 'after' | null>(null);
   const [dragOverColumnName, setDragOverColumnName] = useState<string | null>(null);
   const [activeMenuCardId, setActiveMenuCardId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
@@ -209,28 +210,40 @@ export default function KanbanBoard({
   const handleCardDragOver = (e: React.DragEvent, targetCardId: string, columnName: string) => {
     e.preventDefault();
     e.stopPropagation();
-    if (draggedCardId && draggedCardId !== targetCardId) {
-      setDragOverCardId(targetCardId);
-      setDragOverColumnName(columnName);
-    }
+    if (!draggedCardId || draggedCardId === targetCardId) return;
+    setDragOverColumnName(columnName);
+    // A per-card insertion point (before/after) only makes sense when nothing
+    // is actively re-sorting the column — with a sort active, DatabaseView
+    // silently ignores manual positioning anyway (the sort would just put it
+    // right back), so don't show a misleading indicator for it here.
+    if (hasSorts) return;
+    const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    setDragOverPosition(e.clientY < rect.top + rect.height / 2 ? 'before' : 'after');
+    setDragOverCardId(targetCardId);
   };
 
   const handleCardDrop = (e: React.DragEvent, targetCardId: string, targetColumnName: string) => {
     e.preventDefault();
     e.stopPropagation();
     const cardId = draggedCardId || e.dataTransfer.getData('text/plain');
-    if (!cardId) return;
+    if (!cardId || cardId === targetCardId) {
+      handleCardDragEnd();
+      return;
+    }
 
-    onCardMove(cardId, targetColumnName, targetCardId);
+    if (hasSorts) {
+      onCardMove(cardId, targetColumnName);
+    } else {
+      onCardMove(cardId, targetColumnName, targetCardId, dragOverPosition ?? 'before');
+    }
 
-    setDraggedCardId(null);
-    setDragOverCardId(null);
-    setDragOverColumnName(null);
+    handleCardDragEnd();
   };
 
   const handleCardDragEnd = () => {
     setDraggedCardId(null);
     setDragOverCardId(null);
+    setDragOverPosition(null);
     setDragOverColumnName(null);
   };
 
@@ -238,19 +251,24 @@ export default function KanbanBoard({
     e.preventDefault();
     if (draggedCardId) {
       setDragOverColumnName(columnName);
+      // Left a card's own drop zone for the column's empty area — clear the
+      // stale per-card indicator instead of leaving it stuck on the last card.
+      setDragOverCardId(null);
+      setDragOverPosition(null);
     }
   };
 
   const handleColumnCardAreaDrop = (e: React.DragEvent, columnName: string) => {
     e.preventDefault();
     const cardId = draggedCardId || e.dataTransfer.getData('text/plain');
-    if (!cardId) return;
+    if (!cardId) {
+      handleCardDragEnd();
+      return;
+    }
 
     onCardMove(cardId, columnName);
 
-    setDraggedCardId(null);
-    setDragOverCardId(null);
-    setDragOverColumnName(null);
+    handleCardDragEnd();
   };
 
   if (!groupByCol) {
@@ -351,7 +369,8 @@ export default function KanbanBoard({
                     className={`database-card relative py-3 px-3 mb-1.5 cursor-pointer transition-colors group rounded
                       ${isCardEditing ? 'overflow-visible z-30' : 'overflow-hidden'}
                       ${draggedCardId === page.id ? 'opacity-25' : ''}
-                      ${dragOverCardId === page.id ? 'border-t-2 border-t-blue-500/60' : ''}
+                      ${dragOverCardId === page.id && dragOverPosition === 'before' ? 'border-t-2 border-t-blue-500/60' : ''}
+                      ${dragOverCardId === page.id && dragOverPosition === 'after' ? 'border-b-2 border-b-blue-500/60' : ''}
                     `}
                     style={{ backgroundColor: bgColor ?? 'var(--database-card-bg, rgba(64,68,75,0.55))' }}
                   >
@@ -383,7 +402,7 @@ export default function KanbanBoard({
                           }
                         }}
                         className="p-1 hover:bg-neutral-700/60 text-neutral-400 hover:text-neutral-200 cursor-grab active:cursor-grabbing transition-colors rounded"
-                        title={t('dragMove')}
+                        title={hasSorts ? t('dragMove') : t('dragReorder')}
                       >
                         <GripVertical size={13} />
                       </button>

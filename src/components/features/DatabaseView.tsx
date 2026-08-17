@@ -669,7 +669,7 @@ export default function DatabaseView({
     await reorderPages(database.id, orderedIds);
   };
 
-  const handleCardReorder = async (pageId: string, targetGroupId: string, targetPageId?: string) => {
+  const handleCardReorder = async (pageId: string, targetGroupId: string, targetPageId?: string, position: 'before' | 'after' = 'before') => {
     const page = localPages.find((p) => p.id === pageId);
     if (!page) return;
 
@@ -701,9 +701,10 @@ export default function DatabaseView({
       const fromIdx = nextPages.findIndex((p) => p.id === pageId);
       if (fromIdx !== -1) {
         const [moved] = nextPages.splice(fromIdx, 1);
-        if (targetPageId) {
-          const toIdx = nextPages.findIndex((p) => p.id === targetPageId);
+        if (targetPageId && targetPageId !== pageId) {
+          let toIdx = nextPages.findIndex((p) => p.id === targetPageId);
           if (toIdx !== -1) {
+            if (position === 'after') toIdx += 1;
             nextPages.splice(toIdx, 0, moved);
           } else {
             nextPages.push(moved);
@@ -910,12 +911,19 @@ export default function DatabaseView({
   const handleGroupColBgChange = (groupColBg: boolean) =>
     mutateConfig((cfg) => ({ ...cfg, groupColBg }));
 
-  const handleCardDateChange = async (pageId: string, newDate: string | null) => {
+  const handleCardDateChange = async (
+    pageId: string,
+    newDate: string | null,
+    targetPageId?: string,
+    position: 'before' | 'after' = 'before'
+  ) => {
     const page = localPages.find((p) => p.id === pageId);
     if (!page || !calendarConfig) return;
 
+    const dateChanged = page.properties[calendarConfig.dateCol] !== newDate;
+
     const nextPages = localPages.map((p) => {
-      if (p.id === pageId) {
+      if (p.id === pageId && dateChanged) {
         return {
           ...p,
           properties: {
@@ -927,11 +935,34 @@ export default function DatabaseView({
       return p;
     });
 
+    // Dropped onto another card (not just the day's empty area) — reposition
+    // relative to it, same splice pattern as the Kanban board. Skipped while a
+    // sort is active: applySorts would just re-order it right back anyway.
+    const hasSorts = config.sorts && config.sorts.length > 0;
+    if (!hasSorts && targetPageId && targetPageId !== pageId) {
+      const fromIdx = nextPages.findIndex((p) => p.id === pageId);
+      if (fromIdx !== -1) {
+        const [moved] = nextPages.splice(fromIdx, 1);
+        let toIdx = nextPages.findIndex((p) => p.id === targetPageId);
+        if (toIdx !== -1) {
+          if (position === 'after') toIdx += 1;
+          nextPages.splice(toIdx, 0, moved);
+        } else {
+          nextPages.push(moved);
+        }
+      }
+    }
+
     setLocalPages(nextPages);
 
-    const targetPage = nextPages.find((p) => p.id === pageId);
-    if (targetPage) {
-      await updatePageProperties(pageId, targetPage.properties);
+    if (dateChanged) {
+      const targetPage = nextPages.find((p) => p.id === pageId);
+      if (targetPage) {
+        await updatePageProperties(pageId, targetPage.properties);
+      }
+    }
+    if (!hasSorts && targetPageId && targetPageId !== pageId) {
+      await reorderPages(database.id, nextPages.map((p) => p.id));
     }
   };
 
@@ -1201,6 +1232,7 @@ export default function DatabaseView({
               dateCol={calendarConfig.dateCol}
               viewMode={calendarConfig.viewMode}
               firstDayOfWeek={calendarConfig.firstDayOfWeek || 'sunday'}
+              hasSorts={(config.sorts?.length ?? 0) > 0}
               onCardClick={handlePageClick}
               onCardDateChange={handleCardDateChange}
               onDeletePage={handleDeletePage}

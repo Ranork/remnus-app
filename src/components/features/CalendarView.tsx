@@ -21,8 +21,9 @@ interface CalendarViewProps {
   dateCol: string;
   viewMode: 'month' | 'week';
   firstDayOfWeek: 'sunday' | 'monday';
+  hasSorts?: boolean;
   onCardClick: (pageId: string) => void;
-  onCardDateChange: (pageId: string, newDateStr: string) => void;
+  onCardDateChange: (pageId: string, newDateStr: string, targetPageId?: string, position?: 'before' | 'after') => void;
   onDeletePage: (pageId: string) => void;
   onDuplicatePage: (pageId: string) => void;
   cardColorCol?: string;
@@ -104,6 +105,7 @@ export default function CalendarView({
   dateCol,
   viewMode,
   firstDayOfWeek,
+  hasSorts = false,
   onCardClick,
   onCardDateChange,
   onDeletePage,
@@ -137,9 +139,20 @@ export default function CalendarView({
   // Card dragging states
   const [draggedCardId, setDraggedCardId] = useState<string | null>(null);
   const [dragOverDayStr, setDragOverDayStr] = useState<string | null>(null);
+  // Intra-day reorder: which card is being hovered and on which side of it
+  // the dragged card would land (mirrors KanbanBoard's own indicator).
+  const [dragOverCardId, setDragOverCardId] = useState<string | null>(null);
+  const [dragOverPosition, setDragOverPosition] = useState<'before' | 'after' | null>(null);
   const [activeMenuCardId, setActiveMenuCardId] = useState<string | null>(null);
   const [menuCoords, setMenuCoords] = useState<{ top: number; left: number } | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
+  const resetDragState = () => {
+    setDraggedCardId(null);
+    setDragOverDayStr(null);
+    setDragOverCardId(null);
+    setDragOverPosition(null);
+  };
 
   // Notion-style right-click menu for calendar cards
   const cardMenu = useContextMenu();
@@ -345,6 +358,10 @@ export default function CalendarView({
                   e.preventDefault();
                   if (draggedCardId) {
                     setDragOverDayStr(dayStr);
+                    // Left a card's own drop zone for the day's empty area — clear
+                    // the stale per-card insertion indicator (mirrors KanbanBoard).
+                    setDragOverCardId(null);
+                    setDragOverPosition(null);
                   }
                 }}
                 onDragLeave={() => {
@@ -358,8 +375,7 @@ export default function CalendarView({
                   if (cardId) {
                     onCardDateChange(cardId, dayStr);
                   }
-                  setDragOverDayStr(null);
-                  setDraggedCardId(null);
+                  resetDragState();
                 }}
                 className={`relative border-r border-b border-neutral-800/80 p-1 lg:p-2 min-h-24 flex flex-col transition-colors overflow-visible group/day ${
                   isDragOver
@@ -426,11 +442,34 @@ export default function CalendarView({
                         e.dataTransfer.setData('text/plain', page.id);
                         e.dataTransfer.effectAllowed = 'move';
                       }}
-                      onDragEnd={() => {
-                        setDraggedCardId(null);
+                      onDragOver={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        if (!draggedCardId || draggedCardId === page.id) return;
+                        setDragOverDayStr(dayStr);
+                        // Same reasoning as KanbanBoard: an active sort would just
+                        // re-order cards back, so don't show a misleading indicator.
+                        if (hasSorts) return;
+                        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                        setDragOverPosition(e.clientY < rect.top + rect.height / 2 ? 'before' : 'after');
+                        setDragOverCardId(page.id);
                       }}
+                      onDrop={(e) => {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        const cardId = draggedCardId || e.dataTransfer.getData('text/plain');
+                        if (!cardId || cardId === page.id) {
+                          resetDragState();
+                          return;
+                        }
+                        onCardDateChange(cardId, dayStr, page.id, dragOverPosition ?? 'before');
+                        resetDragState();
+                      }}
+                      onDragEnd={resetDragState}
                       className={`database-card relative py-1 lg:py-2.5 px-1 lg:px-2 cursor-pointer transition-colors group flex flex-col select-none overflow-hidden rounded ${
                         draggedCardId === page.id ? 'opacity-25' : ''
+                      } ${dragOverCardId === page.id && dragOverPosition === 'before' ? 'border-t-2 border-t-blue-500/60' : ''} ${
+                        dragOverCardId === page.id && dragOverPosition === 'after' ? 'border-b-2 border-b-blue-500/60' : ''
                       }`}
                       style={{ backgroundColor: bgColor ?? 'var(--database-card-bg, rgba(64,68,75,0.55))' }}
                     >
