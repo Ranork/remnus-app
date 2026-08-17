@@ -225,8 +225,22 @@ export async function duplicatePage(id: string, databaseId: string) {
 export async function reorderPages(databaseId: string, orderedIds: string[]) {
   const { userId, workspaceId } = await assertDatabaseAccess(databaseId);
 
+  // A single Kanban/Calendar/Table drag only actually moves one card, but
+  // `orderedIds` is the full page list re-expressed in its new order — most
+  // rows keep the same index they already had. Diff against current sortOrder
+  // first so the transaction only writes rows that actually shifted, instead
+  // of one sequential UPDATE per page in the database (previously: moving one
+  // card in a database of, say, 200 rows meant 200 awaited round-trips, which
+  // is what made a single drag feel slow to "Saved").
+  const current = await db
+    .select({ id: pages.id, sortOrder: pages.sortOrder })
+    .from(pages)
+    .where(eq(pages.databaseId, databaseId));
+  const currentSortOrder = new Map(current.map((p) => [p.id, p.sortOrder]));
+
   await db.transaction(async (tx) => {
     for (let i = 0; i < orderedIds.length; i++) {
+      if (currentSortOrder.get(orderedIds[i]) === i) continue;
       await tx.update(pages).set({ sortOrder: i }).where(eq(pages.id, orderedIds[i]));
     }
   });
