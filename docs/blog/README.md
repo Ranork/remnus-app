@@ -4,6 +4,7 @@ Thoughts on open source, AI-native tooling, and building in public.
 
 ## Posts
 
+- [MCP Security Guide: OAuth, Tokens, Scopes, and Audit Logs](/docs/mcp-security-guide) — The MCP threat model, OAuth vs personal access tokens, least privilege, destructive-action confirmation, audit logs, checklists for users and server developers, and how Remnus applies each control.
 - [How to Run Headless AI Agents Without Login Prompts](/docs/run-headless-ai-agents-with-mcp) — OAuth vs personal access tokens for unattended jobs, secure token storage, minimum-permission scopes, a verified headless Claude Code + Remnus example, and a deployment checklist.
 - [AI Agent Memory vs RAG vs Context Windows](/docs/ai-agent-memory-vs-rag-vs-context-window) — Primary-source definitions of context windows, RAG, and persistent agent memory, a direct comparison table, a software-project example, and Remnus's own memory and retrieval layers.
 - [Why Coding Agents Forget Your Project Between Sessions](/docs/why-coding-agents-forget-your-project) — Session boundaries, context selection, repository scope, and unstructured docs, plus a layered context system: instructions, documentation, task database, decision log, RAG, and persistent memory.

@@ -32,6 +32,7 @@ import {
   Scale,
   History,
   Layers,
+  Lock,
 } from 'lucide-react';
 import { NotionMark, AppFlowyMark, AffineMark, ObsidianMark } from '@/components/docs/CompetitorMark';
 
@@ -81,6 +82,15 @@ export type BlogPost = {
 };
 
 export const BLOG_POSTS: BlogPost[] = [
+  {
+    slug: 'mcp-security-guide',
+    file: 'mcp-security-guide.md',
+    title: 'MCP Security Guide: OAuth, Tokens, Scopes, and Audit Logs',
+    description:
+      'A verified guide to MCP security: the threat model (malicious servers, prompt injection, excessive permissions, credential leakage), OAuth and PATs, least privilege, destructive-action confirmation, audit logs, and how Remnus applies each control.',
+    date: '2026-08-14',
+    icon: Lock,
+  },
   {
     slug: 'run-headless-ai-agents-with-mcp',
     file: 'run-headless-ai-agents-with-mcp.md',
