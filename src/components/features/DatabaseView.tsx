@@ -18,6 +18,7 @@ import CalendarView from './CalendarView';
 import ViewsBar from './ViewsBar';
 import DatabasePropertiesSidebar from './DatabasePropertiesSidebar';
 import PageEditor, { type PageEditorHandle } from './PageEditor';
+import SaveStatus, { type SaveState } from './SaveStatus';
 import PageIcon from './PageIcon';
 import IconPicker from './IconPicker';
 import { MembersProvider, type WorkspaceMember } from './MembersContext';
@@ -319,6 +320,43 @@ export default function DatabaseView({
   useEffect(() => {
     setLocalPages(initialPages);
   }, [initialPages]);
+
+  // Visible feedback for row/card drag-reorder + property persistence, shared
+  // across Table/Kanban/Calendar so a drag doesn't just silently succeed or fail.
+  const [saveState, setSaveState] = useState<SaveState>('idle');
+  const pendingSaveCountRef = useRef(0);
+  const trackSave = useCallback(async <T,>(p: Promise<T>): Promise<T> => {
+    pendingSaveCountRef.current += 1;
+    setSaveState('saving');
+    try {
+      const result = await p;
+      pendingSaveCountRef.current -= 1;
+      if (pendingSaveCountRef.current === 0) setSaveState('saved');
+      return result;
+    } catch (err) {
+      pendingSaveCountRef.current -= 1;
+      if (pendingSaveCountRef.current === 0) setSaveState('error');
+      throw err;
+    }
+  }, []);
+
+  // reorderPages rewrites every row's sortOrder in one DB transaction. Firing a
+  // second drag before the first one's transaction lands used to race — two
+  // overlapping full-table renumbers could interleave and leave the DB with a
+  // half-applied order (e.g. several quick same-day Calendar reorders where
+  // only the first survived a refresh). Chaining every call through this ref
+  // serializes them, so each write always starts after the previous one has
+  // actually landed instead of racing it.
+  const reorderQueueRef = useRef<Promise<void>>(Promise.resolve());
+  const persistReorder = useCallback((orderedIds: string[]) => {
+    const previous = reorderQueueRef.current;
+    const run = (async () => {
+      await previous.catch(() => {});
+      await reorderPages(database.id, orderedIds);
+    })();
+    reorderQueueRef.current = run;
+    return trackSave(run);
+  }, [database.id, trackSave]);
 
   // Peek states
   const [peekPageId, setPeekPageId] = useState<string | null>(null);
@@ -666,7 +704,7 @@ export default function DatabaseView({
       return aIdx - bIdx;
     });
     setLocalPages(reordered);
-    await reorderPages(database.id, orderedIds);
+    await persistReorder(orderedIds);
   };
 
   const handleCardReorder = async (pageId: string, targetGroupId: string, targetPageId?: string, position: 'before' | 'after' = 'before') => {
@@ -733,11 +771,11 @@ export default function DatabaseView({
     if (isGroupChanged) {
       const targetPage = nextPages.find((p) => p.id === pageId);
       if (targetPage) {
-        await updatePageProperties(pageId, targetPage.properties);
+        await trackSave(updatePageProperties(pageId, targetPage.properties));
       }
     }
     if (!hasSorts) {
-      await reorderPages(database.id, nextPages.map((p) => p.id));
+      await persistReorder(nextPages.map((p) => p.id));
     }
   };
 
@@ -958,11 +996,11 @@ export default function DatabaseView({
     if (dateChanged) {
       const targetPage = nextPages.find((p) => p.id === pageId);
       if (targetPage) {
-        await updatePageProperties(pageId, targetPage.properties);
+        await trackSave(updatePageProperties(pageId, targetPage.properties));
       }
     }
     if (!hasSorts && targetPageId && targetPageId !== pageId) {
-      await reorderPages(database.id, nextPages.map((p) => p.id));
+      await persistReorder(nextPages.map((p) => p.id));
     }
   };
 
@@ -1075,6 +1113,12 @@ export default function DatabaseView({
         />
 
         <div className="flex items-center gap-0 pb-1.5">
+          {/* Row/card drag-reorder + property save feedback — Table/Kanban/Calendar
+              all funnel through the same persistReorder/trackSave helpers.
+              Renders nothing (no layout footprint) once idle/faded, same as
+              every other SaveStatus consumer in the app. */}
+          <SaveStatus state={saveState} className="mr-1" />
+
           {/* Refresh Button */}
           <button
             onClick={handleManualRefresh}
