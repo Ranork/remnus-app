@@ -692,6 +692,8 @@
     "dragReschedule": "Zum Verschieben ziehen oder für Aktionen klicken",
     "dragReorder": "Zum Neuanordnen ziehen oder für Aktionen klicken",
     "dragMove": "Zum Verschieben ziehen oder für Aktionen klicken",
+    "collapseCard": "Karte einklappen",
+    "expandCard": "Karte ausklappen",
     "collapse": "Einklappen",
     "showItems": "Elemente anzeigen",
     "addProperty": "Eigenschaft hinzufügen",

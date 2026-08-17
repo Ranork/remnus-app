@@ -65,6 +65,12 @@ export const pages = sqliteTable('pages', {
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().default(sql`CURRENT_TIMESTAMP`),
   agentEditedAt: integer('agent_edited_at', { mode: 'timestamp' }),
   agentTokenId: text('agent_token_id'),
+  // Per-row "compact card" preference for Kanban/Calendar — hides the card's
+  // property list, showing just the title. Deliberately a dedicated column,
+  // not a `properties` entry: it's presentation state, not a schema-driven
+  // user field (would otherwise leak into Table columns/exports/MCP reads).
+  // Migration 0042.
+  cardCollapsed: integer('card_collapsed', { mode: 'boolean' }).notNull().default(false),
 }, (table) => [
   index('pages_database_id_idx').on(table.databaseId),
 ]);

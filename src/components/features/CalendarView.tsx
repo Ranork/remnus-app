@@ -1,17 +1,17 @@
 'use client';
 
-import React, { useState, useMemo, useRef } from 'react';
+import React, { useState, useMemo, useRef, useLayoutEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createPortal } from 'react-dom';
 import { getOptionColorByValue, getCardBorderDots, getCardBgColor, formatDateValue } from '@/lib/types/properties';
-import { ChevronLeft, ChevronRight, GripVertical, Trash2, Calendar as CalendarIcon, Clock, Plus, Copy, ArrowUpRight, Maximize2, Link2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronDown, GripVertical, Trash2, Calendar as CalendarIcon, Clock, Plus, Copy, ArrowUpRight, Maximize2, Link2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useContextMenu, type MenuItem } from './ContextMenu';
 import PageIcon from './PageIcon';
 import IconPicker from './IconPicker';
 import AgentEditBadge from './AgentEditBadge';
 import { StatusChip, UserAvatarStack, OptionIcon } from './PropertyTags';
-import { updatePageIcon } from '@/lib/actions/page';
+import { updatePageIcon, updatePageCardCollapsed } from '@/lib/actions/page';
 import { ConfirmDialog } from './ConfirmDialog';
 
 interface CalendarViewProps {
@@ -37,6 +37,7 @@ interface CalendarViewProps {
   defaultPageIcon?: string;
   defaultPageIconColor?: string;
   onPageIconChange?: (pageId: string, icon: string | null, iconColor: string | null) => void;
+  onCardCollapsedChange?: (pageId: string, collapsed: boolean) => void;
 }
 
 const formatYYYYMMDD = (d: Date) => {
@@ -120,6 +121,7 @@ export default function CalendarView({
   defaultPageIcon,
   defaultPageIconColor,
   onPageIconChange,
+  onCardCollapsedChange,
 }: CalendarViewProps) {
   const t = useTranslations('Database');
   const tPage = useTranslations('Page');
@@ -134,6 +136,11 @@ export default function CalendarView({
   const handleCalendarIconSelect = (pageId: string, newIcon: string | null, newColor: string | null) => {
     onPageIconChange?.(pageId, newIcon, newColor);
     updatePageIcon(pageId, newIcon, newColor);
+  };
+
+  const handleToggleCollapsed = (pageId: string, collapsed: boolean) => {
+    onCardCollapsedChange?.(pageId, collapsed);
+    updatePageCardCollapsed(pageId, collapsed);
   };
 
   // Card dragging states
@@ -177,6 +184,29 @@ export default function CalendarView({
   const days = useMemo(() => {
     return viewMode === 'month' ? getMonthDays(currentDate, firstDayOfWeek) : getWeekDays(currentDate, firstDayOfWeek);
   }, [currentDate, viewMode, firstDayOfWeek]);
+
+  // Vertical scroll container (the weekday header's sticky anchor) + a ref
+  // planted on the first cell of the anchor week (index 7 — see getMonthDays:
+  // the week containing `currentDate` always lands on the grid's 2nd row).
+  // On month view, land that row a little below the viewport's top edge
+  // instead of at the grid's actual top (row 1, the prior week) — the prior
+  // week is still rendered above and one scroll-up away, but on a tall week
+  // you no longer have to scroll DOWN just to reach "this week".
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const anchorWeekRowRef = useRef<HTMLDivElement | null>(null);
+  // useLayoutEffect (not useEffect) so the scroll position is corrected before
+  // the browser paints — otherwise the grid would flash at its natural
+  // scrollTop-0 position (prior week visible) for one frame before jumping.
+  useLayoutEffect(() => {
+    if (viewMode !== 'month') return;
+    const container = scrollContainerRef.current;
+    const row = anchorWeekRowRef.current;
+    if (!container || !row) return;
+    const ANCHOR_OFFSET_PX = 32;
+    const containerTop = container.getBoundingClientRect().top;
+    const rowTop = row.getBoundingClientRect().top;
+    container.scrollTop += rowTop - containerTop - ANCHOR_OFFSET_PX;
+  }, [days, viewMode]);
 
   const handlePrev = () => {
     setCurrentDate((prev) => {
@@ -319,7 +349,7 @@ export default function CalendarView({
           weekday row + grid scroll horizontally together; desktop is unchanged.
           This wrapper is also the vertical scroll container so the weekday row
           can stay sticky to its top while the grid scrolls under it. */}
-      <div className="flex-1 min-h-0 overflow-auto">
+      <div ref={scrollContainerRef} className="flex-1 min-h-0 overflow-auto">
       <div className="min-w-170 lg:min-w-0">
       {/* Weekdays names row — sticky so it never scrolls out of view */}
       <div className="grid grid-cols-7 border-b border-neutral-800/80 bg-neutral-850 shrink-0 select-none sticky top-0 z-20">
@@ -354,6 +384,7 @@ export default function CalendarView({
             return (
               <div
                 key={idx}
+                ref={idx === 7 ? anchorWeekRowRef : undefined}
                 onDragOver={(e) => {
                   e.preventDefault();
                   if (draggedCardId) {
@@ -487,6 +518,14 @@ export default function CalendarView({
                         className="hidden lg:flex absolute right-1 top-1.5 opacity-0 group-hover:opacity-100 items-center transition-opacity z-10"
                         onClick={(e) => e.stopPropagation()}
                       >
+                        {/* Collapse/expand — hides the property list, keeping just the title */}
+                        <button
+                          onClick={() => handleToggleCollapsed(page.id, !page.cardCollapsed)}
+                          className="p-1 hover:bg-neutral-700/60 text-neutral-400 hover:text-neutral-200 transition-colors rounded cursor-pointer"
+                          title={page.cardCollapsed ? t('expandCard') : t('collapseCard')}
+                        >
+                          {page.cardCollapsed ? <ChevronRight size={12} /> : <ChevronDown size={12} />}
+                        </button>
                         {/* Drag handle & Actions */}
                         <button
                           draggable={true}
@@ -596,8 +635,19 @@ export default function CalendarView({
                       />
 
                       {/* Card properties — hidden on mobile for a compact,
-                          Google/iOS-calendar-style title-only card. */}
-                      <div className="mt-1.5 hidden lg:flex flex-col gap-1.5 select-none shrink-0">
+                          Google/iOS-calendar-style title-only card. When the
+                          card is collapsed, this is hidden via CSS alone (not
+                          a JS conditional) so hovering the card — via the
+                          `group` class on the card root — can peek it back
+                          open on desktop without touching the persisted
+                          collapsed state. Grid-rows 0fr→1fr animates to the
+                          block's natural height (same technique as
+                          PendingGiftToast's hover-expand panel) — plain
+                          `hidden`/`flex` has no in-between state to animate. */}
+                      <div className="hidden lg:block shrink-0">
+                      <div className={`grid transition-[grid-template-rows] duration-200 ease-out ${page.cardCollapsed ? 'grid-rows-[0fr] group-hover:grid-rows-[1fr]' : 'grid-rows-[1fr]'}`}>
+                      <div className="overflow-hidden">
+                      <div className="pt-1.5 flex flex-col gap-1.5 select-none">
                         {propsToShow.map((c) => {
                             const val = page.properties[c.id];
                             const isEmpty =
@@ -658,6 +708,9 @@ export default function CalendarView({
                                </div>
                              );
                           })}
+                      </div>
+                      </div>
+                      </div>
                       </div>
                     </div>
                   );

@@ -3,7 +3,7 @@
 import React, { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { createPortal } from 'react-dom';
-import { GripVertical, Settings, Trash2, Plus, Copy, CheckSquare, Square, ExternalLink, ArrowUpRight, Maximize2, Link2 } from 'lucide-react';
+import { GripVertical, Settings, Trash2, Plus, Copy, CheckSquare, Square, ExternalLink, ArrowUpRight, Maximize2, Link2, ChevronDown, ChevronRight } from 'lucide-react';
 import { normalizeOption, getOptionColorByValue, getCardBorderDots, getCardBgColor, formatDateValue } from '@/lib/types/properties';
 import { useTranslations } from 'next-intl';
 import type { SelectOption } from '@/lib/types/properties';
@@ -13,7 +13,7 @@ import { StatusChip, UserChip, UserTags, OptionIcon } from './PropertyTags';
 import PageIcon from './PageIcon';
 import IconPicker from './IconPicker';
 import AgentEditBadge from './AgentEditBadge';
-import { updatePageIcon } from '@/lib/actions/page';
+import { updatePageIcon, updatePageCardCollapsed } from '@/lib/actions/page';
 import { updateDatabaseSchema } from '@/lib/actions/database';
 import { ConfirmDialog } from './ConfirmDialog';
 
@@ -49,6 +49,7 @@ export default function KanbanBoard({
   defaultPageIcon,
   defaultPageIconColor,
   onPageIconChange,
+  onCardCollapsedChange,
   hiddenGroups = [],
 }: {
   database: any;
@@ -74,6 +75,7 @@ export default function KanbanBoard({
   defaultPageIcon?: string;
   defaultPageIconColor?: string;
   onPageIconChange?: (pageId: string, icon: string | null, iconColor: string | null) => void;
+  onCardCollapsedChange?: (pageId: string, collapsed: boolean) => void;
   hiddenGroups?: string[];
 }) {
   const t = useTranslations('Database');
@@ -99,6 +101,11 @@ export default function KanbanBoard({
   const handleKanbanIconSelect = (pageId: string, newIcon: string | null, newColor: string | null) => {
     onPageIconChange?.(pageId, newIcon, newColor);
     updatePageIcon(pageId, newIcon, newColor);
+  };
+
+  const handleToggleCollapsed = (pageId: string, collapsed: boolean) => {
+    onCardCollapsedChange?.(pageId, collapsed);
+    updatePageCardCollapsed(pageId, collapsed);
   };
 
   const handleCellSave = (pageId: string, colId: string, newVal: any) => {
@@ -383,6 +390,14 @@ export default function KanbanBoard({
                     )}
                     {/* Hover Card Actions */}
                     <div className="absolute right-2 top-2 opacity-0 group-hover:opacity-100 flex items-center transition-opacity z-10" onClick={(e) => e.stopPropagation()}>
+                      {/* Collapse/expand — hides the property list, keeping just the title */}
+                      <button
+                        onClick={() => handleToggleCollapsed(page.id, !page.cardCollapsed)}
+                        className="p-1 hover:bg-neutral-700/60 text-neutral-400 hover:text-neutral-200 transition-colors rounded cursor-pointer"
+                        title={page.cardCollapsed ? t('expandCard') : t('collapseCard')}
+                      >
+                        {page.cardCollapsed ? <ChevronRight size={13} /> : <ChevronDown size={13} />}
+                      </button>
                       {/* Drag handle & Actions */}
                       <button
                         draggable={true}
@@ -488,7 +503,16 @@ export default function KanbanBoard({
                       className="absolute bottom-0 right-0 rounded-tl-xl p-1.5 z-10 translate-x-0.5 translate-y-0.5"
                     />
 
-                    <div className="mt-1.5 flex flex-col gap-1.5">
+                    {/* Collapsed cards hide this via CSS alone (not a JS
+                        conditional) so hovering the card — via the `group`
+                        class on the card root — can peek it back open without
+                        touching the persisted collapsed state. Grid-rows
+                        0fr→1fr animates to the block's natural height (same
+                        technique as PendingGiftToast's hover-expand panel) —
+                        plain `hidden`/`flex` has no in-between state to animate. */}
+                    <div className={`grid transition-[grid-template-rows] duration-200 ease-out ${page.cardCollapsed ? 'grid-rows-[0fr] group-hover:grid-rows-[1fr]' : 'grid-rows-[1fr]'}`}>
+                    <div className="overflow-hidden">
+                    <div className="pt-1.5 flex flex-col gap-1.5">
                       {propsToShow.map((c) => {
                           const val = page.properties[c.id];
                           const isEditing = editingCell?.pageId === page.id && editingCell?.colId === c.id;
@@ -594,6 +618,8 @@ export default function KanbanBoard({
                             </div>
                           );
                         })}
+                    </div>
+                    </div>
                     </div>
                   </div>
                   );

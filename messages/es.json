@@ -692,6 +692,8 @@
     "dragReschedule": "Arrastra para reprogramar o haz clic para acciones",
     "dragReorder": "Arrastra para reordenar o haz clic para acciones",
     "dragMove": "Arrastra para mover o haz clic para acciones",
+    "collapseCard": "Contraer tarjeta",
+    "expandCard": "Expandir tarjeta",
     "collapse": "Contraer",
     "showItems": "Mostrar elementos",
     "addProperty": "Agregar propiedad",

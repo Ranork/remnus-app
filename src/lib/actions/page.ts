@@ -100,6 +100,7 @@ export async function getPages(databaseId: string) {
       sortOrder: pages.sortOrder,
       icon: pages.icon,
       iconColor: pages.iconColor,
+      cardCollapsed: pages.cardCollapsed,
       createdAt: pages.createdAt,
       updatedAt: pages.updatedAt,
       agentEditedAt: pages.agentEditedAt,
@@ -139,6 +140,7 @@ export async function getPage(id: string) {
       sortOrder: pages.sortOrder,
       icon: pages.icon,
       iconColor: pages.iconColor,
+      cardCollapsed: pages.cardCollapsed,
       createdAt: pages.createdAt,
       updatedAt: pages.updatedAt,
       agentEditedAt: pages.agentEditedAt,
@@ -264,6 +266,20 @@ export async function updatePageIcon(id: string, icon: string | null, iconColor:
 
   revalidatePath(`/db/${page[0].databaseId}`);
   revalidatePath(`/db/${page[0].databaseId}/${id}`);
+  publish({ scope: 'database', workspaceId, resourceId: page[0].databaseId, actorId: userId });
+}
+
+export async function updatePageCardCollapsed(id: string, collapsed: boolean) {
+  const page = await db.select({ databaseId: pages.databaseId }).from(pages).where(eq(pages.id, id));
+  if (!page[0]) return;
+
+  const { userId, workspaceId } = await assertDatabaseAccess(page[0].databaseId);
+
+  await db.update(pages)
+    .set({ cardCollapsed: collapsed })
+    .where(eq(pages.id, id));
+
+  revalidatePath(`/db/${page[0].databaseId}`);
   publish({ scope: 'database', workspaceId, resourceId: page[0].databaseId, actorId: userId });
 }
 

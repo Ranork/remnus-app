@@ -692,6 +692,8 @@
     "dragReschedule": "Drag to reschedule or click for actions",
     "dragReorder": "Drag to reorder or click for actions",
     "dragMove": "Drag to move or click for actions",
+    "collapseCard": "Collapse card",
+    "expandCard": "Expand card",
     "collapse": "Collapse",
     "showItems": "Show items",
     "addProperty": "Add property",

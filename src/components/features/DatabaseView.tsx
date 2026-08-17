@@ -429,6 +429,12 @@ export default function DatabaseView({
     );
   };
 
+  const handlePageCardCollapsedChange = (pageId: string, collapsed: boolean) => {
+    setLocalPages((prev) =>
+      prev.map((p) => p.id === pageId ? { ...p, cardCollapsed: collapsed } : p)
+    );
+  };
+
   const [views, setViews] = useState<DatabaseView[]>(() => {
     const saved = database.views as DatabaseView[] | null | undefined;
     if (Array.isArray(saved) && saved.length > 0) return saved;
@@ -1266,6 +1272,7 @@ export default function DatabaseView({
               defaultPageIcon={config.defaultPageIcon}
               defaultPageIconColor={config.defaultPageIconColor}
               onPageIconChange={handlePageIconChange}
+              onCardCollapsedChange={handlePageCardCollapsedChange}
               hiddenGroups={kanbanConfig.hiddenGroups ?? []}
             />
           ) : calendarConfig ? (
@@ -1292,6 +1299,7 @@ export default function DatabaseView({
               defaultPageIcon={config.defaultPageIcon}
               defaultPageIconColor={config.defaultPageIconColor}
               onPageIconChange={handlePageIconChange}
+              onCardCollapsedChange={handlePageCardCollapsedChange}
             />
           ) : null}
         </div>

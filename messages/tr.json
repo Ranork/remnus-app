@@ -692,6 +692,8 @@
     "dragReschedule": "Yeniden planlamak için sürükle veya işlemler için tıkla",
     "dragReorder": "Yeniden sıralamak için sürükle veya işlemler için tıkla",
     "dragMove": "Taşımak için sürükle veya işlemler için tıkla",
+    "collapseCard": "Kartı daralt",
+    "expandCard": "Kartı genişlet",
     "collapse": "Daralt",
     "showItems": "Öğeleri göster",
     "addProperty": "Özellik ekle",
