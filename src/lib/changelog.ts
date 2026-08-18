@@ -45,6 +45,31 @@ const FIRST_VISIT_WINDOW_DAYS = 7;
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-08-18-collapsed-card-accent-icon',
+    date: '2026-08-18',
+    category: 'improved',
+    title: {
+      en: 'Collapsed cards keep their icon',
+      tr: 'Küçültülmüş kartlar ikonunu koruyor',
+      de: 'Eingeklappte Karten behalten ihr Icon',
+      es: 'Las tarjetas contraídas conservan su icono',
+      fr: 'Les cartes réduites gardent leur icône',
+      hi: 'छोटे किए कार्ड अपना आइकन बनाए रखते हैं',
+      ru: 'Свёрнутые карточки сохраняют значок',
+      zh: '折叠卡片保留其图标',
+    },
+    summary: {
+      en: 'When you collapse a Calendar or Kanban card, its accent line now shows the selected option’s icon too, so you can still tell what it is at a glance.',
+      tr: 'Bir Takvim ya da Kanban kartını küçülttüğünde, vurgu çizgisi artık seçili seçeneğin ikonunu da gösteriyor; kart küçükken bile neyi temsil ettiğini bir bakışta görebiliyorsun.',
+      de: 'Wenn du eine Kalender- oder Kanban-Karte einklappst, zeigt ihre Akzentlinie jetzt auch das Icon der ausgewählten Option, damit du auf einen Blick erkennst, worum es geht.',
+      es: 'Al contraer una tarjeta de Calendario o Kanban, su línea de acento ahora también muestra el icono de la opción seleccionada, así puedes reconocerla de un vistazo.',
+      fr: 'Quand tu réduis une carte de Calendrier ou de Kanban, sa ligne d’accent affiche désormais aussi l’icône de l’option sélectionnée, pour la reconnaître d’un coup d’œil.',
+      hi: 'जब आप किसी कैलेंडर या कानबन कार्ड को छोटा करते हैं, तो अब उसकी एक्सेंट लाइन पर चुने गए विकल्प का आइकन भी दिखता है, ताकि एक नज़र में पता चल सके कि वह क्या है।',
+      ru: 'Когда вы сворачиваете карточку Календаря или Канбана, на её акцентной линии теперь также отображается значок выбранного варианта — сразу понятно, о чём карточка.',
+      zh: '折叠日历或看板卡片时，强调线上现在也会显示所选项的图标，一眼就能看出这张卡片是什么。',
+    },
+  },
+  {
     id: '2026-08-18-agent-repeating-tasks',
     date: '2026-08-18',
     category: 'new',

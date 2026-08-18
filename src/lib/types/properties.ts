@@ -75,30 +75,62 @@ export function getOptionColorByValue(
   return found ? getOptionColor(found) : SELECT_COLORS.default;
 }
 
+/** One segment of a card's border-accent line: its dot color, plus the
+ *  selected option's own icon when it has one (for the collapsed-card
+ *  accent-icon treatment — see `getCardBorderAccents`). */
+export interface CardBorderAccent {
+  color: string;
+  icon?: string;
+  iconColor?: SelectOptionColor;
+}
+
+/**
+ * Returns an ordered list of border-accent segments to paint the card's
+ * accent line. For a `select`/`status` column this is one segment; for a
+ * `multi_select` column one segment per selected value (preserving order).
+ * Each segment carries the option's own icon when it has one — a collapsed
+ * card (properties hidden) can then show that icon on the accent line itself
+ * instead of losing the information entirely. Returns [] when there is
+ * nothing to paint.
+ */
+export function getCardBorderAccents(
+  colSchema: { type: string; options?: (string | SelectOption)[] } | null | undefined,
+  value: unknown,
+): CardBorderAccent[] {
+  if (!colSchema) return [];
+  const opts = colSchema.options ?? [];
+
+  const toAccent = (v: string): CardBorderAccent => {
+    const found = opts.map(normalizeOption).find((o) => o.value === v);
+    const color = getOptionColorByValue(opts, v).dot;
+    return found?.icon ? { color, icon: found.icon, iconColor: found.color } : { color };
+  };
+
+  if (colSchema.type === 'select' || colSchema.type === 'status') {
+    if (typeof value !== 'string' || !value) return [];
+    return [toAccent(value)];
+  }
+
+  if (colSchema.type === 'multi_select') {
+    if (!Array.isArray(value) || value.length === 0) return [];
+    return (value as string[]).map(toAccent);
+  }
+
+  return [];
+}
+
 /**
  * Returns an ordered list of dot-color hex strings to paint the card's
  * left-border accent. For a `select` column this is one color; for a
  * `multi_select` column one color per selected value (preserving order).
- * Returns [] when there is nothing to paint.
+ * Returns [] when there is nothing to paint. Thin wrapper around
+ * `getCardBorderAccents` for callers that only need the color.
  */
 export function getCardBorderDots(
   colSchema: { type: string; options?: (string | SelectOption)[] } | null | undefined,
   value: unknown,
 ): string[] {
-  if (!colSchema) return [];
-  const opts = colSchema.options ?? [];
-
-  if (colSchema.type === 'select' || colSchema.type === 'status') {
-    if (typeof value !== 'string' || !value) return [];
-    return [getOptionColorByValue(opts, value).dot];
-  }
-
-  if (colSchema.type === 'multi_select') {
-    if (!Array.isArray(value) || value.length === 0) return [];
-    return (value as string[]).map((v) => getOptionColorByValue(opts, v).dot);
-  }
-
-  return [];
+  return getCardBorderAccents(colSchema, value).map((a) => a.color);
 }
 
 /**

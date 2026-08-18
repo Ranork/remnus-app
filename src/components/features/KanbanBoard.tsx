@@ -4,7 +4,7 @@ import React, { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { createPortal } from 'react-dom';
 import { GripVertical, Settings, Trash2, Plus, Copy, CheckSquare, Square, ExternalLink, ArrowUpRight, Maximize2, Link2, ChevronDown, ChevronRight } from 'lucide-react';
-import { normalizeOption, getOptionColorByValue, getCardBorderDots, getCardBgColor, formatDateValue } from '@/lib/types/properties';
+import { normalizeOption, getOptionColorByValue, getCardBorderAccents, getCardBgColor, formatDateValue } from '@/lib/types/properties';
 import { useTranslations } from 'next-intl';
 import type { SelectOption } from '@/lib/types/properties';
 import InlineCellEditor from './InlineCellEditor';
@@ -349,18 +349,41 @@ export default function KanbanBoard({
               ) : (
                 groupedPages[columnName].map((page) => {
                   const colorColSchema = cardColorCol ? schema.find((c) => c.id === cardColorCol) : null;
-                  const borderDots = getCardBorderDots(colorColSchema, page.properties[cardColorCol ?? '']);
+                  const borderAccents = getCardBorderAccents(colorColSchema, page.properties[cardColorCol ?? '']);
+                  // Only worth thickening the line for the icon when the card is
+                  // actually collapsed — expanded cards already show the select's
+                  // icon in its own property chip, no need to duplicate it here.
+                  const showAccentIcons = page.cardCollapsed && borderAccents.some((a) => a.icon);
                   const bgColSchema = cardBgCol ? schema.find((c) => c.id === cardBgCol) : null;
                   const bgColor = getCardBgColor(bgColSchema, page.properties[cardBgCol ?? '']);
                   const isCardEditing = editingCell?.pageId === page.id;
                   const isHorizontalBorder = cardBorderSide === 'top' || cardBorderSide === 'bottom';
+                  // Thick+icon only while truly collapsed — the card root already
+                  // carries `group` (used by the existing hover-peek), so on hover
+                  // the bar animates straight back to its normal thin state, same
+                  // moment the property list peeks back open beneath it.
                   const borderLineClass = cardBorderSide === 'top'
-                    ? 'absolute top-0 inset-x-0 h-0.75 flex flex-row'
+                    ? `absolute top-0 inset-x-0 flex flex-row transition-[height] duration-200 ease-out ${showAccentIcons ? 'h-6 group-hover:h-0.75' : 'h-0.75'}`
                     : cardBorderSide === 'right'
-                    ? 'absolute right-0 inset-y-0 w-0.75 flex flex-col'
+                    ? `absolute right-0 inset-y-0 flex flex-col transition-[width] duration-200 ease-out ${showAccentIcons ? 'w-6 group-hover:w-0.75' : 'w-0.75'}`
                     : cardBorderSide === 'bottom'
-                    ? 'absolute bottom-0 inset-x-0 h-0.75 flex flex-row'
-                    : 'absolute left-0 inset-y-0 w-0.75 flex flex-col';
+                    ? `absolute bottom-0 inset-x-0 flex flex-row transition-[height] duration-200 ease-out ${showAccentIcons ? 'h-6 group-hover:h-0.75' : 'h-0.75'}`
+                    : `absolute left-0 inset-y-0 flex flex-col transition-[width] duration-200 ease-out ${showAccentIcons ? 'w-6 group-hover:w-0.75' : 'w-0.75'}`;
+                  // Kanban's normal padding (py-3/px-3, 12px) is narrower than the
+                  // 24px thickened bar — pull the accent side out to 28px so the
+                  // icon sits beside the title instead of under it. On hover it now
+                  // eases back to the plain 12px in step with the bar thinning back
+                  // to normal, so the title/properties actually slide over to meet
+                  // it instead of leaving a gap; other 3 sides never move.
+                  const cardPaddingClass = !showAccentIcons
+                    ? 'py-3 px-3'
+                    : cardBorderSide === 'right'
+                    ? 'py-3 pl-3 pr-7 group-hover:pr-3'
+                    : cardBorderSide === 'top'
+                    ? 'px-3 pb-3 pt-7 group-hover:pt-3'
+                    : cardBorderSide === 'bottom'
+                    ? 'px-3 pt-3 pb-7 group-hover:pb-3'
+                    : 'py-3 pr-3 pl-7 group-hover:pl-3';
                   return (
                   <div
                     key={page.id}
@@ -374,7 +397,7 @@ export default function KanbanBoard({
                     onDragOver={(e) => handleCardDragOver(e, page.id, columnName)}
                     onDrop={(e) => handleCardDrop(e, page.id, columnName)}
                     onDragEnd={handleCardDragEnd}
-                    className={`database-card relative py-3 px-3 mb-1.5 cursor-pointer transition-colors group rounded
+                    className={`database-card relative mb-1.5 cursor-pointer transition-colors group rounded
                       ${isCardEditing ? 'overflow-visible z-30' : 'overflow-hidden'}
                       ${draggedCardId === page.id ? 'opacity-25' : ''}
                       ${dragOverCardId === page.id && dragOverPosition === 'before' ? 'border-t-2 border-t-blue-500/60' : ''}
@@ -382,10 +405,16 @@ export default function KanbanBoard({
                     `}
                     style={{ backgroundColor: bgColor ?? 'var(--database-card-bg, rgba(64,68,75,0.55))' }}
                   >
-                    {borderDots.length > 0 && (
+                    {borderAccents.length > 0 && (
                       <div className={`${borderLineClass} pointer-events-none`} aria-hidden>
-                        {borderDots.map((dot, i) => (
-                          <div key={i} className="flex-1" style={{ backgroundColor: dot }} />
+                        {borderAccents.map((accent, i) => (
+                          <div key={i} className="flex-1 flex items-center justify-center" style={{ backgroundColor: accent.color }}>
+                            {showAccentIcons && accent.icon && (
+                              <span className="transition-opacity duration-150 group-hover:opacity-0">
+                                <PageIcon icon={accent.icon} iconColor={accent.iconColor} size={16} hideFallback style={{ color: '#fff' }} />
+                              </span>
+                            )}
+                          </div>
                         ))}
                       </div>
                     )}
@@ -464,7 +493,16 @@ export default function KanbanBoard({
                       document.body
                     )}
 
-                    <h4 className={`text-sm font-medium text-neutral-100 group-hover:text-neutral-50 transition-colors pr-8 flex items-center gap-1.5 ${propertyTextClamp === 'truncate' ? 'overflow-hidden' : 'wrap-break-word whitespace-normal overflow-visible'}`}>
+                    {/* Owns the padding (not the `group` root above) — `group-hover:`
+                        utilities only match descendants of `.group`, never the
+                        group element itself, so the accent-side padding's hover
+                        reversion has to live on a child for it to actually fire. */}
+                    <div className={`${cardPaddingClass} transition-[padding] duration-200 ease-out`}>
+                    {/* pr-8 (room for the collapse/grip buttons) only reserved on
+                        hover — those buttons are `opacity-0` until then, so
+                        holding the space permanently truncated titles that had
+                        the room to show more. */}
+                    <h4 className={`text-sm font-medium text-neutral-100 group-hover:text-neutral-50 transition-[color,padding-right] duration-200 ease-out pr-1 group-hover:pr-8 flex items-center gap-1.5 ${propertyTextClamp === 'truncate' ? 'overflow-hidden' : 'wrap-break-word whitespace-normal overflow-visible'}`}>
                       <div className="relative shrink-0 select-none">
                         <button
                           ref={(el) => { itemRefs.current[page.id] = el; }}
@@ -624,6 +662,7 @@ export default function KanbanBoard({
                             </div>
                           );
                         })}
+                    </div>
                     </div>
                     </div>
                     </div>

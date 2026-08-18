@@ -3,7 +3,7 @@
 import React, { useState, useMemo, useRef, useEffect, useLayoutEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createPortal } from 'react-dom';
-import { getOptionColorByValue, getCardBorderDots, getCardBgColor, formatDateValue } from '@/lib/types/properties';
+import { getOptionColorByValue, getCardBorderAccents, getCardBgColor, formatDateValue } from '@/lib/types/properties';
 import { ChevronLeft, ChevronRight, ChevronDown, GripVertical, Trash2, Calendar as CalendarIcon, Clock, Plus, Copy, ArrowUpRight, Maximize2, Link2, Repeat, Unlink } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useContextMenu, type MenuItem } from './ContextMenu';
@@ -531,16 +531,44 @@ export default function CalendarView({
                 <div className="flex-1 flex flex-col gap-1.5 min-h-10">
                   {dayPages.map((page) => {
                     const colorColSchema = cardColorCol ? schema.find((c) => c.id === cardColorCol) : null;
-                    const borderDots = getCardBorderDots(colorColSchema, page.properties[cardColorCol ?? '']);
+                    const borderAccents = getCardBorderAccents(colorColSchema, page.properties[cardColorCol ?? '']);
+                    // Only worth thickening the line for the icon when the card is
+                    // actually collapsed — expanded cards already show the select's
+                    // icon in its own property chip, no need to duplicate it here.
+                    const showAccentIcons = page.cardCollapsed && borderAccents.some((a) => a.icon);
                     const bgColSchema = cardBgCol ? schema.find((c) => c.id === cardBgCol) : null;
                     const bgColor = getCardBgColor(bgColSchema, page.properties[cardBgCol ?? '']);
+                    // Thick+icon only while truly collapsed — the card root already
+                    // carries `group` (used by the existing hover-peek), so on hover
+                    // the bar animates straight back to its normal thin state, same
+                    // moment the property list peeks back open beneath it. `lg:`-gated
+                    // like the property block itself: mobile never reveals the peek
+                    // (touch has no real hover), so the bar shouldn't try to thin
+                    // there either — it'd revert with nothing to reveal underneath.
                     const borderLineClass = cardBorderSide === 'top'
-                      ? 'absolute top-0 inset-x-0 h-0.75 flex flex-row'
+                      ? `absolute top-0 inset-x-0 flex flex-row transition-[height] duration-200 ease-out ${showAccentIcons ? 'h-6 lg:group-hover:h-0.75' : 'h-0.75'}`
                       : cardBorderSide === 'right'
-                      ? 'absolute right-0 inset-y-0 w-0.75 flex flex-col'
+                      ? `absolute right-0 inset-y-0 flex flex-col transition-[width] duration-200 ease-out ${showAccentIcons ? 'w-6 lg:group-hover:w-0.75' : 'w-0.75'}`
                       : cardBorderSide === 'bottom'
-                      ? 'absolute bottom-0 inset-x-0 h-0.75 flex flex-row'
-                      : 'absolute left-0 inset-y-0 w-0.75 flex flex-col';
+                      ? `absolute bottom-0 inset-x-0 flex flex-row transition-[height] duration-200 ease-out ${showAccentIcons ? 'h-6 lg:group-hover:h-0.75' : 'h-0.75'}`
+                      : `absolute left-0 inset-y-0 flex flex-col transition-[width] duration-200 ease-out ${showAccentIcons ? 'w-6 lg:group-hover:w-0.75' : 'w-0.75'}`;
+                    // Calendar cards are much tighter than Kanban's (py-1/px-1 on
+                    // mobile), so the 24px thickened bar needs its own side's
+                    // padding pulled out to 28px or the icon would sit under the
+                    // title text instead of beside it. On hover (lg: only, matching
+                    // the bar's own gate — mobile has no real hover to revert on)
+                    // it eases back to the normal responsive value in step with the
+                    // bar thinning, so the title/properties actually slide over to
+                    // meet it instead of leaving a gap; the other three sides never move.
+                    const cardPaddingClass = !showAccentIcons
+                      ? 'py-1 lg:py-2.5 px-1 lg:px-2'
+                      : cardBorderSide === 'right'
+                      ? 'py-1 lg:py-2.5 pl-1 lg:pl-2 pr-7 lg:group-hover:pr-2'
+                      : cardBorderSide === 'top'
+                      ? 'px-1 lg:px-2 pb-1 lg:pb-2.5 pt-7 lg:group-hover:pt-2.5'
+                      : cardBorderSide === 'bottom'
+                      ? 'px-1 lg:px-2 pt-1 lg:pt-2.5 pb-7 lg:group-hover:pb-2.5'
+                      : 'py-1 lg:py-2.5 pr-1 lg:pr-2 pl-7 lg:group-hover:pl-2';
                     return (
                     <div
                       key={page.id}
@@ -577,17 +605,23 @@ export default function CalendarView({
                         resetDragState();
                       }}
                       onDragEnd={resetDragState}
-                      className={`database-card relative py-1 lg:py-2.5 px-1 lg:px-2 cursor-pointer transition-colors group flex flex-col select-none overflow-hidden rounded ${
+                      className={`database-card relative cursor-pointer transition-colors group flex flex-col select-none overflow-hidden rounded ${
                         draggedCardId === page.id ? 'opacity-25' : ''
                       } ${dragOverCardId === page.id && dragOverPosition === 'before' ? 'border-t-2 border-t-blue-500/60' : ''} ${
                         dragOverCardId === page.id && dragOverPosition === 'after' ? 'border-b-2 border-b-blue-500/60' : ''
                       }`}
                       style={{ backgroundColor: bgColor ?? 'var(--database-card-bg, rgba(64,68,75,0.55))' }}
                     >
-                      {borderDots.length > 0 && (
+                      {borderAccents.length > 0 && (
                         <div className={`${borderLineClass} pointer-events-none`} aria-hidden>
-                          {borderDots.map((dot, i) => (
-                            <div key={i} className="flex-1" style={{ backgroundColor: dot }} />
+                          {borderAccents.map((accent, i) => (
+                            <div key={i} className="flex-1 flex items-center justify-center" style={{ backgroundColor: accent.color }}>
+                              {showAccentIcons && accent.icon && (
+                                <span className="transition-opacity duration-150 lg:group-hover:opacity-0">
+                                  <PageIcon icon={accent.icon} iconColor={accent.iconColor} size={16} hideFallback style={{ color: '#fff' }} />
+                                </span>
+                              )}
+                            </div>
                           ))}
                         </div>
                       )}
@@ -705,8 +739,17 @@ export default function CalendarView({
                         document.body
                       )}
 
-                      {/* Page Title */}
-                      <h4 className={`text-[11px] lg:text-sm text-neutral-100 group-hover:text-neutral-50 font-medium leading-snug pr-1 lg:pr-8 mb-0 lg:mb-1 flex items-center gap-1 ${propertyTextClamp === 'truncate' ? 'overflow-hidden' : 'wrap-break-word whitespace-normal overflow-visible'}`}>
+                      {/* Owns the padding (not the `group` root above) — `group-hover:`
+                          utilities only match descendants of `.group`, never the
+                          group element itself, so the accent-side padding's hover
+                          reversion has to live on a child for it to actually fire. */}
+                      <div className={`${cardPaddingClass} transition-[padding] duration-200 ease-out flex-1 flex flex-col min-w-0`}>
+                      {/* Page Title. lg:pr-8 (room for the collapse/grip buttons,
+                          `hidden lg:flex` themselves) only reserved on hover —
+                          those buttons are `opacity-0` until then, so holding the
+                          space permanently truncated titles that had the room to
+                          show more. */}
+                      <h4 className={`text-[11px] lg:text-sm text-neutral-100 group-hover:text-neutral-50 font-medium leading-snug transition-[padding-right] duration-200 ease-out pr-1 lg:group-hover:pr-8 mb-0 lg:mb-1 flex items-center gap-1 ${propertyTextClamp === 'truncate' ? 'overflow-hidden' : 'wrap-break-word whitespace-normal overflow-visible'}`}>
                         <div className="relative shrink-0 select-none hidden lg:block">
                           <button
                             onClick={(e) => {
@@ -825,6 +868,7 @@ export default function CalendarView({
                                </div>
                              );
                           })}
+                      </div>
                       </div>
                       </div>
                       </div>

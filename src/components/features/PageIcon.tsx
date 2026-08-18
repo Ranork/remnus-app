@@ -111,6 +111,10 @@ interface PageIconProps {
   className?: string;
   fallbackType?: 'page' | 'database';
   hideFallback?: boolean;
+  /** Inline style, merged in last so it can override the color-class tinting
+   *  above — e.g. forcing a lucide/emoji icon to white when it's painted on
+   *  top of a solid accent color instead of the app's neutral surfaces. */
+  style?: React.CSSProperties;
 }
 
 export default function PageIcon({
@@ -120,18 +124,19 @@ export default function PageIcon({
   className = '',
   fallbackType = 'page',
   hideFallback = false,
+  style,
 }: PageIconProps) {
   const activeColor = iconColor || 'default';
   const colorClass = ICON_COLORS[activeColor] || ICON_COLORS.default;
 
   if (!icon) {
     if (hideFallback) return null;
-    
+
     // Default fallback icons if no icon is specified
     if (fallbackType === 'database') {
-      return <LucideIcons.Database size={size} className={`${colorClass} shrink-0 ${className}`} />;
+      return <LucideIcons.Database size={size} className={`${colorClass} shrink-0 ${className}`} style={style} />;
     }
-    return <LucideIcons.FileText size={size} className={`${colorClass} shrink-0 ${className}`} />;
+    return <LucideIcons.FileText size={size} className={`${colorClass} shrink-0 ${className}`} style={style} />;
   }
 
   // Check if it's an uploaded image URL
@@ -150,14 +155,14 @@ export default function PageIcon({
   if (icon.startsWith('lucide:')) {
     const iconName = icon.replace('lucide:', '');
     const IconComp = CURATED_ICONS[iconName] || (fallbackType === 'database' ? LucideIcons.Database : LucideIcons.FileText);
-    return <IconComp size={size} className={`${colorClass} shrink-0 ${className}`} />;
+    return <IconComp size={size} className={`${colorClass} shrink-0 ${className}`} style={style} />;
   }
 
   // Otherwise treat as Emoji
   return (
-    <span 
+    <span
       className={`shrink-0 leading-none flex items-center justify-center select-none ${className}`}
-      style={{ fontSize: `${size}px`, width: `${size}px`, height: `${size}px` }}
+      style={{ fontSize: `${size}px`, width: `${size}px`, height: `${size}px`, ...style }}
     >
       {icon}
     </span>
