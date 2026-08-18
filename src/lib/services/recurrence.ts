@@ -1,5 +1,5 @@
 import { db } from '@/db';
-import { pages, recurrenceSeries, workspaceItems, pageLinks } from '@/db/schema';
+import { pages, recurrenceSeries, workspaceItems, pageLinks, databases } from '@/db/schema';
 import { and, eq, gte, inArray, or, sql } from 'drizzle-orm';
 import {
   MAX_OCCURRENCES_PER_SERIES,
@@ -360,6 +360,91 @@ export async function createSeriesFromPage(
   return { seriesId, created };
 }
 
+// ── agent-facing entry point ──────────────────────────────────────────────────
+
+/** The flattened rule an MCP client sends — `until`/`count` instead of the
+ *  nested `end` union, since a tool schema reads better without one. */
+export interface RecurrenceInput {
+  freq: RecurrenceRule['freq'];
+  interval?: number;
+  byWeekday?: RecurrenceRule['byWeekday'];
+  monthlyMode?: RecurrenceRule['monthlyMode'];
+  byMonthDay?: number;
+  bySetPos?: RecurrenceRule['bySetPos'];
+  until?: string;
+  count?: number;
+  /** Column id or name (case-insensitive); defaults to the first date column. */
+  dateColumn?: string;
+}
+
+/**
+ * Turns a freshly created row into a repeating series — the agent-facing path,
+ * so "open a standup card every Monday" is one tool call rather than a loop
+ * that creates fifty rows by hand.
+ *
+ * Resolves the date column the same way the rest of the product does (by id,
+ * then case-insensitively by name, then the first date/datetime column), and
+ * returns a plain reason string instead of throwing so the tool can report it
+ * without failing the row creation that already succeeded.
+ */
+export async function applyRecurrenceInput(
+  pageId: string,
+  databaseId: string,
+  input: RecurrenceInput,
+  actorId: string,
+): Promise<{ seriesId: string; created: number } | { error: string }> {
+  const [database] = await db
+    .select({ schema: databases.schema })
+    .from(databases)
+    .where(eq(databases.id, databaseId))
+    .limit(1);
+  if (!database) return { error: 'Database not found' };
+
+  const columns = (database.schema ?? []) as { id: string; name?: string; type?: string }[];
+  const dateColumns = columns.filter((c) => c.type === 'date' || c.type === 'datetime');
+
+  let column = input.dateColumn
+    ? columns.find((c) => c.id === input.dateColumn)
+      ?? columns.find((c) => (c.name ?? '').toLowerCase() === input.dateColumn!.toLowerCase())
+    : dateColumns[0];
+  if (column && column.type !== 'date' && column.type !== 'datetime') column = undefined;
+  if (!column) {
+    return {
+      error: dateColumns.length === 0
+        ? 'This database has no date column to repeat on.'
+        : `Unknown date column "${input.dateColumn}".`,
+    };
+  }
+
+  const [page] = await db
+    .select({ properties: pages.properties })
+    .from(pages)
+    .where(eq(pages.id, pageId))
+    .limit(1);
+  const shape = parseDateValue((page?.properties as Record<string, unknown> | undefined)?.[column.id]);
+  if (!shape) return { error: `Set a value on the "${column.name ?? column.id}" column before repeating this row.` };
+
+  const rule = normalizeRule({
+    freq: input.freq,
+    interval: input.interval ?? 1,
+    byWeekday: input.byWeekday,
+    monthlyMode: input.monthlyMode,
+    byMonthDay: input.byMonthDay,
+    bySetPos: input.bySetPos,
+    startDate: shape.startDate,
+    exDates: [],
+    end: input.until
+      ? { type: 'onDate', date: input.until }
+      : input.count
+        ? { type: 'afterCount', count: input.count }
+        : { type: 'never' },
+  });
+  if (!rule) return { error: 'Invalid recurrence rule.' };
+
+  const result = await createSeriesFromPage(pageId, column.id, rule, actorId);
+  return result ?? { error: 'Could not create the series.' };
+}
+
 // ── impact preview ────────────────────────────────────────────────────────────
 
 export interface ScopeImpact {
@@ -638,6 +723,43 @@ export async function deleteOccurrences(
     .where(eq(recurrenceSeries.id, page.seriesId));
 
   return { deletedIds, preserved: preservedIds.length, seriesDeleted: false };
+}
+
+/**
+ * Records a single occurrence as deleted on its series, so no later top-up
+ * regenerates it.
+ *
+ * Called from the PLAIN row-delete path (`actions/page.ts`), not just from the
+ * series-aware delete: a recurring card can also be removed from the Table or
+ * Kanban view, or by an agent over MCP, and without this the next
+ * materialization would simply bring it back — the row is missing from a date
+ * the rule still calls for, which is exactly the signal "create it" uses.
+ */
+export async function exdateOccurrenceForPage(pageId: string): Promise<boolean> {
+  const [page] = await db
+    .select({ seriesId: pages.seriesId, occurrenceDate: pages.occurrenceDate })
+    .from(pages)
+    .where(eq(pages.id, pageId))
+    .limit(1);
+  if (!page?.seriesId || !page.occurrenceDate) return false;
+
+  const series = await getSeries(page.seriesId);
+  if (!series) return false;
+  const rule = normalizeRule(series.rule);
+  if (!rule) return false;
+
+  await db
+    .update(recurrenceSeries)
+    .set({
+      rule: {
+        ...rule,
+        exDates: [...new Set([...(rule.exDates ?? []), page.occurrenceDate])],
+      } as unknown as Record<string, unknown>,
+      updatedAt: new Date(),
+    })
+    .where(eq(recurrenceSeries.id, page.seriesId));
+
+  return true;
 }
 
 /** Removes one card from its series without touching the rest — "seriden çıkar". */

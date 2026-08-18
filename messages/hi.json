@@ -1980,6 +1980,17 @@
     "badgeDetached": "शृंखला से हटाया गया",
     "menuRepeat": "दोहराएँ…",
     "menuEditRepeat": "दोहराव संपादित करें…",
-    "menuDetach": "शृंखला से हटाएँ"
+    "menuDetach": "शृंखला से हटाएँ",
+    "decrease": "घटाएँ",
+    "increase": "बढ़ाएँ",
+    "monthlyModeShort_dayOfMonth": "वही तारीख",
+    "monthlyModeShort_nthWeekday": "वही वार",
+    "monthlyModeShort_lastDay": "आखिरी दिन",
+    "seriesPanelTitle": "एक दोहराने वाली शृंखला का हिस्सा",
+    "seriesPanelDetached": "दोहराने वाली शृंखला से हटाया गया",
+    "seriesPanelCount": "{count} कार्ड",
+    "seriesPanelEdit": "दोहराव संपादित करें",
+    "seriesPanelAdd": "इस कार्य को दोहराएँ",
+    "seriesPanelNoDate": "दोहराव सेट करने से पहले इस कार्य में तारीख जोड़ें।"
   }
 }

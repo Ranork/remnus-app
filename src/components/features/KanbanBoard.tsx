@@ -13,6 +13,7 @@ import { StatusChip, UserChip, UserTags, OptionIcon } from './PropertyTags';
 import PageIcon from './PageIcon';
 import IconPicker from './IconPicker';
 import AgentEditBadge from './AgentEditBadge';
+import RecurringBadge from './recurrence/RecurringBadge';
 import { updatePageIcon, updatePageCardCollapsed } from '@/lib/actions/page';
 import { updateDatabaseSchema } from '@/lib/actions/database';
 import { ConfirmDialog } from './ConfirmDialog';
@@ -494,6 +495,11 @@ export default function KanbanBoard({
                         )}
                       </div>
                       <span className={propertyTextClamp === 'truncate' ? 'truncate min-w-0' : ''}>{page.properties['title'] || tPage('untitled')}</span>
+                      {/* No rule passed: the rhythm map is loaded by the calendar
+                          view (which needs it for its window top-up anyway), so
+                          here the badge answers "this repeats" and the details
+                          live one click away in the card itself. */}
+                      <RecurringBadge seriesId={page.seriesId} detached={page.seriesDetached} />
                     </h4>
 
                     <AgentEditBadge

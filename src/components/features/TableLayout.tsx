@@ -13,6 +13,7 @@ import type { ViewFilter, ViewSort, FilterOperator } from '@/lib/types/views';
 import PageIcon from './PageIcon';
 import IconPicker from './IconPicker';
 import AgentEditBadge from './AgentEditBadge';
+import RecurringBadge from './recurrence/RecurringBadge';
 import { updatePageIcon } from '@/lib/actions/page';
 import { updateDatabaseSchema } from '@/lib/actions/database';
 import { ConfirmDialog } from './ConfirmDialog';
@@ -694,6 +695,7 @@ export default function TableLayout({
                             >
                               {val || tPage('untitled')}
                             </span>
+                            <RecurringBadge seriesId={page.seriesId} detached={page.seriesDetached} />
                             {page.agentEditedAt && (
                               <AgentEditBadge
                                 agentName={page.agentName ?? null}

@@ -1980,6 +1980,17 @@
     "badgeDetached": "Aus der Serie entfernt",
     "menuRepeat": "Wiederholen…",
     "menuEditRepeat": "Wiederholung bearbeiten…",
-    "menuDetach": "Aus Serie entfernen"
+    "menuDetach": "Aus Serie entfernen",
+    "decrease": "Verringern",
+    "increase": "Erhöhen",
+    "monthlyModeShort_dayOfMonth": "Gleiches Datum",
+    "monthlyModeShort_nthWeekday": "Gleicher Wochentag",
+    "monthlyModeShort_lastDay": "Letzter Tag",
+    "seriesPanelTitle": "Teil einer wiederkehrenden Serie",
+    "seriesPanelDetached": "Aus einer wiederkehrenden Serie entfernt",
+    "seriesPanelCount": "{count, plural, one {# Karte} other {# Karten}}",
+    "seriesPanelEdit": "Wiederholung bearbeiten",
+    "seriesPanelAdd": "Diese Aufgabe wiederholen",
+    "seriesPanelNoDate": "Füge dieser Aufgabe erst ein Datum hinzu, bevor du sie wiederholst."
   }
 }

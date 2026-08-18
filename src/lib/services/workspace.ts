@@ -4,6 +4,7 @@
  * Next.js session cookies. Every function enforces workspace isolation.
  */
 import { db } from '@/db';
+import { exdateOccurrenceForPage } from '@/lib/services/recurrence';
 import {
   workspaceItems,
   standalonePages,
@@ -1238,6 +1239,10 @@ export async function deleteItemFromWorkspace(workspaceId: string, itemId: strin
 
   if (!page) throw new Error('Item not found');
   await assertDatabaseInWorkspace(page.databaseId, workspaceId);
+  // Same reason as the web delete path in `actions/page.ts`: a deleted
+  // occurrence has to be recorded on its rule, or the next materialization
+  // recreates it and the agent's delete silently undoes itself.
+  await exdateOccurrenceForPage(itemId).catch(() => {});
   await db.delete(pages).where(eq(pages.id, itemId));
   await recordDeletionTombstone(workspaceId, itemId, 'database_row', page.title);
   await purgeReferencesTo([itemId]);

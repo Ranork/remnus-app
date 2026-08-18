@@ -1980,6 +1980,17 @@
     "badgeDetached": "Исключена из серии",
     "menuRepeat": "Повторять…",
     "menuEditRepeat": "Изменить повтор…",
-    "menuDetach": "Исключить из серии"
+    "menuDetach": "Исключить из серии",
+    "decrease": "Уменьшить",
+    "increase": "Увеличить",
+    "monthlyModeShort_dayOfMonth": "Та же дата",
+    "monthlyModeShort_nthWeekday": "Тот же день",
+    "monthlyModeShort_lastDay": "Последний день",
+    "seriesPanelTitle": "Часть повторяющейся серии",
+    "seriesPanelDetached": "Исключена из повторяющейся серии",
+    "seriesPanelCount": "{count, plural, one {# карточка} few {# карточки} many {# карточек} other {# карточек}}",
+    "seriesPanelEdit": "Изменить повтор",
+    "seriesPanelAdd": "Повторять эту задачу",
+    "seriesPanelNoDate": "Сначала добавьте дату, а затем настройте повтор."
   }
 }

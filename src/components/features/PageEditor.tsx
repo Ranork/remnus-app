@@ -18,6 +18,7 @@ import ShareModal from '@/components/share/ShareModal';
 import { PageMarkdownDialog } from './PageMarkdownDialog';
 import PageBacklinksPanel from './PageBacklinksPanel';
 import KnowledgeContextPanel from './KnowledgeContextPanel';
+import SeriesPanel from './recurrence/SeriesPanel';
 import type { WorkspaceItemRow } from '@/lib/actions/workspace';
 import {
   type SelectOption,
@@ -214,6 +215,16 @@ const PageEditor = forwardRef<PageEditorHandle, PageEditorProps>(function PageEd
   }, [initialPage.id, initialPage.icon, initialPage.iconColor]);
 
   const schema = database.schema as any[];
+
+  // Which date column a repeat rule would hang off. Prefer whatever a Calendar
+  // view of this database is already bound to (that is the column the user
+  // thinks of as "the date"), and fall back to the first date/datetime column —
+  // the same heuristic DatabaseView's header "New" button uses.
+  const recurrenceDateColId = useMemo<string | null>(() => {
+    const calendarView = (database.views as any[] | undefined)?.find((v) => v?.type === 'calendar' && v?.dateCol);
+    if (calendarView?.dateCol) return calendarView.dateCol as string;
+    return schema.find((c: any) => c.type === 'date' || c.type === 'datetime')?.id ?? null;
+  }, [database.views, schema]);
   const pageTitle = properties['title'] || 'Untitled';
 
   useEffect(() => {
@@ -814,6 +825,22 @@ const PageEditor = forwardRef<PageEditorHandle, PageEditorProps>(function PageEd
           );
         })}
       </div>
+
+      {/* Recurrence — sits between the properties and the body because that is
+          the order the question gets asked: what is this card, then is it one
+          of many, then what am I writing in it. */}
+      <SeriesPanel
+        page={{
+          id: initialPage.id,
+          properties,
+          seriesId: (initialPage as any).seriesId,
+          seriesDetached: (initialPage as any).seriesDetached,
+        }}
+        databaseId={database.id}
+        dateColId={recurrenceDateColId}
+        isPeek={isPeek}
+        onChanged={() => router.refresh()}
+      />
 
       {/* Content Editor */}
       <BlockEditor

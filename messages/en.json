@@ -2004,6 +2004,17 @@
     "badgeDetached": "Removed from the series",
     "menuRepeat": "Repeat…",
     "menuEditRepeat": "Edit repeat…",
-    "menuDetach": "Remove from series"
+    "menuDetach": "Remove from series",
+    "decrease": "Decrease",
+    "increase": "Increase",
+    "monthlyModeShort_dayOfMonth": "Same date",
+    "monthlyModeShort_nthWeekday": "Same weekday",
+    "monthlyModeShort_lastDay": "Last day",
+    "seriesPanelTitle": "Part of a repeating series",
+    "seriesPanelDetached": "Removed from a repeating series",
+    "seriesPanelCount": "{count, plural, one {# card} other {# cards}}",
+    "seriesPanelEdit": "Edit repeat",
+    "seriesPanelAdd": "Repeat this task",
+    "seriesPanelNoDate": "Add a date to this task before setting a repeat."
   }
 }

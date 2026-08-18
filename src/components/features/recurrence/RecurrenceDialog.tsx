@@ -17,15 +17,28 @@ import {
   type Weekday,
 } from '@/lib/recurrence/rule';
 import { formatRuleSummary, weekdayLabels } from '@/lib/recurrence/summary';
+import { OptionTile, Segmented, Stepper } from './parts';
 
-// The repeat editor: a preset list for the rhythms people actually pick, and a
-// custom builder behind them for everything else. Deliberately NOT folded into
-// `DateRangePicker` — that popover is 288px wide and closes on any outside
-// mousedown, which fights a multi-control form.
+// The repeat editor.
+//
+// Deliberately not a radio list: picking a rhythm is a visual choice, and what
+// actually makes it easy is showing what each option WOULD mean for this
+// particular card ("Every month — on the 19th", "Monthly — 3rd Tuesday") rather
+// than making the user derive it. So every preset renders its own sub-label
+// computed from the card's start date, the live summary sits at the top where
+// it reads as the answer instead of a footnote, and the custom controls are
+// steppers / day circles / segmented switches rather than number fields and
+// dropdowns.
+//
+// Also deliberately not folded into `DateRangePicker`: that popover is 288px
+// wide and saves-and-closes on any outside mousedown, which fights a form.
 
 type PresetId =
   | 'none' | 'daily' | 'weekdays' | 'weekly' | 'biweekly'
   | 'monthly' | 'monthlyNth' | 'yearly' | 'custom';
+
+/** Presets shown as tiles in the grid, between "no repeat" and "custom". */
+const TILE_PRESETS: PresetId[] = ['daily', 'weekdays', 'weekly', 'biweekly', 'monthly', 'monthlyNth', 'yearly'];
 
 interface RecurrenceDialogProps {
   /** Date the rule starts from — the card's own date. */
@@ -60,10 +73,10 @@ function presetRule(preset: PresetId, startDate: string): RecurrenceRule | null 
 }
 
 /** Which preset an existing rule corresponds to, so reopening the dialog lands
- *  on the row the user originally picked instead of always on "Custom". */
+ *  on the tile the user originally picked instead of always on "Custom". */
 function matchPreset(rule: RecurrenceRule | null, startDate: string): PresetId {
   if (!rule) return 'none';
-  for (const preset of ['daily', 'weekdays', 'weekly', 'biweekly', 'monthly', 'monthlyNth', 'yearly'] as const) {
+  for (const preset of TILE_PRESETS) {
     const candidate = presetRule(preset, startDate);
     if (!candidate) continue;
     if (
@@ -78,6 +91,8 @@ function matchPreset(rule: RecurrenceRule | null, startDate: string): PresetId {
   }
   return 'custom';
 }
+
+// ── dialog ────────────────────────────────────────────────────────────────────
 
 export default function RecurrenceDialog({
   startDate,
@@ -96,6 +111,8 @@ export default function RecurrenceDialog({
   );
 
   const dayNames = useMemo(() => weekdayLabels(locale), [locale]);
+  const dayNamesLong = useMemo(() => weekdayLabels(locale, 'long'), [locale]);
+
   const summary = useMemo(
     () => (preset === 'none' ? '' : formatRuleSummary(draft, t as never, locale)),
     [draft, preset, t, locale],
@@ -103,10 +120,32 @@ export default function RecurrenceDialog({
 
   // How many cards this rule would actually create in the materialization
   // window — the guardrail against casually picking "every day, forever".
-  const preview = useMemo(() => {
-    if (preset === 'none') return 0;
-    return countOccurrences(draft, startDate, defaultHorizon());
-  }, [draft, preset, startDate]);
+  const preview = useMemo(
+    () => (preset === 'none' ? 0 : countOccurrences(draft, startDate, defaultHorizon())),
+    [draft, preset, startDate],
+  );
+
+  /** Each tile's second line, resolved against this card's own date. */
+  const subtitleFor = (id: PresetId): string | undefined => {
+    switch (id) {
+      case 'weekdays':
+        return (['MO', 'TU', 'WE', 'TH', 'FR'] as Weekday[]).map((wd) => dayNames[wd]).join(', ');
+      case 'weekly':
+      case 'biweekly':
+        return dayNamesLong[weekdayOf(start)];
+      case 'monthly':
+        return t('sumOnMonthDay', { day: start.getDate() });
+      case 'monthlyNth':
+        return t('sumOnNthWeekday', {
+          nth: t(`nth${nthOfMonth(start)}` as 'nth1'),
+          weekday: dayNamesLong[weekdayOf(start)],
+        });
+      case 'yearly':
+        return new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'long' }).format(start);
+      default:
+        return undefined;
+    }
+  };
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
@@ -132,11 +171,12 @@ export default function RecurrenceDialog({
   const toggleWeekday = (wd: Weekday) => {
     const current = draft.byWeekday ?? [weekdayOf(start)];
     const next = current.includes(wd) ? current.filter((d) => d !== wd) : [...current, wd];
+    // Never let the set empty out — a weekly rule with no days can never fire.
     patch({ byWeekday: next.length > 0 ? next : [wd] });
   };
 
-  const presets: PresetId[] = ['none', 'daily', 'weekdays', 'weekly', 'biweekly', 'monthly', 'monthlyNth', 'yearly', 'custom'];
-  const showCustom = preset === 'custom';
+  const monthlyMode: MonthlyMode = draft.monthlyMode ?? 'dayOfMonth';
+  const endType = draft.end.type;
 
   if (typeof document === 'undefined') return null;
 
@@ -150,73 +190,89 @@ export default function RecurrenceDialog({
         aria-modal="true"
         aria-label={t('title')}
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-full sm:max-w-md max-h-full bg-neutral-850 border border-neutral-800 rounded-lg modal-shadow flex flex-col overflow-hidden animate-scale-in"
+        className="w-full max-w-full sm:max-w-lg max-h-full bg-neutral-850 border border-neutral-800 rounded-xl modal-shadow flex flex-col overflow-hidden animate-scale-in"
       >
-        <div className="flex items-center justify-between gap-3 px-5 py-4 border-b border-neutral-800 bg-neutral-900/30 shrink-0">
+        {/* Header */}
+        <div className="flex items-center justify-between gap-3 px-5 py-3.5 border-b border-neutral-800 shrink-0">
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-7 h-7 rounded-md bg-blue-500/10 border border-blue-500/20 flex items-center justify-center shrink-0">
-              <Repeat size={14} className="text-blue-400" />
+            <div className="w-7 h-7 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center shrink-0">
+              <Repeat size={13} className="text-blue-400" />
             </div>
             <h2 className="m-0 text-sm font-semibold text-neutral-100 truncate">{t('title')}</h2>
           </div>
           <button
             onClick={onClose}
             aria-label={t('cancel')}
-            className="shrink-0 p-1.5 rounded text-neutral-500 hover:text-neutral-200 hover:bg-neutral-800 transition-colors"
+            className="shrink-0 p-1.5 rounded-md text-neutral-500 hover:text-neutral-200 hover:bg-neutral-800 transition-colors"
           >
             <X size={15} />
           </button>
         </div>
 
         <div className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-4">
-          {/* Presets */}
-          <div className="flex flex-col">
-            {presets.map((id) => (
-              <label
+          {/* Live answer, up top where it gets read — not a footnote. */}
+          {preset !== 'none' && (
+            <div className="rounded-lg bg-blue-500/[0.07] border border-blue-500/20 px-4 py-3">
+              <p className="m-0 text-[13px] font-medium text-neutral-50 leading-snug">{summary}</p>
+              <p className="m-0 mt-1 text-[11px] text-blue-300/70">
+                {t('previewCount', { count: preview, days: DEFAULT_HORIZON_DAYS })}
+              </p>
+            </div>
+          )}
+
+          <div className="grid grid-cols-2 gap-2">
+            <OptionTile
+              wide
+              title={t('preset_none')}
+              selected={preset === 'none'}
+              onSelect={() => choosePreset('none')}
+            />
+            {TILE_PRESETS.map((id) => (
+              <OptionTile
                 key={id}
-                className={`flex items-center gap-2.5 px-2 py-1.5 rounded-md cursor-pointer transition-colors ${
-                  preset === id ? 'bg-neutral-800 text-neutral-100' : 'text-neutral-400 hover:bg-neutral-800/50'
-                }`}
-              >
-                <input
-                  type="radio"
-                  name="recurrence-preset"
-                  checked={preset === id}
-                  onChange={() => choosePreset(id)}
-                  className="accent-blue-500"
-                />
-                <span className="text-xs">{t(`preset_${id}`)}</span>
-              </label>
+                title={t(`preset_${id}` as 'preset_daily')}
+                subtitle={subtitleFor(id)}
+                selected={preset === id}
+                onSelect={() => choosePreset(id)}
+              />
             ))}
+            <OptionTile
+              wide
+              title={t('preset_custom')}
+              selected={preset === 'custom'}
+              onSelect={() => choosePreset('custom')}
+            />
           </div>
 
           {/* Custom builder */}
-          {showCustom && (
-            <div className="flex flex-col gap-3 pt-3 border-t border-neutral-800">
-              <div className="flex items-center gap-2">
-                <span className="text-[11px] text-neutral-500 shrink-0">{t('every')}</span>
-                <input
-                  type="number"
+          {preset === 'custom' && (
+            <div className="flex flex-col gap-4 rounded-lg border border-neutral-800 bg-neutral-900/40 p-4">
+              {/* Frequency + interval */}
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-[11px] text-neutral-500">{t('every')}</span>
+                <Stepper
+                  value={draft.interval}
                   min={1}
                   max={99}
-                  value={draft.interval}
-                  onChange={(e) => patch({ interval: Math.max(1, Number(e.target.value) || 1) })}
-                  className="w-14 bg-neutral-800 border border-neutral-700 rounded px-2 py-1 text-xs text-neutral-100 focus:outline-none focus:border-neutral-500"
+                  onChange={(n) => patch({ interval: n })}
+                  decreaseLabel={t('decrease')}
+                  increaseLabel={t('increase')}
                 />
-                <select
+                <Segmented<RecurrenceFreq>
                   value={draft.freq}
-                  onChange={(e) => patch({ freq: e.target.value as RecurrenceFreq })}
-                  className="flex-1 bg-neutral-800 border border-neutral-700 rounded px-2 py-1 text-xs text-neutral-100 focus:outline-none focus:border-neutral-500"
-                >
-                  <option value="daily">{t('unit_daily')}</option>
-                  <option value="weekly">{t('unit_weekly')}</option>
-                  <option value="monthly">{t('unit_monthly')}</option>
-                  <option value="yearly">{t('unit_yearly')}</option>
-                </select>
+                  onChange={(freq) => patch({ freq })}
+                  options={[
+                    { id: 'daily', label: t('unit_daily') },
+                    { id: 'weekly', label: t('unit_weekly') },
+                    { id: 'monthly', label: t('unit_monthly') },
+                    { id: 'yearly', label: t('unit_yearly') },
+                  ]}
+                />
               </div>
 
+              {/* Weekday circles */}
               {draft.freq === 'weekly' && (
-                <div className="flex flex-wrap gap-1">
+                <div className="flex flex-wrap gap-1.5">
                   {WEEKDAYS.map((wd) => {
                     const active = (draft.byWeekday ?? [weekdayOf(start)]).includes(wd);
                     return (
@@ -224,42 +280,42 @@ export default function RecurrenceDialog({
                         key={wd}
                         type="button"
                         onClick={() => toggleWeekday(wd)}
-                        className={`px-2 py-1 rounded text-[10px] font-medium border transition-colors ${
+                        aria-pressed={active}
+                        aria-label={dayNamesLong[wd]}
+                        className={`w-9 h-9 rounded-full text-[10px] font-semibold border transition-colors ${
                           active
-                            ? 'bg-blue-500/15 border-blue-500/30 text-blue-300'
-                            : 'bg-neutral-800 border-neutral-700 text-neutral-400 hover:text-neutral-200'
+                            ? 'bg-blue-500 border-blue-500 text-white'
+                            : 'bg-neutral-900 border-neutral-800 text-neutral-500 hover:text-neutral-200 hover:border-neutral-700'
                         }`}
                       >
-                        {dayNames[wd]}
+                        {dayNames[wd].slice(0, 2)}
                       </button>
                     );
                   })}
                 </div>
               )}
 
+              {/* Monthly mode */}
               {draft.freq === 'monthly' && (
-                <div className="flex flex-col gap-1">
-                  {(['dayOfMonth', 'nthWeekday', 'lastDay'] as MonthlyMode[]).map((mode) => (
-                    <label key={mode} className="flex items-center gap-2.5 px-2 py-1 rounded cursor-pointer text-neutral-400 hover:bg-neutral-800/50">
-                      <input
-                        type="radio"
-                        name="monthly-mode"
-                        checked={(draft.monthlyMode ?? 'dayOfMonth') === mode}
-                        onChange={() => patch({
-                          monthlyMode: mode,
-                          byMonthDay: mode === 'dayOfMonth' ? start.getDate() : draft.byMonthDay,
-                          bySetPos: mode === 'nthWeekday' ? (draft.bySetPos ?? nthOfMonth(start)) : draft.bySetPos,
-                          byWeekday: mode === 'nthWeekday' ? [draft.byWeekday?.[0] ?? weekdayOf(start)] : draft.byWeekday,
-                        })}
-                        className="accent-blue-500"
-                      />
-                      <span className="text-xs">{t(`monthlyMode_${mode}`)}</span>
-                    </label>
-                  ))}
+                <div className="flex flex-col gap-2">
+                  <Segmented<MonthlyMode>
+                    value={monthlyMode}
+                    onChange={(mode) => patch({
+                      monthlyMode: mode,
+                      byMonthDay: mode === 'dayOfMonth' ? start.getDate() : draft.byMonthDay,
+                      bySetPos: mode === 'nthWeekday' ? (draft.bySetPos ?? nthOfMonth(start)) : draft.bySetPos,
+                      byWeekday: mode === 'nthWeekday' ? [draft.byWeekday?.[0] ?? weekdayOf(start)] : draft.byWeekday,
+                    })}
+                    options={[
+                      { id: 'dayOfMonth', label: t('monthlyModeShort_dayOfMonth') },
+                      { id: 'nthWeekday', label: t('monthlyModeShort_nthWeekday') },
+                      { id: 'lastDay', label: t('monthlyModeShort_lastDay') },
+                    ]}
+                  />
                   {/* The 31st simply has no match in a 30-day month; say so
                       rather than silently producing fewer cards than expected. */}
-                  {(draft.monthlyMode ?? 'dayOfMonth') === 'dayOfMonth' && (draft.byMonthDay ?? 1) > 28 && (
-                    <p className="m-0 px-2 text-[10px] text-amber-400/80 leading-snug">
+                  {monthlyMode === 'dayOfMonth' && (draft.byMonthDay ?? 1) > 28 && (
+                    <p className="m-0 text-[10px] text-amber-400/80 leading-snug">
                       {t('monthDaySkipNote', { day: draft.byMonthDay ?? 1 })}
                     </p>
                   )}
@@ -267,86 +323,56 @@ export default function RecurrenceDialog({
               )}
 
               {/* End condition */}
-              <div className="flex flex-col gap-1 pt-2 border-t border-neutral-800">
-                <span className="text-[11px] text-neutral-500 px-2">{t('endsLabel')}</span>
+              <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-neutral-800">
+                <span className="text-[11px] text-neutral-500">{t('endsLabel')}</span>
+                <Segmented
+                  value={endType}
+                  onChange={(type) => {
+                    if (type === 'never') patch({ end: { type: 'never' } });
+                    else if (type === 'onDate') patch({ end: { type: 'onDate', date: draft.end.type === 'onDate' ? draft.end.date : defaultHorizon() } });
+                    else patch({ end: { type: 'afterCount', count: draft.end.type === 'afterCount' ? draft.end.count : 10 } });
+                  }}
+                  options={[
+                    { id: 'never', label: t('endsNever') },
+                    { id: 'onDate', label: t('endsOn') },
+                    { id: 'afterCount', label: t('endsAfter') },
+                  ]}
+                />
 
-                <label className="flex items-center gap-2.5 px-2 py-1 rounded cursor-pointer text-neutral-400 hover:bg-neutral-800/50">
-                  <input
-                    type="radio"
-                    name="recurrence-end"
-                    checked={draft.end.type === 'never'}
-                    onChange={() => patch({ end: { type: 'never' } })}
-                    className="accent-blue-500"
-                  />
-                  <span className="text-xs">{t('endsNever')}</span>
-                </label>
-
-                <label className="flex items-center gap-2.5 px-2 py-1 rounded cursor-pointer text-neutral-400 hover:bg-neutral-800/50">
-                  <input
-                    type="radio"
-                    name="recurrence-end"
-                    checked={draft.end.type === 'onDate'}
-                    onChange={() => patch({
-                      end: {
-                        type: 'onDate',
-                        date: draft.end.type === 'onDate' ? draft.end.date : defaultHorizon(),
-                      },
-                    })}
-                    className="accent-blue-500"
-                  />
-                  <span className="text-xs shrink-0">{t('endsOn')}</span>
+                {draft.end.type === 'onDate' && (
                   <input
                     type="date"
-                    value={draft.end.type === 'onDate' ? draft.end.date : ''}
+                    value={draft.end.date}
                     min={startDate}
                     onChange={(e) => patch({ end: { type: 'onDate', date: e.target.value || defaultHorizon() } })}
-                    disabled={draft.end.type !== 'onDate'}
-                    className="bg-neutral-800 border border-neutral-700 rounded px-2 py-0.5 text-[11px] text-neutral-100 focus:outline-none focus:border-neutral-500 disabled:opacity-40 scheme-dark"
+                    className="bg-neutral-900 border border-neutral-800 rounded-lg px-2.5 py-1.5 text-[11px] text-neutral-100 focus:outline-none focus:border-neutral-600 scheme-dark"
                   />
-                </label>
+                )}
 
-                <label className="flex items-center gap-2.5 px-2 py-1 rounded cursor-pointer text-neutral-400 hover:bg-neutral-800/50">
-                  <input
-                    type="radio"
-                    name="recurrence-end"
-                    checked={draft.end.type === 'afterCount'}
-                    onChange={() => patch({
-                      end: { type: 'afterCount', count: draft.end.type === 'afterCount' ? draft.end.count : 10 },
-                    })}
-                    className="accent-blue-500"
-                  />
-                  <span className="text-xs shrink-0">{t('endsAfter')}</span>
-                  <input
-                    type="number"
-                    min={1}
-                    max={500}
-                    value={draft.end.type === 'afterCount' ? draft.end.count : 10}
-                    onChange={(e) => patch({ end: { type: 'afterCount', count: Math.max(1, Number(e.target.value) || 1) } })}
-                    disabled={draft.end.type !== 'afterCount'}
-                    className="w-14 bg-neutral-800 border border-neutral-700 rounded px-2 py-0.5 text-[11px] text-neutral-100 focus:outline-none focus:border-neutral-500 disabled:opacity-40"
-                  />
-                  <span className="text-[11px] text-neutral-500">{t('occurrences')}</span>
-                </label>
+                {draft.end.type === 'afterCount' && (
+                  <div className="flex items-center gap-1.5">
+                    <Stepper
+                      value={draft.end.count}
+                      min={1}
+                      max={500}
+                      onChange={(count) => patch({ end: { type: 'afterCount', count } })}
+                      decreaseLabel={t('decrease')}
+                      increaseLabel={t('increase')}
+                    />
+                    <span className="text-[11px] text-neutral-500">{t('occurrences')}</span>
+                  </div>
+                )}
               </div>
-            </div>
-          )}
-
-          {/* Live summary + how many cards this actually creates */}
-          {preset !== 'none' && (
-            <div className="rounded-lg border border-neutral-800 bg-neutral-900/30 px-3.5 py-2.5">
-              <p className="m-0 text-xs text-neutral-200 leading-snug">{summary}</p>
-              <p className="m-0 mt-1 text-[10px] text-neutral-500">
-                {t('previewCount', { count: preview, days: DEFAULT_HORIZON_DAYS })}
-              </p>
             </div>
           )}
         </div>
 
-        <div className="flex items-center justify-between gap-2 px-5 py-3 border-t border-neutral-800 bg-neutral-900/30 shrink-0">
+        {/* Footer */}
+        <div className="flex items-center justify-between gap-2 px-5 py-3 border-t border-neutral-800 shrink-0">
           {onRemove ? (
             <button
               onClick={onRemove}
-              className="text-[11px] font-medium text-red-400 hover:text-red-300 px-2 py-1.5 rounded hover:bg-neutral-800 transition-colors"
+              className="text-[11px] font-medium text-red-400 hover:text-red-300 px-2 py-1.5 rounded-md hover:bg-red-500/10 transition-colors"
             >
               {t('removeRepeat')}
             </button>
@@ -355,7 +381,7 @@ export default function RecurrenceDialog({
           <div className="flex items-center gap-2">
             <button
               onClick={onClose}
-              className="px-4 py-2 text-xs font-medium text-neutral-400 hover:text-neutral-200 bg-neutral-800 hover:bg-neutral-700 rounded-lg transition-colors"
+              className="px-4 py-2 text-xs font-medium text-neutral-400 hover:text-neutral-200 bg-neutral-800 hover:bg-neutral-750 rounded-lg transition-colors"
             >
               {t('cancel')}
             </button>

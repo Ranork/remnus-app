@@ -1980,6 +1980,17 @@
     "badgeDetached": "已退出系列",
     "menuRepeat": "重复…",
     "menuEditRepeat": "编辑重复…",
-    "menuDetach": "退出系列"
+    "menuDetach": "退出系列",
+    "decrease": "减少",
+    "increase": "增加",
+    "monthlyModeShort_dayOfMonth": "同一日期",
+    "monthlyModeShort_nthWeekday": "同一星期几",
+    "monthlyModeShort_lastDay": "最后一天",
+    "seriesPanelTitle": "属于一个重复系列",
+    "seriesPanelDetached": "已退出重复系列",
+    "seriesPanelCount": "{count} 张卡片",
+    "seriesPanelEdit": "编辑重复",
+    "seriesPanelAdd": "重复此任务",
+    "seriesPanelNoDate": "请先为此任务添加日期，再设置重复。"
   }
 }

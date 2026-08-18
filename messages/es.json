@@ -1980,6 +1980,17 @@
     "badgeDetached": "Fuera de la serie",
     "menuRepeat": "Repetir…",
     "menuEditRepeat": "Editar repetición…",
-    "menuDetach": "Sacar de la serie"
+    "menuDetach": "Sacar de la serie",
+    "decrease": "Reducir",
+    "increase": "Aumentar",
+    "monthlyModeShort_dayOfMonth": "Misma fecha",
+    "monthlyModeShort_nthWeekday": "Mismo día",
+    "monthlyModeShort_lastDay": "Último día",
+    "seriesPanelTitle": "Parte de una serie periódica",
+    "seriesPanelDetached": "Fuera de una serie periódica",
+    "seriesPanelCount": "{count, plural, one {# tarjeta} other {# tarjetas}}",
+    "seriesPanelEdit": "Editar repetición",
+    "seriesPanelAdd": "Repetir esta tarea",
+    "seriesPanelNoDate": "Añade una fecha a esta tarea antes de configurar una repetición."
   }
 }

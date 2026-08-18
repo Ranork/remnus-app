@@ -7,6 +7,10 @@
     {
       "path": "/api/cron/prospect-gifts",
       "schedule": "0 10 * * *"
+    },
+    {
+      "path": "/api/cron/recurrence",
+      "schedule": "0 3 * * *"
     }
   ],
   "functions": {

@@ -2004,6 +2004,17 @@
     "badgeDetached": "Seriden çıkarıldı",
     "menuRepeat": "Tekrarla…",
     "menuEditRepeat": "Tekrarlamayı düzenle…",
-    "menuDetach": "Seriden çıkar"
+    "menuDetach": "Seriden çıkar",
+    "decrease": "Azalt",
+    "increase": "Artır",
+    "monthlyModeShort_dayOfMonth": "Aynı tarih",
+    "monthlyModeShort_nthWeekday": "Aynı gün",
+    "monthlyModeShort_lastDay": "Son gün",
+    "seriesPanelTitle": "Tekrarlayan bir serinin parçası",
+    "seriesPanelDetached": "Tekrarlayan bir seriden çıkarıldı",
+    "seriesPanelCount": "{count} kart",
+    "seriesPanelEdit": "Tekrarlamayı düzenle",
+    "seriesPanelAdd": "Bu görevi tekrarla",
+    "seriesPanelNoDate": "Tekrarlama vermek için önce bu göreve bir tarih ekle."
   }
 }

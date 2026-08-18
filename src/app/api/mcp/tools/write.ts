@@ -16,9 +16,27 @@ import {
 import { publish } from '@/lib/realtime/publish';
 import { logActivity, type TokenContext } from '../context';
 import { recordGeneratedKnowledge, validateContextRunForWrite } from '@/lib/services/knowledge';
+import { applyRecurrenceInput } from '@/lib/services/recurrence';
 
 const READ_ONLY_ERROR = 'Error: This token only has read scope. A write-scoped token is required.';
 const CONTEXT_RUN_ID = z.string().uuid().optional().describe('prepare_context contextRunId. Required for mutations when the workspace uses Strict context.');
+// Flattened rule (`until`/`count` instead of the nested `end` union) — a tool
+// schema reads better without a discriminated union, and every field beyond
+// `freq` is optional so the common "every Monday" call stays one line.
+// Descriptions stay terse on purpose: tools/list is a fixed per-session context
+// cost for every connected agent.
+const RECURRENCE_INPUT = z.object({
+  freq: z.enum(['daily', 'weekly', 'monthly', 'yearly']),
+  interval: z.number().int().min(1).max(99).optional().describe('1 = every, 2 = every other'),
+  byWeekday: z.array(z.enum(['MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU'])).optional(),
+  monthlyMode: z.enum(['dayOfMonth', 'nthWeekday', 'lastDay']).optional(),
+  byMonthDay: z.number().int().min(1).max(31).optional(),
+  bySetPos: z.union([z.literal(-1), z.literal(1), z.literal(2), z.literal(3), z.literal(4)]).optional().describe('-1 = last'),
+  until: z.string().optional().describe('YYYY-MM-DD, inclusive'),
+  count: z.number().int().min(1).max(500).optional(),
+  dateColumn: z.string().optional().describe('Column id or name; defaults to the first date column'),
+}).optional().describe('Repeat this database row on a schedule. Occurrences are created as real rows.');
+
 const KNOWLEDGE_INPUT = z.object({
   conceptType: z.string().max(120).optional(),
   description: z.string().max(1_000).optional(),
@@ -53,6 +71,7 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
         parentId: z.string().optional().describe('Parent workspace item ID (for standalone pages)'),
         databaseId: z.string().optional().describe('Database ID (creates a database row instead of a page)'),
         properties: z.record(z.string(), z.any()).optional().describe('Initial properties (for database rows)'),
+        recurrence: RECURRENCE_INPUT,
         knowledge: KNOWLEDGE_INPUT,
         contextRunId: CONTEXT_RUN_ID,
       },
@@ -62,7 +81,7 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
       }).passthrough(),
       annotations: { title: 'Create page', readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
     },
-    async ({ title, content, parentId, databaseId, properties, knowledge, contextRunId }) => {
+    async ({ title, content, parentId, databaseId, properties, recurrence, knowledge, contextRunId }) => {
       if (ctx.scope !== 'write') {
         await logActivity(ctx, 'create_page', 'error');
         return { content: [{ type: 'text' as const, text: READ_ONLY_ERROR }], isError: true };
@@ -72,7 +91,23 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
       try {
         const result = await createPageInWorkspace(ctx.workspaceId, { title, content, parentId, databaseId, properties }, { tokenId: ctx.tokenId });
         const knowledgeCaptured = await recordGeneratedKnowledge(ctx.workspaceId, result.id, actorId(ctx), knowledge).then(() => true).catch(() => false);
-        const out = { id: result.id, type: result.type, knowledgeCaptured };
+
+        // Recurrence is applied after the row exists, and its failure is
+        // reported rather than thrown: the row was created successfully, so
+        // turning that into a tool error would leave the agent thinking nothing
+        // happened and retrying into a duplicate.
+        let series: Record<string, unknown> | undefined;
+        if (recurrence && databaseId && result.type === 'db-row') {
+          const applied = await applyRecurrenceInput(result.id, databaseId, recurrence, actorId(ctx))
+            .catch((err) => ({ error: String(err) }));
+          series = 'error' in applied
+            ? { recurrenceError: applied.error }
+            : { seriesId: applied.seriesId, occurrencesCreated: applied.created };
+        } else if (recurrence) {
+          series = { recurrenceError: 'Recurrence applies to database rows only — pass databaseId.' };
+        }
+
+        const out = { id: result.id, type: result.type, knowledgeCaptured, ...series };
         const text = JSON.stringify(out);
         await logActivity(ctx, 'create_page', 'success', result.type, result.id, text);
         publish({ scope: databaseId ? 'database' : 'sidebar', workspaceId: ctx.workspaceId, resourceId: databaseId, actorId: actorId(ctx) });

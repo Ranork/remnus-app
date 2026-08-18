@@ -45,6 +45,31 @@ const FIRST_VISIT_WINDOW_DAYS = 7;
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-08-18-agent-repeating-tasks',
+    date: '2026-08-18',
+    category: 'new',
+    title: {
+      en: 'Agents can set up repeating tasks',
+      tr: 'Ajanlar tekrarlayan görev kurabiliyor',
+      de: 'Agenten können wiederkehrende Aufgaben anlegen',
+      es: 'Los agentes pueden crear tareas periódicas',
+      fr: 'Les agents peuvent créer des tâches récurrentes',
+      hi: 'एजेंट दोहराने वाले कार्य बना सकते हैं',
+      ru: 'Агенты могут создавать повторяющиеся задачи',
+      zh: '智能体可以创建重复任务',
+    },
+    summary: {
+      en: 'You can now just tell a connected AI agent to open a task every Monday and it sets the whole schedule up for you.',
+      tr: 'Bağladığın yapay zekâ ajanına artık "her Pazartesi şu görevi aç" demen yetiyor, tekrarlama düzenini kendisi kuruyor.',
+      de: 'Du kannst einem verbundenen KI-Agenten jetzt einfach sagen, er soll jeden Montag eine Aufgabe anlegen — den ganzen Rhythmus richtet er selbst ein.',
+      es: 'Ahora basta con pedirle a un agente de IA conectado que abra una tarea cada lunes y él configura toda la periodicidad.',
+      fr: 'Il suffit désormais de demander à un agent IA connecté d’ouvrir une tâche chaque lundi : il met en place toute la récurrence.',
+      hi: 'अब आप जुड़े हुए AI एजेंट से बस इतना कह सकते हैं कि हर सोमवार एक कार्य खोले — वह पूरा दोहराव खुद सेट कर देता है।',
+      ru: 'Теперь достаточно попросить подключённого ИИ-агента открывать задачу каждый понедельник — он сам настроит весь график.',
+      zh: '现在你只需告诉已连接的 AI 智能体"每周一开一个任务"，它就会把整个重复计划设置好。',
+    },
+  },
+  {
     id: '2026-08-18-recurring-calendar-tasks',
     date: '2026-08-18',
     category: 'new',

@@ -1980,6 +1980,17 @@
     "badgeDetached": "Retirée de la série",
     "menuRepeat": "Répéter…",
     "menuEditRepeat": "Modifier la répétition…",
-    "menuDetach": "Retirer de la série"
+    "menuDetach": "Retirer de la série",
+    "decrease": "Diminuer",
+    "increase": "Augmenter",
+    "monthlyModeShort_dayOfMonth": "Même date",
+    "monthlyModeShort_nthWeekday": "Même jour",
+    "monthlyModeShort_lastDay": "Dernier jour",
+    "seriesPanelTitle": "Fait partie d’une série récurrente",
+    "seriesPanelDetached": "Retirée d’une série récurrente",
+    "seriesPanelCount": "{count, plural, one {# carte} other {# cartes}}",
+    "seriesPanelEdit": "Modifier la répétition",
+    "seriesPanelAdd": "Répéter cette tâche",
+    "seriesPanelNoDate": "Ajoutez une date à cette tâche avant de définir une répétition."
   }
 }
