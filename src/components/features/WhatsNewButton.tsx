@@ -138,7 +138,11 @@ export default function WhatsNewButton() {
             aria-modal="true"
             aria-label={t('title')}
             onClick={(e) => e.stopPropagation()}
-            className="w-full max-w-full sm:max-w-lg max-h-full bg-neutral-850 border border-neutral-800 rounded-lg modal-shadow flex flex-col overflow-hidden animate-scale-in"
+            // Wide and fixed-height rather than narrow and tall: the entry list
+            // grows forever, so a height that tracks the content just produced a
+            // long thin column. `h-[80vh]` gives the panel a stable shape and
+            // `max-h-full` keeps it inside the padded overlay on short viewports.
+            className="w-full max-w-full sm:max-w-4xl h-[80vh] max-h-full bg-neutral-850 border border-neutral-800 rounded-lg modal-shadow flex flex-col overflow-hidden animate-scale-in"
           >
             {/* Header */}
             <div className="flex items-start justify-between gap-3 px-5 py-4 border-b border-neutral-800 bg-neutral-900/30 shrink-0">
@@ -174,7 +178,10 @@ export default function WhatsNewButton() {
                     {formatDate(group.date)}
                   </p>
 
-                  <div className="flex flex-col gap-2 pb-4">
+                  {/* Two columns once there is room for them. At the panel's new
+                      width a single column would run ~90 characters per line,
+                      which is past comfortable reading length for body copy. */}
+                  <div className="grid gap-2 md:grid-cols-2 pb-4">
                     {group.entries.map((entry) => {
                       const style = CATEGORY_STYLE[entry.category];
                       const CategoryIcon = style.icon;
