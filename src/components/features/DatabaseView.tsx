@@ -1286,6 +1286,9 @@ export default function DatabaseView({
               hasSorts={(config.sorts?.length ?? 0) > 0}
               onCardClick={handlePageClick}
               onCardDateChange={handleCardDateChange}
+              // A series mutation rewrites many rows at once, so re-fetch
+              // rather than trying to patch `localPages` change-by-change.
+              onSeriesChanged={() => tabNav.refresh()}
               onDeletePage={handleDeletePage}
               onDuplicatePage={handleDuplicatePage}
               cardColorCol={calendarConfig.cardColorCol}

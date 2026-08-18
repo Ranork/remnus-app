@@ -60,6 +60,7 @@ import AgentsModal from './AgentsModal';
 import OnboardingGuide from './onboarding/OnboardingGuide';
 import AgentDetectGuide from './agent-detect/AgentDetectGuide';
 import PwaInstallButton from './PwaInstallButton';
+import WhatsNewButton from './WhatsNewButton';
 import BillingModal from './BillingModal';
 import UserSettingsModal from './UserSettingsModal';
 import { getUserAgentTokenCount } from '@/lib/actions/agentToken';
@@ -1623,6 +1624,10 @@ export default function WorkspaceSidebar({
 
       {/* Install app (PWA) button — web only, hidden in Tauri / when installed */}
       <PwaInstallButton />
+
+      {/* What's New — product changelog; badge counts entries shipped since the
+          last time this user opened the panel */}
+      <WhatsNewButton />
 
       {/* Settings button */}
       <div className="shrink-0 px-2 pb-1">

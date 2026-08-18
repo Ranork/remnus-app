@@ -101,6 +101,11 @@ export async function getPages(databaseId: string) {
       icon: pages.icon,
       iconColor: pages.iconColor,
       cardCollapsed: pages.cardCollapsed,
+      // Recurrence link (migration 0043) — the calendar needs these to badge a
+      // card as part of a series and to pick the series-aware delete flow.
+      seriesId: pages.seriesId,
+      occurrenceDate: pages.occurrenceDate,
+      seriesDetached: pages.seriesDetached,
       createdAt: pages.createdAt,
       updatedAt: pages.updatedAt,
       agentEditedAt: pages.agentEditedAt,
@@ -141,6 +146,11 @@ export async function getPage(id: string) {
       icon: pages.icon,
       iconColor: pages.iconColor,
       cardCollapsed: pages.cardCollapsed,
+      // Recurrence link (migration 0043) — the calendar needs these to badge a
+      // card as part of a series and to pick the series-aware delete flow.
+      seriesId: pages.seriesId,
+      occurrenceDate: pages.occurrenceDate,
+      seriesDetached: pages.seriesDetached,
       createdAt: pages.createdAt,
       updatedAt: pages.updatedAt,
       agentEditedAt: pages.agentEditedAt,

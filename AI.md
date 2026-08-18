@@ -41,12 +41,40 @@ Basit typo, format veya salt soru-cevap işleri dışında:
 ## After a meaningful change
 
 1. En dar ilgili doğrulamaları çalıştır.
-2. Aktif görev sürüyorsa yerel `.ai/CURRENT_TASK.md` alanlarını güncelle; bittiyse durumu doğru biçimde kapat. Bu dosyayı stage veya commit etme.
-3. Kalıcı proje bilgisi değiştiyse ilgili Serena memory'sini düzelt; stale bilgiyi yalnızca ekleme yaparak bırakma.
-4. Kritik ortak akış değiştiyse `AI.md`; yapısal ürün haritası değiştiyse `AGENTS.md` güncelle.
-5. `AGENTS.md` değiştiyse Serena'yı `remnus-app` için aktive et, memory listesini kontrol et ve özellikle `core`/`conventions` ile senkronla.
-6. `scripts/ai/update-handoff.ps1` çalıştır.
-7. Work Plan görevi tamamlandıysa sonucu, değişen dosyaları ve doğrulamaları görev gövdesine yazıp durumu `Done` yap.
+2. **Kullanıcının fark edeceği bir değişiklik yaptıysan `src/lib/changelog.ts` dosyasına kayıt ekle** — kullanıcı ayrıca istemese bile, aynı değişiklikle birlikte. Kuralların tamamı: `## Changelog / What's New`.
+3. Aktif görev sürüyorsa yerel `.ai/CURRENT_TASK.md` alanlarını güncelle; bittiyse durumu doğru biçimde kapat. Bu dosyayı stage veya commit etme.
+4. Kalıcı proje bilgisi değiştiyse ilgili Serena memory'sini düzelt; stale bilgiyi yalnızca ekleme yaparak bırakma.
+5. Kritik ortak akış değiştiyse `AI.md`; yapısal ürün haritası değiştiyse `AGENTS.md` güncelle.
+6. `AGENTS.md` değiştiyse Serena'yı `remnus-app` için aktive et, memory listesini kontrol et ve özellikle `core`/`conventions` ile senkronla.
+7. `scripts/ai/update-handoff.ps1` çalıştır.
+8. Work Plan görevi tamamlandıysa sonucu, değişen dosyaları ve doğrulamaları görev gövdesine yazıp durumu `Done` yap.
+
+## Changelog / What's New
+
+Uygulama içi Yenilikler paneli (`src/components/features/WhatsNewButton.tsx`) tek bir
+kaynaktan beslenir: `src/lib/changelog.ts`. Sürüm notu, özelliği getiren değişikliğin
+parçasıdır — ayrı bir CMS, admin ekranı veya veritabanı tablosu yoktur.
+
+**Ne zaman yazılır:** Kullanıcının fark edeceği her değişiklikten sonra, kullanıcı istemese
+bile, aynı değişiklikle birlikte. Yeni özellik, davranış değişikliği, görünür hız/kullanım
+iyileştirmesi ve kullanıcının karşılaştığı hata düzeltmeleri yazılır.
+
+**Ne zaman yazılmaz:** Refactor, iç script, test, bağımlılık yükseltmesi, yalnızca
+dokümantasyon değişikliği, admin-only iş akışları — müşterinin asla fark etmeyeceği hiçbir
+şey.
+
+**Nasıl yazılır:**
+
+- `summary` tam olarak **bir cümle**. Paragraf, madde listesi veya ikinci cümle yok.
+- Müşteri dili kullan: kullanıcının artık ne yapabildiğini söyle; hangi tablo, bileşen veya
+  endpoint'in değiştiğini asla söyleme. Teknik terim gerekiyorsa cümle yanlış yazılmıştır.
+- Küçük bir değişiklik bile okumaya değecek şekilde yazılır; "ufak düzeltmeler" gibi
+  içi boş kayıt eklenmez.
+- Yeni kayıt dizinin **başına** eklenir; `id` biçimi `YYYY-MM-DD-kebab-konu` ve yayınlandıktan
+  sonra asla değiştirilmez (okundu bilgisi bu id'yi saklar).
+- 8 locale de zorunludur — `Record<Locale, string>` tipi eksik locale'de `tsc`'yi hata verdirir.
+- `category`: `new` (yeni özellik), `improved` (mevcut bir şey daha iyi), `fixed` (bozuk olan
+  düzeldi).
 
 ## Agent handoff protocol
 
@@ -98,7 +126,9 @@ Repository monorepo değildir. Ana npm uygulamasına ek olarak dağıtım için 
 - `src/app/`: layouts, pages, API routes, global styles ve proxy girişleri.
 - `src/components/`: feature, editor, database, marketing ve provider bileşenleri.
 - `src/lib/actions/`: session-aware server actions.
-- `src/lib/services/`: workspace, knowledge/context, billing, asset ve page-link domain servisleri.
+- `src/lib/services/`: workspace, knowledge/context, billing, asset, page-link ve recurrence domain servisleri.
+- `src/lib/recurrence/`: takvim tekrarlama kural modeli (RFC 5545 alt kümesi, JSON) ve genişletme motoru.
+- `src/lib/changelog.ts`: uygulama içi Yenilikler panelinin tek kaynağı.
 - `src/db/`: schema, custom migration runner, apply/backfill scriptleri ve migration'lar.
 - `messages/`: 8 locale JSON dosyası; `en.json` source of truth.
 - `docs/`: public Wiki/Docs uzun-form içerikleri.
@@ -117,6 +147,7 @@ Repository monorepo değildir. Ana npm uygulamasına ek olarak dağıtım için 
 - Yapısal sidebar mutasyonları dışında content editlerinde `revalidatePath('/')` kullanma; optimistic client akışını koru.
 - `workspace_items`, `standalone_pages`, `databases`, `pages` insertlerinde `createdAt`/`updatedAt` değerlerini açıkça `new Date()` ile yaz.
 - Content write/delete yollarında `syncPageLinks`, `purgeReferencesTo`, `removePageLinksFor` ve tombstone yan etkilerini koru; `seed.ts` doğrudan DB yazdığı için ayrıca kontrol edilmelidir.
+- Tekrarlayan takvim kartlarında iki değişmez korunmalı: geçmiş occurrence'lar asla yeniden yazılmaz (kural değişimi seriyi böler, mutasyon yapmaz) ve içi doldurulmuş occurrence silinmez, seriden koparılıp yerinde bırakılır. Ayrıntı: `AGENTS.md` → **Recurring Calendar Cards**.
 - MCP write tool'ları write scope doğrulaması yapmalı; audit logging ana cevabı bozmayan best-effort kalmalıdır.
 - Public/cookie-less asset ve API istisnaları `proxy.ts` ile `auth.config.ts` içinde birlikte korunmalıdır.
 
@@ -127,6 +158,7 @@ npm ci
 npm run dev
 npm run lint
 npx tsc --noEmit
+npm run test:recurrence
 npm run db:migrate
 npx drizzle-kit generate
 npm run tauri:dev

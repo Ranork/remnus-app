@@ -1,11 +1,11 @@
 'use client';
 
-import React, { useState, useMemo, useRef, useLayoutEffect } from 'react';
+import React, { useState, useMemo, useRef, useEffect, useLayoutEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { createPortal } from 'react-dom';
 import { getOptionColorByValue, getCardBorderDots, getCardBgColor, formatDateValue } from '@/lib/types/properties';
-import { ChevronLeft, ChevronRight, ChevronDown, GripVertical, Trash2, Calendar as CalendarIcon, Clock, Plus, Copy, ArrowUpRight, Maximize2, Link2 } from 'lucide-react';
-import { useTranslations } from 'next-intl';
+import { ChevronLeft, ChevronRight, ChevronDown, GripVertical, Trash2, Calendar as CalendarIcon, Clock, Plus, Copy, ArrowUpRight, Maximize2, Link2, Repeat, Unlink } from 'lucide-react';
+import { useTranslations, useLocale } from 'next-intl';
 import { useContextMenu, type MenuItem } from './ContextMenu';
 import PageIcon from './PageIcon';
 import IconPicker from './IconPicker';
@@ -13,6 +13,20 @@ import AgentEditBadge from './AgentEditBadge';
 import { StatusChip, UserAvatarStack, OptionIcon } from './PropertyTags';
 import { updatePageIcon, updatePageCardCollapsed } from '@/lib/actions/page';
 import { ConfirmDialog } from './ConfirmDialog';
+import RecurrenceDialog from './recurrence/RecurrenceDialog';
+import RecurrenceScopeDialog, { type ScopeImpact } from './recurrence/RecurrenceScopeDialog';
+import { formatRuleSummary } from '@/lib/recurrence/summary';
+import { parseDateValue, type RecurrenceRule } from '@/lib/recurrence/rule';
+import {
+  changeSeriesRule,
+  clearSeriesRecurrence,
+  deleteRecurringPage,
+  detachPageFromSeries,
+  loadRecurrenceState,
+  previewScopeImpact,
+  setPageRecurrence,
+} from '@/lib/actions/recurrence';
+import type { RecurrenceScope } from '@/lib/services/recurrence';
 
 interface CalendarViewProps {
   database: any;
@@ -38,6 +52,9 @@ interface CalendarViewProps {
   defaultPageIconColor?: string;
   onPageIconChange?: (pageId: string, icon: string | null, iconColor: string | null) => void;
   onCardCollapsedChange?: (pageId: string, collapsed: boolean) => void;
+  /** Fired after a recurrence mutation. A series change rewrites many rows at
+   *  once, so the parent re-fetches rather than trying to patch local state. */
+  onSeriesChanged?: () => void;
 }
 
 const formatYYYYMMDD = (d: Date) => {
@@ -122,9 +139,12 @@ export default function CalendarView({
   defaultPageIconColor,
   onPageIconChange,
   onCardCollapsedChange,
+  onSeriesChanged,
 }: CalendarViewProps) {
   const t = useTranslations('Database');
   const tPage = useTranslations('Page');
+  const tRec = useTranslations('Recurrence');
+  const locale = useLocale();
   const router = useRouter();
   const [currentDate, setCurrentDate] = useState(() => new Date());
   const [activeIconPickerPageId, setActiveIconPickerPageId] = useState<string | null>(null);
@@ -154,6 +174,22 @@ export default function CalendarView({
   const [menuCoords, setMenuCoords] = useState<{ top: number; left: number } | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
+  // ── Recurrence ─────────────────────────────────────────────────────────────
+  // Rules are keyed by series id; each card carries its own `seriesId`, so the
+  // badge and the summary tooltip need no per-card round-trip.
+  const [seriesRules, setSeriesRules] = useState<Record<string, RecurrenceRule>>({});
+  const [repeatDialogPageId, setRepeatDialogPageId] = useState<string | null>(null);
+  const [scopeDialog, setScopeDialog] = useState<
+    | { mode: 'delete'; pageId: string }
+    | { mode: 'edit'; pageId: string; rule: RecurrenceRule }
+    | null
+  >(null);
+  const [scopeImpact, setScopeImpact] = useState<Partial<Record<RecurrenceScope, ScopeImpact>>>({});
+
+  const getPage = (pageId: string) => pages.find((p) => p.id === pageId);
+  const ruleForPage = (page: any): RecurrenceRule | null =>
+    page?.seriesId ? seriesRules[page.seriesId] ?? null : null;
+
   const resetDragState = () => {
     setDraggedCardId(null);
     setDragOverDayStr(null);
@@ -163,14 +199,42 @@ export default function CalendarView({
 
   // Notion-style right-click menu for calendar cards
   const cardMenu = useContextMenu();
-  const buildCardMenu = (pageId: string): MenuItem[] => [
-    { id: 'open', label: t('open'), icon: ArrowUpRight, onSelect: () => onCardClick(pageId) },
-    { id: 'open-full', label: t('openInFullPage'), icon: Maximize2, onSelect: () => router.push(`/db/${database.id}/${pageId}`) },
-    { id: 'copy-link', label: t('copyLink'), icon: Link2, onSelect: () => { navigator.clipboard?.writeText(`${window.location.origin}/db/${database.id}/${pageId}`); } },
-    { kind: 'separator' },
-    { id: 'duplicate', label: t('duplicatePage'), icon: Copy, onSelect: () => onDuplicatePage(pageId) },
-    { id: 'delete', label: tPage('deletePage'), icon: Trash2, danger: true, onSelect: () => setConfirmDeleteId(pageId) },
-  ];
+  const buildCardMenu = (pageId: string): MenuItem[] => {
+    const page = getPage(pageId);
+    const inSeries = !!page?.seriesId && !page?.seriesDetached;
+
+    const items: MenuItem[] = [
+      { id: 'open', label: t('open'), icon: ArrowUpRight, onSelect: () => onCardClick(pageId) },
+      { id: 'open-full', label: t('openInFullPage'), icon: Maximize2, onSelect: () => router.push(`/db/${database.id}/${pageId}`) },
+      { id: 'copy-link', label: t('copyLink'), icon: Link2, onSelect: () => { navigator.clipboard?.writeText(`${window.location.origin}/db/${database.id}/${pageId}`); } },
+      { kind: 'separator' },
+      {
+        id: 'repeat',
+        label: inSeries ? tRec('menuEditRepeat') : tRec('menuRepeat'),
+        icon: Repeat,
+        // A rule needs a start date to hang off, so the option is only live on
+        // a card that actually sits on the calendar's date column.
+        disabled: !parseDateValue(page?.properties?.[dateCol]),
+        onSelect: () => setRepeatDialogPageId(pageId),
+      },
+    ];
+
+    if (inSeries) {
+      items.push({
+        id: 'detach',
+        label: tRec('menuDetach'),
+        icon: Unlink,
+        onSelect: () => runSeriesAction(() => detachPageFromSeries(pageId)),
+      });
+    }
+
+    items.push(
+      { id: 'duplicate', label: t('duplicatePage'), icon: Copy, onSelect: () => onDuplicatePage(pageId) },
+      { id: 'delete', label: tPage('deletePage'), icon: Trash2, danger: true, onSelect: () => handleDeleteRequest(pageId) },
+    );
+
+    return items;
+  };
 
   const schema = database.schema as any[];
   const dateProperty = schema.find((c) => c.id === dateCol);
@@ -184,6 +248,97 @@ export default function CalendarView({
   const days = useMemo(() => {
     return viewMode === 'month' ? getMonthDays(currentDate, firstDayOfWeek) : getWeekDays(currentDate, firstDayOfWeek);
   }, [currentDate, viewMode, firstDayOfWeek]);
+
+  // ── Recurrence: load rules + extend materialization to the visible window ──
+  //
+  // Topping up on read is what lets an open-ended series work with no cron at
+  // all: paging the calendar forward past the horizon simply extends it, and
+  // the unique (series_id, occurrence_date) index keeps that idempotent. The
+  // parent only re-fetches when rows were actually created.
+  const windowEnd = days.length > 0 ? formatYYYYMMDD(days[days.length - 1].date) : null;
+
+  useEffect(() => {
+    if (!database?.id || !windowEnd) return;
+    let cancelled = false;
+
+    loadRecurrenceState(database.id, windowEnd)
+      .then(({ series, created }) => {
+        if (cancelled) return;
+        setSeriesRules(Object.fromEntries(series.map((s) => [s.id, s.rule])));
+        if (created > 0) onSeriesChanged?.();
+      })
+      // A failed top-up must not blank the calendar — the cards already on
+      // screen are real rows and stay valid; only the badges go missing.
+      .catch(() => {});
+
+    return () => { cancelled = true; };
+  }, [database?.id, windowEnd, onSeriesChanged]);
+
+  const runSeriesAction = async (op: () => Promise<unknown>) => {
+    try {
+      await op();
+    } finally {
+      setRepeatDialogPageId(null);
+      setScopeDialog(null);
+      setScopeImpact({});
+      onSeriesChanged?.();
+    }
+  };
+
+  const handleSaveRule = (rule: RecurrenceRule) => {
+    const pageId = repeatDialogPageId;
+    if (!pageId) return;
+    const page = getPage(pageId);
+    const existing = ruleForPage(page);
+
+    if (!existing) {
+      runSeriesAction(() => setPageRecurrence(pageId, dateCol, rule));
+      return;
+    }
+
+    // Already a series: changing the rhythm is the case that needs a scope,
+    // because "from here on" and "the whole series" mean very different things
+    // to the cards the user has already filled in.
+    setRepeatDialogPageId(null);
+    openScopeDialog({ mode: 'edit', pageId, rule }, ['thisAndFollowing', 'all']);
+  };
+
+  const openScopeDialog = (
+    next: { mode: 'delete'; pageId: string } | { mode: 'edit'; pageId: string; rule: RecurrenceRule },
+    scopes: RecurrenceScope[],
+  ) => {
+    setScopeDialog(next);
+    setScopeImpact({});
+    // Fetched per scope so the dialog can show a real count against whichever
+    // option is highlighted, instead of a vague "this may affect other cards".
+    for (const scope of scopes) {
+      previewScopeImpact(next.pageId, scope)
+        .then((impact) => {
+          if (impact) setScopeImpact((prev) => ({ ...prev, [scope]: impact }));
+        })
+        .catch(() => {});
+    }
+  };
+
+  const handleDeleteRequest = (pageId: string) => {
+    const page = getPage(pageId);
+    if (page?.seriesId && !page.seriesDetached) {
+      openScopeDialog({ mode: 'delete', pageId }, ['this', 'thisAndFollowing', 'all']);
+    } else {
+      setConfirmDeleteId(pageId);
+    }
+  };
+
+  const handleScopeConfirm = (scope: RecurrenceScope, includeDirty: boolean) => {
+    if (!scopeDialog) return;
+    if (scopeDialog.mode === 'delete') {
+      runSeriesAction(() => deleteRecurringPage(scopeDialog.pageId, scope, includeDirty));
+    } else {
+      runSeriesAction(() =>
+        changeSeriesRule(scopeDialog.pageId, scopeDialog.rule, scope as 'thisAndFollowing' | 'all'),
+      );
+    }
+  };
 
   // Vertical scroll container (the weekday header's sticky anchor) + a ref
   // planted on the first cell of the anchor week (index 7 — see getMonthDays:
@@ -579,7 +734,7 @@ export default function CalendarView({
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                setConfirmDeleteId(page.id);
+                                handleDeleteRequest(page.id);
                                 setActiveMenuCardId(null);
                                 setMenuCoords(null);
                               }}
@@ -625,6 +780,32 @@ export default function CalendarView({
                           )}
                         </div>
                         <span className={propertyTextClamp === 'truncate' ? 'truncate min-w-0' : ''}>{page.properties['title'] || tPage('untitled')}</span>
+                        {/* Recurring / detached marker. The tooltip carries the
+                            rule in words ("Every 2 weeks on Tue"), which is the
+                            only place a glance can answer "why is this here?".
+                            A detached card keeps a muted, struck-through icon so
+                            it reads as "was part of a series, isn't any more"
+                            rather than silently looking like a normal card. */}
+                        {page.seriesId && (
+                          <span
+                            className="relative shrink-0 inline-flex items-center"
+                            title={
+                              page.seriesDetached
+                                ? tRec('badgeDetached')
+                                : formatRuleSummary(seriesRules[page.seriesId], tRec as never, locale) || tRec('badgeRecurring')
+                            }
+                          >
+                            <Repeat
+                              size={10}
+                              className={page.seriesDetached ? 'text-neutral-600' : 'text-blue-400/80'}
+                            />
+                            {page.seriesDetached && (
+                              <span className="absolute inset-0 flex items-center justify-center" aria-hidden>
+                                <span className="w-[13px] h-px bg-neutral-500 rotate-45" />
+                              </span>
+                            )}
+                          </span>
+                        )}
                       </h4>
 
                       <AgentEditBadge
@@ -732,6 +913,37 @@ export default function CalendarView({
           onCancel={() => setConfirmDeleteId(null)}
         />
       )}
+
+      {repeatDialogPageId && (() => {
+        const page = getPage(repeatDialogPageId);
+        const shape = parseDateValue(page?.properties?.[dateCol]);
+        if (!shape) return null;
+        const existing = ruleForPage(page);
+        return (
+          <RecurrenceDialog
+            startDate={shape.startDate}
+            initialRule={existing}
+            onSave={handleSaveRule}
+            onRemove={
+              existing
+                ? () => runSeriesAction(() => clearSeriesRecurrence(repeatDialogPageId))
+                : undefined
+            }
+            onClose={() => setRepeatDialogPageId(null)}
+          />
+        );
+      })()}
+
+      {scopeDialog && (
+        <RecurrenceScopeDialog
+          mode={scopeDialog.mode}
+          scopes={scopeDialog.mode === 'delete' ? ['this', 'thisAndFollowing', 'all'] : ['thisAndFollowing', 'all']}
+          impact={scopeImpact}
+          onConfirm={handleScopeConfirm}
+          onCancel={() => { setScopeDialog(null); setScopeImpact({}); }}
+        />
+      )}
+
       {cardMenu.node}
     </div>
   );

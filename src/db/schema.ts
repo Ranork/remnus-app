@@ -71,8 +71,57 @@ export const pages = sqliteTable('pages', {
   // user field (would otherwise leak into Table columns/exports/MCP reads).
   // Migration 0042.
   cardCollapsed: integer('card_collapsed', { mode: 'boolean' }).notNull().default(false),
+  // ── Recurrence (migration 0043) ────────────────────────────────────────────
+  // A calendar card can be one occurrence of a repeating series. The occurrence
+  // is a REAL row (not a virtual expansion) because in Remnus every database
+  // row is also a page: it carries a body, sub-items, links, backlinks and MCP
+  // addressability, none of which a computed ghost could hold.
+  //
+  // These are dedicated columns rather than `properties` entries for the same
+  // reason `cardCollapsed` above is: they are system state, not schema-driven
+  // user fields, and would otherwise leak into Table columns, exports, filters
+  // and MCP row reads.
+  seriesId: text('series_id'),
+  // RECURRENCE-ID: the date the rule generated this row. Diverging from the
+  // card's actual date is what marks it as manually moved.
+  occurrenceDate: text('occurrence_date'),
+  // Set when the occurrence was customized (body written, sub-page added,
+  // agent-edited, ...) and a rule change would otherwise have destroyed it —
+  // it keeps its content and stops following the series. See
+  // `.ai/RECURRENCE_DESIGN.md` §4.
+  seriesDetached: integer('series_detached', { mode: 'boolean' }).notNull().default(false),
 }, (table) => [
   index('pages_database_id_idx').on(table.databaseId),
+  index('pages_series_id_idx').on(table.seriesId),
+  // Makes materialization idempotent: a concurrent top-up (read-triggered and
+  // cron at once) can't produce a duplicate card for the same occurrence.
+  uniqueIndex('pages_series_occurrence_idx').on(table.seriesId, table.occurrenceDate),
+]);
+
+// One repeating rule + the template its occurrences are stamped from. Splitting
+// a series ("this and following") creates a NEW row here pointing back at the
+// old one via `parentSeriesId`, instead of mutating the original rule — which
+// is what makes already-materialized past cards immutable by construction.
+export const recurrenceSeries = sqliteTable('recurrence_series', {
+  id:         text('id').primaryKey(),
+  databaseId: text('database_id').notNull().references(() => databases.id, { onDelete: 'cascade' }),
+  // Which date/datetime column of the database the rule drives.
+  dateColId:  text('date_col_id').notNull(),
+  // `RecurrenceRule` from src/lib/recurrence/rule.ts — JSON, not an RRULE
+  // string, so MCP clients can read and write it without a parser.
+  rule:       text('rule', { mode: 'json' }).notNull().$type<Record<string, any>>(),
+  // Title / properties / icon / body that every generated occurrence starts from.
+  template:   text('template', { mode: 'json' }).notNull().$type<Record<string, any>>(),
+  // Last date materialization has reached; the top-up extends it.
+  materializedUntil: text('materialized_until'),
+  parentSeriesId: text('parent_series_id'),
+  // Plain text, no FK: `users` is declared further down this file, and the same
+  // pattern is already used by `pages.agentTokenId`.
+  createdBy:  text('created_by'),
+  createdAt:  integer('created_at', { mode: 'timestamp' }).notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt:  integer('updated_at', { mode: 'timestamp' }).notNull().default(sql`CURRENT_TIMESTAMP`),
+}, (table) => [
+  index('recurrence_series_database_id_idx').on(table.databaseId),
 ]);
 
 // ── Auth tables (matching @auth/drizzle-adapter expected schema) ──────────────
