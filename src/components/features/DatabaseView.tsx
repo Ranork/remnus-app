@@ -15,6 +15,7 @@ import { BulkRowsDialog } from './BulkRowsDialog';
 import { PageMarkdownDialog } from './PageMarkdownDialog';
 import KanbanBoard from './KanbanBoard';
 import CalendarView from './CalendarView';
+import { useRecurrenceControls } from './recurrence/useRecurrenceControls';
 import ViewsBar from './ViewsBar';
 import DatabasePropertiesSidebar from './DatabasePropertiesSidebar';
 import PageEditor, { type PageEditorHandle } from './PageEditor';
@@ -658,6 +659,21 @@ export default function DatabaseView({
     await deletePage(pageId, database.id);
   };
 
+  // Series-aware delete for the Table and Kanban views. Only the scope dialog
+  // is needed here — those views have no "repeat" menu yet, so the rule map
+  // (which the calendar loads anyway for its badges) would go unused; passing
+  // an empty one keeps this from costing a second query on every mount.
+  const recurrence = useRecurrenceControls({
+    dateColId: '',
+    seriesRules: {},
+    getPage: (id) => localPages.find((p) => p.id === id),
+    onChanged: () => tabNav.refresh(),
+    // Falls back to the existing confirm dialog rather than deleting outright:
+    // the opened card's Delete routes through here too, and a non-series row
+    // must still get its "are you sure?".
+    onPlainDelete: (id) => setConfirmDeletePageId(id),
+  });
+
   const handleDuplicatePage = async (pageId: string): Promise<string | undefined> => {
     // Optimistically insert the copy so it shows up immediately in Table/Kanban/Calendar
     // instead of only appearing after a manual refresh (revalidatePath alone doesn't
@@ -1206,6 +1222,7 @@ export default function DatabaseView({
                 onRowClick={handlePageClick}
                 onRowReorder={handleRowReorder}
                 onDeletePage={handleDeletePage}
+                onRecurringDelete={recurrence.requestDelete}
                 onDuplicatePage={handleDuplicatePage}
                 hasSorts={(config.sorts?.length ?? 0) > 0}
                 onUpdatePageProperties={handleUpdatePageProperties}
@@ -1233,6 +1250,7 @@ export default function DatabaseView({
                 onRowClick={handlePageClick}
                 onRowReorder={handleRowReorder}
                 onDeletePage={handleDeletePage}
+                onRecurringDelete={recurrence.requestDelete}
                 onDuplicatePage={handleDuplicatePage}
                 hasSorts={(config.sorts?.length ?? 0) > 0}
                 onUpdatePageProperties={handleUpdatePageProperties}
@@ -1258,6 +1276,7 @@ export default function DatabaseView({
               onCardClick={handlePageClick}
               onCardMove={handleCardReorder}
               onDeletePage={handleDeletePage}
+              onRecurringDelete={recurrence.requestDelete}
               onDuplicatePage={handleDuplicatePage}
               hasSorts={(config.sorts?.length ?? 0) > 0}
               cardProperties={kanbanConfig.cardProperties}
@@ -1475,7 +1494,7 @@ export default function DatabaseView({
                               onClick={(e) => {
                                 e.stopPropagation();
                                 setOpenMenuId(null);
-                                setConfirmDeletePageId(peekPageId!);
+                                recurrence.requestDelete(peekPageId!);
                               }}
                               className="w-full px-3 py-2 text-xs text-red-400 hover:bg-neutral-800 flex items-center gap-2 cursor-pointer transition-colors"
                             >
@@ -1604,7 +1623,7 @@ export default function DatabaseView({
                             onClick={(e) => {
                               e.stopPropagation();
                               setOpenMenuId(null);
-                              setConfirmDeletePageId(peekPageId!);
+                              recurrence.requestDelete(peekPageId!);
                             }}
                             className="w-full px-3 py-2 text-xs text-red-400 hover:bg-neutral-800 flex items-center gap-2 cursor-pointer transition-colors"
                           >
@@ -1662,6 +1681,7 @@ export default function DatabaseView({
           onCancel={() => setConfirmDeletePageId(null)}
         />
       )}
+      {recurrence.node}
     </div>
     </MembersProvider>
   );

@@ -36,6 +36,7 @@ export default function KanbanBoard({
   onCardClick,
   onCardMove,
   onDeletePage,
+  onRecurringDelete,
   onDuplicatePage,
   hasSorts,
   cardProperties,
@@ -62,6 +63,8 @@ export default function KanbanBoard({
   onCardClick: (pageId: string) => void;
   onCardMove: (pageId: string, targetGroupId: string, targetPageId?: string, position?: 'before' | 'after') => void;
   onDeletePage: (pageId: string) => void;
+  /** Series-aware delete; when absent every row uses the plain confirm. */
+  onRecurringDelete?: (pageId: string) => void;
   onDuplicatePage: (pageId: string) => void;
   hasSorts: boolean;
   cardProperties?: string[];
@@ -92,7 +95,7 @@ export default function KanbanBoard({
     { id: 'copy-link', label: t('copyLink'), icon: Link2, onSelect: () => { navigator.clipboard?.writeText(`${window.location.origin}/db/${database.id}/${pageId}`); } },
     { kind: 'separator' },
     { id: 'duplicate', label: t('duplicatePage'), icon: Copy, onSelect: () => onDuplicatePage(pageId) },
-    { id: 'delete', label: tPage('deletePage'), icon: Trash2, danger: true, onSelect: () => setConfirmDeleteId(pageId) },
+    { id: 'delete', label: tPage('deletePage'), icon: Trash2, danger: true, onSelect: () => requestDelete(pageId) },
   ];
 
   const [editingCell, setEditingCell] = useState<{ pageId: string; colId: string } | null>(null);
@@ -165,6 +168,17 @@ export default function KanbanBoard({
   const [dragOverColumnName, setDragOverColumnName] = useState<string | null>(null);
   const [activeMenuCardId, setActiveMenuCardId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+
+  // A recurring row's delete belongs to the series-aware flow (this one / this
+  // and following / all), not to a plain yes-no confirm. Non-series rows keep
+  // this view's own dialog, which is why the branch lives here rather than
+  // inside the shared hook.
+  const requestDelete = (pageId: string) => {
+    const row = pages.find((p: any) => p.id === pageId);
+    if (row?.seriesId && !row?.seriesDetached && onRecurringDelete) onRecurringDelete(pageId);
+    else setConfirmDeleteId(pageId);
+  };
+
   const [menuCoords, setMenuCoords] = useState<{ top: number; left: number } | null>(null);
 
   const handleGroupDragStart = (e: React.DragEvent, group: string) => {
@@ -450,7 +464,7 @@ export default function KanbanBoard({
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              setConfirmDeleteId(page.id);
+                              requestDelete(page.id);
                               setActiveMenuCardId(null);
                               setMenuCoords(null);
                             }}

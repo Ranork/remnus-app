@@ -16,7 +16,7 @@ import {
 import { publish } from '@/lib/realtime/publish';
 import { logActivity, type TokenContext } from '../context';
 import { recordGeneratedKnowledge, validateContextRunForWrite } from '@/lib/services/knowledge';
-import { applyRecurrenceInput } from '@/lib/services/recurrence';
+import { applyRecurrenceInput, changeRecurrenceForRow } from '@/lib/services/recurrence';
 
 const READ_ONLY_ERROR = 'Error: This token only has read scope. A write-scoped token is required.';
 const CONTEXT_RUN_ID = z.string().uuid().optional().describe('prepare_context contextRunId. Required for mutations when the workspace uses Strict context.');
@@ -128,16 +128,20 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
         title: z.string().optional().describe('New title'),
         content: z.string().optional().describe('New markdown content'),
         properties: z.record(z.string(), z.any()).optional().describe('Properties to merge (for database rows)'),
+        recurrence: RECURRENCE_INPUT,
+        recurrenceScope: z.enum(['thisAndFollowing', 'all']).optional()
+          .describe('Required when the row ALREADY repeats: "thisAndFollowing" leaves earlier cards untouched, "all" re-rhythms the whole series. Ask the user rather than guessing.'),
         knowledge: KNOWLEDGE_INPUT,
         contextRunId: CONTEXT_RUN_ID,
       },
       outputSchema: z.object({
         updated: z.boolean().describe('Whether the update was applied'),
         id: z.string().describe('ID of the updated page or row'),
+        recurrenceError: z.string().optional().describe('Set when the rhythm change was refused — the row update itself still applied'),
       }).passthrough(),
       annotations: { title: 'Update page', readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     },
-    async ({ pageId, title, content, properties, knowledge, contextRunId }) => {
+    async ({ pageId, title, content, properties, recurrence, recurrenceScope, knowledge, contextRunId }) => {
       if (ctx.scope !== 'write') {
         await logActivity(ctx, 'update_page', 'error', 'page', pageId);
         return { content: [{ type: 'text' as const, text: READ_ONLY_ERROR }], isError: true };
@@ -147,7 +151,24 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
       try {
         await updatePageById(ctx.workspaceId, pageId, { title, content, properties }, { tokenId: ctx.tokenId });
         const knowledgeCaptured = await recordGeneratedKnowledge(ctx.workspaceId, pageId, actorId(ctx), knowledge).then(() => true).catch(() => false);
-        const out = { updated: true, id: pageId, knowledgeCaptured };
+
+        // Reported, never thrown: the field update above already landed, so a
+        // refused rhythm change must not read as "nothing happened".
+        let series: Record<string, unknown> | undefined;
+        if (recurrence) {
+          const applied = await changeRecurrenceForRow(pageId, recurrence, recurrenceScope, actorId(ctx))
+            .catch((err) => ({ error: String(err) }));
+          series = 'error' in applied
+            ? { recurrenceError: applied.error, ...('impact' in applied && applied.impact ? { recurrenceImpact: applied.impact } : {}) }
+            : {
+                seriesId: applied.seriesId,
+                occurrencesCreated: applied.created,
+                occurrencesRemoved: applied.removed,
+                occurrencesPreserved: applied.preserved,
+              };
+        }
+
+        const out = { updated: true, id: pageId, knowledgeCaptured, ...series };
         const text = JSON.stringify(out);
         await logActivity(ctx, 'update_page', 'success', 'page', pageId, text);
         publish({ scope: 'page', workspaceId: ctx.workspaceId, resourceId: pageId, actorId: actorId(ctx) });

@@ -153,6 +153,7 @@ export function registerReadTools(server: McpServer, ctx: TokenContext) {
         databaseId: z.string().nullable().optional(),
         mode: z.string().optional().describe('"outline" when collapsed'),
         fullContentChars: z.number().optional().describe('Full body size in chars (outline mode) — gauge whether a "full" fetch is worth it'),
+        recurrence: z.any().optional().describe('Present when this row is one occurrence of a repeating series: seriesId, occurrenceDate, detached, rule, occurrences'),
       }).passthrough(),
       annotations: { title: 'Get page', readOnlyHint: true, openWorldHint: false },
     },
@@ -315,7 +316,7 @@ export function registerReadTools(server: McpServer, ctx: TokenContext) {
       },
       outputSchema: z.object({
         schema: z.any().optional().describe('Column schema (trimmed when projecting with fields)'),
-        rows: z.array(z.any()),
+        rows: z.array(z.any()).describe('Rows carry `recurring: true` when they belong to a repeating series — call get_page for the rule before changing its rhythm'),
         hasMore: z.boolean().optional(),
         nextCursor: z.string().optional().describe('Pass back as cursor to continue'),
       }).passthrough(),

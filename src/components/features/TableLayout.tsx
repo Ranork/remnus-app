@@ -77,6 +77,7 @@ export default function TableLayout({
   onRowClick,
   onRowReorder,
   onDeletePage,
+  onRecurringDelete,
   onDuplicatePage,
   hasSorts,
   onUpdatePageProperties,
@@ -104,6 +105,8 @@ export default function TableLayout({
   onRowClick: (pageId: string) => void;
   onRowReorder: (orderedIds: string[]) => void;
   onDeletePage: (pageId: string) => void;
+  /** Series-aware delete; when absent every row uses the plain confirm. */
+  onRecurringDelete?: (pageId: string) => void;
   onDuplicatePage: (pageId: string) => void;
   hasSorts: boolean;
   onUpdatePageProperties: (pageId: string, properties: Record<string, any>) => void;
@@ -129,6 +132,17 @@ export default function TableLayout({
   const [localWidths, setLocalWidths] = useState<Record<string, number>>(() => columnWidths ?? {});
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
+  // A recurring row's delete belongs to the series-aware flow (this one / this
+  // and following / all), not to a plain yes-no confirm. Non-series rows keep
+  // this view's own dialog, which is why the branch lives here rather than
+  // inside the shared hook.
+  const requestDelete = (pageId: string) => {
+    const row = pages.find((p: any) => p.id === pageId);
+    if (row?.seriesId && !row?.seriesDetached && onRecurringDelete) onRecurringDelete(pageId);
+    else setConfirmDeleteId(pageId);
+  };
+
+
   // Notion-style right-click menu for rows
   const rowMenu = useContextMenu();
   const buildRowMenu = (pageId: string): MenuItem[] => [
@@ -137,7 +151,7 @@ export default function TableLayout({
     { id: 'copy-link', label: t('copyLink'), icon: Link2, onSelect: () => { navigator.clipboard?.writeText(`${window.location.origin}/db/${database.id}/${pageId}`); } },
     { kind: 'separator' },
     { id: 'duplicate', label: t('duplicatePage'), icon: Copy, onSelect: () => onDuplicatePage(pageId) },
-    { id: 'delete', label: tPage('deletePage'), icon: Trash2, danger: true, onSelect: () => setConfirmDeleteId(pageId) },
+    { id: 'delete', label: tPage('deletePage'), icon: Trash2, danger: true, onSelect: () => requestDelete(pageId) },
   ];
 
   useEffect(() => {
@@ -481,7 +495,7 @@ export default function TableLayout({
   const handleDeleteConfirm = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (!activeMenuRowId) return;
-    setConfirmDeleteId(activeMenuRowId);
+    requestDelete(activeMenuRowId);
     closeMenu();
   };
 

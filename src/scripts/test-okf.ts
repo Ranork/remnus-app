@@ -46,6 +46,12 @@ const snapshot: OkfWorkspaceSnapshot = {
       icon: null,
       iconColor: null,
       updatedAt: '2026-08-04T09:00:00.000Z',
+      recurrence: {
+        seriesId: 'series-1',
+        occurrenceDate: '2026-08-04',
+        detached: false,
+        rule: { freq: 'weekly', interval: 2, byWeekday: ['TU'], startDate: '2026-08-04', end: { type: 'never' }, exDates: [] },
+      },
     }],
   }],
   knowledge: [],
@@ -70,6 +76,11 @@ async function main() {
   const row = bundle.files.find(file => file.path.endsWith('/portable-task-row1.md'));
   assert.ok(row?.content.includes('status: "stable"'));
   assert.ok(row?.content.includes('tags: ["okf","portable"]'));
+  // Recurrence must survive the export, nested under x-remnus (OKF v0.2 has no
+  // core field for a repeating concept, so a top-level key would misstate the spec).
+  assert.ok(row?.content.includes('series-1'), 'export carries the series id');
+  assert.ok(row?.content.includes('"weekly"'), 'export carries the rule');
+  assert.ok(row?.content.includes('2026-08-04'), 'export carries the occurrence date');
   assert.ok(row?.content.includes('sources:\n  - id: handbook'));
   assert.ok(row?.content.includes('custom_key: keep-me'));
   assert.ok(row?.content.includes('[Start Here](/pages/start-here-page1.md)'));
