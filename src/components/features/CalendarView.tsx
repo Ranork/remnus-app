@@ -716,9 +716,41 @@ export default function CalendarView({
                             onClick={(e) => { e.stopPropagation(); setActiveMenuCardId(null); setMenuCoords(null); }}
                           />
                           <div
-                            className="fixed z-9999 bg-neutral-900 border border-neutral-800 shadow-xl py-1 w-32 rounded text-left animate-fade-in animate-duration-100 overflow-hidden"
+                            className="fixed z-9999 bg-neutral-900 border border-neutral-800 shadow-xl py-1 w-40 rounded text-left animate-fade-in animate-duration-100 overflow-hidden"
                             style={{ top: menuCoords.top, left: menuCoords.left }}
                           >
+                            {/* Repeat lives here as well as in the right-click
+                                menu: this ⋯ button is the only affordance most
+                                people ever find on a card, so leaving recurrence
+                                exclusively behind a right-click hid the feature. */}
+                            {parseDateValue(page.properties?.[dateCol]) && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setRepeatDialogPageId(page.id);
+                                  setActiveMenuCardId(null);
+                                  setMenuCoords(null);
+                                }}
+                                className="w-full px-2.5 py-1.5 text-[11px] text-neutral-300 hover:bg-neutral-800 flex items-center gap-1.5 cursor-pointer transition-colors border-b border-neutral-850"
+                              >
+                                <Repeat size={11} />
+                                <span>{page.seriesId && !page.seriesDetached ? tRec('menuEditRepeat') : tRec('menuRepeat')}</span>
+                              </button>
+                            )}
+                            {page.seriesId && !page.seriesDetached && (
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  runSeriesAction(() => detachPageFromSeries(page.id));
+                                  setActiveMenuCardId(null);
+                                  setMenuCoords(null);
+                                }}
+                                className="w-full px-2.5 py-1.5 text-[11px] text-neutral-300 hover:bg-neutral-800 flex items-center gap-1.5 cursor-pointer transition-colors border-b border-neutral-850"
+                              >
+                                <Unlink size={11} />
+                                <span>{tRec('menuDetach')}</span>
+                              </button>
+                            )}
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
