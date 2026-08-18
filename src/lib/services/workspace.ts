@@ -4,7 +4,7 @@
  * Next.js session cookies. Every function enforces workspace isolation.
  */
 import { db } from '@/db';
-import { exdateOccurrenceForPage } from '@/lib/services/recurrence';
+import { exdateOccurrenceForPage, getOccurrenceInfo } from '@/lib/services/recurrence';
 import {
   workspaceItems,
   standalonePages,
@@ -347,6 +347,11 @@ export async function getDatabasePageById(workspaceId: string, pageId: string) {
   // Verify the database belongs to this workspace
   await assertDatabaseInWorkspace(page.databaseId, workspaceId);
 
+  // Series membership travels with the row so an agent can tell it is editing
+  // one occurrence of many — and that changing the rhythm needs a scope —
+  // instead of treating it as a standalone task.
+  const recurrence = await getOccurrenceInfo(page).catch(() => undefined);
+
   return {
     id: page.id,
     type: 'page' as const,
@@ -355,6 +360,7 @@ export async function getDatabasePageById(workspaceId: string, pageId: string) {
     icon: page.icon,
     properties: page.properties,
     databaseId: page.databaseId,
+    ...(recurrence ? { recurrence } : {}),
   };
 }
 
@@ -505,6 +511,12 @@ export async function queryDatabaseRows(
       properties: pages.properties,
       content: pages.content,
       sortOrder: pages.sortOrder,
+      // Series membership only — NOT the rule. A full rule per row would cost
+      // ~25 tokens × page size; the marker tells an agent "this is one of many,
+      // fetch get_page before changing the rhythm", which is the decision it
+      // actually needs to make here.
+      seriesId: pages.seriesId,
+      seriesDetached: pages.seriesDetached,
     })
     .from(pages)
     .where(and(...allConditions))
@@ -517,7 +529,7 @@ export async function queryDatabaseRows(
 
   return {
     schema: projectedSchema,
-    rows: page.map(({ sortOrder: _so, content, ...r }) => {
+    rows: page.map(({ sortOrder: _so, content, seriesId, seriesDetached, ...r }) => {
       let properties = (r.properties ?? {}) as Record<string, unknown>;
       if (allowedColIds) {
         const trimmed: Record<string, unknown> = {};
@@ -526,7 +538,15 @@ export async function queryDatabaseRows(
         }
         properties = trimmed;
       }
-      return { id: r.id, title: r.title, properties, ...(includeContent ? { content } : {}) };
+      return {
+        id: r.id,
+        title: r.title,
+        properties,
+        ...(includeContent ? { content } : {}),
+        // Absent on ordinary rows, so a database with no recurring rows pays
+        // nothing for this.
+        ...(seriesId ? { recurring: true, ...(seriesDetached ? { recurringDetached: true } : {}) } : {}),
+      };
     }),
     hasMore,
     nextCursor: hasMore && last ? encodeCursor(last.sortOrder, last.id) : undefined,

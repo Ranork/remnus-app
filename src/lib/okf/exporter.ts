@@ -405,6 +405,12 @@ export async function buildOkfBundle(snapshot: OkfWorkspaceSnapshot, exportedAt 
           icon: row.icon,
           icon_color: row.iconColor,
           updated_at: row.updatedAt,
+          // Recurrence lives under x-remnus rather than as a top-level OKF
+          // field: OKF v0.2 has no concept of a repeating concept, and
+          // inventing a core-namespace key would misrepresent the spec.
+          // Nested here it is preserved on round-trip and readable by anything
+          // that understands the Remnus profile.
+          ...(row.recurrence ? { recurrence: row.recurrence } : {}),
           exported_at: exportedAt,
         },
       }, body || `# ${row.title}`, rawFrontmatter));

@@ -1,6 +1,6 @@
 import { eq } from 'drizzle-orm';
 import { db } from '@/db';
-import { databases, pages, standalonePages, workspaceItems, workspaces } from '@/db/schema';
+import { databases, pages, recurrenceSeries, standalonePages, workspaceItems, workspaces } from '@/db/schema';
 import type { OkfWorkspaceSnapshot } from './types';
 import { listKnowledgeCorpus } from '@/lib/services/knowledge';
 
@@ -62,6 +62,12 @@ export async function getOkfWorkspaceSnapshot(workspaceId: string): Promise<OkfW
         icon: pages.icon,
         iconColor: pages.iconColor,
         updatedAt: pages.updatedAt,
+        // Recurrence travels with the row so an export is not silently lossy
+        // about "this repeats weekly" — OKF is an interchange format, and a
+        // reader outside Remnus should be able to see the rhythm.
+        seriesId: pages.seriesId,
+        occurrenceDate: pages.occurrenceDate,
+        seriesDetached: pages.seriesDetached,
       })
       .from(pages)
       .innerJoin(databases, eq(pages.databaseId, databases.id))
@@ -77,6 +83,19 @@ export async function getOkfWorkspaceSnapshot(workspaceId: string): Promise<OkfW
     rowsByDatabase.set(row.databaseId, bucket);
   }
 
+  // Fetched separately rather than joined onto every row: a series is one rule
+  // shared by up to 500 cards, so joining would repeat the same JSON blob once
+  // per occurrence across the whole export.
+  const seriesRows = pageRows.some(r => r.seriesId)
+    ? await db
+        .select({ id: recurrenceSeries.id, rule: recurrenceSeries.rule })
+        .from(recurrenceSeries)
+        .innerJoin(databases, eq(recurrenceSeries.databaseId, databases.id))
+        .innerJoin(workspaceItems, eq(databases.itemId, workspaceItems.id))
+        .where(eq(workspaceItems.workspaceId, workspaceId))
+    : [];
+  const ruleBySeriesId = new Map(seriesRows.map(s => [s.id, s.rule]));
+
   return {
     workspace: { id: workspace.id, name: workspace.name, updatedAt: safeIso(workspace.updatedAt) },
     items: itemRows.map(item => ({ ...item, updatedAt: safeIso(item.updatedAt) })),
@@ -90,11 +109,26 @@ export async function getOkfWorkspaceSnapshot(workspaceId: string): Promise<OkfW
       updatedAt: safeIso(database.updatedAt),
       rows: (rowsByDatabase.get(database.id) ?? [])
         .sort((a, b) => a.sortOrder - b.sortOrder || a.title.localeCompare(b.title))
-        .map(row => ({
-          ...row,
-          properties: row.properties && typeof row.properties === 'object' ? row.properties : {},
-          updatedAt: safeIso(row.updatedAt),
-        })),
+        .map(({ seriesId, occurrenceDate, seriesDetached, ...row }) => {
+          const rule = seriesId ? ruleBySeriesId.get(seriesId) : undefined;
+          return {
+            ...row,
+            properties: row.properties && typeof row.properties === 'object' ? row.properties : {},
+            updatedAt: safeIso(row.updatedAt),
+            // Only when the series still exists — a dangling id would export a
+            // rhythm nobody can read.
+            ...(seriesId && rule
+              ? {
+                  recurrence: {
+                    seriesId,
+                    occurrenceDate: occurrenceDate ?? null,
+                    detached: !!seriesDetached,
+                    rule,
+                  },
+                }
+              : {}),
+          };
+        }),
     })),
     knowledge: knowledgeRows
       .filter(item => item.metadata.id)

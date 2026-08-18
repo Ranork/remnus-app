@@ -360,6 +360,53 @@ export async function createSeriesFromPage(
   return { seriesId, created };
 }
 
+// ── read-side series info (MCP) ───────────────────────────────────────────────
+
+export interface OccurrenceInfo {
+  seriesId: string;
+  /** The date the rule generated this card for. */
+  occurrenceDate: string | null;
+  /** True once the card stopped following the rule. */
+  detached: boolean;
+  rule: RecurrenceRule;
+  /** Materialized cards currently in the series. */
+  occurrences: number;
+}
+
+/**
+ * What an agent needs to know before touching a row: that it is one of many.
+ *
+ * Without this, an agent asked to "update the standup card" cannot tell whether
+ * it is editing a single task or one instance of fifty, and cannot warn the
+ * person that a rhythm change would need a scope. Attached to single-row reads
+ * only — `query_database` gets a one-word marker instead (see below), because a
+ * full rule per row would cost real tokens across a 100-row page.
+ */
+export async function getOccurrenceInfo(row: {
+  seriesId?: string | null;
+  occurrenceDate?: string | null;
+  seriesDetached?: boolean | null;
+}): Promise<OccurrenceInfo | undefined> {
+  if (!row.seriesId) return undefined;
+  const series = await getSeries(row.seriesId);
+  if (!series) return undefined;
+  const rule = normalizeRule(series.rule);
+  if (!rule) return undefined;
+
+  const [{ total }] = await db
+    .select({ total: sql<number>`count(*)` })
+    .from(pages)
+    .where(eq(pages.seriesId, row.seriesId));
+
+  return {
+    seriesId: row.seriesId,
+    occurrenceDate: row.occurrenceDate ?? null,
+    detached: !!row.seriesDetached,
+    rule,
+    occurrences: Number(total ?? 0),
+  };
+}
+
 // ── agent-facing entry point ──────────────────────────────────────────────────
 
 /** The flattened rule an MCP client sends — `until`/`count` instead of the
@@ -424,14 +471,22 @@ export async function applyRecurrenceInput(
   const shape = parseDateValue((page?.properties as Record<string, unknown> | undefined)?.[column.id]);
   if (!shape) return { error: `Set a value on the "${column.name ?? column.id}" column before repeating this row.` };
 
-  const rule = normalizeRule({
+  const rule = ruleFromInput(input, shape.startDate);
+  if (!rule) return { error: 'Invalid recurrence rule.' };
+
+  const result = await createSeriesFromPage(pageId, column.id, rule, actorId);
+  return result ?? { error: 'Could not create the series.' };
+}
+
+function ruleFromInput(input: RecurrenceInput, startDate: string): RecurrenceRule | null {
+  return normalizeRule({
     freq: input.freq,
     interval: input.interval ?? 1,
     byWeekday: input.byWeekday,
     monthlyMode: input.monthlyMode,
     byMonthDay: input.byMonthDay,
     bySetPos: input.bySetPos,
-    startDate: shape.startDate,
+    startDate,
     exDates: [],
     end: input.until
       ? { type: 'onDate', date: input.until }
@@ -439,10 +494,80 @@ export async function applyRecurrenceInput(
         ? { type: 'afterCount', count: input.count }
         : { type: 'never' },
   });
+}
+
+/**
+ * Changing the rhythm of a row that is ALREADY a series, for the agent path.
+ *
+ * A scope is mandatory here and the tool refuses without one, returning the
+ * per-scope impact instead. That refusal is the feature: an agent picking
+ * silently would be choosing, on the user's behalf, whether last month's
+ * filled-in cards get rewritten — and it has no way to ask. Handing back the
+ * numbers lets it put the question to the person who can answer it.
+ */
+export async function changeRecurrenceForRow(
+  pageId: string,
+  input: RecurrenceInput,
+  scope: 'thisAndFollowing' | 'all' | undefined,
+  actorId: string,
+): Promise<
+  | { seriesId: string; created: number; removed: number; preserved: number }
+  | { error: string; requiresScope?: true; impact?: Record<string, ScopeImpact> }
+> {
+  const [page] = await db
+    .select({
+      databaseId: pages.databaseId,
+      seriesId: pages.seriesId,
+      occurrenceDate: pages.occurrenceDate,
+      seriesDetached: pages.seriesDetached,
+    })
+    .from(pages)
+    .where(eq(pages.id, pageId))
+    .limit(1);
+  if (!page) return { error: 'Row not found.' };
+
+  // Not a series yet (or no longer one) — this is a plain "start repeating".
+  if (!page.seriesId || page.seriesDetached) {
+    const created = await applyRecurrenceInput(pageId, page.databaseId, input, actorId);
+    return 'error' in created
+      ? created
+      : { seriesId: created.seriesId, created: created.created, removed: 0, preserved: 0 };
+  }
+
+  if (!scope) {
+    const [following, all] = await Promise.all([
+      getScopeImpact(pageId, 'thisAndFollowing'),
+      getScopeImpact(pageId, 'all'),
+    ]);
+    return {
+      error:
+        'This row already repeats. Pass recurrenceScope: "thisAndFollowing" (leaves earlier cards untouched) '
+        + 'or "all" (re-rhythms the whole series, rewriting past cards too). Ask the user which they want.',
+      requiresScope: true,
+      impact: {
+        ...(following ? { thisAndFollowing: following } : {}),
+        ...(all ? { all: all } : {}),
+      },
+    };
+  }
+
+  const series = await getSeries(page.seriesId);
+  if (!series) return { error: 'Series not found.' };
+
+  const startDate =
+    scope === 'thisAndFollowing'
+      ? page.occurrenceDate ?? series.rule.startDate
+      : series.rule.startDate;
+
+  const rule = ruleFromInput(input, startDate);
   if (!rule) return { error: 'Invalid recurrence rule.' };
 
-  const result = await createSeriesFromPage(pageId, column.id, rule, actorId);
-  return result ?? { error: 'Could not create the series.' };
+  const result =
+    scope === 'all'
+      ? await replaceSeriesRule(page.seriesId, rule)
+      : await splitSeriesAt(page.seriesId, startDate, rule, actorId);
+
+  return result ?? { error: 'Could not change the series.' };
 }
 
 // ── impact preview ────────────────────────────────────────────────────────────

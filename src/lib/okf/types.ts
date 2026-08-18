@@ -30,6 +30,15 @@ export interface OkfDatabaseRowSnapshot {
   icon: string | null;
   iconColor: string | null;
   updatedAt: string | null;
+  /** Set when this row is one occurrence of a repeating series (migration 0043). */
+  recurrence?: {
+    seriesId: string;
+    /** The date the rule generated this row for. */
+    occurrenceDate: string | null;
+    detached: boolean;
+    /** The `RecurrenceRule` JSON, so a reader outside Remnus sees the rhythm. */
+    rule: unknown;
+  };
 }
 
 export interface OkfDatabaseSnapshot {
