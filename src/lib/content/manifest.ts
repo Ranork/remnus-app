@@ -33,6 +33,7 @@ import {
   History,
   Layers,
   Lock,
+  Server,
 } from 'lucide-react';
 import { NotionMark, AppFlowyMark, AffineMark, ObsidianMark } from '@/components/docs/CompetitorMark';
 
@@ -82,6 +83,15 @@ export type BlogPost = {
 };
 
 export const BLOG_POSTS: BlogPost[] = [
+  {
+    slug: 'remote-vs-local-mcp-servers',
+    file: 'remote-vs-local-mcp-servers.md',
+    title: 'Remote vs Local MCP Servers: Which Should You Use?',
+    description:
+      'A neutral, spec-grounded comparison of local (stdio) and remote (Streamable HTTP) MCP servers — setup, auth, team access, headless workflows, security responsibilities, hybrid bridging, and how Remnus fits both models.',
+    date: '2026-08-19',
+    icon: Server,
+  },
   {
     slug: 'mcp-security-guide',
     file: 'mcp-security-guide.md',

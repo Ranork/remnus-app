@@ -4,6 +4,7 @@ Thoughts on open source, AI-native tooling, and building in public.
 
 ## Posts
 
+- [Remote vs Local MCP Servers: Which Should You Use?](/docs/remote-vs-local-mcp-servers) — A neutral, spec-grounded comparison of local (stdio) and remote (Streamable HTTP) MCP servers: setup, auth, team access, headless workflows, security responsibilities, hybrid bridging, and how Remnus fits both models.
 - [MCP Security Guide: OAuth, Tokens, Scopes, and Audit Logs](/docs/mcp-security-guide) — The MCP threat model, OAuth vs personal access tokens, least privilege, destructive-action confirmation, audit logs, checklists for users and server developers, and how Remnus applies each control.
 - [How to Run Headless AI Agents Without Login Prompts](/docs/run-headless-ai-agents-with-mcp) — OAuth vs personal access tokens for unattended jobs, secure token storage, minimum-permission scopes, a verified headless Claude Code + Remnus example, and a deployment checklist.
 - [AI Agent Memory vs RAG vs Context Windows](/docs/ai-agent-memory-vs-rag-vs-context-window) — Primary-source definitions of context windows, RAG, and persistent agent memory, a direct comparison table, a software-project example, and Remnus's own memory and retrieval layers.
