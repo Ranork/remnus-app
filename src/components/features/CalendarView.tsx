@@ -4,14 +4,14 @@ import React, { useState, useMemo, useRef, useEffect, useLayoutEffect } from 're
 import { useRouter } from 'next/navigation';
 import { createPortal } from 'react-dom';
 import { getOptionColorByValue, getCardBorderAccents, getCardBgColor, formatDateValue } from '@/lib/types/properties';
-import { ChevronLeft, ChevronRight, ChevronDown, GripVertical, Trash2, Calendar as CalendarIcon, Clock, Plus, Copy, ArrowUpRight, Maximize2, Link2, Repeat, Unlink } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronDown, ChevronsDownUp, ChevronsUpDown, GripVertical, Trash2, Calendar as CalendarIcon, Clock, Plus, Copy, ArrowUpRight, Maximize2, Link2, Repeat, Unlink } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useContextMenu, type MenuItem } from './ContextMenu';
 import PageIcon from './PageIcon';
 import IconPicker from './IconPicker';
 import AgentEditBadge from './AgentEditBadge';
 import { StatusChip, UserAvatarStack, OptionIcon } from './PropertyTags';
-import { updatePageIcon, updatePageCardCollapsed } from '@/lib/actions/page';
+import { updatePageIcon, updatePageCardCollapsed, updatePagesCardCollapsed } from '@/lib/actions/page';
 import { ConfirmDialog } from './ConfirmDialog';
 import { useRecurrenceControls } from './recurrence/useRecurrenceControls';
 import RecurringBadge from './recurrence/RecurringBadge';
@@ -42,6 +42,7 @@ interface CalendarViewProps {
   defaultPageIconColor?: string;
   onPageIconChange?: (pageId: string, icon: string | null, iconColor: string | null) => void;
   onCardCollapsedChange?: (pageId: string, collapsed: boolean) => void;
+  onCardsCollapsedChange?: (pageIds: string[], collapsed: boolean) => void;
   /** Fired after a recurrence mutation. A series change rewrites many rows at
    *  once, so the parent re-fetches rather than trying to patch local state. */
   onSeriesChanged?: () => void;
@@ -129,6 +130,7 @@ export default function CalendarView({
   defaultPageIconColor,
   onPageIconChange,
   onCardCollapsedChange,
+  onCardsCollapsedChange,
   onSeriesChanged,
 }: CalendarViewProps) {
   const t = useTranslations('Database');
@@ -150,6 +152,14 @@ export default function CalendarView({
   const handleToggleCollapsed = (pageId: string, collapsed: boolean) => {
     onCardCollapsedChange?.(pageId, collapsed);
     updatePageCardCollapsed(pageId, collapsed);
+  };
+
+  // Day header toggle — collapses/expands every card sitting on that day at once.
+  const handleToggleDayCollapsed = (dayPages: any[], collapsed: boolean) => {
+    const ids = dayPages.map((p) => p.id);
+    if (ids.length === 0) return;
+    onCardsCollapsedChange?.(ids, collapsed);
+    updatePagesCardCollapsed(ids, collapsed);
   };
 
   // Card dragging states
@@ -459,6 +469,9 @@ export default function CalendarView({
             const dayStr = formatYYYYMMDD(date);
             const isToday = dayStr === todayStr;
             const dayPages = getPagesForDay(date);
+            // "Expand all" only once every card on the day is collapsed; a single
+            // expanded card keeps the button meaning "collapse all".
+            const allDayCardsCollapsed = dayPages.length > 0 && dayPages.every((p: any) => p.cardCollapsed);
             const isDragOver = dragOverDayStr === dayStr;
 
             return (
@@ -516,6 +529,15 @@ export default function CalendarView({
                       <span className="text-[10px] text-neutral-600 font-medium font-mono group-hover/day:hidden">
                         {dayPages.length}
                       </span>
+                    )}
+                    {dayPages.length > 0 && (
+                      <button
+                        onClick={() => handleToggleDayCollapsed(dayPages, !allDayCardsCollapsed)}
+                        className="opacity-0 group-hover/day:opacity-100 transition-opacity p-0.5 hover:bg-neutral-800 text-neutral-500 hover:text-neutral-200 rounded cursor-pointer duration-100"
+                        title={allDayCardsCollapsed ? t('expandAllCards') : t('collapseAllCards')}
+                      >
+                        {allDayCardsCollapsed ? <ChevronsUpDown size={12} /> : <ChevronsDownUp size={12} />}
+                      </button>
                     )}
                     <button
                       onClick={() => onCreatePage?.({ [dateCol]: dayStr })}

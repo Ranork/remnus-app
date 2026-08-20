@@ -3,7 +3,7 @@
 import React, { useState, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { createPortal } from 'react-dom';
-import { GripVertical, Settings, Trash2, Plus, Copy, CheckSquare, Square, ExternalLink, ArrowUpRight, Maximize2, Link2, ChevronDown, ChevronRight } from 'lucide-react';
+import { GripVertical, Settings, Trash2, Plus, Copy, CheckSquare, Square, ExternalLink, ArrowUpRight, Maximize2, Link2, ChevronDown, ChevronRight, ChevronsDownUp, ChevronsUpDown } from 'lucide-react';
 import { normalizeOption, getOptionColorByValue, getCardBorderAccents, getCardBgColor, formatDateValue } from '@/lib/types/properties';
 import { useTranslations } from 'next-intl';
 import type { SelectOption } from '@/lib/types/properties';
@@ -14,7 +14,7 @@ import PageIcon from './PageIcon';
 import IconPicker from './IconPicker';
 import AgentEditBadge from './AgentEditBadge';
 import RecurringBadge from './recurrence/RecurringBadge';
-import { updatePageIcon, updatePageCardCollapsed } from '@/lib/actions/page';
+import { updatePageIcon, updatePageCardCollapsed, updatePagesCardCollapsed } from '@/lib/actions/page';
 import { updateDatabaseSchema } from '@/lib/actions/database';
 import { ConfirmDialog } from './ConfirmDialog';
 
@@ -52,6 +52,7 @@ export default function KanbanBoard({
   defaultPageIconColor,
   onPageIconChange,
   onCardCollapsedChange,
+  onCardsCollapsedChange,
   hiddenGroups = [],
 }: {
   database: any;
@@ -80,6 +81,7 @@ export default function KanbanBoard({
   defaultPageIconColor?: string;
   onPageIconChange?: (pageId: string, icon: string | null, iconColor: string | null) => void;
   onCardCollapsedChange?: (pageId: string, collapsed: boolean) => void;
+  onCardsCollapsedChange?: (pageIds: string[], collapsed: boolean) => void;
   hiddenGroups?: string[];
 }) {
   const t = useTranslations('Database');
@@ -110,6 +112,14 @@ export default function KanbanBoard({
   const handleToggleCollapsed = (pageId: string, collapsed: boolean) => {
     onCardCollapsedChange?.(pageId, collapsed);
     updatePageCardCollapsed(pageId, collapsed);
+  };
+
+  // Column header toggle — collapses/expands every card in that column at once.
+  const handleToggleColumnCollapsed = (columnPages: any[], collapsed: boolean) => {
+    const ids = columnPages.map((p) => p.id);
+    if (ids.length === 0) return;
+    onCardsCollapsedChange?.(ids, collapsed);
+    updatePagesCardCollapsed(ids, collapsed);
   };
 
   const handleCellSave = (pageId: string, colId: string, newVal: any) => {
@@ -305,6 +315,10 @@ export default function KanbanBoard({
     <div className={`flex overflow-x-auto pb-4 items-start ${groupColBg ? 'gap-2' : 'gap-6'}`}>
       {allColumns.map((columnName) => {
         const isUncategorized = columnName === 'Uncategorized';
+        const columnPages = groupedPages[columnName] ?? [];
+        // "Expand all" only once every card is collapsed; a single expanded card
+        // keeps the button meaning "collapse all".
+        const allCardsCollapsed = columnPages.length > 0 && columnPages.every((p: any) => p.cardCollapsed);
         const isDraggingThis = draggedGroup === columnName;
         const isOver = dragOverGroup === columnName;
         const groupBgStyle = groupColBg
@@ -339,16 +353,32 @@ export default function KanbanBoard({
                 }
               }}
               onMouseUp={() => setIsGroupDragReady(null)}
-              className={`pb-2 mb-2 flex justify-between items-baseline border-b border-neutral-800/60 ${
+              className={`pb-2 mb-2 flex justify-between items-center gap-2 border-b border-neutral-800/60 ${
                 !isUncategorized ? 'cursor-grab active:cursor-grabbing' : ''
               }`}
             >
-              <h3 className="text-xs font-medium uppercase tracking-wider text-neutral-400">
+              <h3 className="text-xs font-medium uppercase tracking-wider text-neutral-400 truncate">
                 {isUncategorized ? t('uncategorized') : columnName}
               </h3>
-              <span className="text-xs text-neutral-500 tabular-nums">
-                {groupedPages[columnName].length}
-              </span>
+              <div className="flex items-center gap-1 shrink-0">
+                {columnPages.length > 0 && (
+                  <button
+                    // Stops the header's mousedown from arming the column drag.
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleToggleColumnCollapsed(columnPages, !allCardsCollapsed);
+                    }}
+                    className="opacity-0 group-hover/col:opacity-100 focus-visible:opacity-100 transition-opacity p-0.5 text-neutral-500 hover:text-neutral-200 hover:bg-neutral-800 rounded cursor-pointer duration-100"
+                    title={allCardsCollapsed ? t('expandAllCards') : t('collapseAllCards')}
+                  >
+                    {allCardsCollapsed ? <ChevronsUpDown size={13} /> : <ChevronsDownUp size={13} />}
+                  </button>
+                )}
+                <span className="text-xs text-neutral-500 tabular-nums">
+                  {columnPages.length}
+                </span>
+              </div>
             </div>
 
             <div

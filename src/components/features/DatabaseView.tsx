@@ -436,6 +436,15 @@ export default function DatabaseView({
     );
   };
 
+  // Group-level collapse (a Kanban column, a calendar day) toggles many cards
+  // in one pass instead of re-mapping `localPages` once per card.
+  const handlePagesCardCollapsedChange = (pageIds: string[], collapsed: boolean) => {
+    const ids = new Set(pageIds);
+    setLocalPages((prev) =>
+      prev.map((p) => ids.has(p.id) ? { ...p, cardCollapsed: collapsed } : p)
+    );
+  };
+
   const [views, setViews] = useState<DatabaseView[]>(() => {
     const saved = database.views as DatabaseView[] | null | undefined;
     if (Array.isArray(saved) && saved.length > 0) return saved;
@@ -920,6 +929,9 @@ export default function DatabaseView({
   const handleGroupOrderChange = (groupOrder: string[]) =>
     mutateConfig((cfg) => ({ ...cfg, groupOrder }));
 
+  const handleCollapsedGroupsChange = (collapsedGroups: string[]) =>
+    mutateConfig((cfg) => ({ ...cfg, collapsedGroups }));
+
   const handleCardPropertiesChange = (cardProperties: string[]) =>
     mutateConfig((cfg) => ({ ...cfg, cardProperties }));
 
@@ -1211,8 +1223,10 @@ export default function DatabaseView({
                 groupByCol={tableConfig.groupByCol!}
                 groupOrder={tableConfig.groupOrder ?? []}
                 hiddenGroups={tableConfig.hiddenGroups ?? []}
+                collapsedGroups={tableConfig.collapsedGroups ?? []}
                 groupColBg={tableConfig.groupColBg ?? false}
                 onGroupOrderChange={handleGroupOrderChange}
+                onCollapsedGroupsChange={handleCollapsedGroupsChange}
                 columnOrder={tableConfig.columnOrder}
                 hiddenColumns={tableConfig.hiddenColumns}
                 columnWidths={tableConfig.columnWidths ?? {}}
@@ -1292,6 +1306,7 @@ export default function DatabaseView({
               defaultPageIconColor={config.defaultPageIconColor}
               onPageIconChange={handlePageIconChange}
               onCardCollapsedChange={handlePageCardCollapsedChange}
+              onCardsCollapsedChange={handlePagesCardCollapsedChange}
               hiddenGroups={kanbanConfig.hiddenGroups ?? []}
             />
           ) : calendarConfig ? (
@@ -1322,6 +1337,7 @@ export default function DatabaseView({
               defaultPageIconColor={config.defaultPageIconColor}
               onPageIconChange={handlePageIconChange}
               onCardCollapsedChange={handlePageCardCollapsedChange}
+              onCardsCollapsedChange={handlePagesCardCollapsedChange}
             />
           ) : null}
         </div>

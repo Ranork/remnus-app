@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo, useState, type ComponentProps, type DragEvent } from 'react';
-import { GripVertical, Plus } from 'lucide-react';
+import { ChevronDown, ChevronRight, GripVertical, Plus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { getOptionColorByValue, normalizeOption } from '@/lib/types/properties';
 import {
@@ -16,8 +16,10 @@ type GroupedTableLayoutProps = ComponentProps<typeof TableLayout> & {
   groupByCol: string;
   groupOrder: string[];
   hiddenGroups: string[];
+  collapsedGroups?: string[];
   groupColBg?: boolean;
   onGroupOrderChange: (order: string[]) => void;
+  onCollapsedGroupsChange?: (groups: string[]) => void;
 };
 
 export default function GroupedTableLayout({
@@ -26,8 +28,10 @@ export default function GroupedTableLayout({
   groupByCol,
   groupOrder,
   hiddenGroups,
+  collapsedGroups = [],
   groupColBg = false,
   onGroupOrderChange,
+  onCollapsedGroupsChange,
   onCreatePage,
   ...tableProps
 }: GroupedTableLayoutProps) {
@@ -50,6 +54,22 @@ export default function GroupedTableLayout({
     () => groupPagesForTable(pages, groupByCol, options, visibleGroups),
     [pages, groupByCol, options, visibleGroups],
   );
+
+  const collapsedSet = useMemo(() => new Set(collapsedGroups), [collapsedGroups]);
+
+  // The "toggle columns" button belongs to whichever table is actually rendered
+  // first — collapsing the top group must not take it away with it.
+  const firstOpenGroupWithRows = visibleGroups.find(
+    (name) => !collapsedSet.has(name) && (groupedPages[name]?.length ?? 0) > 0,
+  );
+
+  const toggleGroupCollapsed = (groupName: string) => {
+    onCollapsedGroupsChange?.(
+      collapsedSet.has(groupName)
+        ? collapsedGroups.filter((g) => g !== groupName)
+        : [...collapsedGroups, groupName],
+    );
+  };
 
   const [draggedGroup, setDraggedGroup] = useState<string | null>(null);
   const [dragOverGroup, setDragOverGroup] = useState<string | null>(null);
@@ -93,9 +113,10 @@ export default function GroupedTableLayout({
 
   return (
     <div className="flex flex-col gap-6 pb-6">
-      {visibleGroups.map((groupName, index) => {
+      {visibleGroups.map((groupName) => {
         const isUncategorized = groupName === UNCATEGORIZED_TABLE_GROUP;
         const groupRows = groupedPages[groupName] ?? [];
+        const isCollapsed = collapsedSet.has(groupName);
         const isDraggingThis = draggedGroup === groupName;
         const isOver = dragOverGroup === groupName;
         const groupBgStyle = groupColBg
@@ -119,8 +140,16 @@ export default function GroupedTableLayout({
                 setDraggedGroup(null);
                 setDragOverGroup(null);
               }}
-              className="mb-3 flex items-center border-b border-neutral-800/60 pb-2.5"
+              className={`flex items-center gap-1.5 border-b border-neutral-800/60 pb-2.5 ${isCollapsed ? 'mb-0' : 'mb-3'}`}
             >
+              <button
+                onClick={() => toggleGroupCollapsed(groupName)}
+                className="shrink-0 p-0.5 text-neutral-500 hover:text-neutral-200 hover:bg-neutral-800/60 rounded transition-colors cursor-pointer"
+                title={isCollapsed ? t('expandGroup') : t('collapseGroup')}
+                aria-expanded={!isCollapsed}
+              >
+                {isCollapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
+              </button>
               <div className={`flex items-center gap-2.5 min-w-0 ${!isUncategorized ? 'cursor-grab active:cursor-grabbing' : ''}`}>
                 {!isUncategorized && <GripVertical size={15} className="text-neutral-600 shrink-0" />}
                 <h3 draggable={!isUncategorized} className="text-lg font-semibold text-neutral-200 truncate">
@@ -132,7 +161,7 @@ export default function GroupedTableLayout({
               </div>
             </div>
 
-            {groupRows.length > 0 ? (
+            {isCollapsed ? null : groupRows.length > 0 ? (
               <TableLayout
                 {...tableProps}
                 database={database}
@@ -142,7 +171,7 @@ export default function GroupedTableLayout({
                   ...initialProperties,
                 })}
                 disableRowDrag
-                showToggleColumnsButton={index === 0}
+                showToggleColumnsButton={groupName === firstOpenGroupWithRows}
               />
             ) : (
               <button

@@ -1,7 +1,7 @@
 'use server';
 import { db } from '@/db';
 import { pages, databases, workspaceItems, workspaceMembers, agentTokens, oauthAccessTokens, oauthClients } from '@/db/schema';
-import { eq, asc, and, sql } from 'drizzle-orm';
+import { eq, asc, and, sql, inArray } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { getCurrentUser } from '@/lib/auth/session';
 import { deleteWorkspaceItem } from './workspace';
@@ -300,6 +300,37 @@ export async function updatePageCardCollapsed(id: string, collapsed: boolean) {
 
   revalidatePath(`/db/${page[0].databaseId}`);
   publish({ scope: 'database', workspaceId, resourceId: page[0].databaseId, actorId: userId });
+}
+
+/**
+ * Collapse/expand many cards at once (a Kanban column, a calendar day).
+ * Every id is expected to live in the same database — the callers only ever
+ * pass the cards of the view they render — so access is checked once and any
+ * id from another database is ignored rather than silently written.
+ */
+export async function updatePagesCardCollapsed(ids: string[], collapsed: boolean) {
+  if (!ids.length) return;
+
+  const rows = await db
+    .select({ id: pages.id, databaseId: pages.databaseId })
+    .from(pages)
+    .where(inArray(pages.id, ids));
+  if (!rows.length) return;
+
+  const databaseId = rows[0].databaseId;
+  const targetIds = rows.filter((r) => r.databaseId === databaseId).map((r) => r.id);
+
+  const { userId, workspaceId } = await assertDatabaseAccess(databaseId);
+
+  // Chunked so a very busy column stays well under SQLite's bound-parameter cap.
+  for (let i = 0; i < targetIds.length; i += 100) {
+    await db.update(pages)
+      .set({ cardCollapsed: collapsed })
+      .where(inArray(pages.id, targetIds.slice(i, i + 100)));
+  }
+
+  revalidatePath(`/db/${databaseId}`);
+  publish({ scope: 'database', workspaceId, resourceId: databaseId, actorId: userId });
 }
 
 // ── Bulk add / update (paste-driven, for fast web-based bulk entry) ───────────────

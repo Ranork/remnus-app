@@ -31,6 +31,7 @@ export interface TableViewConfig {
   groupOrder?: string[];   // option values in display order; []/undefined = use options order
   groupColBg?: boolean;    // tint each grouped table section with the group option's color
   hiddenGroups?: string[];
+  collapsedGroups?: string[]; // group values rendered header-only (their rows are hidden)
   filters: ViewFilter[];
   sorts: ViewSort[];
   openBehavior?: OpenBehavior;
