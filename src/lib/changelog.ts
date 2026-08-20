@@ -45,6 +45,31 @@ const FIRST_VISIT_WINDOW_DAYS = 7;
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-08-20-calendar-today-marker',
+    date: '2026-08-20',
+    category: 'improved',
+    title: {
+      en: 'Today stands out in the calendar',
+      tr: 'Takvimde bugün belirgin',
+      de: 'Heute fällt im Kalender auf',
+      es: 'Hoy destaca en el calendario',
+      fr: 'Aujourd’hui ressort dans le calendrier',
+      hi: 'कैलेंडर में आज अलग दिखता है',
+      ru: 'Сегодняшний день заметен в календаре',
+      zh: '日历中今天更醒目',
+    },
+    summary: {
+      en: 'The current day in Calendar view is now highlighted more strongly and labelled “Today” right next to its date, so you can find it without counting squares.',
+      tr: 'Takvim görünümünde bugünün karesi artık daha belirgin vurgulanıyor ve tarihinin hemen yanında “Bugün” yazıyor; kareleri saymadan bulabiliyorsun.',
+      de: 'Der heutige Tag in der Kalenderansicht ist jetzt deutlicher hervorgehoben und direkt neben dem Datum mit „Heute“ beschriftet, sodass du ihn ohne Suchen findest.',
+      es: 'El día actual en la vista de Calendario ahora se resalta con más fuerza y lleva la etiqueta «Hoy» junto a su fecha, así lo encuentras sin contar casillas.',
+      fr: 'Le jour en cours dans la vue Calendrier est désormais mis en évidence plus nettement et porte la mention « Aujourd’hui » juste à côté de sa date, pour le repérer d’un coup d’œil.',
+      hi: 'कैलेंडर व्यू में आज का दिन अब ज़्यादा स्पष्ट रूप से हाइलाइट होता है और उसकी तारीख़ के ठीक बगल में “आज” लिखा रहता है, जिससे वह तुरंत मिल जाता है।',
+      ru: 'Текущий день в Календаре теперь выделен заметнее и подписан «Сегодня» рядом с датой — его легко найти с первого взгляда.',
+      zh: '日历视图中的当天现在高亮更明显，并在日期旁标注“今天”，一眼就能找到。',
+    },
+  },
+  {
     id: '2026-08-20-collapsible-table-groups',
     date: '2026-08-20',
     category: 'new',

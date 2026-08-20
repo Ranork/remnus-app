@@ -413,7 +413,7 @@ export default function CalendarView({
             onClick={handleToday}
             className="px-3 py-1 text-xs font-semibold hover:bg-neutral-800/60 hover:text-neutral-100 border border-neutral-850 bg-neutral-900/10 transition-colors cursor-pointer rounded"
           >
-            Today
+            {t('today')}
           </button>
           <button
             onClick={handleNext}
@@ -505,26 +505,35 @@ export default function CalendarView({
                   isDragOver
                     ? 'bg-neutral-800/15'
                     : isToday
-                    ? 'bg-blue-500/5'
+                    ? 'bg-blue-500/12'
                     : !isCurrentMonth && viewMode === 'month'
                     ? 'bg-neutral-950/20'
                     : 'bg-transparent'
-                } ${isToday ? 'ring-1 ring-inset ring-blue-500/40 z-10' : ''}`}
+                } ${isToday ? 'ring-1 ring-inset ring-blue-500/70 z-10' : ''}`}
               >
                 {/* Day Number / Indicator */}
-                <div className="flex items-center justify-between mb-1.5 shrink-0 select-none">
-                  <span
-                    className={`text-xs font-semibold py-0.5 px-1.5 ${
-                      isToday
-                        ? 'bg-blue-600 text-white font-bold'
-                        : isCurrentMonth
-                        ? 'text-neutral-200'
-                        : 'text-neutral-500'
-                    }`}
-                  >
-                    {date.getDate()}
-                  </span>
-                  <div className="flex items-center gap-1.5 h-6">
+                <div className="flex items-center justify-between gap-1 mb-1.5 shrink-0 select-none">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <span
+                      className={`shrink-0 text-xs font-semibold py-0.5 px-1.5 ${
+                        isToday
+                          ? 'bg-blue-600 text-white font-bold'
+                          : isCurrentMonth
+                          ? 'text-neutral-200'
+                          : 'text-neutral-500'
+                      }`}
+                    >
+                      {date.getDate()}
+                    </span>
+                    {/* Spells out what the blue square means, so "today" reads as
+                        today instead of just "the highlighted one". */}
+                    {isToday && (
+                      <span className="truncate rounded border border-blue-500/40 bg-blue-500/15 px-1 py-px text-[9px] font-bold uppercase tracking-wider text-blue-300">
+                        {t('today')}
+                      </span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-1.5 h-6 shrink-0">
                     {dayPages.length > 0 && (
                       <span className="text-[10px] text-neutral-600 font-medium font-mono group-hover/day:hidden">
                         {dayPages.length}
