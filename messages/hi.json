@@ -1974,6 +1974,13 @@
     "scopeEdit_this": "केवल यह कार्य",
     "scopeEdit_thisAndFollowing": "यह और आगे के कार्य",
     "scopeEdit_all": "शृंखला के सभी कार्य",
+    "scopeRemoveTitle": "दोहराव रोकें",
+    "scopeRemoveHint": "चुनें कि कौन-से कार्ड शृंखला से बाहर होंगे।",
+    "scopeRemove_thisAndFollowing": "यह और आगे के कार्य",
+    "scopeRemove_all": "शृंखला के सभी कार्य",
+    "scopeImpactRemove": "{count} कार्ड शृंखला से बाहर हो जाएँगे",
+    "scopeConfirmRemove": "दोहराव हटाएँ",
+    "removeResult": "{count} कार्ड शृंखला से हटा दिए गए — वे मिटाए नहीं गए, बस लिंक हटाया गया।",
     "scopeImpactLoading": "गिना जा रहा है…",
     "scopeImpactDelete": "{count} कार्ड हटाए जाएँगे",
     "scopeImpactEdit": "{count} कार्ड अपडेट होंगे",
@@ -1981,6 +1988,7 @@
     "scopeIncludeDirty": "सामग्री वाले कार्ड भी हटाएँ",
     "scopeConfirmDelete": "हटाएँ",
     "scopeConfirmEdit": "लागू करें",
+    "deleteResultPreserved": "{count} कार्ड में सामग्री थी; उन्हें हटाने के बजाय जैसा है वैसा रखा गया और शृंखला से बाहर कर दिया गया।",
     "badgeRecurring": "दोहराने वाला",
     "badgeDetached": "शृंखला से हटाया गया",
     "menuRepeat": "दोहराएँ…",
@@ -1996,6 +2004,8 @@
     "seriesPanelCount": "{count} कार्ड",
     "seriesPanelEdit": "दोहराव संपादित करें",
     "seriesPanelAdd": "इस कार्य को दोहराएँ",
-    "seriesPanelNoDate": "दोहराव सेट करने से पहले इस कार्य में तारीख जोड़ें।"
+    "seriesPanelNoDate": "दोहराव सेट करने से पहले इस कार्य में तारीख जोड़ें।",
+    "actionError": "कुछ गड़बड़ हो गई। कृपया फिर से प्रयास करें।",
+    "dismiss": "बंद करें"
   }
 }

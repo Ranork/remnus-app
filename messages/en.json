@@ -1998,6 +1998,13 @@
     "scopeEdit_this": "This task only",
     "scopeEdit_thisAndFollowing": "This and following tasks",
     "scopeEdit_all": "All tasks in the series",
+    "scopeRemoveTitle": "Stop repeating",
+    "scopeRemoveHint": "Choose which cards stop belonging to the series.",
+    "scopeRemove_thisAndFollowing": "This and following tasks",
+    "scopeRemove_all": "All tasks in the series",
+    "scopeImpactRemove": "{count, plural, one {# card will leave the series} other {# cards will leave the series}}",
+    "scopeConfirmRemove": "Remove repeat",
+    "removeResult": "{count, plural, one {# card was removed from the series — it wasn't deleted, just unlinked.} other {# cards were removed from the series — they weren't deleted, just unlinked.}}",
     "scopeImpactLoading": "Counting…",
     "scopeImpactDelete": "{count, plural, one {# card will be deleted} other {# cards will be deleted}}",
     "scopeImpactEdit": "{count, plural, one {# card will be updated} other {# cards will be updated}}",
@@ -2005,6 +2012,7 @@
     "scopeIncludeDirty": "Delete cards with content too",
     "scopeConfirmDelete": "Delete",
     "scopeConfirmEdit": "Apply",
+    "deleteResultPreserved": "{count, plural, one {# card had content, so it was kept as it is instead of deleted, and removed from the series.} other {# cards had content, so they were kept as they are instead of deleted, and removed from the series.}}",
     "badgeRecurring": "Repeating",
     "badgeDetached": "Removed from the series",
     "menuRepeat": "Repeat…",
@@ -2020,6 +2028,8 @@
     "seriesPanelCount": "{count, plural, one {# card} other {# cards}}",
     "seriesPanelEdit": "Edit repeat",
     "seriesPanelAdd": "Repeat this task",
-    "seriesPanelNoDate": "Add a date to this task before setting a repeat."
+    "seriesPanelNoDate": "Add a date to this task before setting a repeat.",
+    "actionError": "Something went wrong. Please try again.",
+    "dismiss": "Dismiss"
   }
 }

@@ -1974,6 +1974,13 @@
     "scopeEdit_this": "Solo esta tarea",
     "scopeEdit_thisAndFollowing": "Esta y las siguientes tareas",
     "scopeEdit_all": "Todas las tareas de la serie",
+    "scopeRemoveTitle": "Dejar de repetir",
+    "scopeRemoveHint": "Elige qué tarjetas dejarán de pertenecer a la serie.",
+    "scopeRemove_thisAndFollowing": "Esta y las siguientes tareas",
+    "scopeRemove_all": "Todas las tareas de la serie",
+    "scopeImpactRemove": "{count, plural, one {# tarjeta saldrá de la serie} other {# tarjetas saldrán de la serie}}",
+    "scopeConfirmRemove": "Quitar repetición",
+    "removeResult": "{count, plural, one {# tarjeta se quitó de la serie: no se eliminó, solo se desvinculó.} other {# tarjetas se quitaron de la serie: no se eliminaron, solo se desvincularon.}}",
     "scopeImpactLoading": "Calculando…",
     "scopeImpactDelete": "{count, plural, one {Se eliminará # tarjeta} other {Se eliminarán # tarjetas}}",
     "scopeImpactEdit": "{count, plural, one {Se actualizará # tarjeta} other {Se actualizarán # tarjetas}}",
@@ -1981,6 +1988,7 @@
     "scopeIncludeDirty": "Eliminar también las tarjetas con contenido",
     "scopeConfirmDelete": "Eliminar",
     "scopeConfirmEdit": "Aplicar",
+    "deleteResultPreserved": "{count, plural, one {# tarjeta tenía contenido, así que se mantuvo tal cual en lugar de eliminarse y se sacó de la serie.} other {# tarjetas tenían contenido, así que se mantuvieron tal cual en lugar de eliminarse y se sacaron de la serie.}}",
     "badgeRecurring": "Periódica",
     "badgeDetached": "Fuera de la serie",
     "menuRepeat": "Repetir…",
@@ -1996,6 +2004,8 @@
     "seriesPanelCount": "{count, plural, one {# tarjeta} other {# tarjetas}}",
     "seriesPanelEdit": "Editar repetición",
     "seriesPanelAdd": "Repetir esta tarea",
-    "seriesPanelNoDate": "Añade una fecha a esta tarea antes de configurar una repetición."
+    "seriesPanelNoDate": "Añade una fecha a esta tarea antes de configurar una repetición.",
+    "actionError": "Algo salió mal. Inténtalo de nuevo.",
+    "dismiss": "Cerrar"
   }
 }

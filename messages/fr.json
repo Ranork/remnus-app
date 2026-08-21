@@ -1974,6 +1974,13 @@
     "scopeEdit_this": "Cette tâche uniquement",
     "scopeEdit_thisAndFollowing": "Cette tâche et les suivantes",
     "scopeEdit_all": "Toutes les tâches de la série",
+    "scopeRemoveTitle": "Arrêter la répétition",
+    "scopeRemoveHint": "Choisissez les cartes qui quitteront la série.",
+    "scopeRemove_thisAndFollowing": "Cette tâche et les suivantes",
+    "scopeRemove_all": "Toutes les tâches de la série",
+    "scopeImpactRemove": "{count, plural, one {# carte quittera la série} other {# cartes quitteront la série}}",
+    "scopeConfirmRemove": "Supprimer la répétition",
+    "removeResult": "{count, plural, one {# carte a été retirée de la série : elle n’a pas été supprimée, juste dissociée.} other {# cartes ont été retirées de la série : elles n’ont pas été supprimées, juste dissociées.}}",
     "scopeImpactLoading": "Calcul en cours…",
     "scopeImpactDelete": "{count, plural, one {# carte sera supprimée} other {# cartes seront supprimées}}",
     "scopeImpactEdit": "{count, plural, one {# carte sera mise à jour} other {# cartes seront mises à jour}}",
@@ -1981,6 +1988,7 @@
     "scopeIncludeDirty": "Supprimer aussi les cartes contenant du contenu",
     "scopeConfirmDelete": "Supprimer",
     "scopeConfirmEdit": "Appliquer",
+    "deleteResultPreserved": "{count, plural, one {# carte avait déjà du contenu, elle a donc été conservée telle quelle au lieu d’être supprimée, et retirée de la série.} other {# cartes avaient déjà du contenu, elles ont donc été conservées telles quelles au lieu d’être supprimées, et retirées de la série.}}",
     "badgeRecurring": "Récurrente",
     "badgeDetached": "Retirée de la série",
     "menuRepeat": "Répéter…",
@@ -1996,6 +2004,8 @@
     "seriesPanelCount": "{count, plural, one {# carte} other {# cartes}}",
     "seriesPanelEdit": "Modifier la répétition",
     "seriesPanelAdd": "Répéter cette tâche",
-    "seriesPanelNoDate": "Ajoutez une date à cette tâche avant de définir une répétition."
+    "seriesPanelNoDate": "Ajoutez une date à cette tâche avant de définir une répétition.",
+    "actionError": "Une erreur s’est produite. Veuillez réessayer.",
+    "dismiss": "Fermer"
   }
 }

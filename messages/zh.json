@@ -1974,6 +1974,13 @@
     "scopeEdit_this": "仅此任务",
     "scopeEdit_thisAndFollowing": "此任务及后续任务",
     "scopeEdit_all": "该系列的全部任务",
+    "scopeRemoveTitle": "停止重复",
+    "scopeRemoveHint": "选择哪些卡片将退出该系列。",
+    "scopeRemove_thisAndFollowing": "此任务及后续任务",
+    "scopeRemove_all": "该系列的全部任务",
+    "scopeImpactRemove": "{count} 张卡片将退出该系列",
+    "scopeConfirmRemove": "移除重复",
+    "removeResult": "已将 {count} 张卡片从系列中移除——并未删除，只是取消了关联。",
     "scopeImpactLoading": "正在统计…",
     "scopeImpactDelete": "将删除 {count} 张卡片",
     "scopeImpactEdit": "将更新 {count} 张卡片",
@@ -1981,6 +1988,7 @@
     "scopeIncludeDirty": "连同有内容的卡片一起删除",
     "scopeConfirmDelete": "删除",
     "scopeConfirmEdit": "应用",
+    "deleteResultPreserved": "有 {count} 张卡片已有内容，因此未被删除，而是原样保留并退出了该系列。",
     "badgeRecurring": "重复",
     "badgeDetached": "已退出系列",
     "menuRepeat": "重复…",
@@ -1996,6 +2004,8 @@
     "seriesPanelCount": "{count} 张卡片",
     "seriesPanelEdit": "编辑重复",
     "seriesPanelAdd": "重复此任务",
-    "seriesPanelNoDate": "请先为此任务添加日期，再设置重复。"
+    "seriesPanelNoDate": "请先为此任务添加日期，再设置重复。",
+    "actionError": "出了点问题，请重试。",
+    "dismiss": "关闭"
   }
 }

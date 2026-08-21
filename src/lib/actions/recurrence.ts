@@ -10,9 +10,11 @@ import { publish } from '@/lib/realtime/publish';
 import { recordDeletionTombstone } from '@/lib/services/workspace';
 import { purgeReferencesTo, removePageLinksFor } from '@/lib/services/pageLinks';
 import {
+  clearAllOccurrences,
   createSeriesFromPage,
   deleteOccurrences,
   detachOccurrence,
+  endSeriesAt,
   getScopeImpact,
   getSeriesForDatabase,
   horizonFor,
@@ -239,18 +241,27 @@ export async function detachPageFromSeries(pageId: string): Promise<boolean> {
   return ok;
 }
 
-/** Removes the rule entirely: the series record goes, every generated card
- *  becomes an ordinary standalone card. Nothing is deleted. */
-export async function clearSeriesRecurrence(pageId: string): Promise<boolean> {
-  const { userId, workspaceId, databaseId, seriesId } = await assertPageAccess(pageId);
-  if (!seriesId) return false;
+/**
+ * "Kaldır tekrarı" — the scoped counterpart to `deleteRecurringPage`: nothing
+ * is ever deleted here, occurrences just stop belonging to a series and
+ * become ordinary standalone cards, so there is no dirty-content checkbox to
+ * offer. `thisAndFollowing` ends the rhythm from this card on (past cards
+ * keep their series membership and history, frozen); `all` clears the link on
+ * every occurrence, past and future, and drops the series record.
+ */
+export async function endSeriesRecurrence(
+  pageId: string,
+  scope: 'thisAndFollowing' | 'all',
+): Promise<{ removed: number } | null> {
+  const { userId, workspaceId, databaseId, seriesId, occurrenceDate } = await assertPageAccess(pageId);
+  if (!seriesId) return null;
 
-  await db
-    .update(pages)
-    .set({ seriesId: null, occurrenceDate: null, seriesDetached: false, updatedAt: new Date() })
-    .where(eq(pages.seriesId, seriesId));
-  await pruneEmptySeries(databaseId);
+  const result =
+    scope === 'all' || !occurrenceDate
+      ? await clearAllOccurrences(seriesId, databaseId)
+      : await endSeriesAt(seriesId, occurrenceDate);
+  if (!result) return null;
 
   finish(databaseId, workspaceId, userId);
-  return true;
+  return result;
 }

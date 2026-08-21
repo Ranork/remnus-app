@@ -1974,6 +1974,13 @@
     "scopeEdit_this": "Nur diese Aufgabe",
     "scopeEdit_thisAndFollowing": "Diese und alle folgenden Aufgaben",
     "scopeEdit_all": "Alle Aufgaben der Serie",
+    "scopeRemoveTitle": "Wiederholung stoppen",
+    "scopeRemoveHint": "Wähle, welche Karten nicht mehr zur Serie gehören.",
+    "scopeRemove_thisAndFollowing": "Diese und alle folgenden Aufgaben",
+    "scopeRemove_all": "Alle Aufgaben der Serie",
+    "scopeImpactRemove": "{count, plural, one {# Karte verlässt die Serie} other {# Karten verlassen die Serie}}",
+    "scopeConfirmRemove": "Wiederholung entfernen",
+    "removeResult": "{count, plural, one {# Karte wurde aus der Serie entfernt – nicht gelöscht, nur entkoppelt.} other {# Karten wurden aus der Serie entfernt – nicht gelöscht, nur entkoppelt.}}",
     "scopeImpactLoading": "Wird gezählt…",
     "scopeImpactDelete": "{count, plural, one {# Karte wird gelöscht} other {# Karten werden gelöscht}}",
     "scopeImpactEdit": "{count, plural, one {# Karte wird aktualisiert} other {# Karten werden aktualisiert}}",
@@ -1981,6 +1988,7 @@
     "scopeIncludeDirty": "Karten mit Inhalt ebenfalls löschen",
     "scopeConfirmDelete": "Löschen",
     "scopeConfirmEdit": "Übernehmen",
+    "deleteResultPreserved": "{count, plural, one {# Karte hatte bereits Inhalt und wurde daher unverändert beibehalten statt gelöscht und aus der Serie entfernt.} other {# Karten hatten bereits Inhalt und wurden daher unverändert beibehalten statt gelöscht und aus der Serie entfernt.}}",
     "badgeRecurring": "Wiederkehrend",
     "badgeDetached": "Aus der Serie entfernt",
     "menuRepeat": "Wiederholen…",
@@ -1996,6 +2004,8 @@
     "seriesPanelCount": "{count, plural, one {# Karte} other {# Karten}}",
     "seriesPanelEdit": "Wiederholung bearbeiten",
     "seriesPanelAdd": "Diese Aufgabe wiederholen",
-    "seriesPanelNoDate": "Füge dieser Aufgabe erst ein Datum hinzu, bevor du sie wiederholst."
+    "seriesPanelNoDate": "Füge dieser Aufgabe erst ein Datum hinzu, bevor du sie wiederholst.",
+    "actionError": "Etwas ist schiefgelaufen. Bitte versuche es erneut.",
+    "dismiss": "Schließen"
   }
 }

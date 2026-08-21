@@ -45,6 +45,31 @@ const FIRST_VISIT_WINDOW_DAYS = 7;
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-08-21-recurring-series-confirmations',
+    date: '2026-08-21',
+    category: 'fixed',
+    title: {
+      en: 'Recurring card actions ask first, then confirm',
+      tr: 'Tekrarlayan kart işlemleri artık önce soruyor, sonra doğruluyor',
+      de: 'Aktionen an wiederkehrenden Karten fragen jetzt erst nach',
+      es: 'Las acciones en tarjetas periódicas ahora preguntan primero',
+      fr: 'Les actions sur les cartes récurrentes demandent désormais confirmation',
+      hi: 'दोहराने वाले कार्ड पर कार्रवाई अब पहले पूछती है, फिर पुष्टि करती है',
+      ru: 'Действия с повторяющимися карточками теперь сначала спрашивают',
+      zh: '重复卡片的操作现在会先询问，再确认',
+    },
+    summary: {
+      en: 'Removing the repeat pattern from a series now asks whether that should apply from this card on or to the whole series (it used to unlink every card instantly with no way to scope it down), and both that action and deleting a repeating card now confirm what happened afterward — how many cards were kept or unlinked, or a clear error — instead of going silent.',
+      tr: 'Bir seriden tekrarlamayı kaldırmak artık bunun bu karttan itibaren mi yoksa serinin tamamı için mi geçerli olacağını soruyor (öncesinde tek tıkla, kapsam seçmeden anında tüm kartların bağlantısını koparıyordu); hem bu işlem hem de tekrarlayan bir kartı silmek artık ne olduğunu — kaç kartın korunduğunu/seriden çıkarıldığını ya da net bir hatayı — sonradan doğruluyor, sessiz kalmıyor.',
+      de: 'Das Entfernen der Wiederholung aus einer Serie fragt jetzt, ob das ab dieser Karte oder für die gesamte Serie gelten soll (bisher wurden sofort alle Karten ohne Auswahlmöglichkeit entkoppelt); sowohl diese Aktion als auch das Löschen einer wiederkehrenden Karte bestätigen jetzt im Anschluss, was passiert ist – wie viele Karten beibehalten oder entkoppelt wurden, oder einen klaren Fehler – statt stumm zu bleiben.',
+      es: 'Quitar la repetición de una serie ahora pregunta si debe aplicarse desde esta tarjeta en adelante o a toda la serie (antes desvinculaba todas las tarjetas al instante sin poder elegir el alcance); tanto esa acción como eliminar una tarjeta periódica ahora confirman después qué pasó —cuántas tarjetas se mantuvieron o desvincularon, o un error claro— en lugar de quedarse en silencio.',
+      fr: 'Retirer la répétition d’une série demande désormais si cela doit s’appliquer à partir de cette carte ou à toute la série (auparavant, toutes les cartes étaient dissociées instantanément sans possibilité de choisir la portée) ; cette action comme la suppression d’une carte récurrente confirment maintenant ce qui s’est passé — combien de cartes ont été conservées ou dissociées, ou une erreur claire — au lieu de rester silencieuses.',
+      hi: 'किसी शृंखला से दोहराव हटाना अब पूछता है कि यह इस कार्ड से आगे के लिए हो या पूरी शृंखला के लिए (पहले यह बिना कोई दायरा चुने तुरंत सभी कार्डों को अलग कर देता था); यह कार्रवाई और दोहराने वाला कार्ड हटाना, दोनों अब बाद में पुष्टि करते हैं कि क्या हुआ — कितने कार्ड रखे गए या अलग किए गए, या एक स्पष्ट त्रुटि — चुप रहने के बजाय।',
+      ru: 'Удаление повтора из серии теперь спрашивает, применить ли это начиная с этой карточки или ко всей серии (раньше все карточки мгновенно отвязывались без возможности выбрать область действия); и это действие, и удаление повторяющейся карточки теперь показывают, что произошло — сколько карточек сохранено или отвязано, либо явную ошибку — вместо тишины.',
+      zh: '从系列中移除重复现在会询问是从这张卡片开始生效，还是应用于整个系列（以前会立即取消所有卡片的关联，且无法选择范围）；这个操作和删除重复卡片现在都会在之后确认发生了什么——保留或取消关联了多少张卡片，或明确的错误提示——而不再是毫无反应。',
+    },
+  },
+  {
     id: '2026-08-20-calendar-today-marker',
     date: '2026-08-20',
     category: 'improved',

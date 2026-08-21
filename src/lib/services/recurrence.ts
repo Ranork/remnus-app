@@ -696,6 +696,68 @@ export async function splitSeriesAt(
   };
 }
 
+/**
+ * "Stop repeating, from here on": closes the series the day before `fromDate`
+ * (same freeze `splitSeriesAt` does, so past occurrences keep their history
+ * and their "repeating" badge) and unlinks every occurrence from `fromDate`
+ * onward into a plain standalone card. Unlike `splitSeriesAt`, no new series
+ * ever takes over — the point is to end the rhythm, not switch to a different
+ * one. Unlinking never touches content, so — unlike a delete — there is no
+ * dirty/clean distinction to make: every future occurrence is unlinked the
+ * same way regardless of whether it already has content.
+ */
+export async function endSeriesAt(
+  seriesId: string,
+  fromDate: string,
+): Promise<{ removed: number } | null> {
+  const series = await getSeries(seriesId);
+  if (!series) return null;
+
+  const oldRule = normalizeRule(series.rule);
+  if (!oldRule) return null;
+
+  const now = new Date();
+  const future = await getOccurrences(seriesId, fromDate);
+
+  await db
+    .update(recurrenceSeries)
+    .set({ rule: endRuleBefore(oldRule, fromDate) as unknown as Record<string, unknown>, updatedAt: now })
+    .where(eq(recurrenceSeries.id, seriesId));
+
+  if (future.length > 0) {
+    await db
+      .update(pages)
+      .set({ seriesId: null, occurrenceDate: null, seriesDetached: false, updatedAt: now })
+      .where(inArray(pages.id, future.map((o) => o.id)));
+  }
+
+  // Drops the now-frozen series record too if nothing (not even a past
+  // occurrence) is left pointing at it — e.g. removing repeat from the very
+  // first occurrence, where "from here on" covers the whole series.
+  await pruneEmptySeries(series.databaseId);
+
+  return { removed: future.length };
+}
+
+/**
+ * ALL scope of "stop repeating": every occurrence — past and future — is
+ * unlinked into a plain standalone card, and the series record is dropped
+ * (nothing points at it any more). Nothing is deleted, same as `endSeriesAt`.
+ */
+export async function clearAllOccurrences(
+  seriesId: string,
+  databaseId: string,
+): Promise<{ removed: number }> {
+  const updated = await db
+    .update(pages)
+    .set({ seriesId: null, occurrenceDate: null, seriesDetached: false, updatedAt: new Date() })
+    .where(eq(pages.seriesId, seriesId))
+    .returning({ id: pages.id });
+
+  await pruneEmptySeries(databaseId);
+  return { removed: updated.length };
+}
+
 /** ALL: re-rhythms the whole series from its own start date. Past occurrences
  *  ARE rewritten here — that is what the scope means — but dirty ones are still
  *  preserved, so this can never eat a card someone filled in. */

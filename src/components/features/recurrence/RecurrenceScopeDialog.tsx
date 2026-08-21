@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslations } from 'next-intl';
-import { AlertTriangle, Repeat, Trash2 } from 'lucide-react';
+import { AlertTriangle, Repeat, Trash2, Unlink } from 'lucide-react';
 import type { RecurrenceScope } from '@/lib/services/recurrence';
 import { OptionTile } from './parts';
 
@@ -20,9 +20,19 @@ export interface ScopeImpact {
   dirty: number;
 }
 
+/** `remove` = "Kaldır tekrarı": stop repeating, but nothing is ever deleted —
+ *  same three-question shape as delete/edit, just no dirty-content checkbox. */
+type ScopeDialogMode = 'delete' | 'edit' | 'remove';
+
+const COPY_KEY: Record<ScopeDialogMode, { title: string; hint: string; option: string; impact: string; confirm: string }> = {
+  delete: { title: 'scopeDeleteTitle', hint: 'scopeDeleteHint', option: 'scopeDelete', impact: 'scopeImpactDelete', confirm: 'scopeConfirmDelete' },
+  edit: { title: 'scopeEditTitle', hint: 'scopeEditHint', option: 'scopeEdit', impact: 'scopeImpactEdit', confirm: 'scopeConfirmEdit' },
+  remove: { title: 'scopeRemoveTitle', hint: 'scopeRemoveHint', option: 'scopeRemove', impact: 'scopeImpactRemove', confirm: 'scopeConfirmRemove' },
+};
+
 interface RecurrenceScopeDialogProps {
-  mode: 'delete' | 'edit';
-  /** Which scopes to offer. A rule change has no meaningful "just this one". */
+  mode: ScopeDialogMode;
+  /** Which scopes to offer. A rule change (or ending one) has no meaningful "just this one". */
   scopes?: RecurrenceScope[];
   /** Impact per scope; undefined while it is still being fetched. */
   impact: Partial<Record<RecurrenceScope, ScopeImpact>>;
@@ -48,16 +58,19 @@ export default function RecurrenceScopeDialog({
   }, [onCancel]);
 
   const current = impact[scope];
-  const hasDirty = (current?.dirty ?? 0) > 0;
+  // Remove ("Kaldır tekrarı") never deletes content, so there is nothing to
+  // protect — the dirty-content note/checkbox only makes sense for delete/edit.
+  const hasDirty = mode !== 'remove' && (current?.dirty ?? 0) > 0;
   const isDelete = mode === 'delete';
-  const Icon = isDelete ? Trash2 : Repeat;
+  const copy = COPY_KEY[mode];
+  const Icon = isDelete ? Trash2 : mode === 'remove' ? Unlink : Repeat;
 
   /** Each option's own count, so the choice is made with the number visible
    *  rather than after committing to it. */
   const subtitleFor = (id: RecurrenceScope): string | undefined => {
     const entry = impact[id];
     if (entry === undefined) return t('scopeImpactLoading');
-    return t(isDelete ? 'scopeImpactDelete' : 'scopeImpactEdit', { count: entry.affected });
+    return t(copy.impact as 'scopeImpactDelete', { count: entry.affected });
   };
 
   if (typeof document === 'undefined') return null;
@@ -83,10 +96,10 @@ export default function RecurrenceScopeDialog({
           </div>
           <div className="min-w-0">
             <h2 className="m-0 text-sm font-semibold text-neutral-100 truncate">
-              {isDelete ? t('scopeDeleteTitle') : t('scopeEditTitle')}
+              {t(copy.title as 'scopeDeleteTitle')}
             </h2>
             <p className="m-0 text-[11px] text-neutral-500 truncate">
-              {isDelete ? t('scopeDeleteHint') : t('scopeEditHint')}
+              {t(copy.hint as 'scopeDeleteHint')}
             </p>
           </div>
         </div>
@@ -98,7 +111,7 @@ export default function RecurrenceScopeDialog({
                 key={id}
                 wide
                 tone={isDelete ? 'red' : 'blue'}
-                title={t(isDelete ? `scopeDelete_${id}` : `scopeEdit_${id}`)}
+                title={t(`${copy.option}_${id}` as 'scopeDelete_this')}
                 subtitle={subtitleFor(id)}
                 selected={scope === id}
                 onSelect={() => { setScope(id); setIncludeDirty(false); }}
@@ -142,7 +155,7 @@ export default function RecurrenceScopeDialog({
               isDelete ? 'bg-red-500/80 hover:bg-red-500' : 'bg-blue-500 hover:bg-blue-400'
             }`}
           >
-            {isDelete ? t('scopeConfirmDelete') : t('scopeConfirmEdit')}
+            {t(copy.confirm as 'scopeConfirmDelete')}
           </button>
         </div>
       </div>

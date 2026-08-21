@@ -1998,6 +1998,13 @@
     "scopeEdit_this": "Yalnızca bu görev",
     "scopeEdit_thisAndFollowing": "Bu ve sonraki görevler",
     "scopeEdit_all": "Serideki tüm görevler",
+    "scopeRemoveTitle": "Tekrarlamayı durdur",
+    "scopeRemoveHint": "Hangi kartların seriden çıkacağını seç.",
+    "scopeRemove_thisAndFollowing": "Bu ve sonraki görevler",
+    "scopeRemove_all": "Serideki tüm görevler",
+    "scopeImpactRemove": "{count} kart seriden çıkacak",
+    "scopeConfirmRemove": "Tekrarlamayı kaldır",
+    "removeResult": "{count} kart seriden çıkarıldı — silinmedi, sadece bağlantısı kesildi.",
     "scopeImpactLoading": "Hesaplanıyor…",
     "scopeImpactDelete": "{count} kart silinecek",
     "scopeImpactEdit": "{count} kart güncellenecek",
@@ -2005,6 +2012,7 @@
     "scopeIncludeDirty": "İçi dolu kartları da sil",
     "scopeConfirmDelete": "Sil",
     "scopeConfirmEdit": "Uygula",
+    "deleteResultPreserved": "{count} kartın içi doluydu; silinmek yerine olduğu gibi bırakıldı ve seriden çıkarıldı.",
     "badgeRecurring": "Tekrarlayan",
     "badgeDetached": "Seriden çıkarıldı",
     "menuRepeat": "Tekrarla…",
@@ -2020,6 +2028,8 @@
     "seriesPanelCount": "{count} kart",
     "seriesPanelEdit": "Tekrarlamayı düzenle",
     "seriesPanelAdd": "Bu görevi tekrarla",
-    "seriesPanelNoDate": "Tekrarlama vermek için önce bu göreve bir tarih ekle."
+    "seriesPanelNoDate": "Tekrarlama vermek için önce bu göreve bir tarih ekle.",
+    "actionError": "Bir şeyler ters gitti. Lütfen tekrar dene.",
+    "dismiss": "Kapat"
   }
 }
