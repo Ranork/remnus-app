@@ -2005,6 +2005,7 @@
     "scopeImpactRemove": "{count} kart seriden çıkacak",
     "scopeConfirmRemove": "Tekrarlamayı kaldır",
     "removeResult": "{count} kart seriden çıkarıldı — silinmedi, sadece bağlantısı kesildi.",
+    "scopeRemoveDeleteHint": "Bu kartları gerçekten silmek mi istiyorsun? Kartın menüsündeki “Sayfayı sil” seçeneğini kullan.",
     "scopeImpactLoading": "Hesaplanıyor…",
     "scopeImpactDelete": "{count} kart silinecek",
     "scopeImpactEdit": "{count} kart güncellenecek",

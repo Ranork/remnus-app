@@ -1981,6 +1981,7 @@
     "scopeImpactRemove": "{count, plural, one {# Karte verlässt die Serie} other {# Karten verlassen die Serie}}",
     "scopeConfirmRemove": "Wiederholung entfernen",
     "removeResult": "{count, plural, one {# Karte wurde aus der Serie entfernt – nicht gelöscht, nur entkoppelt.} other {# Karten wurden aus der Serie entfernt – nicht gelöscht, nur entkoppelt.}}",
+    "scopeRemoveDeleteHint": "Möchtest du diese Karten wirklich löschen? Nutze „Seite löschen“ im Kartenmenü.",
     "scopeImpactLoading": "Wird gezählt…",
     "scopeImpactDelete": "{count, plural, one {# Karte wird gelöscht} other {# Karten werden gelöscht}}",
     "scopeImpactEdit": "{count, plural, one {# Karte wird aktualisiert} other {# Karten werden aktualisiert}}",

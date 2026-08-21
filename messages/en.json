@@ -2005,6 +2005,7 @@
     "scopeImpactRemove": "{count, plural, one {# card will leave the series} other {# cards will leave the series}}",
     "scopeConfirmRemove": "Remove repeat",
     "removeResult": "{count, plural, one {# card was removed from the series — it wasn't deleted, just unlinked.} other {# cards were removed from the series — they weren't deleted, just unlinked.}}",
+    "scopeRemoveDeleteHint": "Want to actually delete these cards instead? Use “Delete page” from the card's menu.",
     "scopeImpactLoading": "Counting…",
     "scopeImpactDelete": "{count, plural, one {# card will be deleted} other {# cards will be deleted}}",
     "scopeImpactEdit": "{count, plural, one {# card will be updated} other {# cards will be updated}}",

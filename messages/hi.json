@@ -1981,6 +1981,7 @@
     "scopeImpactRemove": "{count} कार्ड शृंखला से बाहर हो जाएँगे",
     "scopeConfirmRemove": "दोहराव हटाएँ",
     "removeResult": "{count} कार्ड शृंखला से हटा दिए गए — वे मिटाए नहीं गए, बस लिंक हटाया गया।",
+    "scopeRemoveDeleteHint": "क्या इन कार्डों को वाकई हटाना चाहते हैं? कार्ड मेनू में “पेज हटाएं” का उपयोग करें।",
     "scopeImpactLoading": "गिना जा रहा है…",
     "scopeImpactDelete": "{count} कार्ड हटाए जाएँगे",
     "scopeImpactEdit": "{count} कार्ड अपडेट होंगे",

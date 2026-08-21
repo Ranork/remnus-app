@@ -1981,6 +1981,7 @@
     "scopeImpactRemove": "{count} 张卡片将退出该系列",
     "scopeConfirmRemove": "移除重复",
     "removeResult": "已将 {count} 张卡片从系列中移除——并未删除，只是取消了关联。",
+    "scopeRemoveDeleteHint": "想要真正删除这些卡片吗？使用卡片菜单中的“删除页面”。",
     "scopeImpactLoading": "正在统计…",
     "scopeImpactDelete": "将删除 {count} 张卡片",
     "scopeImpactEdit": "将更新 {count} 张卡片",

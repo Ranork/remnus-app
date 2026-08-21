@@ -1981,6 +1981,7 @@
     "scopeImpactRemove": "{count, plural, one {# carte quittera la série} other {# cartes quitteront la série}}",
     "scopeConfirmRemove": "Supprimer la répétition",
     "removeResult": "{count, plural, one {# carte a été retirée de la série : elle n’a pas été supprimée, juste dissociée.} other {# cartes ont été retirées de la série : elles n’ont pas été supprimées, juste dissociées.}}",
+    "scopeRemoveDeleteHint": "Tu veux vraiment supprimer ces cartes ? Utilise « Supprimer la page » dans le menu de la carte.",
     "scopeImpactLoading": "Calcul en cours…",
     "scopeImpactDelete": "{count, plural, one {# carte sera supprimée} other {# cartes seront supprimées}}",
     "scopeImpactEdit": "{count, plural, one {# carte sera mise à jour} other {# cartes seront mises à jour}}",

@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslations } from 'next-intl';
-import { AlertTriangle, Repeat, Trash2, Unlink } from 'lucide-react';
+import { AlertTriangle, Info, Repeat, Trash2, Unlink } from 'lucide-react';
 import type { RecurrenceScope } from '@/lib/services/recurrence';
 import { OptionTile } from './parts';
 
@@ -118,6 +118,16 @@ export default function RecurrenceScopeDialog({
               />
             ))}
           </div>
+
+          {/* Remove only stops the rhythm and unlinks — it never deletes a page.
+              Point at the option that actually does, so "I removed repeat but
+              the cards are still there" doesn't read as a bug. */}
+          {mode === 'remove' && (
+            <p className="m-0 flex items-start gap-1.5 text-[11px] text-neutral-500 leading-snug">
+              <Info size={11} className="shrink-0 mt-0.5" />
+              <span>{t('scopeRemoveDeleteHint')}</span>
+            </p>
+          )}
 
           {/* Content protection. Only shown when there is actually something to
               protect, so the dialog stays quiet in the common case. */}
