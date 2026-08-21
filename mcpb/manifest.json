@@ -2,7 +2,7 @@
   "manifest_version": "0.2",
   "name": "remnus",
   "display_name": "Remnus",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Read and write your Remnus workspace, pages, databases, kanban boards, directly from Claude.",
   "long_description": "Remnus is the MCP-native Human-Agent Collaborative Workspace. This extension connects Claude Desktop to your Remnus workspace over a secure remote MCP server. Sign in once with OAuth (no token to paste) and Claude can search, read, create, and update your pages and database rows. Self-hosters can point the extension at their own instance via the configuration field.",
   "author": {

@@ -45,6 +45,31 @@ const FIRST_VISIT_WINDOW_DAYS = 7;
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-08-21-claude-desktop-connect-fix',
+    date: '2026-08-21',
+    category: 'fixed',
+    title: {
+      en: 'Claude Desktop connects on the first try',
+      tr: 'Claude Desktop ilk denemede bağlanıyor',
+      de: 'Claude Desktop verbindet sich beim ersten Versuch',
+      es: 'Claude Desktop se conecta al primer intento',
+      fr: 'Claude Desktop se connecte du premier coup',
+      hi: 'Claude Desktop पहली ही बार में कनेक्ट हो जाता है',
+      ru: 'Claude Desktop подключается с первого раза',
+      zh: 'Claude Desktop 首次尝试即可连接',
+    },
+    summary: {
+      en: 'Adding Remnus to Claude Desktop no longer leaves you stuck on an "unable to connect" message after you sign in — the connection now finishes the first time, even when Claude starts several sessions at once.',
+      tr: 'Remnus’u Claude Desktop’a eklerken oturum açtıktan sonra artık “bağlanılamıyor” uyarısında takılı kalmıyorsunuz; Claude aynı anda birden fazla oturum başlatsa bile bağlantı ilk seferde tamamlanıyor.',
+      de: 'Beim Hinzufügen von Remnus zu Claude Desktop bleiben Sie nach der Anmeldung nicht mehr bei „Verbindung nicht möglich“ hängen – die Verbindung kommt jetzt beim ersten Mal zustande, selbst wenn Claude mehrere Sitzungen gleichzeitig startet.',
+      es: 'Al añadir Remnus a Claude Desktop ya no te quedas atascado en el mensaje «no se puede conectar» después de iniciar sesión: la conexión ahora se completa a la primera, incluso cuando Claude abre varias sesiones a la vez.',
+      fr: 'L’ajout de Remnus à Claude Desktop ne vous laisse plus bloqué sur un message « connexion impossible » après votre connexion : la liaison aboutit désormais du premier coup, même lorsque Claude démarre plusieurs sessions en même temps.',
+      hi: 'Claude Desktop में Remnus जोड़ते समय साइन इन करने के बाद अब आप “कनेक्ट नहीं हो सका” संदेश पर अटके नहीं रहते — अब कनेक्शन पहली ही बार पूरा हो जाता है, भले ही Claude एक साथ कई सत्र शुरू करे।',
+      ru: 'При добавлении Remnus в Claude Desktop вы больше не застреваете на сообщении «не удалось подключиться» после входа — соединение теперь устанавливается с первого раза, даже если Claude запускает сразу несколько сеансов.',
+      zh: '将 Remnus 添加到 Claude Desktop 时，登录后不会再卡在“无法连接”的提示上——即使 Claude 同时启动多个会话，连接现在也能一次成功。',
+    },
+  },
+  {
     id: '2026-08-21-recurring-series-confirmations',
     date: '2026-08-21',
     category: 'fixed',

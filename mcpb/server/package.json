@@ -1,6 +1,6 @@
 {
   "name": "remnus-mcpb-server",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "private": true,
   "description": "Bundled mcp-remote proxy that bridges Claude Desktop (stdio) to the Remnus remote MCP server (Streamable HTTP + OAuth).",
   "main": "index.js",
