@@ -45,6 +45,31 @@ const FIRST_VISIT_WINDOW_DAYS = 7;
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-08-24-code-block-paste-stays-inside',
+    date: '2026-08-24',
+    category: 'fixed',
+    title: {
+      en: 'Pasting into a code block stays in the block',
+      tr: 'Kod bloğuna yapıştırma artık bloğun içinde kalıyor',
+      de: 'Einfügen in einen Codeblock bleibt im Block',
+      es: 'Pegar en un bloque de código se queda dentro',
+      fr: 'Le collage dans un bloc de code y reste',
+      hi: 'कोड ब्लॉक में चिपकाया गया टेक्स्ट ब्लॉक के अंदर ही रहता है',
+      ru: 'Вставка в блок кода остаётся в блоке',
+      zh: '粘贴到代码块的内容不再跳出',
+    },
+    summary: {
+      en: 'Text that looks like markdown — headings, lists, quotes or another set of backticks — now stays inside the code block you paste it into, exactly as written, instead of escaping the block and turning into real headings and lists underneath it.',
+      tr: 'Başlık, liste, alıntı veya bir başka üç tırnak içeren markdown görünümlü metinler artık yapıştırdığınız kod bloğunun dışına taşıp altta gerçek başlıklara ve listelere dönüşmüyor, yazdığınız gibi bloğun içinde kalıyor.',
+      de: 'Text, der wie Markdown aussieht – Überschriften, Listen, Zitate oder weitere Backticks –, bleibt jetzt genau so, wie er geschrieben ist, in dem Codeblock, in den Sie ihn einfügen, statt aus dem Block auszubrechen und darunter zu echten Überschriften und Listen zu werden.',
+      es: 'El texto que parece Markdown —títulos, listas, citas u otro juego de comillas invertidas— ahora se queda tal cual dentro del bloque de código en el que lo pegas, en lugar de salirse del bloque y convertirse en títulos y listas reales debajo.',
+      fr: 'Le texte qui ressemble à du Markdown — titres, listes, citations ou une autre série de backticks — reste désormais tel quel dans le bloc de code où vous le collez, au lieu d’en sortir et de se transformer en véritables titres et listes en dessous.',
+      hi: 'मार्कडाउन जैसा दिखने वाला टेक्स्ट — शीर्षक, सूचियाँ, उद्धरण या बैकटिक का एक और सेट — अब जिस कोड ब्लॉक में आप उसे चिपकाते हैं उसी के अंदर ज्यों का त्यों रहता है, ब्लॉक से बाहर निकलकर नीचे असली शीर्षकों और सूचियों में नहीं बदलता।',
+      ru: 'Текст, похожий на Markdown, — заголовки, списки, цитаты или ещё одна пара обратных кавычек — теперь остаётся в блоке кода, куда вы его вставили, ровно в том виде, в каком написан, а не вырывается наружу и не превращается в настоящие заголовки и списки под ним.',
+      zh: '看起来像 Markdown 的文本——标题、列表、引用或又一组反引号——现在会原样留在你粘贴进去的代码块内，而不再跳出代码块、在下方变成真正的标题和列表。',
+    },
+  },
+  {
     id: '2026-08-21-claude-desktop-connect-fix',
     date: '2026-08-21',
     category: 'fixed',

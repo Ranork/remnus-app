@@ -687,6 +687,16 @@ const BlockEditor = forwardRef<BlockEditorHandle, Props>(function BlockEditor({
           return true;
         }
 
+        // Inside a code block the clipboard is literal source, never markdown to
+        // interpret. Parsing it here turned a pasted `#`/`>`/``` line into real
+        // block nodes, which a code node cannot contain — so ProseMirror placed
+        // them AFTER the block and the paste visibly "escaped" it (a heading
+        // opened below and the rest continued outside). Returning false hands the
+        // paste to ProseMirror's own clipboard parser, which flattens the text
+        // (newlines kept) whenever the target's `spec.code` is set — exactly what
+        // Tiptap's own code-block paste plugin does for the same reason.
+        if (_view.state.selection.$from.parent.type.spec.code) return false;
+
         const text = event.clipboardData?.getData('text/plain');
         if (!text || !BLOCK_MARKDOWN_RE.test(text)) return false;
 
