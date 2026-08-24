@@ -5,6 +5,7 @@ import { auth } from '@/auth';
 import { db } from '@/db';
 import {
   userSessions,
+  demoSessions,
   workspaceMembers,
   workspaceItems,
   standalonePages,
@@ -47,6 +48,47 @@ const epochMax = (col: SQLiteColumn) =>
 function toEpoch(value: unknown): number {
   const n = Number(value ?? 0);
   return Number.isFinite(n) ? n : 0;
+}
+
+/**
+ * Extends the caller's durable demo-usage row (see `demo_sessions`, migration
+ * 0044). Demo accounts — and their `user_sessions` rows — are reaped 6h after
+ * signup, so this is the only record of demo usage that survives long enough for
+ * the admin panel to chart it.
+ *
+ * One row per demo account (opened by `loginAsDemo`), NOT one per activity gap:
+ * a "demo usage" is a visitor trying the product once, even if they wander off
+ * and come back. `activeSeconds` therefore ACCUMULATES each tick's delta, and
+ * only when that delta lands inside the presence window — a tab left open for an
+ * hour must not be reported as an hour-long demo.
+ */
+async function touchDemoSession(userId: string, now: Date) {
+  const [row] = await db
+    .select()
+    .from(demoSessions)
+    .where(eq(demoSessions.userId, userId))
+    .orderBy(desc(demoSessions.startedAt))
+    .limit(1);
+
+  // No row = a demo account predating migration 0044 (or an insert that failed
+  // at login) — open one now rather than losing the visit entirely.
+  if (!row) {
+    await db.insert(demoSessions).values({
+      userId,
+      startedAt: now,
+      lastSeenAt: now,
+      activeSeconds: 0,
+    });
+    return;
+  }
+
+  const deltaMs = now.getTime() - row.lastSeenAt.getTime();
+  const gained = deltaMs > 0 && deltaMs <= SESSION_GAP_MS ? Math.round(deltaMs / 1000) : 0;
+
+  await db
+    .update(demoSessions)
+    .set({ lastSeenAt: now, activeSeconds: row.activeSeconds + gained })
+    .where(eq(demoSessions.id, row.id));
 }
 
 async function computeChangeVersion(userId: string): Promise<number> {
@@ -136,6 +178,8 @@ export async function POST() {
         platform: (await isTauriRequest()) ? 'tauri' : 'web',
       });
     }
+
+    if (session.user.role === 'demo') await touchDemoSession(userId, now);
   } catch {
     // best-effort tracking — swallow errors
   }

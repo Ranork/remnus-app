@@ -1,14 +1,14 @@
 import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
 import { getAllUsers } from '@/lib/actions/auth';
-import { getEngagementOverview, getActivationFunnel } from '@/lib/actions/analytics';
+import { getEngagementOverview, getActivationFunnel, getDemoUsage } from '@/lib/actions/analytics';
 import { getDemoFeedback } from '@/lib/actions/demoFeedback';
 import { getProspectInvitesOverview } from '@/lib/actions/prospectInvites';
 import Link from 'next/link';
 import { Shield, Users, TrendingUp, MonitorPlay, Share2, Workflow, MessageCircle, Mail, Gift, Laptop, Download } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import AdminUsersTable from '@/components/features/AdminUsersTable';
-import { SignupTrendChart } from '@/components/features/admin/AdminCharts';
+import { SignupTrendChart, DemoUsageChart } from '@/components/features/admin/AdminCharts';
 import AdminTrafficSources from '@/components/features/admin/AdminTrafficSources';
 import AdminDesktopStats from '@/components/features/admin/AdminDesktopStats';
 import AdminActivationFunnel from '@/components/features/admin/AdminActivationFunnel';
@@ -156,12 +156,13 @@ export default async function AdminPage() {
     getLocale(),
   ]);
 
-  const [usersResult, engagement, funnel, prospectOverview, demoFeedback] = await Promise.all([
+  const [usersResult, engagement, funnel, prospectOverview, demoFeedback, demoUsage] = await Promise.all([
     getAllUsers(),
     getEngagementOverview(),
     getActivationFunnel(),
     getProspectInvitesOverview(),
     getDemoFeedback(),
+    getDemoUsage(),
   ]);
 
   const userList = Array.isArray(usersResult) ? usersResult : [];
@@ -274,6 +275,16 @@ export default async function AdminPage() {
             </div>
           </section>
         </div>
+
+        {/* Demo usage — the acquisition trend's counterpart for visitors who
+            never sign up. Sits directly under it since it answers the same
+            question one step earlier in the funnel. */}
+        <section className="flex flex-col">
+          <SectionHeader icon={MonitorPlay} title={t('demoUsageSection')} hint={t('demoUsageHint')} />
+          <div className="flex flex-1 flex-col rounded-xl border border-neutral-800 bg-neutral-900 px-5 py-4">
+            <DemoUsageChart data={demoUsage} />
+          </div>
+        </section>
 
         {/* Desktop / Tauri + demo feedback */}
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:items-stretch">

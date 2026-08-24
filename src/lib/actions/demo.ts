@@ -1,6 +1,6 @@
 'use server';
 import { db } from '@/db';
-import { users, workspaces, workspaceMembers } from '@/db/schema';
+import { users, workspaces, workspaceMembers, demoSessions } from '@/db/schema';
 import { eq, ne, and, lt } from 'drizzle-orm';
 import { encode } from '@auth/core/jwt';
 import { cookies } from 'next/headers';
@@ -96,6 +96,23 @@ export async function loginAsDemo(_prevState: unknown, _formData: FormData): Pro
 
   // Seed this visitor's own workspace (pages + databases).
   await createDemoSeedData(demoUserId, demoName);
+
+  // Durable usage log — this account gets reaped in 6h (and its user_sessions
+  // rows with it), so the admin panel's demo history has to be written to a
+  // table that survives the purge. Best-effort: a failed insert must never cost
+  // the visitor their demo. The /api/activity/ping heartbeat takes it from here
+  // and accumulates `activeSeconds` onto this row.
+  try {
+    const startedAt = new Date();
+    await db.insert(demoSessions).values({
+      userId: demoUserId,
+      startedAt,
+      lastSeenAt: startedAt,
+      activeSeconds: 0,
+    });
+  } catch {
+    // ignore — analytics must not block the demo
+  }
 
   // Create a session JWT directly — bypasses Auth.js HTTP route and its CSRF check.
   // Calling signIn() from a server action makes an internal POST to /api/auth/signin

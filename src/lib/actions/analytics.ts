@@ -2,7 +2,7 @@
 import { db } from '@/db';
 import {
   users, accounts, userSessions, workspaceMembers, workspaces, workspaceItems, uploadedAssets, subscriptions,
-  agentTokens, oauthAccessTokens, agentActivity, databases, pages,
+  agentTokens, oauthAccessTokens, agentActivity, databases, pages, demoSessions,
 } from '@/db/schema';
 import { eq, ne, and, inArray, asc, desc, isNull, sql } from 'drizzle-orm';
 import { getCurrentUser } from '@/lib/auth/session';
@@ -208,6 +208,110 @@ export async function getEngagementOverview(): Promise<EngagementOverview> {
     demoTotal: demoCount?.count ?? 0,
     desktopUsersTotal: active?.desktopTotal ?? 0,
     desktopUsersActive30d: active?.desktopActive30d ?? 0,
+  };
+}
+
+export type DemoDurationBucket = 'under1m' | 'from1to5m' | 'from5to15m' | 'over15m';
+
+export type DemoUsageOverview = {
+  /** Last 30 days, oldest → newest. `avgSeconds` covers that day's demos only. */
+  trend: { date: string; count: number; avgSeconds: number }[];
+  total30d: number;
+  /** Time-spent stats over the same 30-day window (0 when there were no demos). */
+  avgSeconds30d: number;
+  medianSeconds30d: number;
+  longestSeconds30d: number;
+  /** Time-spent distribution over the window — where demos actually fall. */
+  buckets: { key: DemoDurationBucket; count: number }[];
+  /** Every demo ever logged, so the 30-day window isn't read as the whole history. */
+  totalAllTime: number;
+};
+
+const DEMO_BUCKETS: { key: DemoDurationBucket; maxSeconds: number }[] = [
+  { key: 'under1m', maxSeconds: 60 },
+  { key: 'from1to5m', maxSeconds: 5 * 60 },
+  { key: 'from5to15m', maxSeconds: 15 * 60 },
+  { key: 'over15m', maxSeconds: Infinity },
+];
+
+/**
+ * Admin-only demo usage rollup: how many demos started per day over the last 30
+ * days, and how long they actually lasted.
+ *
+ * Reads `demo_sessions` (migration 0044) rather than `user`/`user_sessions`:
+ * demo accounts are purged 6h after signup, so those tables only ever hold demos
+ * that are still alive — there is no history in them to chart. Every demo the
+ * heartbeat touched has one row here, carrying accumulated presence time.
+ */
+export async function getDemoUsage(): Promise<DemoUsageOverview> {
+  await assertAdmin();
+
+  const nowSec = Math.floor(Date.now() / 1000);
+  const monthCut = nowSec - 30 * DAY;
+
+  const rows = await db
+    .select({ startedAt: sql<number>`${demoSessions.startedAt}`, activeSeconds: demoSessions.activeSeconds })
+    .from(demoSessions)
+    .where(sql`${demoSessions.startedAt} >= ${monthCut}`);
+
+  const [allTime] = await db
+    .select({ count: sql<number>`cast(count(*) as int)` })
+    .from(demoSessions);
+
+  // Zero-filled day buckets, same shape as the signup trend so both charts line up.
+  const perDay = new Map<string, { count: number; seconds: number }>();
+  for (let i = 29; i >= 0; i--) {
+    const d = new Date((nowSec - i * DAY) * 1000);
+    perDay.set(d.toISOString().slice(0, 10), { count: 0, seconds: 0 });
+  }
+
+  const durations: number[] = [];
+  const bucketCounts = new Map<DemoDurationBucket, number>(DEMO_BUCKETS.map((b) => [b.key, 0]));
+
+  for (const row of rows) {
+    const ms = toEpochMs(row.startedAt);
+    if (ms == null) continue;
+
+    // Everything below is scoped to a row that landed in a charted day. The
+    // `startedAt >= monthCut` filter is a rolling 30×24h window while the
+    // buckets are 30 UTC calendar days, so it can return rows that fall just
+    // before the first bucket — counting those in the headline stats but not in
+    // any bar would make the total disagree with the chart under it.
+    const day = perDay.get(new Date(ms).toISOString().slice(0, 10));
+    if (!day) continue;
+
+    const seconds = Math.max(0, Number(row.activeSeconds ?? 0));
+    day.count += 1;
+    day.seconds += seconds;
+
+    durations.push(seconds);
+    const bucket = DEMO_BUCKETS.find((b) => seconds < b.maxSeconds) ?? DEMO_BUCKETS[DEMO_BUCKETS.length - 1];
+    bucketCounts.set(bucket.key, (bucketCounts.get(bucket.key) ?? 0) + 1);
+  }
+
+  durations.sort((a, b) => a - b);
+  const total30d = durations.length;
+  const totalSeconds = durations.reduce((sum, d) => sum + d, 0);
+  const mid = Math.floor(durations.length / 2);
+  const medianSeconds30d =
+    durations.length === 0
+      ? 0
+      : durations.length % 2 === 1
+        ? durations[mid]
+        : Math.round((durations[mid - 1] + durations[mid]) / 2);
+
+  return {
+    trend: [...perDay.entries()].map(([date, d]) => ({
+      date,
+      count: d.count,
+      avgSeconds: d.count > 0 ? Math.round(d.seconds / d.count) : 0,
+    })),
+    total30d,
+    avgSeconds30d: total30d > 0 ? Math.round(totalSeconds / total30d) : 0,
+    medianSeconds30d,
+    longestSeconds30d: durations.length > 0 ? durations[durations.length - 1] : 0,
+    buckets: DEMO_BUCKETS.map((b) => ({ key: b.key, count: bucketCounts.get(b.key) ?? 0 })),
+    totalAllTime: allTime?.count ?? 0,
   };
 }
 

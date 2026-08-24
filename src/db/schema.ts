@@ -449,6 +449,28 @@ export const demoFeedback = sqliteTable('demo_feedback', {
   index('demo_feedback_created_at_idx').on(table.createdAt),
 ]);
 
+// One row per "Try the demo" click — the DURABLE record of demo usage. It has to
+// be its own table rather than a query over `user`/`user_sessions`, because both
+// of those are wiped for a demo visitor 6h after signup (purgeDemoUser), which
+// left the admin panel with no history at all: only whatever demos happened to
+// be alive right now. `user_id` is ON DELETE SET NULL for exactly that reason —
+// the row must outlive the ephemeral account it describes.
+//
+// `activeSeconds` is ACCUMULATED presence, not `lastSeenAt - startedAt`: the
+// /api/activity/ping heartbeat adds each tick's delta only when it lands within
+// the 2-min presence window, so a visitor who leaves the tab open for an hour
+// isn't recorded as an hour-long demo. Migration 0044.
+export const demoSessions = sqliteTable('demo_sessions', {
+  id:            text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  userId:        text('user_id').references(() => users.id, { onDelete: 'set null' }),
+  startedAt:     integer('started_at', { mode: 'timestamp' }).notNull(),
+  lastSeenAt:    integer('last_seen_at', { mode: 'timestamp' }).notNull(),
+  activeSeconds: integer('active_seconds').notNull().default(0),
+}, (table) => [
+  index('demo_sessions_started_at_idx').on(table.startedAt),
+  index('demo_sessions_user_id_idx').on(table.userId),
+]);
+
 // ── Mailing (AWS SES) ─────────────────────────────────────────────────────────
 // Migration 0033. Manually composed newsletters written by an admin in the
 // /admin/mailing UI (markdown body rendered into the branded email layout).
