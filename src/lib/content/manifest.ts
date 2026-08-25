@@ -34,6 +34,7 @@ import {
   Layers,
   Lock,
   Server,
+  Blocks,
 } from 'lucide-react';
 import { NotionMark, AppFlowyMark, AffineMark, ObsidianMark } from '@/components/docs/CompetitorMark';
 
@@ -91,6 +92,15 @@ export const BLOG_POSTS: BlogPost[] = [
       'A neutral, spec-grounded comparison of local (stdio) and remote (Streamable HTTP) MCP servers — setup, auth, team access, headless workflows, security responsibilities, hybrid bridging, and how Remnus fits both models.',
     date: '2026-08-19',
     icon: Server,
+  },
+  {
+    slug: 'mcp-tools-vs-resources-vs-prompts',
+    file: 'mcp-tools-vs-resources-vs-prompts.md',
+    title: 'MCP Tools vs Resources vs Prompts: A Practical Guide',
+    description:
+      'A practical, spec-grounded guide to the three MCP primitives — model-controlled tools, application-controlled resources, and user-controlled prompts — with verified Remnus examples and one complete workflow.',
+    date: '2026-08-21',
+    icon: Blocks,
   },
   {
     slug: 'mcp-security-guide',

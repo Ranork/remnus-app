@@ -4,6 +4,7 @@ Thoughts on open source, AI-native tooling, and building in public.
 
 ## Posts
 
+- [MCP Tools vs Resources vs Prompts: A Practical Guide](/docs/mcp-tools-vs-resources-vs-prompts) — The three MCP primitives explained with verified Remnus examples: model-controlled tools, application-controlled resources, user-controlled prompts, and one complete workflow tying them together.
 - [Remote vs Local MCP Servers: Which Should You Use?](/docs/remote-vs-local-mcp-servers) — A neutral, spec-grounded comparison of local (stdio) and remote (Streamable HTTP) MCP servers: setup, auth, team access, headless workflows, security responsibilities, hybrid bridging, and how Remnus fits both models.
 - [MCP Security Guide: OAuth, Tokens, Scopes, and Audit Logs](/docs/mcp-security-guide) — The MCP threat model, OAuth vs personal access tokens, least privilege, destructive-action confirmation, audit logs, checklists for users and server developers, and how Remnus applies each control.
 - [How to Run Headless AI Agents Without Login Prompts](/docs/run-headless-ai-agents-with-mcp) — OAuth vs personal access tokens for unattended jobs, secure token storage, minimum-permission scopes, a verified headless Claude Code + Remnus example, and a deployment checklist.
