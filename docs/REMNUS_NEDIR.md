@@ -120,7 +120,7 @@ Planlar insan sayısından ziyade ajan yoğunluğuna göre ölçeklenir: **Free 
 |---|---|
 | Kategori | Human-Agent Collaborative Workspace |
 | MCP endpoint | `https://www.remnus.com/api/mcp` |
-| Tool / Resource / Prompt | 20 / 6 / 7 |
+| Tool / Resource / Prompt | 21 / 6 / 7 |
 | Auth Modeli | Agent-First: OAuth 2.1 + PKCE, PAT |
 | Güvenlik/Güven | Tam Kapsamlı Workspace Audit Log |
 | Lisans | AGPL-3.0 |

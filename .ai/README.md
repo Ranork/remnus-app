@@ -7,6 +7,7 @@ Bu klasör, Claude Code ve Codex arasında görev devri için küçük ve Git il
 - `CURRENT_TASK.template.md`, yeni clone/worktree'lerde yerel `CURRENT_TASK.md` oluşturmak için izlenen nötr şablondur.
 - `DECISIONS.md` görevler arası etkisi olan dayanıklı kararlar içindir.
 - `HANDOFF.generated.md` yalnızca Git metadata snapshot'ıdır ve `scripts/ai/update-handoff.ps1` tarafından üretilir.
+- `OUTREACH_PLAYBOOK.md` ScoutForge 1:1 outreach mail kuralları ve kayıt akışıdır; üçüncü kişi e-postaları içerdiği için yereldir ve Git tarafından izlenmez.
 - Sohbet özeti source of truth değildir. Kod, schema, manifest ve güncel Git durumu önceliklidir.
 - Aynı working tree üzerinde yalnızca bir implementer dosya düzenler; paralel implementasyon ayrı worktree/branch gerektirir.
 - `CURRENT_TASK.md` ve generated handoff dosyası local kalır ve Git tarafından izlenmez; `README.md`, `DECISIONS.md` ve `CURRENT_TASK.template.md` paylaşılabilir proje bilgisidir.

@@ -90,5 +90,8 @@ email-previews/
 # Internal status reports (local only — contain revenue/cost/outreach data, never for GitHub).
 # The template/structure that generates them (.ai/STATUS_REPORT.template.md) stays tracked.
 /.ai/status-reports/
+
+# Outreach playbook (local only — contains third-party contact emails, never for GitHub).
+/.ai/OUTREACH_PLAYBOOK.md
 /REMNUS_DURUM_RAPORU_*.md
 REMNUS_OKF_CONTEXT_ENGINE_REVIEW.md

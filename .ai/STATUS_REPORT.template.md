@@ -52,7 +52,12 @@ duyuruları, changelog'lar). Moat'ın neye dayandığını güncel durumla test 
 ## 6. Büyüme/Pazarlama Geçmişi ve Mevcut Durum
 
 <Aktif stratejik planlar, Work Plan/sprint durumu (plan ile icra arasında
-boşluk var mı), aktif kanallar (outreach, launch, vb.) ve güncel adım.>
+boşluk var mı), aktif kanallar (outreach, launch, vb.) ve güncel adım.
+ScoutForge 1:1 outreach için Growth altındaki **Outreach Log** database'ini
+(`query_database`) kontrol et: satır sayısı, Status kırılımı (Replied/Invite
+Sent/Trial Active/Converted/Declined/No Response), Interest dağılımı ve öne
+çıkan bulgular. Örneklem küçükse ("şu ana kadar N konuşma") açıkça belirt,
+tekil anekdotu trend gibi sunma.>
 
 ## 7. Fiyatlandırma ve Gelir
 

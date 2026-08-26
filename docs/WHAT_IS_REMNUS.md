@@ -120,7 +120,7 @@ Plans scale by agent density rather than headcount: **Free / Startup / Professio
 |---|---|
 | Category | Human-Agent Collaborative Workspace |
 | MCP endpoint | `https://www.remnus.com/api/mcp` |
-| Tools / Resources / Prompts | 20 / 6 / 7 |
+| Tools / Resources / Prompts | 21 / 6 / 7 |
 | Auth model | Agent-first: OAuth 2.1 + PKCE, PAT |
 | Security/trust | Full workspace audit log |
 | License | AGPL-3.0 |
