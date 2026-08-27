@@ -35,6 +35,7 @@ import {
   Lock,
   Server,
   Blocks,
+  Coins,
 } from 'lucide-react';
 import { NotionMark, AppFlowyMark, AffineMark, ObsidianMark } from '@/components/docs/CompetitorMark';
 
@@ -84,6 +85,15 @@ export type BlogPost = {
 };
 
 export const BLOG_POSTS: BlogPost[] = [
+  {
+    slug: 'reduce-token-usage-mcp-agent-workflows',
+    file: 'reduce-token-usage-mcp-agent-workflows.md',
+    title: 'How to Reduce Token Usage in MCP Agent Workflows',
+    description:
+      'Where tokens go in an MCP agent loop and the concrete patterns that cut avoidable reads — workspace digests, outline-first reads, targeted search, schema-before-rows, field projection, change tracking, and separating durable memory from task context.',
+    date: '2026-08-27',
+    icon: Coins,
+  },
   {
     slug: 'remote-vs-local-mcp-servers',
     file: 'remote-vs-local-mcp-servers.md',
