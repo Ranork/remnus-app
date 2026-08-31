@@ -45,6 +45,31 @@ const FIRST_VISIT_WINDOW_DAYS = 7;
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-08-31-card-comments',
+    date: '2026-08-31',
+    category: 'new',
+    title: {
+      en: 'Comments on every card',
+      tr: 'Her kartta yorumlar',
+      de: 'Kommentare auf jeder Karte',
+      es: 'Comentarios en cada tarjeta',
+      fr: 'Commentaires sur chaque carte',
+      hi: 'हर कार्ड पर टिप्पणियाँ',
+      ru: 'Комментарии на каждой карточке',
+      zh: '每张卡片都可以评论',
+    },
+    summary: {
+      en: 'You can now leave running comments on any page or card, including notes your AI agents add as they work, in a thread that stays separate from the content itself.',
+      tr: 'Artık her sayfaya veya karta, ajanlarınızın çalışırken bıraktığı notlar da dahil, içerikten ayrı bir akışta yorum bırakabilirsiniz.',
+      de: 'Sie können jetzt auf jeder Seite oder Karte fortlaufend Kommentare hinterlassen, einschließlich Notizen, die Ihre KI-Agenten während der Arbeit hinzufügen, in einem Thread, der vom eigentlichen Inhalt getrennt bleibt.',
+      es: 'Ahora puedes dejar comentarios continuos en cualquier página o tarjeta, incluidas las notas que tus agentes de IA añaden mientras trabajan, en un hilo que se mantiene separado del contenido.',
+      fr: 'Vous pouvez désormais laisser des commentaires continus sur n’importe quelle page ou carte, y compris les notes que vos agents IA ajoutent pendant leur travail, dans un fil séparé du contenu lui-même.',
+      hi: 'अब आप किसी भी पेज या कार्ड पर लगातार टिप्पणियाँ छोड़ सकते हैं, जिसमें आपके AI एजेंट काम करते समय जोड़े गए नोट्स भी शामिल हैं, एक ऐसे थ्रेड में जो सामग्री से अलग रहता है।',
+      ru: 'Теперь вы можете оставлять комментарии на любой странице или карточке, включая заметки, которые ваши ИИ-агенты добавляют по ходу работы, в отдельной от самого содержимого ветке.',
+      zh: '现在你可以在任何页面或卡片上持续添加评论，包括你的 AI 代理在工作过程中留下的备注，评论会保留在一个与内容本身分开的独立讨论区中。',
+    },
+  },
+  {
     id: '2026-08-24-code-block-paste-stays-inside',
     date: '2026-08-24',
     category: 'fixed',

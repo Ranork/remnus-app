@@ -934,6 +934,18 @@
       "cancel": "रद्द करें"
     }
   },
+  "Comments": {
+    "title": "टिप्पणियाँ",
+    "empty": "अभी कोई टिप्पणी नहीं",
+    "placeholder": "टिप्पणी लिखें…",
+    "submit": "टिप्पणी करें",
+    "byAgent": "{name} द्वारा (एजेंट)",
+    "closureLabel": "समापन",
+    "deleteConfirm": "इस टिप्पणी को हटाएं?",
+    "tooLong": "टिप्पणी बहुत लंबी है (अधिकतम 4000 वर्ण)",
+    "delete": "हटाएं",
+    "deleteCancel": "रद्द करें"
+  },
   "IconPicker": {
     "title": "आइकन",
     "tabEmoji": "इमोजी",
@@ -1147,7 +1159,7 @@
     "bridgeSetupStripTitle": "कोई API key नहीं।",
     "bridgeSetupStripBody": "अपने editor से सीधे एक बार OAuth से sign in करें — कोई token copy, paste या rotate नहीं करना पड़ता।",
     "bridgeToolsSnum": "06 / MCP",
-    "bridgeToolsH2Part1": "21 टूल, 6 संसाधन और 7 प्रॉम्प्ट —",
+    "bridgeToolsH2Part1": "22 टूल, 6 संसाधन और 7 प्रॉम्प्ट —",
     "bridgeToolsH2Accent": "सभी",
     "bridgeToolsH2Part2": "उपलब्ध।",
     "bridgeToolsSubhead": "UI में जो कुछ भी कर सकते हो, तुम्हारी AI भी कर सकती है। वही auth, वही scope, वही audit log।",
@@ -1189,7 +1201,7 @@
     "bridgePricingSelfPrice": "$0",
     "bridgePricingSelfF1": "असीमित workspace और पेज",
     "bridgePricingSelfF2": "सभी दृश्य और डेटाबेस",
-    "bridgePricingSelfF3": "पूर्ण MCP एक्सेस (21 टूल)",
+    "bridgePricingSelfF3": "पूर्ण MCP एक्सेस (22 टूल)",
     "bridgePricingSelfF4": "8 भाषाएँ अंतर्निहित",
     "bridgePricingSelfF5": "कोई cloud या अकाउंट नहीं चाहिए",
     "bridgePricingSelfCta": "GitHub पर देखें",

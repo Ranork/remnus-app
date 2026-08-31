@@ -203,3 +203,19 @@ Delete a saved view. Requires `confirm: true`. A database must always keep at le
 | `confirm` | boolean | | `false` | Set to `true` to confirm deletion |
 
 **Returns** — `{ deleted: true }`
+
+---
+
+## add_comment
+
+Add a comment to a page or database row, in a thread separate from its markdown body — a place to leave running notes or a closure note as you work. Comments you add here cannot be edited or deleted by you afterward; use `update_page` for content you need to revise.
+
+**Parameters**
+
+| Parameter | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `pageId` | string | ✓ | | Workspace item ID or database row ID |
+| `body` | string | ✓ | | Comment text (max 4,000 characters) |
+| `kind` | `"note"` \| `"closure"` | | `"note"` | Marks the comment as a running note or a closing note |
+
+**Returns** — `{ id, createdAt }`

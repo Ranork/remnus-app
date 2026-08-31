@@ -388,6 +388,12 @@ export const oauthAccessTokens = sqliteTable('oauth_access_tokens', {
   expiresAt:          integer('expires_at', { mode: 'timestamp' }).notNull(),
   revokedAt:          integer('revoked_at', { mode: 'timestamp' }),
   createdAt:          integer('created_at', { mode: 'timestamp' }).notNull(),
+  // Rotation successor (no FK — same loosely-referenced pattern as agent_activity.workspace_id):
+  // set together when a refresh grant rotates this row away. Lets the token grant tell a
+  // same-token replay within the grace window (legitimate concurrent client) apart from a
+  // stale reuse well after (treated as theft — see handleRefreshToken). Migration 0046.
+  replacedByTokenId:  text('replaced_by_token_id'),
+  replacedAt:         integer('replaced_at', { mode: 'timestamp' }),
 }, (table) => [
   index('oauth_access_tokens_prefix_idx').on(table.tokenPrefix),
   index('oauth_access_tokens_refresh_prefix_idx').on(table.refreshTokenPrefix),
@@ -469,6 +475,35 @@ export const demoSessions = sqliteTable('demo_sessions', {
 }, (table) => [
   index('demo_sessions_started_at_idx').on(table.startedAt),
   index('demo_sessions_user_id_idx').on(table.userId),
+]);
+
+
+// ── Comments ──────────────────────────────────────────────────────────────────
+// Migration 0045. A time-ordered comment thread attached to a page or database
+// row, separate from its markdown body. Agent comments are append-only — no
+// update/delete tool exists for them — because the thread is meant as a record
+// of what an agent did, not editable prose; only a human (comment author or
+// workspace owner) can remove one, via the UI. `authorLabel` is denormalized
+// for the same reason as `agentActivity.tokenId`/`oauthTokenId`: tokens are
+// revocable (`ON DELETE SET NULL`), but the comment must still show who wrote
+// it after the token is gone.
+export const pageComments = sqliteTable('page_comments', {
+  id: text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  // Standalone page id or database-row (pages table) id — no FK, same pattern
+  // as agent_activity.workspace_id, since it can point at either table.
+  pageId:       text('page_id').notNull(),
+  workspaceId:  text('workspace_id').notNull(),
+  body:         text('body').notNull(),
+  kind:         text('kind', { enum: ['note', 'closure'] }).notNull().default('note'),
+  authorKind:   text('author_kind', { enum: ['human', 'agent'] }).notNull(),
+  authorUserId: text('author_user_id').references(() => users.id, { onDelete: 'set null' }),
+  authorLabel:  text('author_label').notNull(),
+  tokenId:      text('token_id').references(() => agentTokens.id, { onDelete: 'set null' }),
+  oauthTokenId: text('oauth_token_id').references(() => oauthAccessTokens.id, { onDelete: 'set null' }),
+  createdAt:    integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt:    integer('updated_at', { mode: 'timestamp' }).notNull(),
+}, (table) => [
+  index('page_comments_page_created_idx').on(table.pageId, table.createdAt),
 ]);
 
 // ── Mailing (AWS SES) ─────────────────────────────────────────────────────────

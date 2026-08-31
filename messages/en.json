@@ -955,6 +955,18 @@
       "cancel": "Cancel"
     }
   },
+  "Comments": {
+    "title": "Comments",
+    "empty": "No comments yet",
+    "placeholder": "Write a comment…",
+    "submit": "Comment",
+    "byAgent": "by {name} (agent)",
+    "closureLabel": "Closure",
+    "deleteConfirm": "Delete this comment?",
+    "tooLong": "Comment is too long (max 4000 characters)",
+    "delete": "Delete",
+    "deleteCancel": "Cancel"
+  },
   "IconPicker": {
     "title": "Icon",
     "tabEmoji": "Emoji",
@@ -1168,7 +1180,7 @@
     "bridgeSetupStripTitle": "No API keys.",
     "bridgeSetupStripBody": "Sign in once with OAuth, right from your editor — no token to copy, paste, or rotate.",
     "bridgeToolsSnum": "06 / MCP",
-    "bridgeToolsH2Part1": "21 tools, 6 resources & 7 prompts —",
+    "bridgeToolsH2Part1": "22 tools, 6 resources & 7 prompts —",
     "bridgeToolsH2Accent": "All",
     "bridgeToolsH2Part2": "available.",
     "bridgeToolsSubhead": "Anything you can do in the UI, your AI can do too. Same auth, same scopes, same audit log.",
@@ -1210,7 +1222,7 @@
     "bridgePricingSelfPrice": "$0",
     "bridgePricingSelfF1": "Unlimited workspaces & pages",
     "bridgePricingSelfF2": "All views & databases",
-    "bridgePricingSelfF3": "Full MCP access (21 tools)",
+    "bridgePricingSelfF3": "Full MCP access (22 tools)",
     "bridgePricingSelfF4": "8 languages built in",
     "bridgePricingSelfF5": "No cloud or account needed",
     "bridgePricingSelfCta": "View on GitHub",

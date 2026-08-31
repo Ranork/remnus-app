@@ -934,6 +934,18 @@
       "cancel": "Annuler"
     }
   },
+  "Comments": {
+    "title": "Commentaires",
+    "empty": "Aucun commentaire pour l'instant",
+    "placeholder": "Écrivez un commentaire…",
+    "submit": "Commenter",
+    "byAgent": "par {name} (agent)",
+    "closureLabel": "Clôture",
+    "deleteConfirm": "Supprimer ce commentaire ?",
+    "tooLong": "Le commentaire est trop long (max 4000 caractères)",
+    "delete": "Supprimer",
+    "deleteCancel": "Annuler"
+  },
   "IconPicker": {
     "title": "Icône",
     "tabEmoji": "Emoji",
@@ -1147,7 +1159,7 @@
     "bridgeSetupStripTitle": "Aucune clé API.",
     "bridgeSetupStripBody": "Connectez-vous une seule fois avec OAuth, directement depuis votre éditeur — aucun jeton à copier, coller ou renouveler.",
     "bridgeToolsSnum": "06 / MCP",
-    "bridgeToolsH2Part1": "21 outils, 6 ressources & 7 prompts —",
+    "bridgeToolsH2Part1": "22 outils, 6 ressources & 7 prompts —",
     "bridgeToolsH2Accent": "Tous",
     "bridgeToolsH2Part2": "disponibles.",
     "bridgeToolsSubhead": "Tout ce que tu peux faire dans l'interface, ton IA peut le faire aussi. Même auth, mêmes portées, même journal d'audit.",
@@ -1189,7 +1201,7 @@
     "bridgePricingSelfPrice": "$0",
     "bridgePricingSelfF1": "Espaces de travail et pages illimités",
     "bridgePricingSelfF2": "Toutes les vues & bases de données",
-    "bridgePricingSelfF3": "Accès MCP complet (21 outils)",
+    "bridgePricingSelfF3": "Accès MCP complet (22 outils)",
     "bridgePricingSelfF4": "8 langues intégrées",
     "bridgePricingSelfF5": "Pas de cloud ni de compte nécessaire",
     "bridgePricingSelfCta": "Voir sur GitHub",

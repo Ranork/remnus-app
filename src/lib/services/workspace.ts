@@ -18,6 +18,7 @@ import {
   sharedPages,
   deletedItems,
   pageLinks,
+  pageComments,
 } from '@/db/schema';
 import { eq, ne, and, or, like, asc, desc, gte, lte, sql, inArray } from 'drizzle-orm';
 import { syncPageLinks, removePageLinksFor, purgeReferencesTo } from './pageLinks';
@@ -527,6 +528,21 @@ export async function queryDatabaseRows(
   const page = hasMore ? rows.slice(0, limit) : rows;
   const last = page[page.length - 1];
 
+  // One grouped query for the whole page of rows rather than N — costs
+  // ~nothing, and a database with no commented rows pays for it once with an
+  // empty result.
+  const commentCounts = page.length > 0
+    ? new Map(
+        (
+          await db
+            .select({ pageId: pageComments.pageId, n: sql<number>`count(*)` })
+            .from(pageComments)
+            .where(inArray(pageComments.pageId, page.map((r) => r.id)))
+            .groupBy(pageComments.pageId)
+        ).map((r) => [r.pageId, Number(r.n)]),
+      )
+    : new Map<string, number>();
+
   return {
     schema: projectedSchema,
     rows: page.map(({ sortOrder: _so, content, seriesId, seriesDetached, ...r }) => {
@@ -538,6 +554,7 @@ export async function queryDatabaseRows(
         }
         properties = trimmed;
       }
+      const commentCount = commentCounts.get(r.id);
       return {
         id: r.id,
         title: r.title,
@@ -546,6 +563,9 @@ export async function queryDatabaseRows(
         // Absent on ordinary rows, so a database with no recurring rows pays
         // nothing for this.
         ...(seriesId ? { recurring: true, ...(seriesDetached ? { recurringDetached: true } : {}) } : {}),
+        // Absent when the row has no comments — a database with none pays
+        // nothing for this either.
+        ...(commentCount ? { commentCount } : {}),
       };
     }),
     hasMore,

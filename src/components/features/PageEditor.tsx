@@ -18,6 +18,7 @@ import ShareModal from '@/components/share/ShareModal';
 import { PageMarkdownDialog } from './PageMarkdownDialog';
 import PageBacklinksPanel from './PageBacklinksPanel';
 import KnowledgeContextPanel from './KnowledgeContextPanel';
+import PageCommentsPanel from './PageCommentsPanel';
 import SeriesPanel from './recurrence/SeriesPanel';
 import type { WorkspaceItemRow } from '@/lib/actions/workspace';
 import {
@@ -825,6 +826,13 @@ const PageEditor = forwardRef<PageEditorHandle, PageEditorProps>(function PageEd
           );
         })}
       </div>
+
+      {/* Comments — directly under the attributes, above everything else in the
+          properties/body gap, so it reads as part of "what is this card" rather
+          than a footer note. Shown in peek too (unlike Knowledge/Backlinks
+          below), since a peeked card is often exactly where an agent's running
+          comments need to be visible without a full open. */}
+      <PageCommentsPanel workspaceId={database.workspaceId} pageId={initialPage.id} isPeek={isPeek} />
 
       {/* Recurrence — sits between the properties and the body because that is
           the order the question gets asked: what is this card, then is it one

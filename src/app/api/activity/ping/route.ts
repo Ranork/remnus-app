@@ -11,6 +11,7 @@ import {
   standalonePages,
   databases,
   pages,
+  pageComments,
 } from '@/db/schema';
 import { isTauriRequest } from '@/lib/server/platform';
 
@@ -100,7 +101,7 @@ async function computeChangeVersion(userId: string): Promise<number> {
   const ids = memberships.map((m) => m.workspaceId);
   if (ids.length === 0) return 0;
 
-  const [items, sps, dbs, rows] = await Promise.all([
+  const [items, sps, dbs, rows, comments] = await Promise.all([
     db
       .select({ m: epochMax(workspaceItems.updatedAt) })
       .from(workspaceItems)
@@ -123,6 +124,14 @@ async function computeChangeVersion(userId: string): Promise<number> {
       .innerJoin(databases, eq(pages.databaseId, databases.id))
       .innerJoin(workspaceItems, eq(databases.itemId, workspaceItems.id))
       .where(inArray(workspaceItems.workspaceId, ids)),
+    // page_comments carries its own workspaceId (it can point at either a
+    // standalone page or a database row) so no join is needed — otherwise an
+    // agent's MCP add_comment call would never show up for a viewer already
+    // on that page until they manually reloaded.
+    db
+      .select({ m: epochMax(pageComments.updatedAt) })
+      .from(pageComments)
+      .where(inArray(pageComments.workspaceId, ids)),
   ]);
 
   return Math.max(
@@ -130,6 +139,7 @@ async function computeChangeVersion(userId: string): Promise<number> {
     toEpoch(sps[0]?.m),
     toEpoch(dbs[0]?.m),
     toEpoch(rows[0]?.m),
+    toEpoch(comments[0]?.m),
   );
 }
 

@@ -17,6 +17,7 @@ import { publish } from '@/lib/realtime/publish';
 import { logActivity, type TokenContext } from '../context';
 import { recordGeneratedKnowledge, validateContextRunForWrite } from '@/lib/services/knowledge';
 import { applyRecurrenceInput, changeRecurrenceForRow } from '@/lib/services/recurrence';
+import { addPageComment, MAX_COMMENT_LENGTH } from '@/lib/services/comments';
 
 const READ_ONLY_ERROR = 'Error: This token only has read scope. A write-scoped token is required.';
 const CONTEXT_RUN_ID = z.string().uuid().optional().describe('prepare_context contextRunId. Required for mutations when the workspace uses Strict context.');
@@ -501,6 +502,51 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
         return { content: [{ type: 'text' as const, text }], structuredContent: result };
       } catch (err) {
         await logActivity(ctx, 'delete_database_view', 'error', 'database', databaseId);
+        return { content: [{ type: 'text' as const, text: `Error: ${String(err)}` }], isError: true };
+      }
+    },
+  );
+
+  server.registerTool(
+    'add_comment',
+    {
+      description: `Add a comment to a page or database row, in a thread separate from its markdown body — a place to leave running notes or a closure note as you work. Comments you add here cannot be edited or deleted by you afterward (max ${MAX_COMMENT_LENGTH} characters); use update_page for content you need to revise.`,
+      inputSchema: {
+        pageId: z.string().describe('The workspace item ID or database row ID to comment on'),
+        body: z.string().max(MAX_COMMENT_LENGTH).describe(`Comment text (max ${MAX_COMMENT_LENGTH} characters)`),
+        kind: z.enum(['note', 'closure']).optional().default('note').describe('"closure" highlights this as a wrap-up note for the card'),
+        contextRunId: CONTEXT_RUN_ID,
+      },
+      outputSchema: z.object({
+        id: z.string(),
+        createdAt: z.any(),
+      }).passthrough(),
+      annotations: { title: 'Add comment', readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+    },
+    async ({ pageId, body, kind, contextRunId }) => {
+      if (ctx.scope !== 'write') {
+        await logActivity(ctx, 'add_comment', 'error', 'page', pageId);
+        return { content: [{ type: 'text' as const, text: READ_ONLY_ERROR }], isError: true };
+      }
+      const contextError = await requireContext(ctx, contextRunId, 'add_comment', pageId);
+      if (contextError) return contextError;
+      try {
+        const result = await addPageComment({
+          workspaceId: ctx.workspaceId,
+          pageId,
+          body,
+          kind,
+          authorKind: 'agent',
+          authorLabel: ctx.agentName ?? 'Agent',
+          tokenId: ctx.tokenKind === 'pat' ? ctx.tokenId : null,
+          oauthTokenId: ctx.tokenKind === 'oauth' ? ctx.tokenId : null,
+        });
+        const text = JSON.stringify(result);
+        await logActivity(ctx, 'add_comment', 'success', 'page', pageId, text);
+        publish({ scope: 'page', workspaceId: ctx.workspaceId, resourceId: pageId, actorId: actorId(ctx) });
+        return { content: [{ type: 'text' as const, text }], structuredContent: result };
+      } catch (err) {
+        await logActivity(ctx, 'add_comment', 'error', 'page', pageId);
         return { content: [{ type: 'text' as const, text: `Error: ${String(err)}` }], isError: true };
       }
     },

@@ -56,7 +56,8 @@
     { "name": "update_database_schema", "description": "Add or remove columns from a database schema. Removing columns is destructive and requires confirm: true." },
     { "name": "create_database_view", "description": "Add a new saved view (table, kanban, or calendar) to a database." },
     { "name": "update_database_view", "description": "Rename a database view, change its icon, or patch fields within its existing config." },
-    { "name": "delete_database_view", "description": "Delete a saved view from a database. Requires confirm: true. A database must always keep at least one view." }
+    { "name": "delete_database_view", "description": "Delete a saved view from a database. Requires confirm: true. A database must always keep at least one view." },
+    { "name": "add_comment", "description": "Add a comment to a page or row (agent comments are append-only)." }
   ],
   "compatibility": {
     "claude_desktop": ">=0.10.0",

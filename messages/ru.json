@@ -934,6 +934,18 @@
       "cancel": "Отмена"
     }
   },
+  "Comments": {
+    "title": "Комментарии",
+    "empty": "Комментариев пока нет",
+    "placeholder": "Напишите комментарий…",
+    "submit": "Комментировать",
+    "byAgent": "от {name} (агент)",
+    "closureLabel": "Закрытие",
+    "deleteConfirm": "Удалить этот комментарий?",
+    "tooLong": "Комментарий слишком длинный (макс. 4000 символов)",
+    "delete": "Удалить",
+    "deleteCancel": "Отмена"
+  },
   "IconPicker": {
     "title": "Значок",
     "tabEmoji": "Эмодзи",
@@ -1147,7 +1159,7 @@
     "bridgeSetupStripTitle": "Никаких API-ключей.",
     "bridgeSetupStripBody": "Войдите один раз через OAuth прямо из редактора — никаких токенов для копирования, вставки или обновления.",
     "bridgeToolsSnum": "06 / MCP",
-    "bridgeToolsH2Part1": "21 инструмент, 6 ресурсов и 7 промптов —",
+    "bridgeToolsH2Part1": "22 инструмента, 6 ресурсов и 7 промптов —",
     "bridgeToolsH2Accent": "Всё",
     "bridgeToolsH2Part2": "доступно.",
     "bridgeToolsSubhead": "Всё, что вы можете сделать в интерфейсе, может и ваш ИИ. Та же аутентификация, те же права, тот же журнал аудита.",
@@ -1189,7 +1201,7 @@
     "bridgePricingSelfPrice": "$0",
     "bridgePricingSelfF1": "Неограниченно пространств и страниц",
     "bridgePricingSelfF2": "Все представления и базы данных",
-    "bridgePricingSelfF3": "Полный доступ к MCP (21 инструмент)",
+    "bridgePricingSelfF3": "Полный доступ к MCP (22 инструмента)",
     "bridgePricingSelfF4": "8 встроенных языков",
     "bridgePricingSelfF5": "Без облака и аккаунта",
     "bridgePricingSelfCta": "Посмотреть на GitHub",

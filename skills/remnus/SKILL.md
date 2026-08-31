@@ -49,6 +49,7 @@ Column types: `text` | `number` | `select` | `multi_select` | `date` | `datetime
 - `move_item` — reparent a sidebar item; `newParentId: null` → root.
 - `create_database` — new database with a custom schema.
 - `update_database_schema` — add/remove columns. Removing is **guarded.**
+- `add_comment` — leave a note or closure comment on a page/row, in a thread separate from its content. **Append-only** — you cannot edit or delete your own comment afterward, so use `update_page` instead if the content itself needs to change.
 
 If a write tool returns "This token only has read scope," the user connected a read-only token — tell them; do not retry.
 

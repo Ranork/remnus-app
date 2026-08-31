@@ -934,6 +934,18 @@
       "cancel": "取消"
     }
   },
+  "Comments": {
+    "title": "评论",
+    "empty": "暂无评论",
+    "placeholder": "写评论…",
+    "submit": "评论",
+    "byAgent": "由 {name} (代理)",
+    "closureLabel": "结束",
+    "deleteConfirm": "删除此评论？",
+    "tooLong": "评论过长 (最多 4000 个字符)",
+    "delete": "删除",
+    "deleteCancel": "取消"
+  },
   "IconPicker": {
     "title": "图标",
     "tabEmoji": "表情",
@@ -1147,7 +1159,7 @@
     "bridgeSetupStripTitle": "无需 API 密钥。",
     "bridgeSetupStripBody": "直接在编辑器中通过 OAuth 登录一次即可——无需复制、粘贴或轮换任何令牌。",
     "bridgeToolsSnum": "06 / MCP",
-    "bridgeToolsH2Part1": "21 个工具、6 个资源和 7 个提示词 —",
+    "bridgeToolsH2Part1": "22 个工具、6 个资源和 7 个提示词 —",
     "bridgeToolsH2Accent": "全部",
     "bridgeToolsH2Part2": "可用。",
     "bridgeToolsSubhead": "你在界面里能做的一切，你的 AI 也能做。相同的认证、相同的权限、相同的审计日志。",
@@ -1189,7 +1201,7 @@
     "bridgePricingSelfPrice": "$0",
     "bridgePricingSelfF1": "无限工作区和页面",
     "bridgePricingSelfF2": "所有视图和数据库",
-    "bridgePricingSelfF3": "完整 MCP 访问（21 个工具）",
+    "bridgePricingSelfF3": "完整 MCP 访问（22 个工具）",
     "bridgePricingSelfF4": "内置 8 种语言",
     "bridgePricingSelfF5": "无需云或账户",
     "bridgePricingSelfCta": "在 GitHub 上查看",

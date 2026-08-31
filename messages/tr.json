@@ -955,6 +955,18 @@
       "cancel": "Vazgeç"
     }
   },
+  "Comments": {
+    "title": "Yorumlar",
+    "empty": "Henüz yorum yok",
+    "placeholder": "Yorum yaz…",
+    "submit": "Yorum yap",
+    "byAgent": "{name} (ajan)",
+    "closureLabel": "Kapanış",
+    "deleteConfirm": "Bu yorum silinsin mi?",
+    "tooLong": "Yorum çok uzun (en fazla 4000 karakter)",
+    "delete": "Sil",
+    "deleteCancel": "Vazgeç"
+  },
   "IconPicker": {
     "title": "Simge",
     "tabEmoji": "Emoji",
@@ -1168,7 +1180,7 @@
     "bridgeSetupStripTitle": "API anahtarı yok.",
     "bridgeSetupStripBody": "Editöründen tek seferde OAuth ile giriş yap — kopyalanacak, yapıştırılacak ya da yenilenecek bir token yok.",
     "bridgeToolsSnum": "06 / MCP",
-    "bridgeToolsH2Part1": "21 araç, 6 kaynak ve 7 prompt —",
+    "bridgeToolsH2Part1": "22 araç, 6 kaynak ve 7 prompt —",
     "bridgeToolsH2Accent": "Hepsi",
     "bridgeToolsH2Part2": "kullanılabilir.",
     "bridgeToolsSubhead": "Arayüzde yapabildiğin her şeyi yapay zekan da yapabilir. Aynı kimlik doğrulama, aynı kapsam, aynı denetim günlüğü.",
@@ -1210,7 +1222,7 @@
     "bridgePricingSelfPrice": "$0",
     "bridgePricingSelfF1": "Sınırsız çalışma alanı ve sayfa",
     "bridgePricingSelfF2": "Tüm görünümler ve veritabanları",
-    "bridgePricingSelfF3": "Tam MCP erişimi (21 araç)",
+    "bridgePricingSelfF3": "Tam MCP erişimi (22 araç)",
     "bridgePricingSelfF4": "8 dil yerleşik",
     "bridgePricingSelfF5": "Bulut veya hesap gerekmez",
     "bridgePricingSelfCta": "GitHub’da görüntüle",

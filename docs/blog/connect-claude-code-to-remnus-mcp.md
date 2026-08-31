@@ -131,7 +131,7 @@ A working connection reports `remnus: https://www.remnus.com/api/mcp - ✔ Conne
 claude mcp get remnus
 ```
 
-**3. Check the tool count** inside a session with `/mcp`. The panel shows how many tools each server exposes. Remnus publishes **21**: 11 read tools and 10 write tools.
+**3. Check the tool count** inside a session with `/mcp`. The panel shows how many tools each server exposes. Remnus publishes **22**: 11 read tools and 11 write tools.
 
 **4. Run a safe read.** Ask Claude Code:
 

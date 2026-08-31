@@ -14,6 +14,7 @@ import {
   getRelatedPages,
 } from '@/lib/services/workspace';
 import { prepareContextPack } from '@/lib/services/contextPack';
+import { listPageComments } from '@/lib/services/comments';
 import { logActivity, type TokenContext } from '../context';
 
 export function registerReadTools(server: McpServer, ctx: TokenContext) {
@@ -142,6 +143,7 @@ export function registerReadTools(server: McpServer, ctx: TokenContext) {
       inputSchema: {
         pageId: z.string().describe('The workspace item ID or database row ID'),
         mode: z.enum(['full', 'outline']).optional().default('full').describe('"full" (default) returns the whole markdown body; "outline" returns only headings + the first line of each section — use it to skim long pages cheaply, then re-fetch with "full" if needed'),
+        includeComments: z.boolean().optional().default(false).describe('Include the page\'s comment thread (default false, so ordinary reads stay cheap)'),
       },
       outputSchema: z.object({
         id: z.string(),
@@ -154,15 +156,27 @@ export function registerReadTools(server: McpServer, ctx: TokenContext) {
         mode: z.string().optional().describe('"outline" when collapsed'),
         fullContentChars: z.number().optional().describe('Full body size in chars (outline mode) — gauge whether a "full" fetch is worth it'),
         recurrence: z.any().optional().describe('Present when this row is one occurrence of a repeating series: seriesId, occurrenceDate, detached, rule, occurrences'),
+        comments: z.array(z.object({
+          id: z.string(),
+          body: z.string(),
+          kind: z.string().describe('note | closure'),
+          authorKind: z.string().describe('human | agent'),
+          authorLabel: z.string(),
+          createdAt: z.any(),
+        })).optional().describe('Present only when includeComments is true'),
       }).passthrough(),
       annotations: { title: 'Get page', readOnlyHint: true, openWorldHint: false },
     },
-    async ({ pageId, mode }) => {
+    async ({ pageId, mode, includeComments }) => {
       try {
         const page = await getAnyPageById(ctx.workspaceId, pageId);
-        const payload = mode === 'outline' && page.content
+        const payload: Record<string, unknown> = mode === 'outline' && page.content
           ? { ...page, content: buildContentOutline(page.content), mode: 'outline', fullContentChars: page.content.length }
           : page;
+        if (includeComments) {
+          const comments = await listPageComments(pageId);
+          payload.comments = comments.map(({ authorUserId: _authorUserId, authorImage: _authorImage, ...c }) => c);
+        }
         const text = JSON.stringify(payload);
         await logActivity(ctx, 'get_page', 'success', 'page', pageId, text);
         return { content: [{ type: 'text' as const, text }], structuredContent: payload };

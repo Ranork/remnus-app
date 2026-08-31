@@ -52,7 +52,7 @@ Strict; write scope, yetkilendirme veya yıkıcı işlem onayının yerini almaz
 *   **Rate limit:** Token başına dakikada 60 istek.
 *   **İzlenebilirlik (Audit Log):** Her tool çağrısı (hangi sayfa okundu, hangi property değiştirildi) workspace audit log'una yazılır.
 
-### 21 MCP Tool (Ajanların Yetenekleri)
+### 22 MCP Tool (Ajanların Yetenekleri)
 
 | Tool | Scope | Ne Yapar (Ajanlar İçin) |
 |---|---|---|
@@ -75,6 +75,7 @@ Strict; write scope, yetkilendirme veya yıkıcı işlem onayının yerini almaz
 | `create_database` | write | Sıfırdan şemalı yeni bir hafıza tablosu/iş akışı kurma |
 | `update_database_schema` | write | Veritabanına yeni tipli kolonlar ekleme/çıkarma |
 | `create/update/delete_database_view` | write | İnsanların görmesi için tablo/kanban görünümleri yaratma ve yönetme |
+| `add_comment` | write | Sayfa/satıra, içeriğinden ayrı bir akışta çalışma notu veya kapanış notu ekleme |
 
 ### 6 MCP Resource (Ucuz Context Kanalları)
 Ajanların hızlıca oryantasyon sağlaması için URI üzerinden abone olabildiği veriler:
@@ -120,7 +121,7 @@ Planlar insan sayısından ziyade ajan yoğunluğuna göre ölçeklenir: **Free 
 |---|---|
 | Kategori | Human-Agent Collaborative Workspace |
 | MCP endpoint | `https://www.remnus.com/api/mcp` |
-| Tool / Resource / Prompt | 21 / 6 / 7 |
+| Tool / Resource / Prompt | 22 / 6 / 7 |
 | Auth Modeli | Agent-First: OAuth 2.1 + PKCE, PAT |
 | Güvenlik/Güven | Tam Kapsamlı Workspace Audit Log |
 | Lisans | AGPL-3.0 |

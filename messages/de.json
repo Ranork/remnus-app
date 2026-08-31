@@ -934,6 +934,18 @@
       "cancel": "Abbrechen"
     }
   },
+  "Comments": {
+    "title": "Kommentare",
+    "empty": "Noch keine Kommentare",
+    "placeholder": "Schreibe einen Kommentar…",
+    "submit": "Kommentieren",
+    "byAgent": "von {name} (Agent)",
+    "closureLabel": "Abschluss",
+    "deleteConfirm": "Diesen Kommentar löschen?",
+    "tooLong": "Kommentar ist zu lang (max. 4000 Zeichen)",
+    "delete": "Löschen",
+    "deleteCancel": "Abbrechen"
+  },
   "IconPicker": {
     "title": "Symbol",
     "tabEmoji": "Emoji",
@@ -1147,7 +1159,7 @@
     "bridgeSetupStripTitle": "Keine API-Schlüssel.",
     "bridgeSetupStripBody": "Melden Sie sich einmal per OAuth an, direkt aus Ihrem Editor — kein Token zum Kopieren, Einfügen oder Rotieren.",
     "bridgeToolsSnum": "06 / MCP",
-    "bridgeToolsH2Part1": "21 Tools, 6 Ressourcen & 7 Prompts —",
+    "bridgeToolsH2Part1": "22 Tools, 6 Ressourcen & 7 Prompts —",
     "bridgeToolsH2Accent": "Alle",
     "bridgeToolsH2Part2": "verfügbar.",
     "bridgeToolsSubhead": "Alles, was du in der Benutzeroberfläche tun kannst, kann auch deine KI. Dieselbe Authentifizierung, dieselben Bereiche, dasselbe Audit-Log.",
@@ -1189,7 +1201,7 @@
     "bridgePricingSelfPrice": "$0",
     "bridgePricingSelfF1": "Unbegrenzte Arbeitsbereiche & Seiten",
     "bridgePricingSelfF2": "Alle Ansichten & Datenbanken",
-    "bridgePricingSelfF3": "Voller MCP-Zugriff (21 Tools)",
+    "bridgePricingSelfF3": "Voller MCP-Zugriff (22 Tools)",
     "bridgePricingSelfF4": "8 Sprachen integriert",
     "bridgePricingSelfF5": "Keine Cloud oder Account nötig",
     "bridgePricingSelfCta": "Auf GitHub ansehen",

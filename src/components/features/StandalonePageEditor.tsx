@@ -14,6 +14,7 @@ import ShareModal from '@/components/share/ShareModal';
 import { PageMarkdownDialog } from './PageMarkdownDialog';
 import PageBacklinksPanel from './PageBacklinksPanel';
 import KnowledgeContextPanel from './KnowledgeContextPanel';
+import PageCommentsPanel from './PageCommentsPanel';
 import { useTabNav } from '@/components/providers/TabsContext';
 import { tabKeys } from './tabs/keys';
 import type { WorkspaceItemRow } from '@/lib/actions/workspace';
@@ -313,6 +314,11 @@ export default function StandalonePageEditor({
           />
         </div>
       </div>
+
+      {/* Comments — directly under the title, above the body (standalone pages
+          have no attributes section, so this is the closest equivalent to
+          PageEditor's "right under the attributes" placement). */}
+      <PageCommentsPanel workspaceId={item.workspaceId} pageId={item.id} />
 
       <BlockEditor
         ref={editorRef}

@@ -19,7 +19,13 @@ import { getContextPolicy } from '@/lib/services/knowledge';
 
 const TOKEN_PREFIX = process.env.MCP_TOKEN_PREFIX ?? 'rmns';
 
-async function verifyBearerToken(authHeader: string | null): Promise<TokenContext | null> {
+// RFC 6750 §3: `error="invalid_token"` belongs on the challenge only when a credential
+// WAS presented and rejected (expired, unknown, malformed) — it tells a spec-compliant
+// client to retry with a refresh rather than fall back to a full re-auth. A request with
+// no Authorization header at all is `no_credential` and gets a bare challenge instead.
+type AuthFailure = 'no_credential' | 'invalid_token';
+
+async function verifyBearerToken(authHeader: string | null): Promise<TokenContext | AuthFailure> {
   console.log('[mcp/auth] enter', {
     hasHeader: !!authHeader,
     headerPreview: authHeader ? authHeader.slice(0, 20) + '...' : null,
@@ -28,20 +34,20 @@ async function verifyBearerToken(authHeader: string | null): Promise<TokenContex
   const match = authHeader?.match(/^Bearer\s+(.+)$/i);
   if (!match) {
     console.error('[mcp/auth] no_bearer_match', { headerPreview: authHeader?.slice(0, 30) ?? null });
-    return null;
+    return 'no_credential';
   }
   const token = match[1];
 
   const parts = token.split('_');
   if (parts.length < 3) {
     console.error('[mcp/auth] bad_token_shape', { partsLen: parts.length, tokenPreview: token.slice(0, 12) });
-    return null;
+    return 'invalid_token';
   }
   const [scheme, prefix8, ...secretParts] = parts;
   const secret = secretParts.join('_');
   if (!prefix8 || !secret) {
     console.error('[mcp/auth] empty_prefix_or_secret', { scheme, hasPrefix: !!prefix8, hasSecret: !!secret });
-    return null;
+    return 'invalid_token';
   }
 
   console.log('[mcp/auth] parsed', { scheme, prefix8 });
@@ -56,15 +62,15 @@ async function verifyBearerToken(authHeader: string | null): Promise<TokenContex
 
     if (!row) {
       console.error('[mcp/auth] oauth_token_not_found', { prefix: prefix8 });
-      return null;
+      return 'invalid_token';
     }
     if (!await bcrypt.compare(secret, row.tokenHash)) {
       console.error('[mcp/auth] oauth_token_hash_mismatch', { prefix: prefix8 });
-      return null;
+      return 'invalid_token';
     }
     if (row.expiresAt.getTime() < Date.now()) {
       console.error('[mcp/auth] oauth_token_expired', { prefix: prefix8, expiresAt: row.expiresAt });
-      return null;
+      return 'invalid_token';
     }
 
     console.log('[mcp/auth] oauth_token_ok', { prefix: prefix8, scope: row.scope });
@@ -74,7 +80,7 @@ async function verifyBearerToken(authHeader: string | null): Promise<TokenContex
   // Personal access token (rmns_ prefix)
   if (scheme !== TOKEN_PREFIX) {
     console.error('[mcp/auth] unknown_scheme', { scheme, expectedPat: TOKEN_PREFIX });
-    return null;
+    return 'invalid_token';
   }
 
   const [row] = await db
@@ -83,9 +89,9 @@ async function verifyBearerToken(authHeader: string | null): Promise<TokenContex
     .where(and(eq(agentTokens.tokenPrefix, prefix8), isNull(agentTokens.revokedAt)))
     .limit(1);
 
-  if (!row) return null;
-  if (!await bcrypt.compare(secret, row.tokenHash)) return null;
-  if (row.expiresAt && row.expiresAt.getTime() < Date.now()) return null;
+  if (!row) return 'invalid_token';
+  if (!await bcrypt.compare(secret, row.tokenHash)) return 'invalid_token';
+  if (row.expiresAt && row.expiresAt.getTime() < Date.now()) return 'invalid_token';
 
   db.update(agentTokens).set({ lastUsedAt: new Date() }).where(eq(agentTokens.id, row.id)).catch(() => {});
 
@@ -184,18 +190,22 @@ async function authenticate(req: Request): Promise<TokenContext | Response> {
   const reqUrl = new URL(req.url);
   const base = `${reqUrl.protocol}//${reqUrl.host}`;
 
-  const ctx = await verifyBearerToken(req.headers.get('Authorization'));
-  if (!ctx) {
+  const result = await verifyBearerToken(req.headers.get('Authorization'));
+  if (result === 'no_credential' || result === 'invalid_token') {
+    const resourceMetadata = `resource_metadata="${base}/.well-known/oauth-protected-resource"`;
+    const challenge = result === 'invalid_token'
+      ? `Bearer error="invalid_token", error_description="The access token is missing, expired, or invalid", realm="${base}/api/mcp", ${resourceMetadata}`
+      : `Bearer realm="${base}/api/mcp", ${resourceMetadata}`;
     return new Response(JSON.stringify({ error: 'Unauthorized' }), {
       status: 401,
       headers: {
         'Content-Type': 'application/json',
-        'WWW-Authenticate': `Bearer realm="${base}/api/mcp", resource_metadata="${base}/.well-known/oauth-protected-resource"`,
+        'WWW-Authenticate': challenge,
         ...MCP_HEADERS,
       },
     });
   }
-  return ctx;
+  return result;
 }
 
 async function handleMcpRequest(req: Request): Promise<Response> {

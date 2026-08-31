@@ -2,7 +2,7 @@ export const runtime = 'nodejs';
 
 import { db } from '@/db';
 import { oauthAuthCodes, oauthAccessTokens, oauthClients, users } from '@/db/schema';
-import { eq, and, isNull } from 'drizzle-orm';
+import { eq } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
 import { randomBytes, createHash, randomUUID } from 'crypto';
 import { checkCanAddAgent } from '@/lib/services/billing';
@@ -11,6 +11,28 @@ import { maybeSendAgentConnectedEmail } from '@/lib/email/lifecycle';
 
 const ACCESS_TOKEN_TTL_MS  = 60 * 60 * 1000;          // 1 hour
 const REFRESH_TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
+
+// Refresh tokens rotate on every use (OAuth 2.1 §4.13.2) — the old row is deliberately
+// left unusable. A client with multiple concurrent instances (or a retry racing a prior
+// success) can legitimately present that same now-rotated token again a moment later;
+// without this, the loser of that race gets a hard failure and, per the incident this
+// grace window was built for, falls back to its now-revoked access token too — the
+// "session died mid-way" symptom. REFRESH_REPLAY_GRACE_MS bounds how long a reused
+// refresh token is treated as a benign race instead of theft. Best-effort, in-memory,
+// per-instance (same tradeoff as the MCP route's rate limiter) — a cache miss inside the
+// window still falls through to a plain invalid_grant, never to revoking anything, so a
+// miss is never worse than today; only a genuine post-window reuse revokes the chain.
+const REFRESH_REPLAY_GRACE_MS = 45_000;
+type CachedRotation = { accessToken: string; refreshToken: string; scope: string; cachedAt: number };
+const recentRotations = new Map<string, CachedRotation>();
+
+function cacheRotation(oldRowId: string, entry: Omit<CachedRotation, 'cachedAt'>): void {
+  const now = Date.now();
+  for (const [key, cached] of recentRotations) {
+    if (now - cached.cachedAt > REFRESH_REPLAY_GRACE_MS) recentRotations.delete(key);
+  }
+  recentRotations.set(oldRowId, { ...entry, cachedAt: now });
+}
 
 function oauthError(code: string, description: string, status = 400) {
   return Response.json(
@@ -171,6 +193,26 @@ async function handleAuthorizationCode(params: URLSearchParams): Promise<Respons
   });
 }
 
+// Walks replacedByTokenId forward from a revoked row to the current active head of its
+// rotation chain, then revokes that head too (no-op if already revoked, or if the row
+// predates this migration and carries no successor pointer — legacy rows fall back to
+// today's plain invalid_grant with nothing further touched).
+async function revokeRotationChain(startRow: typeof oauthAccessTokens.$inferSelect): Promise<void> {
+  let current = startRow;
+  while (current.replacedByTokenId) {
+    const [next] = await db
+      .select()
+      .from(oauthAccessTokens)
+      .where(eq(oauthAccessTokens.id, current.replacedByTokenId))
+      .limit(1);
+    if (!next) break;
+    current = next;
+  }
+  if (!current.revokedAt) {
+    await db.update(oauthAccessTokens).set({ revokedAt: new Date() }).where(eq(oauthAccessTokens.id, current.id));
+  }
+}
+
 async function handleRefreshToken(params: URLSearchParams): Promise<Response> {
   const refreshToken = params.get('refresh_token');
   const clientId     = params.get('client_id');
@@ -186,10 +228,12 @@ async function handleRefreshToken(params: URLSearchParams): Promise<Response> {
   const [, rPrefix, ...secretParts] = parts;
   const rSecret = secretParts.join('_');
 
+  // Not filtered by revokedAt here (unlike before) — an already-rotated row must still be
+  // found so its reuse can be told apart as a grace-window replay vs. stale theft below.
   const [row] = await db
     .select()
     .from(oauthAccessTokens)
-    .where(and(eq(oauthAccessTokens.refreshTokenPrefix, rPrefix), isNull(oauthAccessTokens.revokedAt)))
+    .where(eq(oauthAccessTokens.refreshTokenPrefix, rPrefix))
     .limit(1);
 
   if (!row || !row.refreshTokenHash) return oauthError('invalid_grant', 'Refresh token not found');
@@ -200,13 +244,36 @@ async function handleRefreshToken(params: URLSearchParams): Promise<Response> {
   const refreshExpiry = new Date(row.createdAt.getTime() + REFRESH_TOKEN_TTL_MS);
   if (refreshExpiry.getTime() < Date.now()) return oauthError('invalid_grant', 'Refresh token expired');
 
-  // Rotate: revoke old, issue new pair
-  await db.update(oauthAccessTokens).set({ revokedAt: new Date() }).where(eq(oauthAccessTokens.id, row.id));
+  if (row.revokedAt) {
+    const withinGrace = !!row.replacedAt && Date.now() - row.replacedAt.getTime() <= REFRESH_REPLAY_GRACE_MS;
+    if (withinGrace) {
+      const cached = recentRotations.get(row.id);
+      if (cached) {
+        return tokenResponse({
+          access_token:  cached.accessToken,
+          token_type:    'Bearer',
+          expires_in:    ACCESS_TOKEN_TTL_MS / 1000,
+          refresh_token: cached.refreshToken,
+          scope:         cached.scope,
+        });
+      }
+      // Cache miss (different serverless instance, or cold start) — fail plainly without
+      // touching the active chain, same as today. Only a reuse OUTSIDE the grace window
+      // (below) is treated as theft.
+      return oauthError('invalid_grant', 'Refresh token already used');
+    }
+    await revokeRotationChain(row);
+    return oauthError('invalid_grant', 'Refresh token already used');
+  }
 
+  // Rotate: issue the new pair first, then point the old row at it — cacheRotation needs
+  // the new row's id before the old row is marked revoked.
   const tokens = await generateTokenPair();
   const now = new Date();
+  const newId = randomUUID();
 
   await db.insert(oauthAccessTokens).values({
+    id:                 newId,
     tokenPrefix:        tokens.accessPrefix,
     tokenHash:          tokens.accessHash,
     refreshTokenPrefix: tokens.refreshPrefix,
@@ -221,6 +288,12 @@ async function handleRefreshToken(params: URLSearchParams): Promise<Response> {
     expiresAt:          new Date(now.getTime() + ACCESS_TOKEN_TTL_MS),
     createdAt:          now,
   });
+
+  await db.update(oauthAccessTokens)
+    .set({ revokedAt: now, replacedByTokenId: newId, replacedAt: now })
+    .where(eq(oauthAccessTokens.id, row.id));
+
+  cacheRotation(row.id, { accessToken: tokens.accessToken, refreshToken: tokens.refreshToken, scope: row.scope });
 
   return tokenResponse({
     access_token:  tokens.accessToken,

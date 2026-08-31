@@ -34,7 +34,7 @@ This does not let an MCP server control local files, shell commands, or Git. Rep
 
 - **Pages** — Markdown editor with slash commands, nested sub-pages, and icons
 - **Databases** — Customizable columns, Table / Kanban / Calendar views, filters, sorts
-- **MCP Server** — 21 tools + 6 resources + 7 prompts over stateless Streamable HTTP
+- **MCP Server** — 22 tools + 6 resources + 7 prompts over stateless Streamable HTTP
 - **OKF-native context** — Portable knowledge metadata, exact-revision reviews, Context Pack v2, and Smart/Strict MCP policies
 - **Agent auth** — One-click OAuth 2.1 + PKCE (RFC 7591 dynamic registration) for editors, or scoped read/write personal access tokens for headless agents
 - **Multi-workspace** — Invite members, role-based access (owner / member / viewer)
@@ -152,6 +152,7 @@ Swap `--client` for `cursor`, `vscode`, `codex`, `windsurf`, etc. Either way, th
 | `create_database_view` | write | Add a table/kanban/calendar view |
 | `update_database_view` | write | Rename a view or patch its config |
 | `delete_database_view` | write | Delete a saved view (requires `confirm: true`) |
+| `add_comment` | write | Add a comment to a page or row (agent comments are append-only) |
 
 ## Tech Stack
 
