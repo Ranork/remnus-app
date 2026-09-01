@@ -165,7 +165,7 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
       const contextError = await requireContext(ctx, contextRunId, 'update_page', pageId);
       if (contextError) return contextError;
       try {
-        await updatePageById(ctx.workspaceId, pageId, { title, content, properties }, { tokenId: ctx.tokenId });
+        await updatePageById(ctx.workspaceId, pageId, { title, content, properties }, { tokenId: ctx.tokenId }, agentActor(ctx));
         const knowledgeCaptured = await recordGeneratedKnowledge(ctx.workspaceId, pageId, actorId(ctx), knowledge).then(() => true).catch(() => false);
 
         // Reported, never thrown: the field update above already landed, so a
@@ -225,7 +225,7 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
       const contextError = await requireContext(ctx, contextRunId, 'bulk_update_pages');
       if (contextError) return contextError;
       try {
-        const results = await bulkUpdatePages(ctx.workspaceId, updates, { tokenId: ctx.tokenId });
+        const results = await bulkUpdatePages(ctx.workspaceId, updates, { tokenId: ctx.tokenId }, agentActor(ctx));
         await Promise.allSettled(updates.map(update => recordGeneratedKnowledge(ctx.workspaceId, update.pageId, actorId(ctx))));
         const text = JSON.stringify(results);
         await logActivity(ctx, 'bulk_update_pages', 'success', undefined, undefined, text);

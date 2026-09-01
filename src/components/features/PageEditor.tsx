@@ -2,7 +2,7 @@
 import { useState, useMemo, useEffect, useRef, useCallback, forwardRef, useImperativeHandle } from 'react';
 import { updatePageContent, updatePageProperties, duplicatePage, deletePage, updatePageIcon } from '@/lib/actions/page';
 import { updateDatabaseSchema } from '@/lib/actions/database';
-import { ArrowLeft, X, Check, ChevronDown, MoreHorizontal, Trash2, Copy, Smile, ArrowLeftRight, Globe, CheckSquare, Square, ExternalLink, Plus, FileCode2 } from 'lucide-react';
+import { ArrowLeft, X, Check, ChevronDown, MoreHorizontal, Trash2, Copy, Smile, ArrowLeftRight, Globe, CheckSquare, Square, ExternalLink, Plus, FileCode2, History } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
@@ -16,6 +16,7 @@ import SaveStatus, { type SaveState } from './SaveStatus';
 import { ConfirmDialog } from './ConfirmDialog';
 import ShareModal from '@/components/share/ShareModal';
 import { PageMarkdownDialog } from './PageMarkdownDialog';
+import { PageHistoryModal } from './PageHistoryModal';
 import PageBacklinksPanel from './PageBacklinksPanel';
 import KnowledgeContextPanel from './KnowledgeContextPanel';
 import PageCommentsPanel from './PageCommentsPanel';
@@ -131,6 +132,7 @@ const PageEditor = forwardRef<PageEditorHandle, PageEditorProps>(function PageEd
   const iconButtonRef = useRef<HTMLButtonElement>(null);
   const [showShareModal, setShowShareModal] = useState(false);
   const [markdownDraft, setMarkdownDraft] = useState<string | null>(null);
+  const [showHistory, setShowHistory] = useState(false);
 
   type WidthMode = 'narrow' | 'wide' | 'full';
   const [widthMode, setWidthMode] = useState<WidthMode>('full');
@@ -379,6 +381,15 @@ const PageEditor = forwardRef<PageEditorHandle, PageEditorProps>(function PageEd
                   >
                     <FileCode2 size={12} className="text-neutral-500" />
                     {t('markdown.button')}
+                  </button>
+
+                  {/* History — earlier content versions, session+size debounced */}
+                  <button
+                    onClick={(e) => { e.stopPropagation(); setOpenMenu(false); setShowHistory(true); }}
+                    className="w-full px-3 py-1.5 text-xs text-neutral-300 hover:bg-neutral-800 flex items-center gap-2 cursor-pointer transition-colors"
+                  >
+                    <History size={12} className="text-neutral-500" />
+                    {t('history.button')}
                   </button>
 
                   <div className="border-t border-neutral-800 my-1" />
@@ -879,6 +890,15 @@ const PageEditor = forwardRef<PageEditorHandle, PageEditorProps>(function PageEd
           initialMarkdown={markdownDraft}
           onApply={(md) => editorRef.current?.replaceContent(md)}
           onClose={() => setMarkdownDraft(null)}
+        />
+      )}
+      {showHistory && (
+        <PageHistoryModal
+          workspaceId={database.workspaceId}
+          pageId={initialPage.id}
+          currentContent={editorRef.current?.getMarkdown() ?? initialPage.content ?? ''}
+          onRestored={(content) => editorRef.current?.replaceContent(content)}
+          onClose={() => setShowHistory(false)}
         />
       )}
       {showDeleteConfirm && (

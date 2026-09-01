@@ -942,6 +942,14 @@
       "copied": "Copié",
       "apply": "Appliquer",
       "cancel": "Annuler"
+    },
+    "history": {
+      "button": "Historique",
+      "title": "Historique de la page",
+      "empty": "Pas encore de version antérieure.",
+      "restore": "Restaurer cette version",
+      "restoreFailed": "Cette version n'a pas pu être restaurée.",
+      "byAgent": "{name} (agent)"
     }
   },
   "Comments": {

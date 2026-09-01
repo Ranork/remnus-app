@@ -942,6 +942,14 @@
       "copied": "已复制",
       "apply": "应用",
       "cancel": "取消"
+    },
+    "history": {
+      "button": "历史记录",
+      "title": "页面历史",
+      "empty": "暂无早期版本。",
+      "restore": "恢复此版本",
+      "restoreFailed": "无法恢复此版本。",
+      "byAgent": "{name}（智能体）"
     }
   },
   "Comments": {

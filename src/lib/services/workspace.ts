@@ -22,7 +22,7 @@ import {
 } from '@/db/schema';
 import { eq, ne, and, or, like, asc, desc, gte, lte, sql, inArray } from 'drizzle-orm';
 import { syncPageLinks, removePageLinksFor, purgeReferencesTo } from './pageLinks';
-import { snapshotBeforeDelete, type SnapshotActor } from './snapshots';
+import { snapshotBeforeDelete, maybeSnapshotContentUpdate, type SnapshotActor } from './snapshots';
 
 export type { SnapshotActor } from './snapshots';
 
@@ -1072,9 +1072,10 @@ export async function bulkUpdatePages(
   workspaceId: string,
   updates: { pageId: string; title?: string; content?: string; properties?: Record<string, unknown> }[],
   agentCtx?: { tokenId: string },
+  actor?: SnapshotActor,
 ) {
   const results = await Promise.all(
-    updates.map(({ pageId, ...patch }) => updatePageById(workspaceId, pageId, patch, agentCtx)),
+    updates.map(({ pageId, ...patch }) => updatePageById(workspaceId, pageId, patch, agentCtx, actor)),
   );
   return results.map((r, i) => ({ id: updates[i].pageId, updated: r.updated }));
 }
@@ -1767,10 +1768,16 @@ export async function updatePageById(
   itemId: string,
   patch: { title?: string; content?: string; properties?: Record<string, any> },
   agentCtx?: { tokenId: string },
+  /** Versioning-only actor — separate from `agentCtx` (which only feeds the
+   *  unrelated `agentEditedAt`/`agentTokenId` columns and has no display
+   *  name). Undefined means no version is recorded for this write (e.g. the
+   *  OKF import route's post-import link rewrite has no resolvable actor
+   *  and isn't a meaningful edit worth versioning). */
+  actor?: SnapshotActor,
 ) {
   // Try as workspace item first
   const [item] = await db
-    .select({ type: workspaceItems.type, workspaceId: workspaceItems.workspaceId })
+    .select({ type: workspaceItems.type, workspaceId: workspaceItems.workspaceId, title: workspaceItems.title })
     .from(workspaceItems)
     .where(eq(workspaceItems.id, itemId))
     .limit(1);
@@ -1791,6 +1798,22 @@ export async function updatePageById(
       }
     }
     if (patch.content !== undefined && item.type === 'page') {
+      if (actor) {
+        const [current] = await db
+          .select({ content: standalonePages.content })
+          .from(standalonePages)
+          .where(eq(standalonePages.itemId, itemId))
+          .limit(1);
+        await maybeSnapshotContentUpdate({
+          workspaceId, originalId: itemId, itemType: 'page', title: item.title,
+          priorContent: current?.content ?? '', newContent: patch.content,
+          // Human callers here (the write-share editor, `sharing.ts`) still
+          // autosave continuously like the owner's own editor, so they get
+          // the same session+size gate. Agent callers (MCP) never debounce
+          // — every real content change is a discrete deliberate action.
+          changedBy: actor, debounced: actor.kind === 'human',
+        });
+      }
       await db
         .update(standalonePages)
         .set({ content: patch.content, updatedAt: new Date() })
@@ -1802,13 +1825,22 @@ export async function updatePageById(
 
   // Try as DB row (pages table)
   const [page] = await db
-    .select({ databaseId: pages.databaseId, properties: pages.properties })
+    .select({ databaseId: pages.databaseId, properties: pages.properties, title: pages.title, content: pages.content })
     .from(pages)
     .where(eq(pages.id, itemId))
     .limit(1);
 
   if (!page) throw new Error('Page not found');
   await assertDatabaseInWorkspace(page.databaseId, workspaceId);
+
+  if (patch.content !== undefined && actor) {
+    await maybeSnapshotContentUpdate({
+      workspaceId, originalId: itemId, itemType: 'database_row', title: page.title,
+      priorContent: page.content ?? '', newContent: patch.content,
+      // Same human-vs-agent debounce split as the workspace-item branch above.
+      changedBy: actor, debounced: actor.kind === 'human',
+    });
+  }
 
   const updateData: Record<string, any> = { updatedAt: new Date() };
   if (patch.title !== undefined) updateData.title = patch.title;

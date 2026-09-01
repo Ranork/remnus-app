@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 
 import Link from 'next/link';
-import { ChevronLeft, RefreshCw, MoreHorizontal, Globe, ArrowLeftRight, FileCode2 } from 'lucide-react';
+import { ChevronLeft, RefreshCw, MoreHorizontal, Globe, ArrowLeftRight, FileCode2, History } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useQueryClient } from '@tanstack/react-query';
 import { updateStandalonePageContent, updateWorkspaceItemTitle, updateWorkspaceItemIcon } from '@/lib/actions/workspace';
@@ -12,6 +12,7 @@ import IconPicker from './IconPicker';
 import SaveStatus, { type SaveState } from './SaveStatus';
 import ShareModal from '@/components/share/ShareModal';
 import { PageMarkdownDialog } from './PageMarkdownDialog';
+import { PageHistoryModal } from './PageHistoryModal';
 import PageBacklinksPanel from './PageBacklinksPanel';
 import KnowledgeContextPanel from './KnowledgeContextPanel';
 import PageCommentsPanel from './PageCommentsPanel';
@@ -58,6 +59,7 @@ export default function StandalonePageEditor({
   const [openMenu, setOpenMenu] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [markdownDraft, setMarkdownDraft] = useState<string | null>(null);
+  const [showHistory, setShowHistory] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<BlockEditorHandle>(null);
 
@@ -239,6 +241,15 @@ export default function StandalonePageEditor({
                   <FileCode2 size={12} className="text-neutral-500" />
                   {t('markdown.button')}
                 </button>
+
+                {/* History — earlier content versions, session+size debounced */}
+                <button
+                  onClick={() => { setOpenMenu(false); setShowHistory(true); }}
+                  className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-neutral-300 hover:bg-neutral-800 cursor-pointer transition-colors"
+                >
+                  <History size={12} className="text-neutral-500" />
+                  {t('history.button')}
+                </button>
               </div>
             )}
           </div>
@@ -258,6 +269,16 @@ export default function StandalonePageEditor({
             initialMarkdown={markdownDraft}
             onApply={(md) => editorRef.current?.replaceContent(md)}
             onClose={() => setMarkdownDraft(null)}
+          />
+        )}
+
+        {showHistory && (
+          <PageHistoryModal
+            workspaceId={item.workspaceId}
+            pageId={item.id}
+            currentContent={editorRef.current?.getMarkdown() ?? page.content}
+            onRestored={(content) => editorRef.current?.replaceContent(content)}
+            onClose={() => setShowHistory(false)}
           />
         )}
       </div>

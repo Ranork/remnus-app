@@ -8,7 +8,7 @@ import { deleteWorkspaceItem } from './workspace';
 import { publish } from '@/lib/realtime/publish';
 import { isCloudinaryUrl, deleteCloudinaryImage } from '@/lib/cloudinary';
 import { recordDeletionTombstone } from '@/lib/services/workspace';
-import { snapshotBeforeDelete } from '@/lib/services/snapshots';
+import { snapshotBeforeDelete, maybeSnapshotContentUpdate } from '@/lib/services/snapshots';
 import { exdateOccurrenceForPage } from '@/lib/services/recurrence';
 import { syncPageLinks, removePageLinksFor, purgeReferencesTo } from '@/lib/services/pageLinks';
 import { coerceRowValues, extractRowContent, assignOptionColors, type DatabaseColumn } from '@/lib/utils/propertyCoercion';
@@ -174,9 +174,18 @@ export async function getPage(id: string) {
 }
 
 export async function updatePageContent(id: string, content: string) {
-  const page = await db.select({ databaseId: pages.databaseId }).from(pages).where(eq(pages.id, id)).limit(1);
+  const page = await db.select({ databaseId: pages.databaseId, title: pages.title, content: pages.content }).from(pages).where(eq(pages.id, id)).limit(1);
   let workspaceId: string | null = null;
-  if (page[0]) ({ workspaceId } = await assertDatabaseAccess(page[0].databaseId));
+  if (page[0]) {
+    ({ workspaceId } = await assertDatabaseAccess(page[0].databaseId));
+    const user = await getCurrentUser();
+    await maybeSnapshotContentUpdate({
+      workspaceId, originalId: id, itemType: 'database_row', title: page[0].title,
+      priorContent: page[0].content ?? '', newContent: content,
+      changedBy: { kind: 'human', userId: user.id, label: user.name || user.email || 'Someone' },
+      debounced: true,
+    });
+  }
   await db.update(pages).set({ content, updatedAt: new Date() }).where(eq(pages.id, id));
   if (workspaceId) await syncPageLinks(workspaceId, id, 'database_row', content);
 }

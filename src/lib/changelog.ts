@@ -45,6 +45,31 @@ const FIRST_VISIT_WINDOW_DAYS = 7;
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-09-01-page-history',
+    date: '2026-09-01',
+    category: 'new',
+    title: {
+      en: 'Version history for every page',
+      tr: 'Her sayfa için sürüm geçmişi',
+      de: 'Versionsverlauf für jede Seite',
+      es: 'Historial de versiones para cada página',
+      fr: 'Historique des versions pour chaque page',
+      hi: 'हर पेज के लिए वर्जन हिस्ट्री',
+      ru: 'История версий для каждой страницы',
+      zh: '每个页面的版本历史',
+    },
+    summary: {
+      en: 'Every page and row now keeps a short history of earlier versions — open it from the "..." menu to preview or bring back an older one, including edits your AI agents made.',
+      tr: 'Artık her sayfa ve satır, önceki sürümlerinin kısa bir geçmişini tutuyor — "..." menüsünden açıp AI ajanlarınızın yaptığı değişiklikler dahil eski bir sürümü önizleyebilir veya geri getirebilirsiniz.',
+      de: 'Jede Seite und Zeile behält jetzt einen kurzen Verlauf früherer Versionen — öffnen Sie ihn über das „…"-Menü, um eine ältere Version anzusehen oder wiederherzustellen, einschließlich Änderungen Ihrer KI-Agenten.',
+      es: 'Cada página y fila ahora conserva un breve historial de versiones anteriores — ábrelo desde el menú "..." para previsualizar o restaurar una versión anterior, incluidos los cambios hechos por tus agentes de IA.',
+      fr: 'Chaque page et ligne conserve désormais un bref historique de ses versions précédentes — ouvrez-le depuis le menu « ... » pour prévisualiser ou restaurer une version antérieure, y compris les modifications faites par vos agents IA.',
+      hi: 'अब हर पेज और रो पिछले वर्ज़न्स का एक संक्षिप्त इतिहास रखता है — "..." मेनू से खोलकर किसी पुराने वर्ज़न को देख सकते हैं या वापस ला सकते हैं, आपके AI एजेंट्स द्वारा किए बदलाव भी शामिल।',
+      ru: 'Теперь каждая страница и строка хранит краткую историю прежних версий — откройте её из меню «...», чтобы просмотреть или восстановить более раннюю версию, включая изменения ваших ИИ-агентов.',
+      zh: '现在每个页面和行都会保留一份简短的历史版本记录——从"..."菜单打开即可预览或恢复较早的版本，包括你的 AI 代理所做的更改。',
+    },
+  },
+  {
     id: '2026-09-01-bulk-delete-move',
     date: '2026-09-01',
     category: 'new',

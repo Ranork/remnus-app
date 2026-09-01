@@ -13,7 +13,7 @@ import { isCloudinaryUrl, deleteCloudinaryImage } from '@/lib/cloudinary';
 import { checkCanCreateWorkspace } from '@/lib/services/billing';
 import { recordDeletionTombstone, getRelatedPages } from '@/lib/services/workspace';
 import { syncPageLinks, removePageLinksFor, purgeReferencesTo } from '@/lib/services/pageLinks';
-import { snapshotBeforeDelete, type SnapshotActor } from '@/lib/services/snapshots';
+import { snapshotBeforeDelete, maybeSnapshotContentUpdate, type SnapshotActor } from '@/lib/services/snapshots';
 
 export type { RelatedPageRef } from '@/lib/services/workspace';
 
@@ -464,8 +464,18 @@ export async function getStandalonePageByItemId(itemId: string) {
 }
 
 export async function updateStandalonePageContent(itemId: string, content: string) {
-  const item = await db.select({ workspaceId: workspaceItems.workspaceId }).from(workspaceItems).where(eq(workspaceItems.id, itemId)).limit(1);
-  if (item[0]) await assertWorkspaceAccess(item[0].workspaceId);
+  const item = await db.select({ workspaceId: workspaceItems.workspaceId, title: workspaceItems.title }).from(workspaceItems).where(eq(workspaceItems.id, itemId)).limit(1);
+  if (item[0]) {
+    await assertWorkspaceAccess(item[0].workspaceId);
+    const [current] = await db.select({ content: standalonePages.content }).from(standalonePages).where(eq(standalonePages.itemId, itemId)).limit(1);
+    const user = await getCurrentUser();
+    await maybeSnapshotContentUpdate({
+      workspaceId: item[0].workspaceId, originalId: itemId, itemType: 'page', title: item[0].title,
+      priorContent: current?.content ?? '', newContent: content,
+      changedBy: { kind: 'human', userId: user.id, label: user.name || user.email || 'Someone' },
+      debounced: true,
+    });
+  }
 
   await db.update(standalonePages)
     .set({ content, updatedAt: new Date() })

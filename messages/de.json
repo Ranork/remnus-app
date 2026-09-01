@@ -942,6 +942,14 @@
       "copied": "Kopiert",
       "apply": "Anwenden",
       "cancel": "Abbrechen"
+    },
+    "history": {
+      "button": "Verlauf",
+      "title": "Seitenverlauf",
+      "empty": "Noch keine früheren Versionen.",
+      "restore": "Diese Version wiederherstellen",
+      "restoreFailed": "Diese Version konnte nicht wiederhergestellt werden.",
+      "byAgent": "{name} (Agent)"
     }
   },
   "Comments": {

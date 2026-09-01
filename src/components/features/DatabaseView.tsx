@@ -7,12 +7,14 @@ import { useTranslations } from 'next-intl';
 import { createPage, getPage, deletePage, duplicatePage, reorderPages, updatePageProperties } from '@/lib/actions/page';
 import { updateDatabaseViews } from '@/lib/actions/database';
 import { updateWorkspaceItemIcon, updateWorkspaceItemTitle } from '@/lib/actions/workspace';
-import { Plus, Settings, Columns3, Filter, ArrowUpDown, X, Maximize2, Database, ArrowLeftRight, MoreHorizontal, Trash2, Copy, ChevronLeft, RefreshCw, ClipboardList, FileCode2 } from 'lucide-react';
+import { Plus, Settings, Columns3, Filter, ArrowUpDown, X, Maximize2, Database, ArrowLeftRight, MoreHorizontal, Trash2, Copy, ChevronLeft, RefreshCw, ClipboardList, FileCode2, Globe, History } from 'lucide-react';
 import TableLayout from './TableLayout';
 import GroupedTableLayout from './GroupedTableLayout';
 import { ConfirmDialog } from './ConfirmDialog';
 import { BulkRowsDialog } from './BulkRowsDialog';
 import { PageMarkdownDialog } from './PageMarkdownDialog';
+import { PageHistoryModal } from './PageHistoryModal';
+import ShareModal from '@/components/share/ShareModal';
 import KanbanBoard from './KanbanBoard';
 import CalendarView from './CalendarView';
 import { useRecurrenceControls } from './recurrence/useRecurrenceControls';
@@ -292,6 +294,7 @@ export default function DatabaseView({
 }) {
   const t = useTranslations('Database');
   const tPage = useTranslations('Page');
+  const tSharing = useTranslations('Sharing');
   const tWs = useTranslations('Workspace');
   // Schema mutations (new inline option, settings-panel save) only persist server-side
   // and revalidate the route for the NEXT navigation — they never touch this already-
@@ -368,6 +371,8 @@ export default function DatabaseView({
   const [peekScrolled, setPeekScrolled] = useState(false);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [markdownDraft, setMarkdownDraft] = useState<string | null>(null);
+  const [showSharePeek, setShowSharePeek] = useState(false);
+  const [showHistoryPeek, setShowHistoryPeek] = useState(false);
   const peekEditorRef = useRef<PageEditorHandle>(null);
   const [showIconPicker, setShowIconPicker] = useState(false);
   const dbButtonRef = useRef<HTMLButtonElement>(null);
@@ -1493,6 +1498,28 @@ export default function DatabaseView({
                               <span>{tPage('markdown.button')}</span>
                             </button>
                             <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setOpenMenuId(null);
+                                setShowSharePeek(true);
+                              }}
+                              className="w-full px-3 py-2 text-xs text-neutral-300 hover:bg-neutral-800 flex items-center gap-2 cursor-pointer transition-colors border-b border-neutral-850"
+                            >
+                              <Globe size={13} />
+                              <span>{tSharing('shareButton')}</span>
+                            </button>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setOpenMenuId(null);
+                                setShowHistoryPeek(true);
+                              }}
+                              className="w-full px-3 py-2 text-xs text-neutral-300 hover:bg-neutral-800 flex items-center gap-2 cursor-pointer transition-colors border-b border-neutral-850"
+                            >
+                              <History size={13} />
+                              <span>{tPage('history.button')}</span>
+                            </button>
+                            <button
                               onClick={async (e) => {
                                 e.stopPropagation();
                                 setOpenMenuId(null);
@@ -1622,6 +1649,28 @@ export default function DatabaseView({
                             <span>{tPage('markdown.button')}</span>
                           </button>
                           <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setOpenMenuId(null);
+                              setShowSharePeek(true);
+                            }}
+                            className="w-full px-3 py-2 text-xs text-neutral-300 hover:bg-neutral-800 flex items-center gap-2 cursor-pointer transition-colors border-b border-neutral-850"
+                          >
+                            <Globe size={13} />
+                            <span>{tSharing('shareButton')}</span>
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setOpenMenuId(null);
+                              setShowHistoryPeek(true);
+                            }}
+                            className="w-full px-3 py-2 text-xs text-neutral-300 hover:bg-neutral-800 flex items-center gap-2 cursor-pointer transition-colors border-b border-neutral-850"
+                          >
+                            <History size={13} />
+                            <span>{tPage('history.button')}</span>
+                          </button>
+                          <button
                             onClick={async (e) => {
                               e.stopPropagation();
                               setOpenMenuId(null);
@@ -1686,6 +1735,23 @@ export default function DatabaseView({
           initialMarkdown={markdownDraft}
           onApply={(md) => peekEditorRef.current?.replaceContent(md)}
           onClose={() => setMarkdownDraft(null)}
+        />
+      )}
+      {showSharePeek && peekPageId && (
+        <ShareModal
+          pageId={peekPageId}
+          workspaceId={database.workspaceId}
+          isAdmin={false}
+          onClose={() => setShowSharePeek(false)}
+        />
+      )}
+      {showHistoryPeek && peekPageId && (
+        <PageHistoryModal
+          workspaceId={database.workspaceId}
+          pageId={peekPageId}
+          currentContent={peekEditorRef.current?.getMarkdown() ?? peekPage?.content ?? ''}
+          onRestored={(content) => peekEditorRef.current?.replaceContent(content)}
+          onClose={() => setShowHistoryPeek(false)}
         />
       )}
       {confirmDeletePageId && (

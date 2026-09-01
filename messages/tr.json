@@ -963,6 +963,14 @@
       "copied": "Kopyalandı",
       "apply": "Uygula",
       "cancel": "Vazgeç"
+    },
+    "history": {
+      "button": "Geçmiş",
+      "title": "Sayfa Geçmişi",
+      "empty": "Henüz önceki sürüm yok.",
+      "restore": "Bu sürüme dön",
+      "restoreFailed": "Bu sürüm geri yüklenemedi.",
+      "byAgent": "{name} (ajan)"
     }
   },
   "Comments": {

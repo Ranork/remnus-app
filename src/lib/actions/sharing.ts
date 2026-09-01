@@ -242,7 +242,9 @@ export async function updateSharedPageContent(
 
   const { updatePageById } = await import('@/lib/services/workspace');
   try {
-    await updatePageById(share.workspaceId, share.pageId, { content });
+    await updatePageById(share.workspaceId, share.pageId, { content }, undefined, {
+      kind: 'human', userId: session.id, label: session.name || session.email || 'Someone',
+    });
     return {};
   } catch (err) {
     return { error: String(err) };

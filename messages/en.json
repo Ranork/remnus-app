@@ -963,6 +963,14 @@
       "copied": "Copied",
       "apply": "Apply",
       "cancel": "Cancel"
+    },
+    "history": {
+      "button": "History",
+      "title": "Page History",
+      "empty": "No earlier versions yet.",
+      "restore": "Restore this version",
+      "restoreFailed": "This version could not be restored.",
+      "byAgent": "{name} (agent)"
     }
   },
   "Comments": {

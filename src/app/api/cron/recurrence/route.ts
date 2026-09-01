@@ -24,7 +24,7 @@ import { db } from '@/db';
 import { recurrenceSeries } from '@/db/schema';
 import { defaultHorizon } from '@/lib/recurrence/rule';
 import { materializeSeries } from '@/lib/services/recurrence';
-import { purgeExpiredSnapshots } from '@/lib/services/snapshots';
+import { purgeExpiredSnapshots, enforceWorkspaceSnapshotByteCaps } from '@/lib/services/snapshots';
 
 /** Bounded so one run always finishes inside `maxDuration`. Series whose
  *  horizon is already far enough out are filtered in-process and cost nothing,
@@ -65,11 +65,13 @@ export async function GET(req: NextRequest) {
     }
   }
 
-  // Trash cleanup rides along on this same daily cron rather than getting its
-  // own scheduler (`.ai/FEATURE_BULK_AND_TRASH.md` explicitly says reuse an
-  // existing daily job) — this is the only maintenance-only cron of the three
-  // (emails/prospect-gifts are both product-facing lifecycle jobs).
+  // Trash + version-history cleanup rides along on this same daily cron
+  // rather than getting its own scheduler (`.ai/FEATURE_BULK_AND_TRASH.md`
+  // explicitly says reuse an existing daily job) — this is the only
+  // maintenance-only cron of the three (emails/prospect-gifts are both
+  // product-facing lifecycle jobs).
   const snapshotsPurged = await purgeExpiredSnapshots().catch(() => 0);
+  const snapshotsEvictedByByteCap = await enforceWorkspaceSnapshotByteCaps().catch(() => 0);
 
   return NextResponse.json({
     ok: true,
@@ -79,5 +81,6 @@ export async function GET(req: NextRequest) {
     cardsCreated: created,
     failed,
     snapshotsPurged,
+    snapshotsEvictedByByteCap,
   });
 }
