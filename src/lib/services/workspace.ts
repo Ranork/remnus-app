@@ -22,6 +22,9 @@ import {
 } from '@/db/schema';
 import { eq, ne, and, or, like, asc, desc, gte, lte, sql, inArray } from 'drizzle-orm';
 import { syncPageLinks, removePageLinksFor, purgeReferencesTo } from './pageLinks';
+import { snapshotBeforeDelete, type SnapshotActor } from './snapshots';
+
+export type { SnapshotActor } from './snapshots';
 
 // ── Cursor pagination utilities ───────────────────────────────────────────────
 
@@ -1219,14 +1222,28 @@ async function deleteWorkspaceItemAndDescendants(
   itemId: string,
   type: 'page' | 'database',
   title: string,
+  meta: { parentId: string | null; icon: string | null; iconColor: string | null; sortOrder: number },
+  actor: SnapshotActor,
 ) {
   const children = await db
-    .select({ id: workspaceItems.id, type: workspaceItems.type, title: workspaceItems.title })
+    .select({
+      id: workspaceItems.id,
+      type: workspaceItems.type,
+      title: workspaceItems.title,
+      parentId: workspaceItems.parentId,
+      icon: workspaceItems.icon,
+      iconColor: workspaceItems.iconColor,
+      sortOrder: workspaceItems.sortOrder,
+    })
     .from(workspaceItems)
     .where(eq(workspaceItems.parentId, itemId));
 
   for (const child of children) {
-    await deleteWorkspaceItemAndDescendants(workspaceId, child.id, child.type, child.title);
+    await deleteWorkspaceItemAndDescendants(
+      workspaceId, child.id, child.type, child.title,
+      { parentId: child.parentId, icon: child.icon, iconColor: child.iconColor, sortOrder: child.sortOrder },
+      actor,
+    );
   }
 
   // Every id another page could have linked to: a database is reachable by its
@@ -1236,17 +1253,45 @@ async function deleteWorkspaceItemAndDescendants(
 
   if (type === 'database') {
     const [dbRow] = await db
-      .select({ id: databases.id })
+      .select({ id: databases.id, schema: databases.schema })
       .from(databases)
       .where(eq(databases.itemId, itemId))
       .limit(1);
     if (dbRow) {
       deadIds.push(dbRow.id);
-      const rows = await db.select({ id: pages.id }).from(pages).where(eq(pages.databaseId, dbRow.id));
-      for (const r of rows) deadIds.push(r.id);
+      const rows = await db
+        .select({
+          id: pages.id, title: pages.title, content: pages.content, properties: pages.properties,
+          icon: pages.icon, iconColor: pages.iconColor, sortOrder: pages.sortOrder,
+        })
+        .from(pages)
+        .where(eq(pages.databaseId, dbRow.id));
+      for (const r of rows) {
+        deadIds.push(r.id);
+        await snapshotBeforeDelete({
+          workspaceId, originalId: r.id, itemType: 'database_row', title: r.title,
+          content: r.content, properties: r.properties, icon: r.icon, iconColor: r.iconColor,
+          databaseId: dbRow.id, sortOrder: r.sortOrder, deletedBy: actor,
+        });
+      }
+      await snapshotBeforeDelete({
+        workspaceId, originalId: itemId, itemType: 'database', title,
+        schema: dbRow.schema as any[], icon: meta.icon, iconColor: meta.iconColor,
+        parentId: meta.parentId, sortOrder: meta.sortOrder, databaseId: dbRow.id, deletedBy: actor,
+      });
     }
     await db.delete(databases).where(eq(databases.itemId, itemId));
   } else {
+    const [content] = await db
+      .select({ content: standalonePages.content })
+      .from(standalonePages)
+      .where(eq(standalonePages.itemId, itemId))
+      .limit(1);
+    await snapshotBeforeDelete({
+      workspaceId, originalId: itemId, itemType: 'page', title,
+      content: content?.content, icon: meta.icon, iconColor: meta.iconColor,
+      parentId: meta.parentId, sortOrder: meta.sortOrder, deletedBy: actor,
+    });
     await db.delete(standalonePages).where(eq(standalonePages.itemId, itemId));
   }
 
@@ -1258,21 +1303,32 @@ async function deleteWorkspaceItemAndDescendants(
   await removePageLinksFor(deadIds);
 }
 
-export async function deleteItemFromWorkspace(workspaceId: string, itemId: string) {
+export async function deleteItemFromWorkspace(workspaceId: string, itemId: string, actor: SnapshotActor) {
   const [item] = await db
-    .select({ workspaceId: workspaceItems.workspaceId, type: workspaceItems.type, title: workspaceItems.title })
+    .select({
+      workspaceId: workspaceItems.workspaceId, type: workspaceItems.type, title: workspaceItems.title,
+      parentId: workspaceItems.parentId, icon: workspaceItems.icon, iconColor: workspaceItems.iconColor,
+      sortOrder: workspaceItems.sortOrder,
+    })
     .from(workspaceItems)
     .where(eq(workspaceItems.id, itemId))
     .limit(1);
 
   if (item) {
     if (item.workspaceId !== workspaceId) throw new Error('Access denied');
-    await deleteWorkspaceItemAndDescendants(workspaceId, itemId, item.type, item.title);
+    await deleteWorkspaceItemAndDescendants(
+      workspaceId, itemId, item.type, item.title,
+      { parentId: item.parentId, icon: item.icon, iconColor: item.iconColor, sortOrder: item.sortOrder },
+      actor,
+    );
     return { deleted: true, type: item.type as 'page' | 'database' };
   }
 
   const [page] = await db
-    .select({ databaseId: pages.databaseId, title: pages.title })
+    .select({
+      databaseId: pages.databaseId, title: pages.title, content: pages.content, properties: pages.properties,
+      icon: pages.icon, iconColor: pages.iconColor, sortOrder: pages.sortOrder,
+    })
     .from(pages)
     .where(eq(pages.id, itemId))
     .limit(1);
@@ -1283,11 +1339,36 @@ export async function deleteItemFromWorkspace(workspaceId: string, itemId: strin
   // occurrence has to be recorded on its rule, or the next materialization
   // recreates it and the agent's delete silently undoes itself.
   await exdateOccurrenceForPage(itemId).catch(() => {});
+  await snapshotBeforeDelete({
+    workspaceId, originalId: itemId, itemType: 'database_row', title: page.title,
+    content: page.content, properties: page.properties, icon: page.icon, iconColor: page.iconColor,
+    databaseId: page.databaseId, sortOrder: page.sortOrder, deletedBy: actor,
+  });
   await db.delete(pages).where(eq(pages.id, itemId));
   await recordDeletionTombstone(workspaceId, itemId, 'database_row', page.title);
   await purgeReferencesTo([itemId]);
   await removePageLinksFor(itemId);
   return { deleted: true, type: 'db-row' as const };
+}
+
+// Batch counterpart for the MCP `bulk_delete_pages` tool. Uses Promise.allSettled
+// (like `getPagesByIds`) rather than `bulkUpdatePages`'s Promise.all — one bad id
+// must not sink the rest of the batch, and the caller gets a per-item result
+// instead of an all-or-nothing error (spec: the exact failure mode this feature
+// exists to fix — see `.ai/FEATURE_BULK_AND_TRASH.md` §A.1).
+export async function bulkDeleteItemsFromWorkspace(
+  workspaceId: string,
+  itemIds: string[],
+  actor: SnapshotActor,
+): Promise<{ id: string; ok: boolean; error?: string }[]> {
+  const settled = await Promise.allSettled(
+    itemIds.map((id) => deleteItemFromWorkspace(workspaceId, id, actor)),
+  );
+  return settled.map((result, i) => (
+    result.status === 'fulfilled'
+      ? { id: itemIds[i], ok: true }
+      : { id: itemIds[i], ok: false, error: String(result.reason?.message ?? result.reason) }
+  ));
 }
 
 export async function moveItemInWorkspace(
@@ -1317,6 +1398,104 @@ export async function moveItemInWorkspace(
     .where(eq(workspaceItems.id, itemId));
 
   return { moved: true };
+}
+
+// Batch counterpart for the MCP `bulk_move_items` tool, sidebar-reparent mode
+// (mirrors move_item's semantics, batched, same per-item result contract as
+// `bulkDeleteItemsFromWorkspace`). Workspace items (pages/databases) only —
+// database rows go through `bulkMoveRowsToDatabase` instead.
+export async function bulkMoveItemsInWorkspace(
+  workspaceId: string,
+  itemIds: string[],
+  newParentId: string | null,
+): Promise<{ id: string; ok: boolean; error?: string }[]> {
+  const settled = await Promise.allSettled(
+    itemIds.map((id) => moveItemInWorkspace(workspaceId, id, newParentId)),
+  );
+  return settled.map((result, i) => (
+    result.status === 'fulfilled'
+      ? { id: itemIds[i], ok: true }
+      : { id: itemIds[i], ok: false, error: String(result.reason?.message ?? result.reason) }
+  ));
+}
+
+// Cross-database row move (`.ai/FEATURE_BULK_AND_TRASH.md` §A.3): moving a row
+// to a DIFFERENT database is a distinct operation from `moveItemInWorkspace`'s
+// sidebar reparenting, because the target database's schema may not match the
+// source's. Decision: reject the WHOLE call up front if it doesn't, naming the
+// columns that don't line up — never silently drop a property. This is a
+// stricter check than the bulk-paste-import path (`propertyCoercion.ts`'s
+// `coerceRowValues`, which auto-appends unknown option values) — that
+// leniency is exactly what this feature must not do.
+export async function bulkMoveRowsToDatabase(
+  workspaceId: string,
+  itemIds: string[],
+  targetDatabaseId: string,
+): Promise<{ id: string; ok: boolean; error?: string }[]> {
+  const targetDbId = await assertDatabaseInWorkspace(targetDatabaseId, workspaceId);
+  const [targetRecord] = await db
+    .select({ schema: databases.schema })
+    .from(databases)
+    .where(eq(databases.id, targetDbId))
+    .limit(1);
+  if (!targetRecord) throw new Error('Target database not found');
+  const targetSchema: Array<{ id: string; name: string; type: string }> = targetRecord.schema ?? [];
+  const targetByName = new Map(targetSchema.map((c) => [c.name.toLowerCase(), c]));
+
+  const rows = await db
+    .select({ id: pages.id, databaseId: pages.databaseId, properties: pages.properties })
+    .from(pages)
+    .where(inArray(pages.id, itemIds));
+  const rowById = new Map(rows.map((r) => [r.id, r]));
+
+  const sourceDatabaseIds = Array.from(new Set(rows.map((r) => r.databaseId)));
+  const sourceSchemas = new Map<string, Array<{ id: string; name: string; type: string }>>();
+  for (const dbId of sourceDatabaseIds) {
+    const [record] = await db.select({ schema: databases.schema }).from(databases).where(eq(databases.id, dbId)).limit(1);
+    sourceSchemas.set(dbId, record?.schema ?? []);
+  }
+
+  // Batch-level gate: every source database's columns (by name, case-insensitive)
+  // must exist on the target with the SAME type, or nothing moves.
+  const missing = new Set<string>();
+  for (const dbId of sourceDatabaseIds) {
+    for (const col of sourceSchemas.get(dbId) ?? []) {
+      const match = targetByName.get(col.name.toLowerCase());
+      if (!match || match.type !== col.type) missing.add(col.name);
+    }
+  }
+  if (missing.size > 0) {
+    throw new Error(`Target database is missing or has a different type for: ${Array.from(missing).join(', ')}`);
+  }
+
+  const [maxSortRow] = await db
+    .select({ maxSort: sql<number>`coalesce(max(${pages.sortOrder}), -1)` })
+    .from(pages)
+    .where(eq(pages.databaseId, targetDbId));
+  let nextSort = (maxSortRow?.maxSort ?? -1) + 1;
+
+  const results: { id: string; ok: boolean; error?: string }[] = [];
+  for (const id of itemIds) {
+    const row = rowById.get(id);
+    if (!row) { results.push({ id, ok: false, error: 'Row not found' }); continue; }
+    try {
+      const sourceSchema = sourceSchemas.get(row.databaseId) ?? [];
+      const sourceIdToName = new Map(sourceSchema.map((c) => [c.id, c.name.toLowerCase()]));
+      const remapped: Record<string, any> = {};
+      for (const [colId, value] of Object.entries(row.properties ?? {})) {
+        const name = sourceIdToName.get(colId);
+        const targetCol = name ? targetByName.get(name) : undefined;
+        remapped[targetCol ? targetCol.id : colId] = value;
+      }
+      await db.update(pages)
+        .set({ databaseId: targetDbId, properties: remapped, sortOrder: nextSort++, updatedAt: new Date() })
+        .where(eq(pages.id, id));
+      results.push({ id, ok: true });
+    } catch (err) {
+      results.push({ id, ok: false, error: String((err as Error).message ?? err) });
+    }
+  }
+  return results;
 }
 
 export async function createDatabaseInWorkspace(

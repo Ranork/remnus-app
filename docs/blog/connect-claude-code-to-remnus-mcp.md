@@ -131,7 +131,7 @@ A working connection reports `remnus: https://www.remnus.com/api/mcp - ✔ Conne
 claude mcp get remnus
 ```
 
-**3. Check the tool count** inside a session with `/mcp`. The panel shows how many tools each server exposes. Remnus publishes **22**: 11 read tools and 11 write tools.
+**3. Check the tool count** inside a session with `/mcp`. The panel shows how many tools each server exposes. Remnus publishes **24**: 11 read tools and 13 write tools.
 
 **4. Run a safe read.** Ask Claude Code:
 
@@ -163,7 +163,7 @@ Grant the smallest scope that does the job.
 
 **Start read-only.** A `read`-scoped connection can reach all 11 read tools — `prepare_context`, `search_workspace`, `list_workspace`, `get_page`, `get_pages`, `get_database_schema`, `query_database`, `list_members`, `query_audit_log`, `get_changes_since`, and `get_related_pages` — and cannot modify anything. For summaries, reports, standups, and code work that only needs context, this is enough. Calling a write tool with a read token returns an error and changes nothing.
 
-**Add write access deliberately.** The `write` scope adds `create_page`, `update_page`, `bulk_update_pages`, `delete_page`, `move_item`, `create_database`, `update_database_schema`, and the three database-view tools. Use a separate write connection for the agent that genuinely needs to file tasks, rather than upgrading your everyday one.
+**Add write access deliberately.** The `write` scope adds `create_page`, `update_page`, `bulk_update_pages`, `delete_page`, `bulk_delete_pages`, `move_item`, `bulk_move_items`, `create_database`, `update_database_schema`, the three database-view tools, and `add_comment`. Use a separate write connection for the agent that genuinely needs to file tasks, rather than upgrading your everyday one.
 
 **Use two connections when it helps.** Register a read-only `remnus` at user scope for daily work, and a write-scoped server under a different name for a specific automation.
 

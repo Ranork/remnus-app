@@ -5,13 +5,17 @@ import {
   updatePageById,
   bulkUpdatePages,
   deleteItemFromWorkspace,
+  bulkDeleteItemsFromWorkspace,
   moveItemInWorkspace,
+  bulkMoveItemsInWorkspace,
+  bulkMoveRowsToDatabase,
   createDatabaseInWorkspace,
   updateDatabaseSchemaById,
   createDatabaseView,
   updateDatabaseView,
   deleteDatabaseView,
   getAnyPageById,
+  type SnapshotActor,
 } from '@/lib/services/workspace';
 import { publish } from '@/lib/realtime/publish';
 import { logActivity, type TokenContext } from '../context';
@@ -49,6 +53,17 @@ const KNOWLEDGE_INPUT = z.object({
 
 function actorId(ctx: TokenContext) {
   return ctx.agentName ? `mcp:${ctx.agentName}:${ctx.tokenId}` : `mcp:${ctx.tokenId}`;
+}
+
+// Trash snapshot attribution — every MCP delete is agent-authored by definition.
+// Same tokenId/oauthTokenId split already used by add_comment's handler.
+function agentActor(ctx: TokenContext): SnapshotActor {
+  return {
+    kind: 'agent',
+    label: ctx.agentName ?? 'Agent',
+    tokenId: ctx.tokenKind === 'pat' ? ctx.tokenId : null,
+    oauthTokenId: ctx.tokenKind === 'oauth' ? ctx.tokenId : null,
+  };
 }
 
 async function requireContext(ctx: TokenContext, contextRunId: string | undefined, tool: string, targetId?: string) {
@@ -252,7 +267,7 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
         }
         const contextError = await requireContext(ctx, contextRunId, 'delete_page', pageId);
         if (contextError) return contextError;
-        const result = await deleteItemFromWorkspace(ctx.workspaceId, pageId);
+        const result = await deleteItemFromWorkspace(ctx.workspaceId, pageId, agentActor(ctx));
         const out = { deleted: true, id: pageId };
         const text = JSON.stringify(out);
         await logActivity(ctx, 'delete_page', 'success', result.type, pageId, text);
@@ -260,6 +275,69 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
         return { content: [{ type: 'text' as const, text }], structuredContent: out };
       } catch (err) {
         await logActivity(ctx, 'delete_page', 'error', 'page', pageId);
+        return { content: [{ type: 'text' as const, text: `Error: ${String(err)}` }], isError: true };
+      }
+    },
+  );
+
+  server.registerTool(
+    'bulk_delete_pages',
+    {
+      description: 'Delete multiple workspace pages, databases, or database rows in one call (max 100). Requires confirm: true to execute — omit or set false to preview what would be deleted. Deletions run concurrently and each entry reports its own ok/error, so one bad id cannot sink the rest of the batch (unlike bulk_update_pages).',
+      inputSchema: {
+        pageIds: z.array(z.string()).max(100).describe('Workspace item IDs or database row IDs to delete'),
+        confirm: z.boolean().optional().default(false).describe('Set to true to confirm deletion. Without this flag, returns a preview of what would be deleted.'),
+        contextRunId: CONTEXT_RUN_ID,
+      },
+      outputSchema: z.object({
+        deleted: z.boolean().describe('Whether items were actually deleted (false for a preview)'),
+        requested: z.number().describe('Number of ids requested'),
+        succeeded: z.number().optional().describe('Number successfully deleted (confirm: true only)'),
+        failed: z.number().optional().describe('Number that failed (confirm: true only)'),
+        results: z.array(z.object({
+          id: z.string(),
+          ok: z.boolean(),
+          error: z.string().optional(),
+        })).optional().describe('Per-item result (confirm: true only)'),
+        items: z.array(z.object({
+          id: z.string(),
+          title: z.string(),
+          type: z.string(),
+        })).optional().describe('Items that would be deleted (preview only)'),
+        preview: z.string().optional().describe('Preview message when confirm was not set'),
+      }).passthrough(),
+      annotations: { title: 'Bulk delete pages', readOnlyHint: false, destructiveHint: true, idempotentHint: false, openWorldHint: false },
+    },
+    async ({ pageIds, confirm, contextRunId }) => {
+      if (ctx.scope !== 'write') {
+        await logActivity(ctx, 'bulk_delete_pages', 'error');
+        return { content: [{ type: 'text' as const, text: READ_ONLY_ERROR }], isError: true };
+      }
+      try {
+        if (!confirm) {
+          const items = await Promise.all(pageIds.map(async (id) => {
+            try {
+              const item = await getAnyPageById(ctx.workspaceId, id);
+              return { id, title: item.title, type: item.type };
+            } catch (err) {
+              return { id, title: `<${String(err)}>`, type: 'unknown' };
+            }
+          }));
+          const preview = `This will permanently delete ${items.length} item(s). Set confirm: true to proceed.`;
+          const out = { deleted: false, requested: pageIds.length, items, preview };
+          return { content: [{ type: 'text' as const, text: preview }], structuredContent: out };
+        }
+        const contextError = await requireContext(ctx, contextRunId, 'bulk_delete_pages');
+        if (contextError) return contextError;
+        const results = await bulkDeleteItemsFromWorkspace(ctx.workspaceId, pageIds, agentActor(ctx));
+        const succeeded = results.filter(r => r.ok).length;
+        const out = { deleted: true, requested: pageIds.length, succeeded, failed: results.length - succeeded, results };
+        const text = JSON.stringify(out);
+        await logActivity(ctx, 'bulk_delete_pages', 'success', undefined, undefined, text);
+        publish({ scope: 'sidebar', workspaceId: ctx.workspaceId, actorId: actorId(ctx) });
+        return { content: [{ type: 'text' as const, text }], structuredContent: out };
+      } catch (err) {
+        await logActivity(ctx, 'bulk_delete_pages', 'error');
         return { content: [{ type: 'text' as const, text: `Error: ${String(err)}` }], isError: true };
       }
     },
@@ -294,6 +372,58 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
         return { content: [{ type: 'text' as const, text }], structuredContent: result };
       } catch (err) {
         await logActivity(ctx, 'move_item', 'error', 'item', itemId);
+        return { content: [{ type: 'text' as const, text: `Error: ${String(err)}` }], isError: true };
+      }
+    },
+  );
+
+  server.registerTool(
+    'bulk_move_items',
+    {
+      description: 'Move multiple items in one call (max 100). Pass newParentId to reparent workspace items (pages/databases) within the sidebar — same semantics as move_item, batched. Pass targetDatabaseId to move database rows to a DIFFERENT database — refused entirely (no rows moved) if the target database\'s columns don\'t cover the source columns by name and type, naming the missing/mismatched columns; never silently drops a property. Exactly one of newParentId or targetDatabaseId must be given.',
+      inputSchema: {
+        itemIds: z.array(z.string()).max(100).describe('IDs to move'),
+        newParentId: z.string().nullable().optional().describe('Sidebar mode: new parent item ID, or null for workspace root'),
+        targetDatabaseId: z.string().optional().describe('Cross-database mode: destination database ID for row(s)'),
+        contextRunId: CONTEXT_RUN_ID,
+      },
+      outputSchema: z.object({
+        requested: z.number(),
+        succeeded: z.number(),
+        failed: z.number(),
+        results: z.array(z.object({
+          id: z.string(),
+          ok: z.boolean(),
+          error: z.string().optional(),
+        })),
+      }).passthrough(),
+      annotations: { title: 'Bulk move items', readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
+    },
+    async ({ itemIds, newParentId, targetDatabaseId, contextRunId }) => {
+      if (ctx.scope !== 'write') {
+        await logActivity(ctx, 'bulk_move_items', 'error');
+        return { content: [{ type: 'text' as const, text: READ_ONLY_ERROR }], isError: true };
+      }
+      const hasParent = newParentId !== undefined;
+      const hasTarget = !!targetDatabaseId;
+      if (hasParent === hasTarget) {
+        await logActivity(ctx, 'bulk_move_items', 'error');
+        return { content: [{ type: 'text' as const, text: 'Error: pass exactly one of newParentId or targetDatabaseId.' }], isError: true };
+      }
+      const contextError = await requireContext(ctx, contextRunId, 'bulk_move_items');
+      if (contextError) return contextError;
+      try {
+        const results = hasTarget
+          ? await bulkMoveRowsToDatabase(ctx.workspaceId, itemIds, targetDatabaseId!)
+          : await bulkMoveItemsInWorkspace(ctx.workspaceId, itemIds, newParentId ?? null);
+        const succeeded = results.filter(r => r.ok).length;
+        const out = { requested: itemIds.length, succeeded, failed: results.length - succeeded, results };
+        const text = JSON.stringify(out);
+        await logActivity(ctx, 'bulk_move_items', 'success', undefined, undefined, text);
+        publish({ scope: hasTarget ? 'database' : 'sidebar', workspaceId: ctx.workspaceId, actorId: actorId(ctx) });
+        return { content: [{ type: 'text' as const, text }], structuredContent: out };
+      } catch (err) {
+        await logActivity(ctx, 'bulk_move_items', 'error');
         return { content: [{ type: 'text' as const, text: `Error: ${String(err)}` }], isError: true };
       }
     },

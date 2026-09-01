@@ -15,6 +15,7 @@ import {
   ChevronRight,
   Check,
   Trash,
+  Trash2,
   Edit3,
   Briefcase,
   MoreHorizontal,
@@ -57,6 +58,7 @@ import TemplatePickerModal from './TemplatePickerModal';
 import WorkspaceSettingsModal from './WorkspaceSettingsModal';
 import { initDesktopZoom } from '@/lib/desktop/zoom';
 import AgentsModal from './AgentsModal';
+import TrashModal from './TrashModal';
 import OnboardingGuide from './onboarding/OnboardingGuide';
 import AgentDetectGuide from './agent-detect/AgentDetectGuide';
 import PwaInstallButton from './PwaInstallButton';
@@ -64,6 +66,7 @@ import WhatsNewButton from './WhatsNewButton';
 import BillingModal from './BillingModal';
 import UserSettingsModal from './UserSettingsModal';
 import { getUserAgentTokenCount } from '@/lib/actions/agentToken';
+import { getUserTrashCount } from '@/lib/actions/trash';
 import { getMyTier } from '@/lib/actions/billing';
 import type { PlanTier } from '@/lib/billing/plans';
 import { getSidebarOverlayContainer, writeSidebarVisible } from '@/lib/sidebarVisibility';
@@ -214,10 +217,12 @@ export default function WorkspaceSidebar({
   const [workspaceCreateError, setWorkspaceCreateError] = useState<string | null>(null);
   const [settingsModalWorkspace, setSettingsModalWorkspace] = useState<{ id: string; name: string; icon?: string | null; iconColor?: string | null } | null>(null);
   const [agentsModalOpen, setAgentsModalOpen] = useState(false);
+  const [trashModalOpen, setTrashModalOpen] = useState(false);
   const [billingModalOpen, setBillingModalOpen] = useState(false);
   const [userSettingsOpen, setUserSettingsOpen] = useState(false);
   // null = not yet loaded (avoids a false "no agents" warning flash on first render)
   const [agentTokenCount, setAgentTokenCount] = useState<number | null>(null);
+  const [trashCount, setTrashCount] = useState<number | null>(null);
   const [planTier, setPlanTier] = useState<PlanTier | null>(null);
   const [settingsInitialTab, setSettingsInitialTab] = useState<'general' | 'members' | 'tokens' | 'sharing'>('general');
   const [shareModalItemId, setShareModalItemId] = useState<string | null>(null);
@@ -318,6 +323,7 @@ export default function WorkspaceSidebar({
   // Load agent token count + current plan tier for the sidebar badges
   useEffect(() => {
     getUserAgentTokenCount().then(setAgentTokenCount).catch(() => {});
+    getUserTrashCount().then(setTrashCount).catch(() => {});
     getMyTier().then(setPlanTier).catch(() => {});
   }, []);
 
@@ -1503,6 +1509,16 @@ export default function WorkspaceSidebar({
         sidebarOverlayContainer,
       )}
 
+      {trashModalOpen && sidebarOverlayContainer && createPortal(
+        <TrashModal
+          onClose={() => {
+            setTrashModalOpen(false);
+            getUserTrashCount().then(setTrashCount).catch(() => {});
+          }}
+        />,
+        sidebarOverlayContainer,
+      )}
+
       {billingModalOpen && sidebarOverlayContainer && createPortal(
         <BillingModal isDemo={currentUser.role === 'demo'} onClose={() => {
           setBillingModalOpen(false);
@@ -1600,6 +1616,25 @@ export default function WorkspaceSidebar({
               {t('agentsConnectNudge')}
             </span>
           ) : null}
+        </button>
+      </div>
+
+      {/* Trash button — same "common ground" placement as AI Agents, not
+          buried in a per-workspace Settings tab (deletions can happen in any
+          workspace, from any client, so the entry point shouldn't be scoped
+          to whichever workspace happens to be active). */}
+      <div className="shrink-0 px-2 pb-1">
+        <button
+          onClick={() => setTrashModalOpen(true)}
+          className="w-full flex items-center gap-1.5 min-w-0 px-2 py-1.5 rounded-md text-sm text-neutral-300 hover:bg-neutral-800 hover:text-neutral-50 transition-all duration-200"
+        >
+          <Trash2 size={14} className="shrink-0 text-neutral-500" />
+          <span className="truncate">{t('myTrash')}</span>
+          {trashCount !== null && trashCount > 0 && (
+            <span className="ml-auto shrink-0 text-[10px] font-bold text-neutral-400 bg-neutral-800 border border-neutral-700 px-1.5 py-0.5 rounded-full leading-none">
+              {trashCount}
+            </span>
+          )}
         </button>
       </div>
 

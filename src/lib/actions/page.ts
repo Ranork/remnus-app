@@ -8,6 +8,7 @@ import { deleteWorkspaceItem } from './workspace';
 import { publish } from '@/lib/realtime/publish';
 import { isCloudinaryUrl, deleteCloudinaryImage } from '@/lib/cloudinary';
 import { recordDeletionTombstone } from '@/lib/services/workspace';
+import { snapshotBeforeDelete } from '@/lib/services/snapshots';
 import { exdateOccurrenceForPage } from '@/lib/services/recurrence';
 import { syncPageLinks, removePageLinksFor, purgeReferencesTo } from '@/lib/services/pageLinks';
 import { coerceRowValues, extractRowContent, assignOptionColors, type DatabaseColumn } from '@/lib/utils/propertyCoercion';
@@ -189,7 +190,14 @@ export async function deletePage(id: string, databaseId: string) {
     await deleteWorkspaceItem(item.id);
   }
 
-  const [row] = await db.select({ title: pages.title }).from(pages).where(eq(pages.id, id)).limit(1);
+  const [row] = await db
+    .select({
+      title: pages.title, content: pages.content, properties: pages.properties,
+      icon: pages.icon, iconColor: pages.iconColor, sortOrder: pages.sortOrder,
+    })
+    .from(pages)
+    .where(eq(pages.id, id))
+    .limit(1);
 
   // If this row is one occurrence of a recurring series, record the deletion on
   // the rule BEFORE dropping the row. Otherwise the next materialization sees a
@@ -197,6 +205,14 @@ export async function deletePage(id: string, databaseId: string) {
   // deleting a repeating card from the Table/Kanban view, or over MCP, would
   // silently undo itself. Best-effort: a failure here must not block the delete.
   await exdateOccurrenceForPage(id).catch(() => {});
+
+  const user = await getCurrentUser();
+  await snapshotBeforeDelete({
+    workspaceId, originalId: id, itemType: 'database_row', title: row?.title ?? '',
+    content: row?.content, properties: row?.properties, icon: row?.icon, iconColor: row?.iconColor,
+    databaseId, sortOrder: row?.sortOrder,
+    deletedBy: { kind: 'human', userId, label: user.name || user.email || 'Someone' },
+  });
 
   await db.delete(pages).where(eq(pages.id, id));
   await recordDeletionTombstone(workspaceId, id, 'database_row', row?.title ?? '');

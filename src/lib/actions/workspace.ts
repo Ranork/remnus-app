@@ -13,6 +13,7 @@ import { isCloudinaryUrl, deleteCloudinaryImage } from '@/lib/cloudinary';
 import { checkCanCreateWorkspace } from '@/lib/services/billing';
 import { recordDeletionTombstone, getRelatedPages } from '@/lib/services/workspace';
 import { syncPageLinks, removePageLinksFor, purgeReferencesTo } from '@/lib/services/pageLinks';
+import { snapshotBeforeDelete, type SnapshotActor } from '@/lib/services/snapshots';
 
 export type { RelatedPageRef } from '@/lib/services/workspace';
 
@@ -521,8 +522,14 @@ export async function deleteWorkspaceItem(itemId: string) {
 
   const userId = await assertWorkspaceAccess(item[0].workspaceId);
   const { workspaceId } = item[0];
+  const user = await getCurrentUser();
+  const actor: SnapshotActor = { kind: 'human', userId, label: user.name || user.email || 'Someone' };
 
-  await deleteWorkspaceItemRecursive(workspaceId, itemId, item[0].type, item[0].title);
+  await deleteWorkspaceItemRecursive(
+    workspaceId, itemId, item[0].type, item[0].title,
+    { parentId: item[0].parentId, icon: item[0].icon, iconColor: item[0].iconColor, sortOrder: item[0].sortOrder },
+    actor,
+  );
   revalidatePath('/', 'layout');
   publish({ scope: 'sidebar', workspaceId, actorId: userId });
 }
@@ -563,14 +570,29 @@ export async function checkItemHasContent(itemId: string): Promise<boolean> {
   }
 }
 
-async function deleteWorkspaceItemRecursive(workspaceId: string, itemId: string, type: 'page' | 'database', title: string) {
+async function deleteWorkspaceItemRecursive(
+  workspaceId: string,
+  itemId: string,
+  type: 'page' | 'database',
+  title: string,
+  meta: { parentId: string | null; icon: string | null; iconColor: string | null; sortOrder: number },
+  actor: SnapshotActor,
+) {
   // Find all children
-  const children = await db.select({ id: workspaceItems.id, type: workspaceItems.type, title: workspaceItems.title })
+  const children = await db.select({
+    id: workspaceItems.id, type: workspaceItems.type, title: workspaceItems.title,
+    parentId: workspaceItems.parentId, icon: workspaceItems.icon, iconColor: workspaceItems.iconColor,
+    sortOrder: workspaceItems.sortOrder,
+  })
     .from(workspaceItems)
     .where(eq(workspaceItems.parentId, itemId));
 
   for (const child of children) {
-    await deleteWorkspaceItemRecursive(workspaceId, child.id, child.type, child.title);
+    await deleteWorkspaceItemRecursive(
+      workspaceId, child.id, child.type, child.title,
+      { parentId: child.parentId, icon: child.icon, iconColor: child.iconColor, sortOrder: child.sortOrder },
+      actor,
+    );
   }
 
   // Every id another page could have linked to. A database is reachable both by
@@ -580,17 +602,45 @@ async function deleteWorkspaceItemRecursive(workspaceId: string, itemId: string,
 
   if (type === 'database') {
     const [dbRow] = await db
-      .select({ id: databases.id })
+      .select({ id: databases.id, schema: databases.schema })
       .from(databases)
       .where(eq(databases.itemId, itemId))
       .limit(1);
     if (dbRow) {
       deadIds.push(dbRow.id);
-      const rows = await db.select({ id: pages.id }).from(pages).where(eq(pages.databaseId, dbRow.id));
-      for (const r of rows) deadIds.push(r.id);
+      const rows = await db
+        .select({
+          id: pages.id, title: pages.title, content: pages.content, properties: pages.properties,
+          icon: pages.icon, iconColor: pages.iconColor, sortOrder: pages.sortOrder,
+        })
+        .from(pages)
+        .where(eq(pages.databaseId, dbRow.id));
+      for (const r of rows) {
+        deadIds.push(r.id);
+        await snapshotBeforeDelete({
+          workspaceId, originalId: r.id, itemType: 'database_row', title: r.title,
+          content: r.content, properties: r.properties, icon: r.icon, iconColor: r.iconColor,
+          databaseId: dbRow.id, sortOrder: r.sortOrder, deletedBy: actor,
+        });
+      }
+      await snapshotBeforeDelete({
+        workspaceId, originalId: itemId, itemType: 'database', title,
+        schema: dbRow.schema as any[], icon: meta.icon, iconColor: meta.iconColor,
+        parentId: meta.parentId, sortOrder: meta.sortOrder, databaseId: dbRow.id, deletedBy: actor,
+      });
     }
     await db.delete(databases).where(eq(databases.itemId, itemId));
   } else {
+    const [content] = await db
+      .select({ content: standalonePages.content })
+      .from(standalonePages)
+      .where(eq(standalonePages.itemId, itemId))
+      .limit(1);
+    await snapshotBeforeDelete({
+      workspaceId, originalId: itemId, itemType: 'page', title,
+      content: content?.content, icon: meta.icon, iconColor: meta.iconColor,
+      parentId: meta.parentId, sortOrder: meta.sortOrder, deletedBy: actor,
+    });
     await db.delete(standalonePages).where(eq(standalonePages.itemId, itemId));
   }
 

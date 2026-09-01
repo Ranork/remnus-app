@@ -80,6 +80,26 @@ Always call once without `confirm` first to verify the target before confirming.
 
 ---
 
+## bulk_delete_pages
+
+Delete multiple workspace pages, databases, or database rows in one call. Requires `confirm: true` to execute. Without it, the tool returns a preview of what would be deleted and makes no changes.
+
+Deletions run concurrently and each entry reports its own `ok`/`error`, so one bad id cannot sink the rest of the batch — unlike `bulk_update_pages`, whose `Promise.all` implementation can silently drop entries on a partial failure.
+
+**Parameters**
+
+| Parameter | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `pageIds` | string[] | ✓ | | Workspace item IDs or database row IDs to delete (max 100) |
+| `confirm` | boolean | | `false` | Set to `true` to confirm deletion |
+| `contextRunId` | string | | | Context preflight ID (required in Strict mode) |
+
+Always call once without `confirm` first to verify the targets before confirming.
+
+**Returns** — on `confirm: true`: `{ deleted: true, requested, succeeded, failed, results: [{ id, ok, error? }] }`. Preview (no `confirm`): `{ deleted: false, requested, items: [{ id, title, type }], preview }`.
+
+---
+
 ## move_item
 
 Move a sidebar item (page or database) to a new parent within the workspace.
@@ -92,6 +112,25 @@ Move a sidebar item (page or database) to a new parent within the workspace.
 | `newParentId` | string \| null | | New parent item ID — pass `null` to move to workspace root |
 
 **Returns** — updated item object.
+
+---
+
+## bulk_move_items
+
+Move multiple items in one call. Pass `newParentId` to reparent workspace items (pages/databases) within the sidebar — the same semantics as `move_item`, batched. Pass `targetDatabaseId` to move database rows to a **different** database. Exactly one of `newParentId` or `targetDatabaseId` must be given.
+
+The cross-database move is refused entirely (no rows moved) if the target database's columns don't cover the source columns by name and type — the error names the missing/mismatched columns rather than silently dropping data.
+
+**Parameters**
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `itemIds` | string[] | ✓ | IDs to move (max 100) |
+| `newParentId` | string \| null | | Sidebar mode: new parent item ID, or `null` for workspace root |
+| `targetDatabaseId` | string | | Cross-database mode: destination database ID for row(s) |
+| `contextRunId` | string | | Context preflight ID (required in Strict mode) |
+
+**Returns** — `{ requested, succeeded, failed, results: [{ id, ok, error? }] }`
 
 ---
 

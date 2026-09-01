@@ -52,7 +52,7 @@ Strict does not replace write scope, authorization, or destructive confirmation,
 *   **Rate limit:** 60 requests/minute per token.
 *   **Traceability (audit log):** every tool call (which page was read, which property changed) is written to the workspace audit log.
 
-### 22 MCP tools (agent capabilities)
+### 24 MCP tools (agent capabilities)
 
 | Tool | Scope | What it does (for agents) |
 |---|---|---|
@@ -71,7 +71,9 @@ Strict does not replace write scope, authorization, or destructive confirmation,
 | `update_page` | write | Update a page's content or properties (status, tags, etc.) |
 | `bulk_update_pages` | write | **(Agent-specific)** Update dozens of rows (e.g., 50 tasks' status) in one call |
 | `delete_page` | write | Delete a page (requires `confirm: true`) |
+| `bulk_delete_pages` | write | **(Agent-specific)** Delete up to 100 pages/rows/databases in one call (requires `confirm: true`); per-item results so one bad id can't sink the batch |
 | `move_item` | write | Reorganize the hierarchy |
+| `bulk_move_items` | write | **(Agent-specific)** Move up to 100 items in one call — reparent within the sidebar, or move rows to a different database |
 | `create_database` | write | Set up a new, custom-schema memory table/workflow from scratch |
 | `update_database_schema` | write | Add or remove typed columns on a database |
 | `create/update/delete_database_view` | write | Create and manage table/kanban views for humans to see |
@@ -121,7 +123,7 @@ Plans scale by agent density rather than headcount: **Free / Startup / Professio
 |---|---|
 | Category | Human-Agent Collaborative Workspace |
 | MCP endpoint | `https://www.remnus.com/api/mcp` |
-| Tools / Resources / Prompts | 22 / 6 / 7 |
+| Tools / Resources / Prompts | 24 / 6 / 7 |
 | Auth model | Agent-first: OAuth 2.1 + PKCE, PAT |
 | Security/trust | Full workspace audit log |
 | License | AGPL-3.0 |

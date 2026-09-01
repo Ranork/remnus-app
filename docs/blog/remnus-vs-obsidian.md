@@ -35,7 +35,7 @@ None of the plugin-ecosystem gap is something a young project closes overnight, 
 | Native database views | Table, gallery, list, map (via the built-in Bases layer) | Table, kanban, calendar |
 | Kanban / calendar views | Third-party plugins today; both listed as "Planned" on the official roadmap | Native, shipped |
 | Real-time multiplayer editing | Not shipped (listed as "Planned"); Sync merges file-by-file, not keystroke-by-keystroke | Not shipped either; updates arrive via background refresh |
-| Native MCP server (agent connects in) | No official core plugin; a forum request for one exists with no team commitment | Yes, first-party, 22 tools |
+| Native MCP server (agent connects in) | No official core plugin; a forum request for one exists with no team commitment | Yes, first-party, 24 tools |
 | Community MCP options | Several independent plugins/servers (at least five actively maintained ones found) wrap vault file access over MCP | Not applicable |
 | Bearer token / PAT auth for agents | Not standardized; each community plugin defines its own | Yes, scoped `rmns_` personal access tokens, expiry optional, instantly revocable |
 | OAuth 2.1 with PKCE for editors | Not applicable | Yes |
@@ -50,7 +50,7 @@ Search for ways to connect an AI agent to Obsidian and you'll find a genuinely a
 
 What none of them are is official. A forum thread asking Obsidian's team to ship "a core plugin that exposes the 'canonical' MCP server," so agents go through supported commands instead of raw file access, has sat with a handful of likes and no team response since it was posted in December 2025. Until that changes, whichever community server you pick comes with its own authentication approach, its own update cadence, and its own risk if the maintainer moves on.
 
-Remnus didn't leave that gap open. The MCP server ships with the product, built and maintained by the same team, covering 22 tools (11 read, 11 write) plus 6 resource templates and 7 prompt templates against the workspace's real data model, not a file-system shim.
+Remnus didn't leave that gap open. The MCP server ships with the product, built and maintained by the same team, covering 24 tools (11 read, 13 write) plus 6 resource templates and 7 prompt templates against the workspace's real data model, not a file-system shim.
 
 ### Authentication and headless agents
 
@@ -62,7 +62,7 @@ Remnus settled this once, centrally: OAuth 2.1 with PKCE for editors connecting 
 
 Obsidian itself costs nothing, for personal or commercial use alike, as of a February 2026 change that dropped the earlier commercial-use requirement. Sync (multi-device access plus shared vaults) runs $4 a month billed annually or $5 month to month. Publish (turning notes into a public website) runs $8 a month annually or $10 month to month. The old $50-per-user commercial license is now a voluntary contribution rather than a requirement. None of that pricing has anything to do with AI agent access, since there's no first-party agent feature to price.
 
-Remnus prices the workspace itself, flat per owner rather than per seat: Free at $0, Startup at $10 a month, Professional at $29 a month, Enterprise custom. The entire 22-tool MCP surface works the same on every tier, Free included, because agent access is the product, not an add-on bolted beside it.
+Remnus prices the workspace itself, flat per owner rather than per seat: Free at $0, Startup at $10 a month, Professional at $29 a month, Enterprise custom. The entire 24-tool MCP surface works the same on every tier, Free included, because agent access is the product, not an add-on bolted beside it.
 
 ### Audit trails
 

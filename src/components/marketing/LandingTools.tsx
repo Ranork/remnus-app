@@ -33,7 +33,9 @@ const TOOLS = [
   { scope: 'write', tool: 'update_page' },
   { scope: 'write', tool: 'bulk_update_pages' },
   { scope: 'write', tool: 'delete_page' },
+  { scope: 'write', tool: 'bulk_delete_pages' },
   { scope: 'write', tool: 'move_item' },
+  { scope: 'write', tool: 'bulk_move_items' },
   { scope: 'write', tool: 'create_database' },
   { scope: 'write', tool: 'update_database_schema' },
   { scope: 'write', tool: 'create_database_view' },
@@ -61,7 +63,7 @@ const PROMPTS = [
   { name: 'recall-context' },
 ] as const;
 
-// Curated highlights shown as cards on the landing page — the full 22-tool
+// Curated highlights shown as cards on the landing page — the full 24-tool
 // reference table lives at /wiki/read-tools. Picked to span discovery, query,
 // live sync, creation, bulk ops, and schema control (3 read + 3 write).
 const FLAGSHIP_TOOLS = [

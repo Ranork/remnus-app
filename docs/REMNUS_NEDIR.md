@@ -52,7 +52,7 @@ Strict; write scope, yetkilendirme veya yıkıcı işlem onayının yerini almaz
 *   **Rate limit:** Token başına dakikada 60 istek.
 *   **İzlenebilirlik (Audit Log):** Her tool çağrısı (hangi sayfa okundu, hangi property değiştirildi) workspace audit log'una yazılır.
 
-### 22 MCP Tool (Ajanların Yetenekleri)
+### 24 MCP Tool (Ajanların Yetenekleri)
 
 | Tool | Scope | Ne Yapar (Ajanlar İçin) |
 |---|---|---|
@@ -71,7 +71,9 @@ Strict; write scope, yetkilendirme veya yıkıcı işlem onayının yerini almaz
 | `update_page` | write | Mevcut sayfanın içeriğini veya properties (durum, etiket vb.) güncelleme |
 | `bulk_update_pages` | write | **(Ajanlara Özel)** Tek çağrıda onlarca satırı (örn: 50 taskın durumunu) güncelleme |
 | `delete_page` | write | Sayfa silme (`confirm: true` zorunlu koruması ile) |
+| `bulk_delete_pages` | write | **(Ajanlara Özel)** Tek çağrıda 100'e kadar sayfa/satır/database silme (`confirm: true` zorunlu); kötü bir id tüm batch'i düşürmesin diye satır satır sonuç döner |
 | `move_item` | write | Hiyerarşiyi yeniden düzenleme |
+| `bulk_move_items` | write | **(Ajanlara Özel)** Tek çağrıda 100'e kadar öğeyi taşıma — sidebar içinde yeniden ebeveynleme veya satırları başka bir database'e taşıma |
 | `create_database` | write | Sıfırdan şemalı yeni bir hafıza tablosu/iş akışı kurma |
 | `update_database_schema` | write | Veritabanına yeni tipli kolonlar ekleme/çıkarma |
 | `create/update/delete_database_view` | write | İnsanların görmesi için tablo/kanban görünümleri yaratma ve yönetme |
@@ -121,7 +123,7 @@ Planlar insan sayısından ziyade ajan yoğunluğuna göre ölçeklenir: **Free 
 |---|---|
 | Kategori | Human-Agent Collaborative Workspace |
 | MCP endpoint | `https://www.remnus.com/api/mcp` |
-| Tool / Resource / Prompt | 22 / 6 / 7 |
+| Tool / Resource / Prompt | 24 / 6 / 7 |
 | Auth Modeli | Agent-First: OAuth 2.1 + PKCE, PAT |
 | Güvenlik/Güven | Tam Kapsamlı Workspace Audit Log |
 | Lisans | AGPL-3.0 |

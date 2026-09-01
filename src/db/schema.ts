@@ -506,6 +506,39 @@ export const pageComments = sqliteTable('page_comments', {
   index('page_comments_page_created_idx').on(table.pageId, table.createdAt),
 ]);
 
+// ── Trash / page snapshots (migration 0047) ────────────────────────────────────
+// Full content captured immediately before every delete (single or bulk, web or
+// MCP) so a human can restore it later — see `snapshotBeforeDelete` in
+// services/snapshots.ts. `reason` future-proofs the table for content-versioning
+// ('update' rows) without a second migration; only 'delete' is written today.
+// `originalId` has no FK — the row it pointed at is gone by the time this is
+// read, same pattern as `deletedItems.itemId`/`pageComments.pageId`.
+export const pageSnapshots = sqliteTable('page_snapshots', {
+  id:              text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  workspaceId:     text('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  reason:          text('reason', { enum: ['delete', 'update'] }).notNull(),
+  originalId:      text('original_id').notNull(),
+  itemType:        text('item_type', { enum: ['page', 'database', 'database_row'] }).notNull(),
+  title:           text('title').notNull(),
+  content:         text('content'),
+  properties:      text('properties', { mode: 'json' }).$type<Record<string, any>>(),
+  schema:          text('schema', { mode: 'json' }).$type<any[]>(),
+  icon:            text('icon'),
+  iconColor:       text('icon_color'),
+  parentId:        text('parent_id'),
+  databaseId:      text('database_id'),
+  sortOrder:       integer('sort_order'),
+  contentHash:     text('content_hash').notNull(),
+  deletedByKind:   text('deleted_by_kind', { enum: ['human', 'agent'] }).notNull(),
+  deletedByLabel:  text('deleted_by_label').notNull(),
+  deletedByUserId: text('deleted_by_user_id').references(() => users.id, { onDelete: 'set null' }),
+  tokenId:         text('token_id').references(() => agentTokens.id, { onDelete: 'set null' }),
+  oauthTokenId:    text('oauth_token_id').references(() => oauthAccessTokens.id, { onDelete: 'set null' }),
+  createdAt:       integer('created_at', { mode: 'timestamp' }).notNull(),
+}, (table) => [
+  index('page_snapshots_workspace_created_idx').on(table.workspaceId, table.createdAt),
+]);
+
 // ── Mailing (AWS SES) ─────────────────────────────────────────────────────────
 // Migration 0033. Manually composed newsletters written by an admin in the
 // /admin/mailing UI (markdown body rendered into the branded email layout).

@@ -24,7 +24,7 @@ const OUTPUT = [
   { text: 'Connecting to remnus…', tone: 'muted' as const },
   { text: 'Opening browser to sign in…', tone: 'muted' as const, browser: true },
   { text: '✓ Signed in', tone: 'ok' as const },
-  { text: '✓ remnus connected · 22 tools available', tone: 'ok' as const },
+  { text: '✓ remnus connected · 24 tools available', tone: 'ok' as const },
 ];
 const BROWSER_LINE = OUTPUT.findIndex(l => l.browser);
 

@@ -46,7 +46,9 @@ Column types: `text` | `number` | `select` | `multi_select` | `date` | `datetime
 - `update_page` — change title/content/properties of one item.
 - `bulk_update_pages` — many updates in one call. Prefer this over a loop.
 - `delete_page` — delete a page, row, or whole database. **Guarded.**
+- `bulk_delete_pages` — delete up to 100 pages/rows/databases in one call. **Guarded**, same preview/confirm shape as `delete_page`. Response reports each id's own ok/error — never all-or-nothing.
 - `move_item` — reparent a sidebar item; `newParentId: null` → root.
+- `bulk_move_items` — move up to 100 items in one call: pass `newParentId` to reparent (batched `move_item`), or `targetDatabaseId` to move database rows to a different database. Cross-database moves are refused entirely if the target's columns don't cover the source's by name and type.
 - `create_database` — new database with a custom schema.
 - `update_database_schema` — add/remove columns. Removing is **guarded.**
 - `add_comment` — leave a note or closure comment on a page/row, in a thread separate from its content. **Append-only** — you cannot edit or delete your own comment afterward, so use `update_page` instead if the content itself needs to change.
