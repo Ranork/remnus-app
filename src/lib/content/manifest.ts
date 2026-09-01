@@ -36,6 +36,7 @@ import {
   Server,
   Blocks,
   Coins,
+  Users,
 } from 'lucide-react';
 import { NotionMark, AppFlowyMark, AffineMark, ObsidianMark } from '@/components/docs/CompetitorMark';
 
@@ -85,6 +86,15 @@ export type BlogPost = {
 };
 
 export const BLOG_POSTS: BlogPost[] = [
+  {
+    slug: 'claude-cursor-codex-shared-workspace',
+    file: 'claude-cursor-codex-shared-workspace.md',
+    title: 'How Claude, Cursor, and Codex Can Share One AI Workspace',
+    description:
+      'How Claude Code, Cursor, and OpenAI Codex can participate in the same project without treating any one tool\'s private chat history as the source of truth — what to share, what to keep tool-specific, conflict prevention, and a fictional multi-agent workflow.',
+    date: '2026-09-01',
+    icon: Users,
+  },
   {
     slug: 'reduce-token-usage-mcp-agent-workflows',
     file: 'reduce-token-usage-mcp-agent-workflows.md',

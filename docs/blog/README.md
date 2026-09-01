@@ -4,6 +4,7 @@ Thoughts on open source, AI-native tooling, and building in public.
 
 ## Posts
 
+- [How Claude, Cursor, and Codex Can Share One AI Workspace](/docs/claude-cursor-codex-shared-workspace) — How Claude Code, Cursor, and OpenAI Codex can participate in the same project without treating any one tool's private chat history as the source of truth: what to share, what stays tool-specific, conflict prevention, and a fictional multi-agent workflow.
 - [How to Reduce Token Usage in MCP Agent Workflows](/docs/reduce-token-usage-mcp-agent-workflows) — Where tokens are consumed in an MCP agent loop and the patterns that cut avoidable reads: workspace digests, outline-first reads, targeted search, schema-before-rows, field projection, change tracking, memory vs. task context, and a bad/improved workflow comparison.
 - [MCP Tools vs Resources vs Prompts: A Practical Guide](/docs/mcp-tools-vs-resources-vs-prompts) — The three MCP primitives explained with verified Remnus examples: model-controlled tools, application-controlled resources, user-controlled prompts, and one complete workflow tying them together.
 - [Remote vs Local MCP Servers: Which Should You Use?](/docs/remote-vs-local-mcp-servers) — A neutral, spec-grounded comparison of local (stdio) and remote (Streamable HTTP) MCP servers: setup, auth, team access, headless workflows, security responsibilities, hybrid bridging, and how Remnus fits both models.
