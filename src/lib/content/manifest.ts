@@ -83,6 +83,15 @@ export type BlogPost = {
 
 export const BLOG_POSTS: BlogPost[] = [
   {
+    slug: 'ai-native-workspace-for-vibe-coding',
+    file: 'ai-native-workspace-for-vibe-coding.md',
+    title: 'How to Build an AI-Native Workspace for Vibe Coding',
+    description:
+      'A lightweight workspace for vibe coders and indie hackers: product brief, feature and bug databases, kanban board, decision log, release checklist, and agent memory — with copyable field templates and 8 ready-to-use prompts.',
+    date: '2026-08-17',
+    icon: Rocket,
+  },
+  {
     slug: 'mcp-security-guide',
     file: 'mcp-security-guide.md',
     title: 'MCP Security Guide: OAuth, Tokens, Scopes, and Audit Logs',
