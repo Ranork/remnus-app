@@ -83,6 +83,15 @@ export type BlogPost = {
 
 export const BLOG_POSTS: BlogPost[] = [
   {
+    slug: 'best-mcp-servers',
+    file: 'best-mcp-servers.md',
+    title: 'Best MCP Servers for Claude Code, Cursor, and Codex',
+    description:
+      'A verified, non-affiliate comparison of actively maintained MCP servers across code repositories, browser automation, databases, documentation, file systems, monitoring, memory and workspace, and project management, with a security checklist and example stacks.',
+    date: '2026-09-08',
+    icon: Search,
+  },
+  {
     slug: 'ai-native-workspace-for-vibe-coding',
     file: 'ai-native-workspace-for-vibe-coding.md',
     title: 'How to Build an AI-Native Workspace for Vibe Coding',

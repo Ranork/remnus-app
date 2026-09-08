@@ -4,6 +4,7 @@ Thoughts on open source, AI-native tooling, and building in public.
 
 ## Posts
 
+- [Best MCP Servers for Claude Code, Cursor, and Codex](/docs/best-mcp-servers) — A verified, non-affiliate comparison of actively maintained MCP servers across code repositories, browser automation, databases, documentation, file systems, monitoring, memory and workspace, and project management, with a security checklist and example stacks.
 - [How to Build an AI-Native Workspace for Vibe Coding](/docs/ai-native-workspace-for-vibe-coding) — A minimum viable workspace for vibe coders: product brief, feature and bug databases, kanban board, decision log, release checklist, and agent memory, with copyable field templates and 8 ready-to-use prompts.
 - [MCP Security Guide: OAuth, Tokens, Scopes, and Audit Logs](/docs/mcp-security-guide) — The MCP threat model, OAuth vs personal access tokens, least privilege, destructive-action confirmation, audit logs, checklists for users and server developers, and how Remnus applies each control.
 - [How to Run Headless AI Agents Without Login Prompts](/docs/run-headless-ai-agents-with-mcp) — OAuth vs personal access tokens for unattended jobs, secure token storage, minimum-permission scopes, a verified headless Claude Code + Remnus example, and a deployment checklist.
