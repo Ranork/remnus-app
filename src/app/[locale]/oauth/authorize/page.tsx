@@ -7,6 +7,7 @@ import { randomBytes, createHmac } from 'crypto';
 import { getTranslations } from 'next-intl/server';
 import { OAuthAuthorizeForm } from './OAuthAuthorizeForm';
 import { AGENT_MARKS } from '@/components/features/agents/agentMarks';
+import { workspaceIdFromResource } from '@/lib/mcp/workspaceEndpoint';
 import { captureForUser } from '@/lib/analytics/server';
 
 function signRedirectUrl(url: string): string {
@@ -21,6 +22,8 @@ interface SearchParams {
   client_id?: string;
   redirect_uri?: string;
   response_type?: string;
+  /** RFC 8707 resource indicator — the exact MCP URL the client was configured with. */
+  resource?: string;
   scope?: string;
   state?: string;
   code_challenge?: string;
@@ -44,6 +47,7 @@ export default async function OAuthAuthorizePage({
     client_id,
     redirect_uri,
     response_type,
+    resource,
     scope = 'read',
     state,
     code_challenge,
@@ -102,6 +106,21 @@ export default async function OAuthAuthorizePage({
     return <ErrorPage title={t('errorTitle')} message={t('noWorkspaces')} />;
   }
 
+  // A workspace-pinned MCP URL (`/api/mcp/w/<id>`, what `remnus init` writes into a
+  // project) arrives here as the RFC 8707 `resource` indicator. The user already chose
+  // the workspace when they set the project up, so there is nothing left to pick —
+  // collapse the picker to that one workspace instead of asking again.
+  const pinnedWorkspaceId = workspaceIdFromResource(resource);
+  const consentWorkspaces = pinnedWorkspaceId
+    ? userWorkspaces.filter((ws) => ws.id === pinnedWorkspaceId)
+    : userWorkspaces;
+
+  // Pinned to a workspace this account cannot reach: refuse rather than silently
+  // falling back to the full picker, which would grant a token for the wrong one.
+  if (pinnedWorkspaceId && consentWorkspaces.length === 0) {
+    return <ErrorPage title={t('errorTitle')} message={t('pinnedWorkspaceUnavailable')} />;
+  }
+
   // Funnel: the editor's OAuth flow reached our consent screen. A gap between
   // `connect_editor_selected` and this event = config friction (couldn't even
   // kick off OAuth from their tool).
@@ -115,6 +134,11 @@ export default async function OAuthAuthorizePage({
     'use server';
     const workspaceId = formData.get('workspace_id') as string;
     if (!workspaceId) return;
+
+    // The picker was collapsed to one workspace, but the form field is still client
+    // input: re-check it here so a crafted post cannot mint a token for a different
+    // workspace than the one the resource indicator asked for.
+    if (pinnedWorkspaceId && workspaceId !== pinnedWorkspaceId) return;
 
     // User-chosen scope from the consent form (defaults to the requested scope, can be upgraded to write).
     const chosenScope = formData.get('scope') === 'write' ? 'write' : 'read';
@@ -188,7 +212,7 @@ export default async function OAuthAuthorizePage({
     <OAuthAuthorizeForm
       clientName={client.clientName}
       scope={validScope}
-      workspaces={userWorkspaces}
+      workspaces={consentWorkspaces}
       userName={user!.name ?? user!.email ?? ''}
       onApprove={handleApprove}
       onDeny={handleDeny}

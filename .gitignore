@@ -74,6 +74,7 @@ next-env.d.ts
 
 # .mcpb bundle build outputs + bundled deps + signing keys (reproducible via `npm run mcpb:build`)
 /mcpb/server/node_modules/
+/cli/node_modules/
 /mcpb-build/
 *.pem
 

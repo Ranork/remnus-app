@@ -1,5 +1,6 @@
 'use client';
-import { useActionState, useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { Suspense, useActionState, useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { signIn } from 'next-auth/react';
 import { loginAsDemo } from '@/lib/actions/demo';
 import { useTranslations } from 'next-intl';
@@ -11,7 +12,20 @@ import { getDesktopLoginUrl } from '@/lib/authDesktopLogin';
 type TauriState = 'idle' | 'waiting' | 'activating' | 'error';
 
 export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-neutral-950" />}>
+      <LoginForm />
+    </Suspense>
+  );
+}
+
+function LoginForm() {
   const t = useTranslations('Auth');
+  // Preserves where the visit came from (e.g. `/install` bounces unauthenticated
+  // visitors here with `?callbackUrl=/install?...`) — without this, sign-in always
+  // lands on `/app` and drops whatever flow was waiting for the user to return.
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get('callbackUrl') || '/app';
   const isTauri = useIsTauri();
   const [tauriState, setTauriState] = useState<TauriState>('idle');
   const [openUrlError, setOpenUrlError] = useState<string | null>(null);
@@ -186,7 +200,7 @@ export default function LoginPage() {
           {/* Google */}
           <button
             type="button"
-            onClick={() => signIn('google', { callbackUrl: '/app' })}
+            onClick={() => signIn('google', { callbackUrl })}
             className="w-full flex items-center justify-center gap-3 bg-white hover:bg-neutral-100 text-neutral-900 font-medium text-sm py-2.5 px-4 rounded-lg transition-colors cursor-pointer"
           >
             <GoogleIcon />
@@ -196,7 +210,7 @@ export default function LoginPage() {
           {/* GitHub */}
           <button
             type="button"
-            onClick={() => signIn('github', { callbackUrl: '/app' })}
+            onClick={() => signIn('github', { callbackUrl })}
             className="w-full flex items-center justify-center gap-3 bg-[#24292e] hover:bg-[#2f363d] text-white border border-neutral-800 font-medium text-sm py-2.5 px-4 rounded-lg transition-colors cursor-pointer"
           >
             <GithubIcon />

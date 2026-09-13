@@ -134,6 +134,43 @@ Do not guess a schema, and do not re-run `info` before every call.
 - **Dashboards/insights are no longer "manual-only":** **Activation Funnel Analytics** deliberately leaves the funnel insight and the agent-add drill-down as "PostHog-side config, not code" — those can now be built through this server. Because that writes into the real Remnus project, do it only when the task asks for it.
 - **Writes hit production:** creating or updating dashboards, insights, cohorts, feature flags, experiments, surveys, or annotations changes what the team sees. Explicit user intent required.
 
+## Project Install (`npx remnus init`)
+
+Turns any directory into a Remnus-connected project: **one project = one workspace**. Three pieces, in dependency order.
+
+### 1. Workspace-pinned MCP endpoint
+
+`/api/mcp/w/<workspaceId>` ([src/app/api/mcp/w/[workspaceId]/route.ts](src/app/api/mcp/w/[workspaceId]/route.ts)) alongside the original `/api/mcp`. Both mount the same [handler.ts](src/app/api/mcp/handler.ts) via an `McpEndpoint` descriptor.
+
+**Why it exists:** MCP clients namespace stored OAuth state by a hash of the server URL — Remnus's own launcher does this (`SERVER_URL_HASH` in [mcpb/server/index.js](mcpb/server/index.js)). With one shared URL, two projects on two workspaces collide on one token file and the second silently opens the first's workspace. A per-workspace URL makes that state per-workspace at zero client cost.
+
+**Invariants — do not break these:**
+- A token whose workspace differs from the URL gets **403, not 401**. 401 would send the client back through OAuth with a credential that can never satisfy that URL.
+- The workspace id is shape-checked (`isWorkspaceIdShape` in [src/lib/mcp/workspaceEndpoint.ts](src/lib/mcp/workspaceEndpoint.ts)) before it reaches a `WWW-Authenticate` header — an unchecked segment carrying CR/LF is header injection. Bad shape → 404, the same answer an unknown workspace gets.
+- `/api/mcp` behaviour is frozen. Every already-connected client uses it.
+- RFC 9728 metadata is served from **both** the bare `/.well-known/oauth-protected-resource` (where existing clients look) and the path-scoped `[...path]` route. Both must keep answering: the 401 challenge points at the path-scoped form, and a 404 there breaks auth discovery. `isProtectedMcpPath` is the single list of what gets a metadata document.
+- The consent screen reads the RFC 8707 `resource` indicator and collapses the workspace picker to the pinned workspace, re-checking it server-side in `handleApprove` (the form field is still client input).
+
+### 2. Install channel
+
+`remnus init` never shows a token. The CLI invents a `deviceId`, opens `/install?device_id=…&project=…`, and polls `/api/install/poll` until the browser side lands ([src/lib/services/installSession.ts](src/lib/services/installSession.ts)).
+
+- Storage reuses `client_auth_tokens` (**no migration**). The Tauri sign-in bridge stores a bare JWT there; install results are a JSON envelope tagged `kind: 'install'`, and a read that finds anything else reports "nothing pending" instead of consuming someone else's sign-in.
+- One-time read, 5-minute TTL.
+- `/api/install/poll` is the **only** public path (allowlisted in [src/auth.config.ts](src/auth.config.ts)); `no-store` is mandatory or a cached `{ready:false}` hangs the install forever.
+- `/install` is **not** allowlisted, but it must not rely on `getCurrentUser()` for the redirect — that goes to a bare `/login` and drops the device id. The page builds its own `callbackUrl`, same as the OAuth consent screen.
+- `mode=oauth` mints nothing and only carries the workspace choice back.
+- Only workspaces the user **owns** are offered: `mintAgentToken` requires owner access, so a member-only workspace would fail at the last step.
+
+### 3. The `cli/` package
+
+Standalone ESM Node package, **zero dependencies**, published to npm as `remnus`. Not part of the Next app — ignored in [eslint.config.mjs](eslint.config.mjs) alongside `mcpb/`.
+
+- `init` writes `.mcp.json`, `.remnus/config.json`, `.remnus/credentials.json` (git-ignored, 0600) and a marked section in `AGENTS.md`/`CLAUDE.md`. **Every writer edits in place**: other MCP servers, existing ignore rules and hand-written prose all survive a re-run. Markers make it idempotent.
+- `.mcp.json` runs `npx remnus mcp` rather than a direct HTTP transport, so no secret sits in a committed file, both auth modes produce the same file, and there is one place that notices a broken connection. `--http` opts out.
+- `mcp` is a stdio↔HTTPS bridge. **Nothing but protocol bytes may touch stdout** — every log in the package goes to stderr ([cli/src/lib/ui.js](cli/src/lib/ui.js)). On 401/403 it answers the request with a JSON-RPC error (never leave an agent hanging) *and* tells the human to run `remnus init`.
+- OAuth mode delegates to `mcp-remote` against the pinned URL.
+
 ## Color Theme
 
 | Role                | Hex       | Tailwind token |

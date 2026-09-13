@@ -13,9 +13,11 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
     // Not part of the Next app: the .mcpb bundle launcher is a standalone
-    // CommonJS Node script (own package.json), and src-tauri is the Rust project
-    // plus its build output.
+    // CommonJS Node script (own package.json), `cli/` is the published `remnus`
+    // command (standalone ESM Node package, own package.json), and src-tauri is
+    // the Rust project plus its build output.
     "mcpb/**",
+    "cli/**",
     "src-tauri/**",
   ]),
   {

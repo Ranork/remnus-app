@@ -43,6 +43,10 @@ export const authConfig: NextAuthConfig = {
       const isOAuthApi = cleanPath.startsWith('/api/oauth');
       const isWellKnown = cleanPath.startsWith('/.well-known');
       const isOAuthPage = cleanPath.startsWith('/oauth/');
+      // `remnus init` waits on this from a terminal, with no cookies to send. Only the
+      // poll is public — the /install page itself stays behind the session check so an
+      // unauthenticated visit gets the normal login-then-return redirect.
+      const isInstallPoll = cleanPath.startsWith('/api/install/poll');
       const isStripeWebhook = cleanPath.startsWith('/api/webhooks/stripe');
       const isInvite = cleanPath.startsWith('/invite/');
       // Prospect Invites (outreach gift-signup links) — distinct route from
@@ -63,7 +67,7 @@ export const authConfig: NextAuthConfig = {
         cleanPath.startsWith('/api/unsubscribe') ||
         cleanPath.startsWith('/api/cron') ||
         cleanPath.startsWith('/api/webhooks/ses');
-      if (isApiAuth || isMcpRoute || isPublicAsset || isTauriEntry || isClientActivate || isOAuthApi || isWellKnown || isOAuthPage || isStripeWebhook || isInvite || isProspectWelcome || isHealthCheck || isDownloadProxy || isMailingPublic) return true;
+      if (isApiAuth || isMcpRoute || isPublicAsset || isTauriEntry || isClientActivate || isOAuthApi || isWellKnown || isOAuthPage || isInstallPoll || isStripeWebhook || isInvite || isProspectWelcome || isHealthCheck || isDownloadProxy || isMailingPublic) return true;
 
       // Public marketing pages (pricing, contact) are always accessible
       if (isPublicMarketingRoute) return true;

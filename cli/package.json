@@ -1,0 +1,34 @@
+{
+  "name": "remnus",
+  "version": "0.1.0",
+  "description": "Set up Remnus in a project: one command, one sign-in, one workspace.",
+  "license": "AGPL-3.0-only",
+  "type": "module",
+  "bin": {
+    "remnus": "bin/remnus.js"
+  },
+  "engines": {
+    "node": ">=18.17"
+  },
+  "files": [
+    "bin",
+    "src",
+    "templates",
+    "README.md"
+  ],
+  "keywords": [
+    "remnus",
+    "mcp",
+    "workspace",
+    "agent",
+    "claude",
+    "cli"
+  ],
+  "homepage": "https://remnus.com",
+  "bugs": "https://remnus.com/contact",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Ranork/remnus-app.git",
+    "directory": "cli"
+  }
+}

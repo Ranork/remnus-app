@@ -134,6 +134,7 @@ Repository monorepo değildir. Ana npm uygulamasına ek olarak dağıtım için 
 - `docs/`: public Wiki/Docs uzun-form içerikleri.
 - `src-tauri/`, `android/`: masaüstü ve mobil shell'ler.
 - `mcpb/`: Claude Desktop remote-MCP proxy bundle'ı.
+- `cli/`: npm'e `remnus` olarak yayınlanan bağımsız kurulum CLI'ı (`npx remnus init`); bir proje dizinini bir workspace'e bağlar. Ayrıntı: `AGENTS.md` → **Project Install**.
 - `skills/remnus/`: Remnus MCP kullanım skill'i.
 - `.serena/memories/`: kalıcı ajan bilgisi; `.ai/`: görev/handoff durumu.
 
@@ -150,6 +151,7 @@ Repository monorepo değildir. Ana npm uygulamasına ek olarak dağıtım için 
 - Tekrarlayan takvim kartlarında iki değişmez korunmalı: geçmiş occurrence'lar asla yeniden yazılmaz (kural değişimi seriyi böler, mutasyon yapmaz) ve içi doldurulmuş occurrence silinmez, seriden koparılıp yerinde bırakılır. Ayrıntı: `AGENTS.md` → **Recurring Calendar Cards**.
 - MCP write tool'ları write scope doğrulaması yapmalı; audit logging ana cevabı bozmayan best-effort kalmalıdır.
 - Public/cookie-less asset ve API istisnaları `proxy.ts` ile `auth.config.ts` içinde birlikte korunmalıdır.
+- Proje kurulumu workspace-pinned MCP adresine (`/api/mcp/w/<workspaceId>`) dayanır: paylaşılan `/api/mcp` davranışı dondurulmuştur, workspace uyuşmazlığı 401 değil **403** döner ve RFC 9728 metadata hem bare hem path-scoped adresten servis edilmelidir. Ayrıntı: `AGENTS.md` → **Project Install**.
 
 ## Critical commands
 
