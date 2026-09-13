@@ -44,15 +44,16 @@ Self-hosting? Add `--server https://your-instance` (or set `REMNUS_SERVER_URL`).
 
 ## Step 2 — Set the workspace up for this project
 
-`init` also writes `.remnus/calibrate.md` — a one-time checklist for whichever agent
-is running in this project. It says to read the project (manifest, README, structure,
-commit history) and use the Remnus MCP tools to build out pages and databases that
-actually reflect it, instead of leaving the workspace empty.
+`init` prints a URL — `<your Remnus instance>/wiki/calibrate`, [also readable on its
+own](calibrate.md) — for a one-time checklist for whichever agent is running in this
+project. It's served live rather than copied into the project, so it can't go stale.
+It says to read the project (manifest, README, structure, commit history) and use
+the Remnus MCP tools to build out pages and databases that actually reflect it,
+instead of leaving the workspace empty.
 
-If you just ran `init` yourself: stop here and follow `.remnus/calibrate.md` now,
-before doing anything else. If you're picking up a project someone else already
-connected, check `.remnus/config.json` — if `"calibrated"` is still `false`, do the
-same thing.
+If you just ran `init` yourself: fetch that URL now and follow it, before doing
+anything else. If you're picking up a project someone else already connected, check
+`.remnus/config.json` — if `"calibrated"` is still `false`, do the same thing.
 
 ## Step 3 — Verify
 

@@ -52,11 +52,16 @@ export type WikiPage = {
   title: string;
   icon: LucideIcon;
   order: number;
+  /** Reachable by URL and rendered normally, but left out of the sidebar nav and
+   *  sitemap — for pages meant to be fetched directly (by an agent, a tool) rather
+   *  than browsed by a human. */
+  hidden?: boolean;
 };
 
 export const WIKI_PAGES: WikiPage[] = [
   { slug: '',                 file: 'README.md',           title: 'MCP Documentation',  icon: BookOpen,    order: 0 },
   { slug: 'project-install',  file: 'project-install.md',  title: 'Project Install',    icon: Terminal,    order: 1 },
+  { slug: 'calibrate',        file: 'calibrate.md',        title: 'Calibrate',          icon: Wrench,      order: 1.5, hidden: true },
   { slug: 'getting-started',  file: 'getting-started.md',  title: 'Getting Started',    icon: Rocket,      order: 2 },
   { slug: 'connect-editors',  file: 'connect-editors.md',  title: 'Connect Your Editor', icon: Plug,       order: 3 },
   { slug: 'authentication',   file: 'authentication.md',   title: 'Authentication',     icon: KeyRound,    order: 4 },

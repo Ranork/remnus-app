@@ -1,13 +1,11 @@
-# Set up this workspace
+# Calibrate
 
-`npx remnus init` just connected this project to a Remnus workspace that has not
-been set up for it yet (`.remnus/config.json` still says `"calibrated": false`).
-This file is a one-time checklist for the agent doing that setup — not a human
-document, not something to keep polishing later. It was generated locally by the
-`remnus` CLI (AGPL-3.0, source at
-[github.com/Ranork/remnus-app](https://github.com/Ranork/remnus-app/tree/master/cli))
-that this project's own `.mcp.json`/`AGENTS.md` already point at — nothing in it
-reaches further than the Remnus MCP tools already available in this session.
+`npx remnus init` connected a project to a Remnus workspace that has not been set up
+for it yet (`.remnus/config.json` in that project still says `"calibrated": false`).
+This page is a one-time checklist for whichever agent is working in that project —
+not a human document. It's served live from this Remnus instance rather than copied
+into the project, so it can't go stale: whatever's on this page is always what
+following it does, no local file to fall behind as the guide improves.
 
 Before step 1: skim the workspace first (`list_workspace`, `search_workspace`). If
 it already has real content — this project reused an existing workspace rather
@@ -16,14 +14,14 @@ recreate what is already there.
 
 ## 1. Understand the project
 
-Read enough of this repository to describe it accurately: its manifest
-(`package.json`, `pyproject.toml`, `Cargo.toml`, a `.csproj`, whatever this project
-uses), its README, its top-level folder structure and main modules, its commit
-history (`git log`, not just the latest commit — look for the *shape* of the work
-over time), and any docs a human already wrote for agents (`AGENTS.md`/`CLAUDE.md`
-above the Remnus section, `docs/`, `.ai/`). Do not guess — everything you write into
-the workspace next should trace back to something you actually read, not to what a
-project like this "usually" has.
+Read enough of the project to describe it accurately: its manifest (`package.json`,
+`pyproject.toml`, `Cargo.toml`, a `.csproj`, whatever it uses), its README, its
+top-level folder structure and main modules, its commit history (`git log`, not
+just the latest commit — look for the *shape* of the work over time), and any docs
+a human already wrote for agents (`AGENTS.md`/`CLAUDE.md` above the Remnus section,
+`docs/`, `.ai/`). Do not guess — everything you write into the workspace next should
+trace back to something you actually read, not to what a project like this
+"usually" has.
 
 Also mine what you already know, not just the file tree: if you (the calibrating
 agent) have access to earlier conversation or session history for this project —
@@ -56,7 +54,8 @@ substance, a shallow two-page skeleton is just as wrong as an invented one.
 
 ## 3. Finish
 
-- Edit `.remnus/config.json` and set `"calibrated": true`.
+- Edit the project's local `.remnus/config.json` and set `"calibrated": true` — this
+  is the only local file this checklist touches.
 - Tell the human, in one or two sentences, what you set up and where to look.
 - Then continue with whatever you were actually asked to do — this checklist was a
   detour, not the task.

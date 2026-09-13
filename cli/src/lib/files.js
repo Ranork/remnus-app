@@ -119,23 +119,6 @@ export function writeAgentSection(root, fileName, section) {
   return existed ? 'updated' : 'created';
 }
 
-/**
- * Writes the one-time calibration checklist to `.remnus/calibrate.md`. Unlike
- * `.mcp.json`/AGENTS.md this file has no user content to preserve — it is fully
- * regenerated on every `init` so an updated template always reaches the project.
- * Returns 'created' | 'updated' | 'unchanged'.
- */
-export function writeCalibrationGuide(root, content) {
-  const dir = path.join(root, '.remnus');
-  fs.mkdirSync(dir, { recursive: true });
-  const file = path.join(dir, 'calibrate.md');
-  const existed = fs.existsSync(file);
-  const existing = existed ? fs.readFileSync(file, 'utf8') : null;
-  if (existing === content) return 'unchanged';
-  fs.writeFileSync(file, content, 'utf8');
-  return existed ? 'updated' : 'created';
-}
-
 /** Which agent instruction files this project already keeps. */
 export function detectAgentDocs(root) {
   const candidates = ['AGENTS.md', 'CLAUDE.md'];

@@ -128,7 +128,7 @@ const wikiBySlug = new Map<string, WikiPage>(WIKI_PAGES.map((p) => [p.slug, p]))
 export type WikiNavItem = { slug: string; title: string };
 
 export function getWikiNav(): WikiNavItem[] {
-  return [...WIKI_PAGES]
+  return WIKI_PAGES.filter((p) => !p.hidden)
     .sort((a, b) => a.order - b.order)
     .map(({ slug, title }) => ({ slug, title }));
 }

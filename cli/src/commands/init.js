@@ -14,7 +14,6 @@ import {
   detectAgentDocs,
   ensureGitignore,
   writeAgentSection,
-  writeCalibrationGuide,
   writeMcpConfig,
 } from '../lib/files.js';
 import { installUrl, newDeviceId, openBrowser, waitForInstall } from '../lib/install.js';
@@ -124,14 +123,18 @@ export async function initCommand(options) {
   const mcpState = writeMcpConfig(root, mcpEntryFor(config, { direct: options.http }));
   if (mcpState !== 'unchanged') detail(`.mcp.json  (${mcpState})`);
 
-  const calibrateState = writeCalibrationGuide(root, renderTemplate('calibrate.md', {}));
-  if (calibrateState !== 'unchanged') detail(`.remnus/calibrate.md  (${calibrateState})`);
+  // Served live from the connected Remnus instance rather than copied into the
+  // project: a local `.remnus/calibrate.md` would go stale as the guide improves,
+  // and this way a self-hosted instance always serves the guide matching its own
+  // deployed version instead of remnus.com's.
+  const calibrateUrl = `${serverUrl}/wiki/calibrate`;
 
   const section = renderTemplate('agents-section.md', {
     WORKSPACE_NAME: config.workspaceName,
     WORKSPACE_ID: config.workspaceId,
     MCP_URL: config.mcpUrl,
     SCOPE: config.scope ?? 'set when the agent connects',
+    CALIBRATE_URL: calibrateUrl,
   });
 
   for (const docName of detectAgentDocs(root)) {
@@ -149,10 +152,10 @@ export async function initCommand(options) {
   ok('Setup complete.');
   say();
   step('This project is not marked as set up yet.');
-  say(dim(`A one-time setup guide is waiting at ${bold('.remnus/calibrate.md')} — it walks`));
-  say(dim('whichever agent works in this project through reading the project and filling'));
-  say(dim('the workspace in to match it. It is optional: point an agent at that file if'));
-  say(dim('you want that done, or use the workspace empty and skip it.'));
+  say(dim(`A one-time setup guide lives at ${bold(calibrateUrl)} — it walks whichever`));
+  say(dim('agent works in this project through reading the project and filling the'));
+  say(dim('workspace in to match it. It is optional: point an agent at that page if you'));
+  say(dim('want that done, or use the workspace empty and skip it.'));
   say();
   say(dim(`Check the connection any time with ${bold('npx remnus doctor')}.`));
 }

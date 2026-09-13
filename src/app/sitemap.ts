@@ -26,7 +26,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   } catch { /* DB may not be available at build time */ }
 
   // Wiki (MCP reference) + Docs (blog) — file-driven, always in the sitemap.
-  const wikiEntries: MetadataRoute.Sitemap = WIKI_PAGES.map((p) => ({
+  const wikiEntries: MetadataRoute.Sitemap = WIKI_PAGES.filter((p) => !p.hidden).map((p) => ({
     url: p.slug ? `https://remnus.com/wiki/${p.slug}` : 'https://remnus.com/wiki',
     lastModified: new Date(),
     changeFrequency: 'weekly',
