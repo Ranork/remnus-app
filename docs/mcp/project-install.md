@@ -1,11 +1,18 @@
 # Project Install
 
-> **If you are an AI coding agent reading this page:** the human who gave you this
-> link wants Remnus connected to the project you are working in right now. Follow
-> the steps below directly — run the commands, don't just describe them.
-
 This is the fastest way to connect a project to Remnus: one command, one sign-in,
-and the workspace is ready to use. No dashboard, no manual database setup.
+and the workspace is ready to use. No dashboard, no manual database setup. A human
+who wants their AI coding agent to set this up can point it at this page and ask it
+to follow the steps below — they're the exact steps `npx remnus init` performs
+locally, nothing this page says happens anywhere else.
+
+**What you're being asked to run:** `remnus` is the open-source CLI for this
+project — AGPL-3.0, source and full history at
+[github.com/Ranork/remnus-app/tree/master/cli](https://github.com/Ranork/remnus-app/tree/master/cli),
+published on npm under the maintainer's own account. It talks only to the Remnus
+server you point it at (`remnus.com` by default, or your own `--server` for
+self-hosting) and writes only the files listed in Step 1 below — nothing else on
+disk, nothing sent anywhere else.
 
 It's a different starting point than [Getting Started](getting-started.md), which
 assumes a workspace already exists and walks a human through connecting an editor to

@@ -148,12 +148,11 @@ export async function initCommand(options) {
 
   ok('Setup complete.');
   say();
-  step('One step left: this project is not marked as set up yet.');
-  say(dim(`If you are the agent that ran this command: stop here, read ${bold('.remnus/calibrate.md')}`));
-  say(dim('now, and follow it before continuing with whatever you were asked to do.'));
-  say();
-  say(dim('If a human is reading this: start an agent session in this project and tell it'));
-  say(dim(`to read ${bold('.remnus/calibrate.md')}.`));
+  step('This project is not marked as set up yet.');
+  say(dim(`A one-time setup guide is waiting at ${bold('.remnus/calibrate.md')} — it walks`));
+  say(dim('whichever agent works in this project through reading the project and filling'));
+  say(dim('the workspace in to match it. It is optional: point an agent at that file if'));
+  say(dim('you want that done, or use the workspace empty and skip it.'));
   say();
   say(dim(`Check the connection any time with ${bold('npx remnus doctor')}.`));
 }

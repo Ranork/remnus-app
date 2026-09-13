@@ -3,7 +3,11 @@
 `npx remnus init` just connected this project to a Remnus workspace that has not
 been set up for it yet (`.remnus/config.json` still says `"calibrated": false`).
 This file is a one-time checklist for the agent doing that setup — not a human
-document, not something to keep polishing later.
+document, not something to keep polishing later. It was generated locally by the
+`remnus` CLI (AGPL-3.0, source at
+[github.com/Ranork/remnus-app](https://github.com/Ranork/remnus-app/tree/master/cli))
+that this project's own `.mcp.json`/`AGENTS.md` already point at — nothing in it
+reaches further than the Remnus MCP tools already available in this session.
 
 Before step 1: skim the workspace first (`list_workspace`, `search_workspace`). If
 it already has real content — this project reused an existing workspace rather
