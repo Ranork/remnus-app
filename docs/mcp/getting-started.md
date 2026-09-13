@@ -2,6 +2,11 @@
 
 This guide walks you through connecting your first AI client to Remnus. The recommended path is **OAuth** — no token to generate or paste. A personal access token (PAT) is available as a fallback for clients that don't run the MCP OAuth flow.
 
+> **Starting a new project instead of connecting an editor to a workspace you already
+> have?** [Project Install](project-install.md) does both in one command —
+> `npx remnus init` — and is what to hand an AI agent when you want it to set Remnus
+> up itself.
+
 ## Step 1 — Open the connect flow
 
 1. Open your workspace in Remnus

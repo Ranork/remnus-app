@@ -10,6 +10,9 @@ Your browser opens once. You sign in, pick (or create) a workspace for this proj
 and the command writes everything the project needs. No token is ever shown to you or
 pasted anywhere.
 
+Full walkthrough (also the page to hand an AI agent and ask it to run this for you):
+[remnus.com/wiki/project-install](https://remnus.com/wiki/project-install).
+
 ## What `init` writes
 
 | File | Committed? | What it is |

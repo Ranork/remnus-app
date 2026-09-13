@@ -58,7 +58,7 @@ function printHelp() {
   say('  --server <url>   Use a self-hosted Remnus instance');
   say('  --dir <path>     Set up a different directory than the current one');
   say();
-  say(dim('Docs: https://remnus.com/docs/mcp'));
+  say(dim('Docs: https://remnus.com/wiki/project-install'));
   say();
 }
 

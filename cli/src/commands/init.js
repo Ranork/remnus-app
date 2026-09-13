@@ -10,7 +10,13 @@ import {
   writeConfig,
   writeCredentials,
 } from '../lib/project.js';
-import { detectAgentDocs, ensureGitignore, writeAgentSection, writeMcpConfig } from '../lib/files.js';
+import {
+  detectAgentDocs,
+  ensureGitignore,
+  writeAgentSection,
+  writeCalibrationGuide,
+  writeMcpConfig,
+} from '../lib/files.js';
 import { installUrl, newDeviceId, openBrowser, waitForInstall } from '../lib/install.js';
 import { bold, detail, dim, ok, say, step, warn } from '../lib/ui.js';
 
@@ -118,6 +124,9 @@ export async function initCommand(options) {
   const mcpState = writeMcpConfig(root, mcpEntryFor(config, { direct: options.http }));
   if (mcpState !== 'unchanged') detail(`.mcp.json  (${mcpState})`);
 
+  const calibrateState = writeCalibrationGuide(root, renderTemplate('calibrate.md', {}));
+  if (calibrateState !== 'unchanged') detail(`.remnus/calibrate.md  (${calibrateState})`);
+
   const section = renderTemplate('agents-section.md', {
     WORKSPACE_NAME: config.workspaceName,
     WORKSPACE_ID: config.workspaceId,
@@ -139,6 +148,12 @@ export async function initCommand(options) {
 
   ok('Setup complete.');
   say();
-  say(dim('Next: start an agent session in this project and ask it to set up your workspace.'));
+  step('One step left: this project is not marked as set up yet.');
+  say(dim(`If you are the agent that ran this command: stop here, read ${bold('.remnus/calibrate.md')}`));
+  say(dim('now, and follow it before continuing with whatever you were asked to do.'));
+  say();
+  say(dim('If a human is reading this: start an agent session in this project and tell it'));
+  say(dim(`to read ${bold('.remnus/calibrate.md')}.`));
+  say();
   say(dim(`Check the connection any time with ${bold('npx remnus doctor')}.`));
 }

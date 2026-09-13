@@ -18,16 +18,26 @@ https://www.remnus.com/api/mcp
 
 Always use the `www` host — the apex `remnus.com` redirects to `www.remnus.com`, and some OAuth clients reject the resulting resource-indicator mismatch. Uses the modern **Streamable HTTP** transport (stateless, one request per call) — the transport the current MCP spec recommends for remote servers.
 
-## Quick start
+## Two ways to connect
+
+- **Starting from a project, no workspace yet?** Use [Project Install](project-install.md) — `npx remnus init` creates or picks a workspace and wires up your editor in one command. This is what to link an AI agent to when you want it to set Remnus up for you.
+- **Already have a workspace, just want to add an editor to it?** Use [Getting Started](getting-started.md) — connect from the workspace's own **AI Agents** panel.
+
+Both talk to the same MCP server; pick whichever matches what you already have.
+
+## Quick start (existing workspace)
 
 1. Open your workspace → sidebar **AI Agents** button → **Connect editor**
 2. Pick your editor. Most connect with **OAuth** — no token to copy, just approve the consent screen in your browser on first connect. Prefer a token? Expand **Advanced** to mint one.
 3. Ask your agent to prepare a read-only context pack — see [Getting Started](getting-started.md) for the full walkthrough
 
+New project instead? Skip straight to [Project Install](project-install.md).
+
 ## Documentation
 
 | | |
 |---|---|
+| [Project Install](project-install.md) | Connect a project in one command: `npx remnus init` |
 | [Getting Started](getting-started.md) | OAuth connect, PAT fallback, first call |
 | [Connect Your Editor](connect-editors.md) | Windsurf, Continue, Antigravity, Cline, Zed & more — ready configs + OAuth |
 | [Authentication](authentication.md) | Bearer tokens, scopes, rate limits |

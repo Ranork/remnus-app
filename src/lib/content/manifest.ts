@@ -16,6 +16,7 @@ import type { ComponentType } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import {
   BookOpen,
+  Terminal,
   Rocket,
   Plug,
   KeyRound,
@@ -55,16 +56,17 @@ export type WikiPage = {
 
 export const WIKI_PAGES: WikiPage[] = [
   { slug: '',                 file: 'README.md',           title: 'MCP Documentation',  icon: BookOpen,    order: 0 },
-  { slug: 'getting-started',  file: 'getting-started.md',  title: 'Getting Started',    icon: Rocket,      order: 1 },
-  { slug: 'connect-editors',  file: 'connect-editors.md',  title: 'Connect Your Editor', icon: Plug,       order: 2 },
-  { slug: 'authentication',   file: 'authentication.md',   title: 'Authentication',     icon: KeyRound,    order: 3 },
-  { slug: 'read-tools',       file: 'read-tools.md',       title: 'Read Tools',         icon: Search,      order: 4 },
-  { slug: 'write-tools',      file: 'write-tools.md',      title: 'Write Tools',        icon: PencilLine,  order: 5 },
-  { slug: 'resources',        file: 'resources.md',        title: 'Resources',          icon: Package,     order: 6 },
-  { slug: 'prompts',          file: 'prompts.md',          title: 'Prompts',            icon: Lightbulb,   order: 7 },
-  { slug: 'agent-memory',     file: 'agent-memory.md',     title: 'Agent Memory',       icon: Brain,       order: 8 },
-  { slug: 'context-first',    file: 'context-first.md',    title: 'Context-First MCP',  icon: ShieldCheck, order: 9 },
-  { slug: 'token-efficient-usage', file: 'token-efficient-usage.md', title: 'Token-Efficient Usage', icon: Gauge, order: 10 },
+  { slug: 'project-install',  file: 'project-install.md',  title: 'Project Install',    icon: Terminal,    order: 1 },
+  { slug: 'getting-started',  file: 'getting-started.md',  title: 'Getting Started',    icon: Rocket,      order: 2 },
+  { slug: 'connect-editors',  file: 'connect-editors.md',  title: 'Connect Your Editor', icon: Plug,       order: 3 },
+  { slug: 'authentication',   file: 'authentication.md',   title: 'Authentication',     icon: KeyRound,    order: 4 },
+  { slug: 'read-tools',       file: 'read-tools.md',       title: 'Read Tools',         icon: Search,      order: 5 },
+  { slug: 'write-tools',      file: 'write-tools.md',      title: 'Write Tools',        icon: PencilLine,  order: 6 },
+  { slug: 'resources',        file: 'resources.md',        title: 'Resources',          icon: Package,     order: 7 },
+  { slug: 'prompts',          file: 'prompts.md',          title: 'Prompts',            icon: Lightbulb,   order: 8 },
+  { slug: 'agent-memory',     file: 'agent-memory.md',     title: 'Agent Memory',       icon: Brain,       order: 9 },
+  { slug: 'context-first',    file: 'context-first.md',    title: 'Context-First MCP',  icon: ShieldCheck, order: 10 },
+  { slug: 'token-efficient-usage', file: 'token-efficient-usage.md', title: 'Token-Efficient Usage', icon: Gauge, order: 11 },
 ];
 
 // ── Docs (blog, article layout) ────────────────────────────────────────────────

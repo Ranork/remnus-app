@@ -45,6 +45,31 @@ const FIRST_VISIT_WINDOW_DAYS = 7;
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-09-13-workspace-auto-setup',
+    date: '2026-09-13',
+    category: 'improved',
+    title: {
+      en: 'Your AI assistant sets up the new workspace for you',
+      tr: 'Yapay zekâ asistanınız yeni çalışma alanını sizin için kuruyor',
+      de: 'Ihr KI-Assistent richtet den neuen Arbeitsbereich für Sie ein',
+      es: 'Tu asistente de IA configura el nuevo espacio de trabajo por ti',
+      fr: 'Votre assistant IA configure le nouvel espace de travail pour vous',
+      hi: 'आपका AI असिस्टेंट नया वर्कस्पेस आपके लिए सेट करता है',
+      ru: 'Ваш ИИ-ассистент сам настраивает новое пространство',
+      zh: '您的 AI 助手会自动为您搭建新工作区',
+    },
+    summary: {
+      en: 'After connecting a project, your AI assistant now reads it and fills the new workspace with pages that match it instead of handing you an empty one.',
+      tr: 'Bir proje bağlandıktan sonra, yapay zekâ asistanınız artık projeyi okuyup yeni çalışma alanını ona uygun sayfalarla dolduruyor; size boş bir alan bırakmıyor.',
+      de: 'Nach dem Verbinden eines Projekts liest Ihr KI-Assistent es jetzt und füllt den neuen Arbeitsbereich mit passenden Seiten, statt ihn leer zu lassen.',
+      es: 'Tras conectar un proyecto, tu asistente de IA ahora lo lee y llena el nuevo espacio de trabajo con páginas que encajan, en vez de dejarlo vacío.',
+      fr: 'Après avoir connecté un projet, votre assistant IA le lit désormais et remplit le nouvel espace de travail avec des pages adaptées, au lieu de vous le laisser vide.',
+      hi: 'प्रोजेक्ट जोड़ने के बाद अब आपका AI असिस्टेंट उसे पढ़कर नए वर्कस्पेस को उपयुक्त पेजों से भर देता है, इसे खाली नहीं छोड़ता।',
+      ru: 'После подключения проекта ваш ИИ-ассистент теперь читает его и сразу наполняет новое пространство подходящими страницами, а не оставляет его пустым.',
+      zh: '连接项目后，您的 AI 助手现在会读取项目内容并用匹配的页面填充新工作区，而不是留一个空的给您。',
+    },
+  },
+  {
     id: '2026-09-13-login-return-link',
     date: '2026-09-13',
     category: 'fixed',
