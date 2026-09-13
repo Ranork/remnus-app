@@ -28,7 +28,7 @@
   "bugs": "https://remnus.com/contact",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Ranork/remnus-app.git",
+    "url": "git+https://github.com/Ranork/remnus-app.git",
     "directory": "cli"
   }
 }
