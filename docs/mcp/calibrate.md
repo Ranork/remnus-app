@@ -62,7 +62,13 @@ actually read here.
 This is the phase a simple "copy the docs over" pass skips, and it's the one that
 matters most. Before creating anything, decide: *what are the recurring kinds of
 thing in this project's world* — not a fixed checklist, a real answer for this
-project. Common ones, use as a prompt for your own thinking, not a mandatory list:
+project. Do this in two passes; **neither is optional**, and the second is the one a
+lazy calibration skips entirely.
+
+### 2a — Process concepts
+
+The generic ones that recur across almost any software project. Use this as a prompt
+for your own thinking, not a mandatory list:
 
 - **Decisions** — binding calls that shaped the product (architecture choices,
   rejected alternatives, "why we don't do X").
@@ -70,17 +76,44 @@ project. Common ones, use as a prompt for your own thinking, not a mandatory lis
 - **Systems / architecture** — how the pieces fit together *right now*.
 - **Gotchas / known traps** — recurring failure modes, each with a real incident
   behind it.
-- **Glossary / domain concepts** — terms this project's code and docs use that a
-  newcomer wouldn't know for free.
+- **Glossary** — terms this project's code and docs use that a newcomer wouldn't know
+  for free.
 - **Open questions / risks** — things nobody has decided yet, but that come up.
 
 Some of these won't apply — a project with no real decision history yet doesn't get
-an empty Decisions database for the sake of having one. Some projects will have a
-concept that isn't on this list at all (a game's balance parameters, an API's
-versioning history, a data pipeline's source inventory) — model that too if it's
-real and recurring. The list exists to make you look, not to cap what you build.
+an empty Decisions database for the sake of having one.
 
-**For each concept you decide is real here, choose page vs. database deliberately:**
+### 2b — Domain concepts: what makes *this specific project* worth managing
+
+Process concepts are the same shape for almost any codebase. This pass is about the
+opposite: what would only ever come up for *this* project, because of what it
+actually is? Ask directly: **if a product manager or project owner were sitting
+where you are, what would they want tracked that has nothing to do with engineering
+process at all?** The answer depends entirely on the project's domain — that's the
+point, don't skip it because it doesn't fit a template:
+
+- A game project might have creatures/enemies, zones or levels, items, balance
+  parameters, narrative or lore — real design data a producer would track, not
+  engineering backlog.
+- A product/company's own workspace (this one, for instance) might have a roadmap of
+  future plans, marketing or growth status, competitive positioning, pricing —
+  business reality, not code.
+- A data or API project might have a source/endpoint inventory, schema versioning
+  history, data-quality issues.
+
+These are illustrations of the *kind* of thing to look for, not a checklist — the
+actual answer for a given project could be none of these and something else entirely.
+Ground it the same way as everything else: look for real evidence before modeling a
+domain concept (an Enemy/Creature data model in the code, a design doc, a balance
+spreadsheet, a marketing/roadmap doc or a source you're told about elsewhere) — don't
+invent a "Creatures" database for a game project just because it's a game, and don't
+skip modeling one if the evidence for it is sitting right there in the codebase or
+history. If domain data like this is already tracked somewhere you have access to
+(another doc, another connected tool, something mentioned in conversation history),
+that's real evidence too — reflect and link it rather than re-inventing a second copy.
+
+**For each concept you decide is real, from either pass, choose page vs. database
+deliberately:**
 
 - It's a **database** if there are (or clearly will be) multiple genuinely distinct
   instances of the same kind of thing, and a person managing this project would want
