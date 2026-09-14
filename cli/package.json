@@ -1,6 +1,6 @@
 {
   "name": "remnus",
-  "version": "0.1.5",
+  "version": "0.1.6",
   "description": "Set up Remnus in a project: one command, one sign-in, one workspace.",
   "license": "AGPL-3.0-only",
   "type": "module",
