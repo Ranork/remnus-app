@@ -1,5 +1,13 @@
 import fs from 'node:fs';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
+/** This CLI's own version, read from its package.json — used to pin `.mcp.json`'s
+ *  `npx` invocation so a compromised or broken future release doesn't silently run
+ *  in every already-connected project the next time an MCP client restarts. */
+export const CLI_VERSION = JSON.parse(
+  fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'package.json'), 'utf8'),
+).version;
 
 export const DEFAULT_SERVER_URL = 'https://www.remnus.com';
 

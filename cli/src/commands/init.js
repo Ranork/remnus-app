@@ -3,6 +3,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import {
+  CLI_VERSION,
   DEFAULT_SERVER_URL,
   normalizeServerUrl,
   projectNameFor,
@@ -29,10 +30,15 @@ const TEMPLATE_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), '..
  * committed file, the token and the OAuth modes produce the *same* .mcp.json, and
  * every request passes through somewhere we can notice a broken connection and say
  * so. `--http` opts out for anyone who would rather have the direct transport.
+ *
+ * Pinned to this CLI's exact version rather than a bare `remnus` — otherwise every
+ * connected project silently pulls whatever is newest on npm the next time an MCP
+ * client restarts, which is a real supply-chain exposure a security review will
+ * flag (one did, on a real install). Re-running `init` moves the pin forward.
  */
 function mcpEntryFor(config, { direct }) {
   if (!direct) {
-    return { command: 'npx', args: ['-y', 'remnus', 'mcp'] };
+    return { command: 'npx', args: ['-y', `remnus@${CLI_VERSION}`, 'mcp'] };
   }
   if (config.authMode === 'oauth') {
     return { type: 'http', url: config.mcpUrl };
