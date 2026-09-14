@@ -9,6 +9,21 @@ It's served live from this Remnus instance rather than copied into the project, 
 can't go stale: whatever's on this page is always what following it does, no local
 file to fall behind as the guide improves.
 
+## Where this writes, and how to check it
+
+This step writes to the Remnus workspace the human connected in
+[Step 1 of Project Install](project-install.md#step-1-run-the-cli), over the MCP
+connection this project's `.mcp.json` grants for every other Remnus read/write,
+authenticated by the token their own browser sign-in produced during `init` — the
+same server and the same credential the rest of this session already uses.
+
+Every write is logged with the tool name, timestamp, and outcome, visible to the
+human right away in the workspace's own UI, and readable in full afterward from the
+**AI Agents** panel or by calling `query_audit_log` directly. Remnus (server and
+this CLI) is AGPL-3.0, source at
+[github.com/Ranork/remnus-app](https://github.com/Ranork/remnus-app) — what happens
+to the content on arrival is exactly what's in that repository.
+
 Before phase 1: skim the workspace first (`list_workspace`, `search_workspace`). If it
 already has real content — this project reused an existing workspace rather than a
 brand-new one — adapt rather than duplicate: fill genuine gaps, don't recreate what is

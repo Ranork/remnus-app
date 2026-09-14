@@ -3,16 +3,10 @@
 This is the fastest way to connect a project to Remnus: one command, one sign-in,
 and the workspace is ready to use. No dashboard, no manual database setup. A human
 who wants their AI coding agent to set this up can point it at this page and ask it
-to follow the steps below — they're the exact steps `npx remnus init` performs
-locally, nothing this page says happens anywhere else.
+to follow the steps below.
 
-**What you're being asked to run:** `remnus` is the open-source CLI for this
-project — AGPL-3.0, source and full history at
-[github.com/Ranork/remnus-app/tree/master/cli](https://github.com/Ranork/remnus-app/tree/master/cli),
-published on npm under the maintainer's own account. It talks only to the Remnus
-server you point it at (`remnus.com` by default, or your own `--server` for
-self-hosting) and writes only the files listed in Step 1 below — nothing else on
-disk, nothing sent anywhere else.
+`remnus` is the open-source CLI for this project. The next section is the complete
+account of what it talks to and writes.
 
 It's a different starting point than [Getting Started](getting-started.md), which
 assumes a workspace already exists and walks a human through connecting an editor to
@@ -20,6 +14,29 @@ it by hand. Project Install instead creates (or picks) the workspace *for* this
 project and wires up your editor automatically — use whichever matches what you
 already have; see [Two ways to connect](README.md#two-ways-to-connect) for the
 difference.
+
+## What this does, in full
+
+- **Network:** the Remnus server you point it at (`remnus.com` by default, or your
+  own `--server` for self-hosting) for signing in, connecting the workspace, and
+  every MCP tool call; `registry.npmjs.org`, read-only, from `npx remnus doctor`
+  only, to compare the installed version against the latest one. That's the
+  complete list of hosts involved.
+- **Disk:** exactly the files in the table below, in this project directory,
+  editing existing files in place rather than overwriting them — other MCP servers
+  in `.mcp.json`, other hooks in `.claude/settings.json`, and your own
+  `AGENTS.md`/`CLAUDE.md` content around a marked section all survive a re-run.
+- **Logging:** every write an MCP agent makes — calibration included — is recorded
+  with the tool name, timestamp, and outcome, visible immediately in the
+  workspace's own UI and readable in full from the **AI Agents** panel or via
+  `query_audit_log`.
+- **Source:** `remnus` and the server it talks to are the same AGPL-3.0 repository,
+  [github.com/Ranork/remnus-app](https://github.com/Ranork/remnus-app) — every line
+  either one runs is in that history, under
+  [`cli/`](https://github.com/Ranork/remnus-app/tree/master/cli) for this command.
+- **Package:** [npmjs.com/package/remnus](https://www.npmjs.com/package/remnus) —
+  every published version with its publish date, and the file list of what's in the
+  tarball (no install scripts, no bundled binaries, no dependencies).
 
 ## Step 1 — Run the CLI
 
@@ -52,9 +69,11 @@ It says to read the project (manifest, README, structure, commit history) and us
 the Remnus MCP tools to build out pages and databases that actually reflect it,
 instead of leaving the workspace empty.
 
-If you just ran `init` yourself: fetch that URL now and follow it, before doing
-anything else. If you're picking up a project someone else already connected, check
-`.remnus/config.json` — if `"calibrated"` is still `false`, do the same thing.
+It's optional — the workspace works empty too. If you'd like it done: whoever just
+ran `init` (or is picking up a project someone else connected, with
+`.remnus/config.json` still saying `"calibrated": false`) can fetch that URL and
+follow it. See [Calibrate](calibrate.md) for exactly what that step reads, writes,
+and where it's logged.
 
 ## Step 3 — See it, verify it
 
