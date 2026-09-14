@@ -48,6 +48,22 @@ actually need to track — don't default to a fixed page count in either directi
   going while you are still finding real, grounded material — stop when you run out
   of substance, not when you hit some page count.
 
+**If this material already exists as plain files in the repo** — a decisions log, an
+architecture doc, a gotcha list, checked into git — that is not a reason to skip it.
+A file only an agent with a terminal can read is not doing what Remnus is for: making
+this content visual, filterable, and reviewable by a human. Convert it: one row per
+decision (with `Status`/date/superseded-by columns, not a pasted wall of text), one
+row per gotcha, real pages for architecture — don't stop at a page that just points to
+the file and calls it done.
+
+"Don't duplicate" (above) means don't paste in a static snapshot that will keep
+silently drifting from a file someone is still editing directly — it does not mean
+leave the file untouched and skip importing it. Those are different failures; this
+step exists to fix the second one, not to excuse it. If, after importing, you're
+unsure whether the local file should stay authoritative going forward or Remnus
+should become the new source of truth, ask the human — that's a real decision, not
+yours to make silently.
+
 Depth over volume either way: every page/row should trace to something you actually
 read, never to what a project "like this" usually has. But for a project with real
 substance, a shallow two-page skeleton is just as wrong as an invented one.
