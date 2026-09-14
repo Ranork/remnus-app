@@ -1,5 +1,7 @@
 import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
+import fs from 'node:fs';
+import path from 'node:path';
 import { detail, warn } from './ui.js';
 
 export function newDeviceId() {
@@ -37,6 +39,67 @@ export function openBrowser(url) {
     return true;
   } catch {
     return false;
+  }
+}
+
+/** Absolute path to Edge or Chrome on Windows, or null if neither is installed
+ *  where we'd expect. Both ship a `--app` mode; no reason to prefer one over
+ *  whichever the machine actually has. */
+function findChromiumWindows() {
+  const roots = [process.env.ProgramFiles, process.env['ProgramFiles(x86)'], process.env.LOCALAPPDATA].filter(Boolean);
+  const relatives = [
+    ['Microsoft', 'Edge', 'Application', 'msedge.exe'],
+    ['Google', 'Chrome', 'Application', 'chrome.exe'],
+  ];
+  for (const rel of relatives) {
+    for (const root of roots) {
+      const candidate = path.join(root, ...rel);
+      if (fs.existsSync(candidate)) return candidate;
+    }
+  }
+  return null;
+}
+
+/** macOS `.app` bundle name for Edge or Chrome, or null if neither is in /Applications. */
+function findChromiumMac() {
+  return ['Microsoft Edge', 'Google Chrome'].find((name) => fs.existsSync(`/Applications/${name}.app`)) ?? null;
+}
+
+/**
+ * Opens a URL as its own minimal window — no tabs, no address bar, no toolbar —
+ * instead of a tab in whatever the default browser is. Chrome/Edge's `--app` mode
+ * is the lightest way to get something that reads as "an app opened", not "a
+ * browser tab opened": no new dependency, no native binary to ship, unlike a real
+ * embedded-webview wrapper (see the gotcha below).
+ *
+ * Firefox and Safari have no equivalent app-mode flag, so this only fires for a
+ * detected Chromium browser and falls straight back to `openBrowser` (a normal
+ * tab) otherwise — never worse than before, just not always the nicer window.
+ */
+export function openAppWindow(url) {
+  const args = [`--app=${url}`];
+
+  try {
+    if (process.platform === 'win32') {
+      const exe = findChromiumWindows();
+      if (!exe) return openBrowser(url);
+      spawn(exe, args, { detached: true, stdio: 'ignore' }).unref();
+      return true;
+    }
+    if (process.platform === 'darwin') {
+      const app = findChromiumMac();
+      if (!app) return openBrowser(url);
+      spawn('open', ['-na', app, '--args', ...args], { detached: true, stdio: 'ignore' }).unref();
+      return true;
+    }
+    // Linux: no reliable file-existence check across distros' package managers —
+    // try common binary names on PATH and fall back on ENOENT instead of probing first.
+    const child = spawn('google-chrome', args, { detached: true, stdio: 'ignore' });
+    child.on('error', () => openBrowser(url));
+    child.unref();
+    return true;
+  } catch {
+    return openBrowser(url);
   }
 }
 

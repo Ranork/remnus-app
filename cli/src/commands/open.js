@@ -1,5 +1,5 @@
 import { findProjectRoot, readConfig } from '../lib/project.js';
-import { openBrowser } from '../lib/install.js';
+import { openAppWindow } from '../lib/install.js';
 import { bold, detail, fail, ok, say } from '../lib/ui.js';
 
 // Deliberately naive: this does not probe the connection (that's `doctor`'s job).
@@ -20,8 +20,8 @@ export async function openCommand() {
   say(`${bold('Workspace')} ${config.workspaceName ?? config.workspaceId}`);
   detail(url);
 
-  if (openBrowser(url)) {
-    ok('Opened in your browser.');
+  if (openAppWindow(url)) {
+    ok('Opened.');
   } else {
     say('Could not open a browser automatically — open the link above.');
   }
