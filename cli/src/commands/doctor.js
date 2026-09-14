@@ -9,6 +9,34 @@ import { bold, detail, dim, fail, ok, say, warn } from '../lib/ui.js';
 // remedy is just a different way of saying "broken".
 
 const PROBE_TIMEOUT_MS = 15000;
+const REGISTRY_TIMEOUT_MS = 5000;
+
+/** Extracts the `X` from a `.mcp.json` `remnus` entry pinned as `npx -y remnus@X mcp`
+ *  (see `mcpEntryFor` in `init.js`). Returns null for `--http` entries (no pin to
+ *  check) or an unpinned bare `remnus` (an older install, or hand-edited). */
+function pinnedVersionFrom(doc) {
+  const entry = doc?.mcpServers?.remnus;
+  if (!entry || entry.command !== 'npx' || !Array.isArray(entry.args)) return null;
+  const match = entry.args.find((a) => /^remnus@/.test(a));
+  return match ? match.slice('remnus@'.length) : null;
+}
+
+/** Best-effort, silent on failure — an outdated-version nudge is not worth failing
+ *  `doctor` over if the registry is unreachable. */
+async function fetchLatestVersion() {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), REGISTRY_TIMEOUT_MS);
+  try {
+    const res = await fetch('https://registry.npmjs.org/remnus/latest', { signal: controller.signal });
+    if (!res.ok) return null;
+    const json = await res.json();
+    return json?.version ?? null;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 async function probeConnection(config, token) {
   const controller = new AbortController();
@@ -64,6 +92,7 @@ export async function doctorCommand() {
   detail(`mode: ${config.authMode === 'oauth' ? 'browser sign-in (no token stored here)' : 'project token'}`);
 
   let problems = 0;
+  let pinnedVersion = null;
 
   // .mcp.json — without this entry the agent never even tries to connect.
   const mcpFile = path.join(root, '.mcp.json');
@@ -80,11 +109,24 @@ export async function doctorCommand() {
         detail('Run `npx remnus init` to write it again.');
       } else {
         ok('.mcp.json points at Remnus');
+        pinnedVersion = pinnedVersionFrom(doc);
       }
     } catch {
       problems += 1;
       fail('.mcp.json is not valid JSON.');
       detail('Fix the file, then run `npx remnus init`.');
+    }
+  }
+
+  // Pinned on purpose (see mcpEntryFor in init.js) so a compromised or broken future
+  // release doesn't silently run here — but that means nobody gets nudged when a real
+  // update ships either, unless doctor says so.
+  if (pinnedVersion) {
+    const latest = await fetchLatestVersion();
+    if (latest && latest !== pinnedVersion) {
+      warn(`A newer remnus is available: ${pinnedVersion} → ${bold(latest)}.`);
+      detail(`This project is pinned and won't pick it up on its own. In .mcp.json, change`);
+      detail(`"remnus@${pinnedVersion}" to "remnus@${latest}" (or run \`npx remnus init\` to reconnect on it).`);
     }
   }
 
