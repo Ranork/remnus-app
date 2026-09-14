@@ -21,15 +21,17 @@ Full walkthrough (also the page to hand an AI agent and ask it to run this for y
 | `.remnus/config.json` | yes | Which workspace this project belongs to. |
 | `.remnus/credentials.json` | **no** | This project's token. Added to `.gitignore` automatically. |
 | `AGENTS.md` / `CLAUDE.md` | yes | A marked section telling agents how to use the workspace. |
+| `.claude/settings.json` | yes | A `SessionStart` hook that opens the workspace on a fresh Claude Code session. Inert elsewhere. |
 
-Existing files are edited, never replaced: other MCP servers in `.mcp.json`, your own
-`.gitignore` rules, and everything you wrote around the marked section all survive a
-re-run.
+Existing files are edited, never replaced: other MCP servers in `.mcp.json`, other hooks
+in `.claude/settings.json`, your own `.gitignore` rules, and everything you wrote around
+the marked section all survive a re-run.
 
 ## Commands
 
 ```bash
 npx remnus init      # connect this project to a workspace
+npx remnus open      # open this project's workspace in your browser
 npx remnus doctor    # check whether the connection still works
 npx remnus mcp       # run the MCP server (.mcp.json calls this for you)
 ```

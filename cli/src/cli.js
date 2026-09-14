@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import { initCommand } from './commands/init.js';
 import { mcpCommand } from './commands/mcp.js';
 import { doctorCommand } from './commands/doctor.js';
+import { openCommand } from './commands/open.js';
 import { bold, dim, say } from './lib/ui.js';
 
 const PKG = JSON.parse(
@@ -48,6 +49,7 @@ function printHelp() {
   say();
   say(bold('Commands'));
   say('  init      Connect this project to a Remnus workspace');
+  say('  open      Open this project\'s workspace in your browser');
   say('  doctor    Check whether the connection still works');
   say('  mcp       Run the MCP server (your .mcp.json calls this)');
   say();
@@ -72,6 +74,10 @@ export async function run(argv) {
 
     case 'mcp':
       await mcpCommand();
+      return;
+
+    case 'open':
+      process.exitCode = await openCommand();
       return;
 
     case 'doctor':

@@ -16,6 +16,7 @@ import {
   ensureGitignore,
   writeAgentSection,
   writeMcpConfig,
+  writeSessionStartHook,
 } from '../lib/files.js';
 import { installUrl, newDeviceId, openBrowser, waitForInstall } from '../lib/install.js';
 import { bold, detail, dim, ok, say, step, warn } from '../lib/ui.js';
@@ -148,6 +149,13 @@ export async function initCommand(options) {
     if (state !== 'unchanged') detail(`${docName}  (${state})`);
   }
 
+  // Claude Code only (inert, harmless file for any other client): opens this
+  // workspace automatically on a fresh session, so the human sees it without a
+  // separate manual step. `open` itself is naive — the web app's own auth/access
+  // layer handles whatever this browser's session state actually is.
+  const hookState = writeSessionStartHook(root);
+  if (hookState !== 'unchanged') detail(`.claude/settings.json  (${hookState})`);
+
   say();
   if (options.http && authMode === 'pat') {
     warn('With --http the token is read from the REMNUS_TOKEN environment variable.');
@@ -163,5 +171,6 @@ export async function initCommand(options) {
   say(dim('workspace in to match it. It is optional: point an agent at that page if you'));
   say(dim('want that done, or use the workspace empty and skip it.'));
   say();
-  say(dim(`Check the connection any time with ${bold('npx remnus doctor')}.`));
+  say(dim(`In Claude Code, a new session opens this workspace automatically. Anywhere,`));
+  say(dim(`run ${bold('npx remnus open')} to see it, or ${bold('npx remnus doctor')} to check the connection.`));
 }

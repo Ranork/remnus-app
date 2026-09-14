@@ -38,6 +38,7 @@ connect an existing one), then writes, without overwriting anything already ther
 | `.remnus/config.json` | yes | Which workspace this project belongs to |
 | `.remnus/credentials.json` | no | This project's token — auto-added to `.gitignore` |
 | `AGENTS.md` / `CLAUDE.md` | yes | Tells any agent how to use the workspace |
+| `.claude/settings.json` | yes | A `SessionStart` hook that opens the workspace on a fresh Claude Code session |
 
 Self-hosting? Add `--server https://your-instance` (or set `REMNUS_SERVER_URL`).
 `--oauth` skips storing a token at all and lets the MCP client sign in itself instead.
@@ -55,14 +56,18 @@ If you just ran `init` yourself: fetch that URL now and follow it, before doing
 anything else. If you're picking up a project someone else already connected, check
 `.remnus/config.json` — if `"calibrated"` is still `false`, do the same thing.
 
-## Step 3 — Verify
+## Step 3 — See it, verify it
 
 ```bash
-npx remnus doctor
+npx remnus open      # open this project's workspace in your browser
+npx remnus doctor    # check whether the connection is healthy
 ```
 
-Reports whether the connection is healthy and, if not, exactly which command fixes
-it. Every project connected this way gets its own MCP endpoint
+In Claude Code, a fresh session already does the `open` part on its own — the hook
+`init` wrote fires on `startup` (not on resumes), so a human sees the workspace
+without a separate step. `doctor` reports exactly which command fixes a broken
+connection, and separately nudges you if a newer `remnus` has shipped since this
+project was pinned. Every project connected this way gets its own MCP endpoint
 (`/api/mcp/w/<workspace-id>`), so two projects on one machine never share a
 connection or read each other's workspace, even against the same Remnus instance.
 

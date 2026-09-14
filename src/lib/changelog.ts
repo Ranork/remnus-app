@@ -45,6 +45,31 @@ const FIRST_VISIT_WINDOW_DAYS = 7;
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-09-14-workspace-opens-on-session-start',
+    date: '2026-09-14',
+    category: 'new',
+    title: {
+      en: 'Your workspace opens itself when you start coding',
+      tr: 'Kodlamaya başladığınızda çalışma alanınız kendiliğinden açılıyor',
+      de: 'Ihr Arbeitsbereich öffnet sich, wenn Sie mit dem Programmieren beginnen',
+      es: 'Tu espacio de trabajo se abre solo cuando empiezas a programar',
+      fr: 'Votre espace de travail s\'ouvre dès que vous commencez à coder',
+      hi: 'कोडिंग शुरू करते ही आपका वर्कस्पेस खुद खुल जाता है',
+      ru: 'Ваше пространство открывается само, когда вы начинаете кодить',
+      zh: '开始写代码时，您的工作区会自动打开',
+    },
+    summary: {
+      en: 'In a project connected to Remnus, starting a fresh Claude Code session now opens that project\'s workspace in your browser on its own — or run `npx remnus open` any time.',
+      tr: 'Remnus\'a bağlı bir projede yeni bir Claude Code oturumu başlattığınızda, o projenin çalışma alanı artık tarayıcınızda kendiliğinden açılıyor — istediğiniz an `npx remnus open` da çalıştırabilirsiniz.',
+      de: 'In einem mit Remnus verbundenen Projekt öffnet eine neue Claude-Code-Sitzung den Arbeitsbereich jetzt von selbst im Browser — oder führen Sie jederzeit `npx remnus open` aus.',
+      es: 'En un proyecto conectado a Remnus, iniciar una nueva sesión de Claude Code ahora abre el espacio de trabajo de ese proyecto en tu navegador por su cuenta, o ejecuta `npx remnus open` en cualquier momento.',
+      fr: 'Dans un projet connecté à Remnus, démarrer une nouvelle session Claude Code ouvre désormais automatiquement l\'espace de travail du projet dans votre navigateur — ou lancez `npx remnus open` à tout moment.',
+      hi: 'Remnus से जुड़े प्रोजेक्ट में, नया Claude Code सेशन शुरू करने पर अब वह प्रोजेक्ट वर्कस्पेस आपके ब्राउज़र में स्वयं खुल जाता है — या कभी भी `npx remnus open` चलाएँ।',
+      ru: 'В проекте, подключённом к Remnus, запуск новой сессии Claude Code теперь сам открывает пространство этого проекта в браузере — или запустите `npx remnus open` в любой момент.',
+      zh: '在已连接 Remnus 的项目中，启动新的 Claude Code 会话现在会自动在浏览器中打开该项目的工作区——也可以随时运行 `npx remnus open`。',
+    },
+  },
+  {
     id: '2026-09-13-workspace-auto-setup',
     date: '2026-09-13',
     category: 'improved',

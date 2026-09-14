@@ -126,3 +126,55 @@ export function detectAgentDocs(root) {
   // A project with neither still gets one, so the agent has somewhere to read this from.
   return found.length ? found : ['AGENTS.md'];
 }
+
+const SESSION_START_MATCHER = 'startup';
+const SESSION_START_COMMAND = 'npx remnus open';
+
+/**
+ * Adds (or updates) a Claude Code `SessionStart` hook that opens this project's
+ * workspace whenever a fresh session starts — `matcher: "startup"` so it skips
+ * resumes/compaction, not just every prompt. Finds our own entry by its exact
+ * command string and only ever touches that one, leaving any other tool's hooks in
+ * `.claude/settings.json` untouched. Returns 'created' | 'updated' | 'unchanged'.
+ */
+export function writeSessionStartHook(root) {
+  const file = path.join(root, '.claude', 'settings.json');
+  const existed = fs.existsSync(file);
+  let doc = {};
+
+  if (existed) {
+    const raw = fs.readFileSync(file, 'utf8');
+    try {
+      doc = raw.trim() ? JSON.parse(raw) : {};
+    } catch (err) {
+      throw new Error(`.claude/settings.json is not valid JSON (${err.message}). Fix it before running \`remnus init\`.`);
+    }
+    if (typeof doc !== 'object' || Array.isArray(doc) || doc === null) {
+      throw new Error('.claude/settings.json does not contain a JSON object. Fix it before running `remnus init`.');
+    }
+  }
+
+  if (!doc.hooks || typeof doc.hooks !== 'object' || Array.isArray(doc.hooks)) doc.hooks = {};
+  if (!Array.isArray(doc.hooks.SessionStart)) doc.hooks.SessionStart = [];
+
+  const isOurs = (entry) =>
+    entry?.matcher === SESSION_START_MATCHER &&
+    Array.isArray(entry.hooks) &&
+    entry.hooks.some((h) => h?.command === SESSION_START_COMMAND);
+
+  const ourEntry = {
+    matcher: SESSION_START_MATCHER,
+    hooks: [{ type: 'command', command: SESSION_START_COMMAND }],
+  };
+
+  const idx = doc.hooks.SessionStart.findIndex(isOurs);
+  const before = idx === -1 ? null : JSON.stringify(doc.hooks.SessionStart[idx]);
+  if (before === JSON.stringify(ourEntry)) return 'unchanged';
+
+  if (idx === -1) doc.hooks.SessionStart.push(ourEntry);
+  else doc.hooks.SessionStart[idx] = ourEntry;
+
+  fs.mkdirSync(path.dirname(file), { recursive: true });
+  fs.writeFileSync(file, `${JSON.stringify(doc, null, 2)}\n`, 'utf8');
+  return existed ? 'updated' : 'created';
+}
