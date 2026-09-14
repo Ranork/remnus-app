@@ -152,8 +152,11 @@ export async function initCommand(options) {
   // Claude Code only (inert, harmless file for any other client): opens this
   // workspace automatically on a fresh session, so the human sees it without a
   // separate manual step. `open` itself is naive — the web app's own auth/access
-  // layer handles whatever this browser's session state actually is.
-  const hookState = writeSessionStartHook(root);
+  // layer handles whatever this browser's session state actually is. Pinned to
+  // this CLI's version for the same reason as the .mcp.json entry above — an
+  // auto-run hook is exactly the kind of thing that shouldn't silently float to
+  // whatever npm has today.
+  const hookState = writeSessionStartHook(root, `npx remnus@${CLI_VERSION} open`);
   if (hookState !== 'unchanged') detail(`.claude/settings.json  (${hookState})`);
 
   say();

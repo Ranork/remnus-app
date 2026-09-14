@@ -21,6 +21,21 @@ function pinnedVersionFrom(doc) {
   return match ? match.slice('remnus@'.length) : null;
 }
 
+/** Same idea as `pinnedVersionFrom`, for the SessionStart hook `init` writes (see
+ *  `writeSessionStartHook` in `files.js`). Returns null if there's no such hook, or
+ *  it's unpinned. */
+function pinnedHookVersionFrom(settingsDoc) {
+  const entries = settingsDoc?.hooks?.SessionStart;
+  if (!Array.isArray(entries)) return null;
+  for (const entry of entries) {
+    for (const hook of entry?.hooks ?? []) {
+      const match = /^npx remnus@(\S+) open$/.exec(hook?.command ?? '');
+      if (match) return match[1];
+    }
+  }
+  return null;
+}
+
 /** Best-effort, silent on failure — an outdated-version nudge is not worth failing
  *  `doctor` over if the registry is unreachable. */
 async function fetchLatestVersion() {
@@ -118,15 +133,32 @@ export async function doctorCommand() {
     }
   }
 
+  // The SessionStart hook (if any) is pinned the same way and for the same reason —
+  // an auto-run command shouldn't silently float to whatever's newest on npm.
+  let pinnedHookVersion = null;
+  const settingsFile = path.join(root, '.claude', 'settings.json');
+  if (fs.existsSync(settingsFile)) {
+    try {
+      pinnedHookVersion = pinnedHookVersionFrom(JSON.parse(fs.readFileSync(settingsFile, 'utf8')));
+    } catch {
+      // Malformed .claude/settings.json isn't this command's problem to diagnose.
+    }
+  }
+
   // Pinned on purpose (see mcpEntryFor in init.js) so a compromised or broken future
   // release doesn't silently run here — but that means nobody gets nudged when a real
   // update ships either, unless doctor says so.
-  if (pinnedVersion) {
+  if (pinnedVersion || pinnedHookVersion) {
     const latest = await fetchLatestVersion();
-    if (latest && latest !== pinnedVersion) {
+    if (latest && pinnedVersion && latest !== pinnedVersion) {
       warn(`A newer remnus is available: ${pinnedVersion} → ${bold(latest)}.`);
       detail(`This project is pinned and won't pick it up on its own. In .mcp.json, change`);
       detail(`"remnus@${pinnedVersion}" to "remnus@${latest}" (or run \`npx remnus init\` to reconnect on it).`);
+    }
+    if (latest && pinnedHookVersion && latest !== pinnedHookVersion) {
+      warn(`The SessionStart hook is also pinned to an older remnus: ${pinnedHookVersion} → ${bold(latest)}.`);
+      detail(`In .claude/settings.json, change "remnus@${pinnedHookVersion} open" to`);
+      detail(`"remnus@${latest} open" (or run \`npx remnus init\` to reconnect on it).`);
     }
   }
 

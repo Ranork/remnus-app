@@ -128,16 +128,19 @@ export function detectAgentDocs(root) {
 }
 
 const SESSION_START_MATCHER = 'startup';
-const SESSION_START_COMMAND = 'npx remnus open';
+// Matches our hook regardless of which version it was pinned to, so re-running
+// `init` on a newer CLI replaces the old pin instead of adding a second entry.
+const SESSION_START_COMMAND_RE = /^npx remnus(?:@\S+)? open$/;
 
 /**
  * Adds (or updates) a Claude Code `SessionStart` hook that opens this project's
  * workspace whenever a fresh session starts — `matcher: "startup"` so it skips
- * resumes/compaction, not just every prompt. Finds our own entry by its exact
- * command string and only ever touches that one, leaving any other tool's hooks in
+ * resumes/compaction, not just every prompt. `command` should be the full pinned
+ * invocation (see `init.js`); finds our own existing entry by pattern (any prior
+ * pin) and only ever touches that one, leaving any other tool's hooks in
  * `.claude/settings.json` untouched. Returns 'created' | 'updated' | 'unchanged'.
  */
-export function writeSessionStartHook(root) {
+export function writeSessionStartHook(root, command) {
   const file = path.join(root, '.claude', 'settings.json');
   const existed = fs.existsSync(file);
   let doc = {};
@@ -160,11 +163,11 @@ export function writeSessionStartHook(root) {
   const isOurs = (entry) =>
     entry?.matcher === SESSION_START_MATCHER &&
     Array.isArray(entry.hooks) &&
-    entry.hooks.some((h) => h?.command === SESSION_START_COMMAND);
+    entry.hooks.some((h) => SESSION_START_COMMAND_RE.test(h?.command ?? ''));
 
   const ourEntry = {
     matcher: SESSION_START_MATCHER,
-    hooks: [{ type: 'command', command: SESSION_START_COMMAND }],
+    hooks: [{ type: 'command', command }],
   };
 
   const idx = doc.hooks.SessionStart.findIndex(isOurs);
