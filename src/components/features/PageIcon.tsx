@@ -1,9 +1,10 @@
 'use client';
 import React from 'react';
 import * as LucideIcons from 'lucide-react';
+import type { CuratedIconName } from '@/lib/icons';
 
 // Curated list of popular Lucide icons for the picker
-export const CURATED_ICONS: Record<string, React.ComponentType<any>> = {
+export const CURATED_ICONS = {
   Heart: LucideIcons.Heart,
   Smile: LucideIcons.Smile,
   Star: LucideIcons.Star,
@@ -76,7 +77,9 @@ export const CURATED_ICONS: Record<string, React.ComponentType<any>> = {
   Search: LucideIcons.Search,
   Trash2: LucideIcons.Trash2,
   HeartHandshake: LucideIcons.HeartHandshake,
-};
+  // Must match CURATED_ICON_NAMES exactly — the MCP tools validate agent icons against that
+  // list, so an icon added or removed here alone is a type error, not a silent fallback.
+} satisfies Record<CuratedIconName, React.ComponentType<any>>;
 
 // Map of friendly color keys to tailwind color classes
 export const ICON_COLORS: Record<string, string> = {
@@ -154,7 +157,7 @@ export default function PageIcon({
   // Check if it's a Lucide icon
   if (icon.startsWith('lucide:')) {
     const iconName = icon.replace('lucide:', '');
-    const IconComp = CURATED_ICONS[iconName] || (fallbackType === 'database' ? LucideIcons.Database : LucideIcons.FileText);
+    const IconComp = (CURATED_ICONS as Record<string, React.ComponentType<any>>)[iconName] || (fallbackType === 'database' ? LucideIcons.Database : LucideIcons.FileText);
     return <IconComp size={size} className={`${colorClass} shrink-0 ${className}`} style={style} />;
   }
 

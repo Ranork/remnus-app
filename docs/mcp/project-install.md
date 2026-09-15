@@ -88,6 +88,10 @@ ran `init` (or is picking up a project someone else connected, with
 follow it. See [Calibrate](calibrate.md) for exactly what that step reads, writes,
 and where it's logged.
 
+Right after `init`, an agent session that was already running won't see the Remnus tools
+yet — agents load MCP servers when a session starts. Reload them before calibrating (in
+Claude Code: `/mcp`, then reconnect `remnus`, or start a new session).
+
 ## Step 3 — See it, verify it
 
 ```bash

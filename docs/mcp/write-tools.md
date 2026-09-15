@@ -6,6 +6,8 @@ Every write tool also accepts optional `contextRunId`. In a workspace using **St
 
 `create_page`, `update_page`, and `create_database` additionally accept optional `knowledge` (`conceptType`, `description`, `tags`, `sources`, `status`, `staleAfter`). Agent-created or agent-updated items are recorded as machine-generated drafts; only a signed-in Remnus user can review the exact revision.
 
+`create_page`, `bulk_create_pages`, `update_page`, `bulk_update_pages` and `create_database` accept `icon` — an emoji (`"🗺️"`) or `"lucide:Name"` for one of the icons the sidebar can draw (for example `lucide:Map`, `lucide:Layers`, `lucide:Target`) — and `iconColor`: `default`, `red`, `orange`, `yellow`, `green`, `teal`, `blue`, `purple` or `pink` (applies to Lucide icons). An unknown Lucide name is refused with the list of valid ones, and image URLs can't be set over MCP. In updates, `null` clears.
+
 ---
 
 ## create_page
@@ -21,6 +23,8 @@ Create a new standalone page or a database row.
 | `parentId` | string | | Parent workspace item ID — creates a nested standalone page |
 | `databaseId` | string | | Database ID — creates a row instead of a standalone page |
 | `properties` | object | | Initial property values for database rows |
+| `icon` | string | | Emoji or `lucide:Name` |
+| `iconColor` | string | | Color for a Lucide icon |
 | `knowledge` | object | | OKF-aligned retrieval/lifecycle metadata |
 | `contextRunId` | string | | Context preflight ID (required in Strict mode) |
 
@@ -42,6 +46,8 @@ Update an existing page or database row. Properties are **merged** — existing 
 | `title` | string | | New title |
 | `content` | string | | New markdown content (replaces existing) |
 | `properties` | object | | Properties to merge into the row |
+| `icon` | string \| null | | Emoji or `lucide:Name`; `null` clears |
+| `iconColor` | string \| null | | Color for a Lucide icon; `null` clears |
 | `knowledge` | object | | OKF-aligned retrieval/lifecycle metadata |
 | `contextRunId` | string | | Context preflight ID (required in Strict mode) |
 
@@ -57,9 +63,49 @@ Update multiple pages or database rows in a single call.
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
-| `updates` | array | ✓ | Array of update objects — each has `pageId` plus optional `title`, `content`, `properties` |
+| `updates` | array | ✓ | Array of update objects — each has `pageId` plus optional `title`, `content`, `properties`, `icon`, `iconColor` |
 
 **Returns** — array of per-item results.
+
+---
+
+## bulk_create_pages
+
+Create up to 50 standalone pages and/or database rows in one call — the fast way to fill a database or lay out a section. Entries are created **in order**, and the call is **not atomic**: each entry reports its own `ok`/`error`, and one bad entry never stops the rest.
+
+**Parameters**
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `pages` | array | ✓ | 1–50 entries, created in order |
+| `contextRunId` | string | | Context preflight ID (required in Strict mode) |
+
+**Entry**
+
+| Field | Type | Description |
+|---|---|---|
+| `title` | string | Plain-text title (required) |
+| `content` | string | Markdown content |
+| `databaseId` | string | Creates a row in this database |
+| `properties` | object | Row properties (column names or ids) |
+| `parentId` | string | Nest a page under an existing item |
+| `ref` | string | A label later entries in the same call can point at |
+| `parentRef` | string | Nest a page under a page created earlier in this call |
+| `icon` / `iconColor` | string | See the icon note above |
+
+`parentRef` can't be combined with `parentId` or `databaseId`, and only pages — not rows — can be a `parentRef` target.
+
+```json
+{
+  "pages": [
+    { "ref": "systems", "title": "Systems", "icon": "lucide:Layers", "iconColor": "blue" },
+    { "parentRef": "systems", "title": "Combat", "icon": "⚔️" },
+    { "parentRef": "systems", "title": "Itemization", "icon": "🎒" }
+  ]
+}
+```
+
+**Returns** — `{ requested, succeeded, failed, results: [{ index, ok, id?, type?, ref?, error? }] }`
 
 ---
 
@@ -145,6 +191,9 @@ Create a new database with a custom schema. A `Title` text column is always prep
 | `name` | string | ✓ | Database name |
 | `parentId` | string | | Parent workspace item ID (omit for root) |
 | `schema` | array | | Column definitions (omit for default Title + Status schema) |
+| `icon` | string | | Emoji or `lucide:Name` |
+| `iconColor` | string | | Color for a Lucide icon |
+| `views` | array | | Up to 5 views created with the database: `{ name, type: "table" \| "kanban" \| "calendar", groupByCol?, dateCol?, icon?, iconColor? }`. A Table view always exists. Each view reports its own result; a view that can't be created never undoes the database. |
 
 **Column definition**
 
@@ -165,7 +214,7 @@ Column types: `text`, `number`, `select`, `multi_select`, `status`, `user`, `mul
 - `status` — like `select`, but each option may include a `group`: `"todo"` | `"in_progress"` | `"complete"` (renders as a progress-ring glyph).
 - `user` / `multi_user` — store workspace member user ids (no `options` needed); resolved to member name + avatar in the UI.
 
-**Returns** — `{ id, databaseId }`
+**Returns** — `{ id, databaseId, views? }`
 
 ---
 

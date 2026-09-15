@@ -30,6 +30,7 @@ const TOOLS = [
   { scope: 'read',  tool: 'get_changes_since' },
   { scope: 'read',  tool: 'get_related_pages' },
   { scope: 'write', tool: 'create_page' },
+  { scope: 'write', tool: 'bulk_create_pages' },
   { scope: 'write', tool: 'update_page' },
   { scope: 'write', tool: 'bulk_update_pages' },
   { scope: 'write', tool: 'delete_page' },

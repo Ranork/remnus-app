@@ -43,13 +43,14 @@ Column types: `text` | `number` | `select` | `multi_select` | `date` | `datetime
 
 **Write (needs a write-scoped token):**
 - `create_page` — new standalone page OR database row (see decision below).
+- `bulk_create_pages` — up to 50 pages/rows in one call, created in order; nest pages created in the same call with `ref`/`parentRef`. Prefer it whenever you'd create more than a couple of items.
 - `update_page` — change title/content/properties of one item.
 - `bulk_update_pages` — many updates in one call. Prefer this over a loop.
 - `delete_page` — delete a page, row, or whole database. **Guarded.**
 - `bulk_delete_pages` — delete up to 100 pages/rows/databases in one call. **Guarded**, same preview/confirm shape as `delete_page`. Response reports each id's own ok/error — never all-or-nothing.
 - `move_item` — reparent a sidebar item; `newParentId: null` → root.
 - `bulk_move_items` — move up to 100 items in one call: pass `newParentId` to reparent (batched `move_item`), or `targetDatabaseId` to move database rows to a different database. Cross-database moves are refused entirely if the target's columns don't cover the source's by name and type.
-- `create_database` — new database with a custom schema.
+- `create_database` — new database with a custom schema; pass an `icon` and the `views` people will use (kanban on status, calendar on dates).
 - `update_database_schema` — add/remove columns. Removing is **guarded.**
 - `add_comment` — leave a note or closure comment on a page/row, in a thread separate from its content. **Append-only** — you cannot edit or delete your own comment afterward, so use `update_page` instead if the content itself needs to change.
 
@@ -105,9 +106,10 @@ Deleting a database row is irreversible; deleting a database or a parent page ca
 - **Standalone page** → pass `title`, `content`, optional `parentId`.
 - **Database row** → pass `databaseId` (+ `title`, `content`, `properties`). The row is created inside that database.
 Don't pass both `parentId` and `databaseId`. Property keys must match the database's column IDs.
+Give pages and databases an `icon` (an emoji, or `lucide:Name` with an `iconColor`), and nest related pages under a parent instead of leaving everything at the root.
 
 ### 6. Batch, don't loop
-Updating several rows (e.g. "mark all done")? Build one `bulk_update_pages` call. It's one audit entry and one round-trip instead of N.
+Creating several pages or rows? One `bulk_create_pages` call. Updating several rows (e.g. "mark all done")? One `bulk_update_pages` call. It's one audit entry and one round-trip instead of N.
 
 ### 7. Content is markdown
 `content` is plain markdown. Headings, lists, tables, checkboxes (`- [ ]`) all work. Write clean markdown, not HTML.
@@ -126,7 +128,7 @@ Updating several rows (e.g. "mark all done")? Build one `bulk_update_pages` call
 
 **"Add a new task"** → resolve the database id → `get_database_schema` for property keys → `create_page` with `databaseId` + `properties`.
 
-**"Set up a database for X"** → `create_database` with a sensible schema (a Title column is auto-prepended). Then `create_page` rows.
+**"Set up a database for X"** → `create_database` with a sensible schema, an `icon` and the `views` people will use (a Title column is auto-prepended). Then one `bulk_create_pages` call for the rows.
 
 **Reports / triage / summaries** → use the matching **prompt** (see the Prompts section). Fall back to read-tools + your own summary if prompts aren't exposed.
 

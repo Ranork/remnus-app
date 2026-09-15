@@ -1070,7 +1070,14 @@ export async function getRelatedPages(workspaceId: string, pageId: string) {
 
 export async function bulkUpdatePages(
   workspaceId: string,
-  updates: { pageId: string; title?: string; content?: string; properties?: Record<string, unknown> }[],
+  updates: {
+    pageId: string;
+    title?: string;
+    content?: string;
+    properties?: Record<string, unknown>;
+    icon?: string | null;
+    iconColor?: string | null;
+  }[],
   agentCtx?: { tokenId: string },
   actor?: SnapshotActor,
 ) {
@@ -1088,6 +1095,7 @@ export async function createPageInWorkspace(
     parentId?: string;
     databaseId?: string;
     properties?: Record<string, any>;
+    icon?: string;
     iconColor?: string;
   },
   agentCtx?: { tokenId: string },
@@ -1117,6 +1125,8 @@ export async function createPageInWorkspace(
       sortOrder: maxSort + 1,
       createdAt: now,
       updatedAt: now,
+      ...(input.icon ? { icon: input.icon } : {}),
+      ...(input.iconColor ? { iconColor: input.iconColor } : {}),
       ...(agentCtx ? { agentEditedAt: now, agentTokenId: agentCtx.tokenId } : {}),
     });
     if (input.content) await syncPageLinks(workspaceId, id, 'database_row', input.content);
@@ -1141,6 +1151,7 @@ export async function createPageInWorkspace(
     sortOrder: 0,
     createdAt: now,
     updatedAt: now,
+    ...(input.icon ? { icon: input.icon } : {}),
     ...(input.iconColor ? { iconColor: input.iconColor } : {}),
   });
 
@@ -1505,6 +1516,7 @@ export async function createDatabaseInWorkspace(
     name: string;
     schema?: Array<{ name: string; type: string; options?: any[] }>;
     parentId?: string;
+    icon?: string;
     iconColor?: string;
   },
 ) {
@@ -1548,6 +1560,7 @@ export async function createDatabaseInWorkspace(
     sortOrder: 0,
     createdAt: now,
     updatedAt: now,
+    ...(input.icon ? { icon: input.icon } : {}),
     ...(input.iconColor ? { iconColor: input.iconColor } : {}),
   });
 
@@ -1766,7 +1779,14 @@ async function resolvePropertiesBySchema(
 export async function updatePageById(
   workspaceId: string,
   itemId: string,
-  patch: { title?: string; content?: string; properties?: Record<string, any> },
+  patch: {
+    title?: string;
+    content?: string;
+    properties?: Record<string, any>;
+    /** `null` clears; omitted leaves the current icon as it is. */
+    icon?: string | null;
+    iconColor?: string | null;
+  },
   agentCtx?: { tokenId: string },
   /** Versioning-only actor — separate from `agentCtx` (which only feeds the
    *  unrelated `agentEditedAt`/`agentTokenId` columns and has no display
@@ -1796,6 +1816,17 @@ export async function updatePageById(
           .set({ name: patch.title, updatedAt: new Date() })
           .where(eq(databases.itemId, itemId));
       }
+    }
+    // Pages and databases keep their icon on the sidebar item itself.
+    if (patch.icon !== undefined || patch.iconColor !== undefined) {
+      await db
+        .update(workspaceItems)
+        .set({
+          ...(patch.icon !== undefined ? { icon: patch.icon } : {}),
+          ...(patch.iconColor !== undefined ? { iconColor: patch.iconColor } : {}),
+          updatedAt: new Date(),
+        })
+        .where(eq(workspaceItems.id, itemId));
     }
     if (patch.content !== undefined && item.type === 'page') {
       if (actor) {
@@ -1845,6 +1876,8 @@ export async function updatePageById(
   const updateData: Record<string, any> = { updatedAt: new Date() };
   if (patch.title !== undefined) updateData.title = patch.title;
   if (patch.content !== undefined) updateData.content = patch.content;
+  if (patch.icon !== undefined) updateData.icon = patch.icon;
+  if (patch.iconColor !== undefined) updateData.iconColor = patch.iconColor;
   if (patch.title !== undefined || patch.properties !== undefined) {
     // `title` is mirrored into `properties.title` too — table views render a row's
     // name from `properties.title`, not `pages.title`, so writing only the former

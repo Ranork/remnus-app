@@ -52,7 +52,7 @@ Strict; write scope, yetkilendirme veya yıkıcı işlem onayının yerini almaz
 *   **Rate limit:** Token başına dakikada 60 istek.
 *   **İzlenebilirlik (Audit Log):** Her tool çağrısı (hangi sayfa okundu, hangi property değiştirildi) workspace audit log'una yazılır.
 
-### 24 MCP Tool (Ajanların Yetenekleri)
+### 25 MCP Tool (Ajanların Yetenekleri)
 
 | Tool | Scope | Ne Yapar (Ajanlar İçin) |
 |---|---|---|
@@ -68,6 +68,7 @@ Strict; write scope, yetkilendirme veya yıkıcı işlem onayının yerini almaz
 | `get_changes_since` | read | Belirli bir timestamp'ten beri olan tüm değişiklikleri çekme (delta-sync) |
 | `get_related_pages` | read | Link graph analizi (parent/child/backlink bulma) |
 | `create_page` | write | Yeni doküman veya task (satır) oluşturma |
+| `bulk_create_pages` | write | **(Ajanlara Özel)** Tek çağrıda en fazla 50 sayfa veya satır oluşturma; aynı çağrıda oluşturulan sayfaları iç içe yerleştirme |
 | `update_page` | write | Mevcut sayfanın içeriğini veya properties (durum, etiket vb.) güncelleme |
 | `bulk_update_pages` | write | **(Ajanlara Özel)** Tek çağrıda onlarca satırı (örn: 50 taskın durumunu) güncelleme |
 | `delete_page` | write | Sayfa silme (`confirm: true` zorunlu koruması ile) |
@@ -123,7 +124,7 @@ Planlar insan sayısından ziyade ajan yoğunluğuna göre ölçeklenir: **Free 
 |---|---|
 | Kategori | Human-Agent Collaborative Workspace |
 | MCP endpoint | `https://www.remnus.com/api/mcp` |
-| Tool / Resource / Prompt | 24 / 6 / 7 |
+| Tool / Resource / Prompt | 25 / 6 / 7 |
 | Auth Modeli | Agent-First: OAuth 2.1 + PKCE, PAT |
 | Güvenlik/Güven | Tam Kapsamlı Workspace Audit Log |
 | Lisans | AGPL-3.0 |

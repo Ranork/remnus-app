@@ -34,7 +34,7 @@ This does not let an MCP server control local files, shell commands, or Git. Rep
 
 - **Pages** — Markdown editor with slash commands, nested sub-pages, and icons
 - **Databases** — Customizable columns, Table / Kanban / Calendar views, filters, sorts
-- **MCP Server** — 24 tools + 6 resources + 7 prompts over stateless Streamable HTTP
+- **MCP Server** — 25 tools + 6 resources + 7 prompts over stateless Streamable HTTP
 - **OKF-native context** — Portable knowledge metadata, exact-revision reviews, Context Pack v2, and Smart/Strict MCP policies
 - **Agent auth** — One-click OAuth 2.1 + PKCE (RFC 7591 dynamic registration) for editors, or scoped read/write personal access tokens for headless agents
 - **Multi-workspace** — Invite members, role-based access (owner / member / viewer)
@@ -142,14 +142,15 @@ Swap `--client` for `cursor`, `vscode`, `codex`, `windsurf`, etc. Either way, th
 | `query_audit_log` | read | Filtered agent activity log |
 | `get_changes_since` | read | Compact, chronological feed of what changed since a timestamp or cursor |
 | `get_related_pages` | read | A page's parent, children, outgoing links, backlinks, and database siblings |
-| `create_page` | write | Create a standalone page or database row |
+| `create_page` | write | Create a standalone page or database row, with an icon |
+| `bulk_create_pages` | write | Create up to 50 pages or rows in one call, nesting pages via `ref`/`parentRef` |
 | `update_page` | write | Update title, content, or properties |
 | `bulk_update_pages` | write | Update multiple rows in one call |
 | `delete_page` | write | Delete a page (requires `confirm: true`) |
 | `bulk_delete_pages` | write | Delete up to 100 pages/rows/databases in one call (requires `confirm: true`) |
 | `move_item` | write | Move item to a new parent |
 | `bulk_move_items` | write | Move up to 100 items in one call, reparenting or moving rows to a different database |
-| `create_database` | write | Create a database with custom schema |
+| `create_database` | write | Create a database with custom schema, icon, and views |
 | `update_database_schema` | write | Add or remove columns |
 | `create_database_view` | write | Add a table/kanban/calendar view |
 | `update_database_view` | write | Rename a view or patch its config |

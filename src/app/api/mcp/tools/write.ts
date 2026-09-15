@@ -22,6 +22,7 @@ import { logActivity, type TokenContext } from '../context';
 import { recordGeneratedKnowledge, validateContextRunForWrite } from '@/lib/services/knowledge';
 import { applyRecurrenceInput, changeRecurrenceForRow } from '@/lib/services/recurrence';
 import { addPageComment, MAX_COMMENT_LENGTH } from '@/lib/services/comments';
+import { iconInputError, ICON_COLOR_KEYS } from '@/lib/icons';
 
 const READ_ONLY_ERROR = 'Error: This token only has read scope. A write-scoped token is required.';
 const CONTEXT_RUN_ID = z.string().uuid().optional().describe('prepare_context contextRunId. Required for mutations when the workspace uses Strict context.');
@@ -50,6 +51,26 @@ const KNOWLEDGE_INPUT = z.object({
   status: z.enum(['draft', 'stable', 'deprecated']).optional(),
   staleAfter: z.string().max(40).optional(),
 }).optional().describe('Optional OKF-aligned knowledge metadata. Agent-authored knowledge remains draft/machine-confirmed until a Remnus user reviews the exact revision.');
+
+// Icons the sidebar can draw: an emoji or a curated Lucide name. Names are checked in the
+// handlers (iconInputError) rather than listed here — tools/list is a fixed per-session
+// context cost for every connected agent.
+const ICON_INPUT = z.string().max(32).optional().describe('Emoji or "lucide:Name", e.g. "lucide:Map"');
+const ICON_COLOR_INPUT = z.enum(ICON_COLOR_KEYS).optional().describe('Color for a lucide icon');
+const ICON_PATCH_INPUT = z.string().max(32).nullable().optional().describe('Emoji or "lucide:Name"; null clears');
+const ICON_COLOR_PATCH_INPUT = z.enum(ICON_COLOR_KEYS).nullable().optional().describe('Color for a lucide icon; null clears');
+const VIEW_INPUT = z.object({
+  name: z.string().max(80),
+  type: z.enum(['table', 'kanban', 'calendar']),
+  groupByCol: z.string().optional().describe('Kanban: select/status column id or name'),
+  dateCol: z.string().optional().describe('Calendar: date column id or name'),
+  icon: ICON_INPUT,
+  iconColor: ICON_COLOR_INPUT,
+});
+
+function iconErrorResult(message: string) {
+  return { content: [{ type: 'text' as const, text: `Error: ${message}` }], isError: true as const };
+}
 
 function actorId(ctx: TokenContext) {
   return ctx.agentName ? `mcp:${ctx.agentName}:${ctx.tokenId}` : `mcp:${ctx.tokenId}`;
@@ -80,13 +101,15 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
   server.registerTool(
     'create_page',
     {
-      description: 'Create a new standalone page (use parentId to nest it) or a database row (use databaseId). For rows, `properties` keys may be column names or ids (matched case-insensitively); `title` is always mirrored into the row\'s own title property.',
+      description: 'Create a new standalone page (use parentId to nest it) or a database row (use databaseId). Give it an icon so the sidebar reads well; for several pages or rows use bulk_create_pages. For rows, `properties` keys may be column names or ids (matched case-insensitively); `title` is always mirrored into the row\'s own title property.',
       inputSchema: {
         title: z.string().describe('Page title'),
         content: z.string().optional().describe('Initial markdown content'),
         parentId: z.string().optional().describe('Parent workspace item ID (for standalone pages)'),
         databaseId: z.string().optional().describe('Database ID (creates a database row instead of a page)'),
         properties: z.record(z.string(), z.any()).optional().describe('Initial properties (for database rows)'),
+        icon: ICON_INPUT,
+        iconColor: ICON_COLOR_INPUT,
         recurrence: RECURRENCE_INPUT,
         knowledge: KNOWLEDGE_INPUT,
         contextRunId: CONTEXT_RUN_ID,
@@ -97,15 +120,20 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
       }).passthrough(),
       annotations: { title: 'Create page', readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
     },
-    async ({ title, content, parentId, databaseId, properties, recurrence, knowledge, contextRunId }) => {
+    async ({ title, content, parentId, databaseId, properties, icon, iconColor, recurrence, knowledge, contextRunId }) => {
       if (ctx.scope !== 'write') {
         await logActivity(ctx, 'create_page', 'error');
         return { content: [{ type: 'text' as const, text: READ_ONLY_ERROR }], isError: true };
       }
       const contextError = await requireContext(ctx, contextRunId, 'create_page');
       if (contextError) return contextError;
+      const iconProblem = iconInputError(icon, iconColor);
+      if (iconProblem) {
+        await logActivity(ctx, 'create_page', 'error');
+        return iconErrorResult(iconProblem);
+      }
       try {
-        const result = await createPageInWorkspace(ctx.workspaceId, { title, content, parentId, databaseId, properties }, { tokenId: ctx.tokenId });
+        const result = await createPageInWorkspace(ctx.workspaceId, { title, content, parentId, databaseId, properties, icon, iconColor }, { tokenId: ctx.tokenId });
         const knowledgeCaptured = await recordGeneratedKnowledge(ctx.workspaceId, result.id, actorId(ctx), knowledge).then(() => true).catch(() => false);
 
         // Recurrence is applied after the row exists, and its failure is
@@ -144,6 +172,8 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
         title: z.string().optional().describe('New title'),
         content: z.string().optional().describe('New markdown content'),
         properties: z.record(z.string(), z.any()).optional().describe('Properties to merge (for database rows)'),
+        icon: ICON_PATCH_INPUT,
+        iconColor: ICON_COLOR_PATCH_INPUT,
         recurrence: RECURRENCE_INPUT,
         recurrenceScope: z.enum(['thisAndFollowing', 'all']).optional()
           .describe('Required when the row ALREADY repeats: "thisAndFollowing" leaves earlier cards untouched, "all" re-rhythms the whole series. Ask the user rather than guessing.'),
@@ -157,15 +187,20 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
       }).passthrough(),
       annotations: { title: 'Update page', readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     },
-    async ({ pageId, title, content, properties, recurrence, recurrenceScope, knowledge, contextRunId }) => {
+    async ({ pageId, title, content, properties, icon, iconColor, recurrence, recurrenceScope, knowledge, contextRunId }) => {
       if (ctx.scope !== 'write') {
         await logActivity(ctx, 'update_page', 'error', 'page', pageId);
         return { content: [{ type: 'text' as const, text: READ_ONLY_ERROR }], isError: true };
       }
       const contextError = await requireContext(ctx, contextRunId, 'update_page', pageId);
       if (contextError) return contextError;
+      const iconProblem = iconInputError(icon, iconColor);
+      if (iconProblem) {
+        await logActivity(ctx, 'update_page', 'error', 'page', pageId);
+        return iconErrorResult(iconProblem);
+      }
       try {
-        await updatePageById(ctx.workspaceId, pageId, { title, content, properties }, { tokenId: ctx.tokenId }, agentActor(ctx));
+        await updatePageById(ctx.workspaceId, pageId, { title, content, properties, icon, iconColor }, { tokenId: ctx.tokenId }, agentActor(ctx));
         const knowledgeCaptured = await recordGeneratedKnowledge(ctx.workspaceId, pageId, actorId(ctx), knowledge).then(() => true).catch(() => false);
 
         // Reported, never thrown: the field update above already landed, so a
@@ -206,6 +241,8 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
           title: z.string().optional().describe('New title'),
           content: z.string().optional().describe('New markdown content'),
           properties: z.record(z.string(), z.any()).optional().describe('Properties to merge'),
+          icon: ICON_PATCH_INPUT,
+          iconColor: ICON_COLOR_PATCH_INPUT,
         })).describe('List of updates to apply'),
         contextRunId: CONTEXT_RUN_ID,
       },
@@ -224,6 +261,11 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
       }
       const contextError = await requireContext(ctx, contextRunId, 'bulk_update_pages');
       if (contextError) return contextError;
+      const iconProblem = updates.map((u) => iconInputError(u.icon, u.iconColor)).find((m) => m !== null);
+      if (iconProblem) {
+        await logActivity(ctx, 'bulk_update_pages', 'error');
+        return iconErrorResult(iconProblem);
+      }
       try {
         const results = await bulkUpdatePages(ctx.workspaceId, updates, { tokenId: ctx.tokenId }, agentActor(ctx));
         await Promise.allSettled(updates.map(update => recordGeneratedKnowledge(ctx.workspaceId, update.pageId, actorId(ctx))));
@@ -235,6 +277,108 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
         await logActivity(ctx, 'bulk_update_pages', 'error');
         return { content: [{ type: 'text' as const, text: `Error: ${String(err)}` }], isError: true };
       }
+    },
+  );
+
+  server.registerTool(
+    'bulk_create_pages',
+    {
+      description: 'Create up to 50 standalone pages and/or database rows in one call — the fast way to fill a database or lay out a section. Entries run in order and are NOT atomic: each reports its own ok/error. Nest a page under one created earlier in the same call with `ref` + `parentRef`.',
+      inputSchema: {
+        pages: z.array(z.object({
+          ref: z.string().max(64).optional().describe('Label that later entries can use as parentRef'),
+          title: z.string().describe('Page title (plain text)'),
+          content: z.string().optional().describe('Markdown content'),
+          parentId: z.string().optional().describe('Existing parent item ID'),
+          parentRef: z.string().max(64).optional().describe('ref of a page created earlier in this call'),
+          databaseId: z.string().optional().describe('Creates a row in this database'),
+          properties: z.record(z.string(), z.any()).optional().describe('Row properties'),
+          icon: ICON_INPUT,
+          iconColor: ICON_COLOR_INPUT,
+        })).min(1).max(50).describe('Pages or rows to create, in order'),
+        contextRunId: CONTEXT_RUN_ID,
+      },
+      outputSchema: z.object({
+        requested: z.number().describe('Entries in the call'),
+        succeeded: z.number().describe('Entries created'),
+        failed: z.number().describe('Entries that errored'),
+        results: z.array(z.object({
+          index: z.number().describe('Position in `pages`'),
+          ok: z.boolean().describe('Whether this entry was created'),
+          id: z.string().optional().describe('Created page or row ID'),
+          type: z.string().optional().describe('page | db-row'),
+          ref: z.string().optional().describe('The entry\'s ref, when given'),
+          error: z.string().optional().describe('Why this entry was not created'),
+        }).passthrough()).describe('Per-entry results'),
+      }),
+      annotations: { title: 'Bulk create pages', readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+    },
+    async ({ pages: entries, contextRunId }) => {
+      if (ctx.scope !== 'write') {
+        await logActivity(ctx, 'bulk_create_pages', 'error');
+        return { content: [{ type: 'text' as const, text: READ_ONLY_ERROR }], isError: true };
+      }
+      const contextError = await requireContext(ctx, contextRunId, 'bulk_create_pages');
+      if (contextError) return contextError;
+
+      // Sequential on purpose: a row takes the next sort position in its database, and a
+      // parentRef can only resolve to an entry that has already been created.
+      const createdByRef = new Map<string, string>();
+      const results: Array<{ index: number; ok: boolean; id?: string; type?: string; ref?: string; error?: string }> = [];
+      const touchedDatabases = new Set<string>();
+      let touchedSidebar = false;
+
+      for (let index = 0; index < entries.length; index++) {
+        const entry = entries[index];
+        const base = { index, ...(entry.ref ? { ref: entry.ref } : {}) };
+        try {
+          const iconProblem = iconInputError(entry.icon, entry.iconColor);
+          if (iconProblem) throw new Error(iconProblem);
+          if (entry.parentRef && (entry.parentId || entry.databaseId)) {
+            throw new Error('Pass parentRef on its own, not together with parentId or databaseId.');
+          }
+          if (entry.ref && createdByRef.has(entry.ref)) {
+            throw new Error(`ref "${entry.ref}" is already used by an earlier entry in this call.`);
+          }
+          let parentId = entry.parentId;
+          if (entry.parentRef) {
+            parentId = createdByRef.get(entry.parentRef);
+            if (!parentId) throw new Error(`parentRef "${entry.parentRef}" does not name a page created earlier in this call.`);
+          }
+
+          const result = await createPageInWorkspace(
+            ctx.workspaceId,
+            {
+              title: entry.title,
+              content: entry.content,
+              parentId,
+              databaseId: entry.databaseId,
+              properties: entry.properties,
+              icon: entry.icon,
+              iconColor: entry.iconColor,
+            },
+            { tokenId: ctx.tokenId },
+          );
+          if (entry.ref && result.type === 'page') createdByRef.set(entry.ref, result.id);
+          if (entry.databaseId) touchedDatabases.add(entry.databaseId);
+          else touchedSidebar = true;
+          results.push({ ...base, ok: true, id: result.id, type: result.type });
+        } catch (err) {
+          results.push({ ...base, ok: false, error: err instanceof Error ? err.message : String(err) });
+        }
+      }
+
+      const createdIds = results.flatMap((r) => (r.ok && r.id ? [r.id] : []));
+      await Promise.allSettled(createdIds.map((id) => recordGeneratedKnowledge(ctx.workspaceId, id, actorId(ctx))));
+
+      const out = { requested: entries.length, succeeded: createdIds.length, failed: entries.length - createdIds.length, results };
+      const text = JSON.stringify(out);
+      await logActivity(ctx, 'bulk_create_pages', createdIds.length > 0 ? 'success' : 'error', undefined, undefined, text);
+      if (touchedSidebar) publish({ scope: 'sidebar', workspaceId: ctx.workspaceId, actorId: actorId(ctx) });
+      for (const databaseId of touchedDatabases) {
+        publish({ scope: 'database', workspaceId: ctx.workspaceId, resourceId: databaseId, actorId: actorId(ctx) });
+      }
+      return { content: [{ type: 'text' as const, text }], structuredContent: out };
     },
   );
 
@@ -432,7 +576,7 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
   server.registerTool(
     'create_database',
     {
-      description: 'Create a new database with a custom schema. A "Title" text column is always prepended if not provided.',
+      description: 'Create a new database with a custom schema (a "Title" column is always prepended). Give it an icon, and pass `views` for the kanban/calendar views people will use — a Table view always exists.',
       inputSchema: {
         name: z.string().describe('Database name'),
         parentId: z.string().optional().describe('Parent workspace item ID (omit for root)'),
@@ -441,6 +585,9 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
           type: z.string().describe('Column type: text | number | select | multi_select | status | user | multi_user | date | datetime | checkbox | url | email | phone'),
           options: z.array(z.any()).optional().describe('Options for select/multi_select/status columns. For status, each option may include a group: "todo" | "in_progress" | "complete". user/multi_user store workspace member user ids and need no options.'),
         })).optional().describe('Column definitions. Omit to use default schema (Title + Status).'),
+        icon: ICON_INPUT,
+        iconColor: ICON_COLOR_INPUT,
+        views: z.array(VIEW_INPUT).max(5).optional().describe('Extra views to create with it'),
         knowledge: KNOWLEDGE_INPUT,
         contextRunId: CONTEXT_RUN_ID,
       },
@@ -450,17 +597,35 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
       }).passthrough(),
       annotations: { title: 'Create database', readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
     },
-    async ({ name, parentId, schema, knowledge, contextRunId }) => {
+    async ({ name, parentId, schema, icon, iconColor, views, knowledge, contextRunId }) => {
       if (ctx.scope !== 'write') {
         await logActivity(ctx, 'create_database', 'error');
         return { content: [{ type: 'text' as const, text: READ_ONLY_ERROR }], isError: true };
       }
       const contextError = await requireContext(ctx, contextRunId, 'create_database');
       if (contextError) return contextError;
+      const iconProblem = [iconInputError(icon, iconColor), ...(views ?? []).map((v) => iconInputError(v.icon, v.iconColor))]
+        .find((m) => m !== null);
+      if (iconProblem) {
+        await logActivity(ctx, 'create_database', 'error');
+        return iconErrorResult(iconProblem);
+      }
       try {
-        const result = await createDatabaseInWorkspace(ctx.workspaceId, { name, schema, parentId });
+        const result = await createDatabaseInWorkspace(ctx.workspaceId, { name, schema, parentId, icon, iconColor });
+
+        // Views are added once the database exists and reported per view rather than thrown:
+        // the database itself was created, so failing the call would invite a duplicate retry.
+        const viewResults: Array<{ name: string; created: boolean; id?: string; error?: string }> = [];
+        for (const view of views ?? []) {
+          try {
+            const created = await createDatabaseView(ctx.workspaceId, result.databaseId, view);
+            viewResults.push({ name: view.name, created: true, id: created.view.id });
+          } catch (err) {
+            viewResults.push({ name: view.name, created: false, error: err instanceof Error ? err.message : String(err) });
+          }
+        }
         const knowledgeCaptured = await recordGeneratedKnowledge(ctx.workspaceId, result.id, actorId(ctx), knowledge).then(() => true).catch(() => false);
-        const out = { id: result.id, databaseId: result.databaseId, knowledgeCaptured };
+        const out = { id: result.id, databaseId: result.databaseId, knowledgeCaptured, ...(viewResults.length ? { views: viewResults } : {}) };
         const text = JSON.stringify(out);
         await logActivity(ctx, 'create_database', 'success', 'database', result.databaseId, text);
         publish({ scope: 'sidebar', workspaceId: ctx.workspaceId, actorId: actorId(ctx) });

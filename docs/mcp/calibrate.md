@@ -29,6 +29,11 @@ already has real content — this project reused an existing workspace rather th
 brand-new one — adapt rather than duplicate: fill genuine gaps, don't recreate what is
 already there.
 
+If the Remnus MCP tools aren't available in your session yet — normal right after `init`,
+because agents load MCP servers when a session starts — stop and ask the human to reload
+them (in Claude Code: `/mcp`, then reconnect `remnus`, or start a new session). Don't
+work around it by calling the HTTP endpoint yourself.
+
 ## Your role for this process: incoming product manager, not a filing clerk
 
 A filing clerk moves existing documents from one shelf to another, unchanged. That is
@@ -182,21 +187,63 @@ when you hit some number.
 
 ## Phase 3 — Build it
 
-Use the Remnus MCP tools (`list_workspace`, `create_page`, `create_workspace_database`,
-`update_page`, …) to actually construct what Phase 2 designed. A few mechanical notes:
+Use the Remnus MCP tools to construct what Phase 2 designed. The human will open this
+workspace in a sidebar, not read it through an API — so its *shape* is part of the work,
+not decoration.
+
+**Plan the tree before writing anything.** Decide the handful of top-level sections a
+person would expect to see (typically 4–9: an overview page, the main databases, one
+parent page per larger area) and what nests under each. A root that is a flat list of
+twenty sibling pages is the most common way a well-researched calibration still ends up
+hard to read.
+
+- Start with one **overview page** at the root that orients a newcomer and links to the
+  rest.
+- Group related pages under a parent: a dozen "System: …" pages belong under one
+  "Systems" page — or become rows of a Systems database if they're comparable enough to
+  filter — not beside everything else at the root.
+- Nest with `parentId` (an existing item) or, inside one `bulk_create_pages` call, with
+  `ref` / `parentRef`, so a parent and its children are created together.
+- Databases can be nested too (`create_database` takes `parentId`) when they belong to one
+  area rather than to the whole project.
+- If the workspace already holds a flat list from an earlier pass, restructure it with
+  `bulk_move_items` instead of recreating it.
+
+**Give everything an icon.** Every page and database gets one — an emoji (`🗺️`) or a
+Lucide icon (`lucide:Map`, with an `iconColor` such as `blue` or `green`). Keep them
+consistent within a section so the sidebar can be scanned at a glance. Set them at
+creation (`icon`/`iconColor` on `create_page`, `bulk_create_pages`, `create_database`);
+fix existing items with `update_page` or `bulk_update_pages`.
+
+**Give every database the views a person would actually use.** A Table view always
+exists; add the others when you create the database (`create_database`'s `views`), or
+later with `create_database_view`:
+
+- a **Kanban** grouped by the status/state column for anything with a lifecycle — backlog,
+  open questions, decisions by status;
+- a **Calendar** on the date column for anything dated — decisions, releases, events;
+- an extra **Table** only when a slice is genuinely looked at on its own.
+
+Give select/status columns real options; they're colored automatically.
+
+**Build in batches.** `bulk_create_pages` creates up to 50 pages or rows per call — use it
+for every database's rows and for each section's pages. One `create_page` per row turns a
+ten-minute job into a forty-minute one.
+
+A few more mechanical notes:
 
 - Create each database with the schema you designed, not an afterthought default.
-- Write real content into every row — see the decision-record example above. A row
-  with only a title and a status is a task list item, not the knowledge Remnus exists
-  to hold.
-- Cross-reference where it's genuinely useful (a decision that shaped a system, a
-  gotcha that explains why a decision was made the way it was) rather than leaving
-  every collection floating on its own.
+- Write real content into every row — see the decision-record example above. A row with
+  only a title and a status is a task list item, not the knowledge Remnus exists to hold.
+- Titles are plain text: write `Scene Flow & Bootstrap`, never `Scene Flow &amp; Bootstrap`.
+- Cross-reference where it's genuinely useful (a decision that shaped a system, a gotcha
+  that explains why a decision was made the way it was) rather than leaving every
+  collection floating on its own.
 
-Depth over volume: every page/row should trace to something you actually read in
-Phase 1, never to what a project "like this" usually has. But for a project with real
-substance, a shallow skeleton is just as wrong as an invented one — this phase should
-feel like it took real work, because Phase 2's modeling was real work.
+Depth over volume: every page/row should trace to something you actually read in Phase 1,
+never to what a project "like this" usually has. But for a project with real substance, a
+shallow skeleton is just as wrong as an invented one — this phase should feel like it took
+real work, because Phase 2's modeling was real work.
 
 ## Phase 4 — Review and finish
 
@@ -204,6 +251,12 @@ feel like it took real work, because Phase 2's modeling was real work.
   actually read like someone who understands this project put it together, or does it
   read like a template got filled in? If the latter, go back — this is the check that
   catches a lazy pass through Phase 2.
+- Look at the structure the way the human will: `list_workspace` at the root should read
+  as a short, meaningful set of sections; every page and database should have an icon;
+  every database with a status or date column should have the matching Kanban or Calendar
+  view. Fix what doesn't before finishing.
+- If Phase 2b produced no domain databases, say why in your summary — "nothing in the
+  material supported one" is a fine answer; silently skipping the pass is not.
 - Edit the project's local `.remnus/config.json` and set `"calibrated": true` — this
   is the only local file this process touches.
 - Tell the human, in a few sentences, what concepts you modeled, why (briefly), and

@@ -48,6 +48,7 @@
     { "name": "get_changes_since", "description": "Get a compact list of everything that changed in the workspace since a given time or a previous call's cursor, pages/databases edited, rows edited, and items deleted. Built for recurring agents to sync incrementally." },
     { "name": "get_related_pages", "description": "Get a page's knowledge-graph neighborhood in one compact call: parent, child pages, outgoing links, backlinks, and sibling rows for database rows." },
     { "name": "create_page", "description": "Create a new standalone page (nested via parentId) or a database row (via databaseId)." },
+    { "name": "bulk_create_pages", "description": "Create up to 50 pages or database rows in one call, in order. Nest pages created in the same call with ref and parentRef, and give each an icon." },
     { "name": "update_page", "description": "Update a page or database row. Only the fields you pass are changed; row properties are merged, not replaced." },
     { "name": "bulk_update_pages", "description": "Update multiple pages or database rows in one call, same merge semantics as update_page per entry." },
     { "name": "delete_page", "description": "Delete a workspace page, database, or database row. Requires confirm: true to execute." },

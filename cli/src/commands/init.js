@@ -168,6 +168,10 @@ export async function initCommand(options) {
 
   ok('Setup complete.');
   say();
+  step('Reload MCP servers in any agent session that was already running.');
+  say(dim('Agents load MCP servers when a session starts. In Claude Code, run /mcp and reconnect'));
+  say(dim('remnus, or start a new session — until then that session has no Remnus tools.'));
+  say();
   step('This project is not marked as set up yet.');
   say(dim(`A one-time setup guide lives at ${bold(calibrateUrl)} — it walks whichever`));
   say(dim('agent works in this project through reading the project and filling the'));

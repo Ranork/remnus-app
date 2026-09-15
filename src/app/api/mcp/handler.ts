@@ -15,6 +15,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js';
 import { LATEST_PROTOCOL_VERSION } from '@modelcontextprotocol/sdk/types.js';
 import bcrypt from 'bcryptjs';
+import { createHash, timingSafeEqual } from 'crypto';
 import { db } from '@/db';
 import { agentTokens, oauthAccessTokens } from '@/db/schema';
 import { eq, and, isNull } from 'drizzle-orm';
@@ -34,6 +35,26 @@ const TOKEN_PREFIX = process.env.MCP_TOKEN_PREFIX ?? 'rmns';
 // client to retry with a refresh rather than fall back to a full re-auth. A request with
 // no Authorization header at all is `no_credential` and gets a bare challenge instead.
 type AuthFailure = 'no_credential' | 'invalid_token';
+
+// bcrypt (cost 12) is slow on purpose, and every MCP request re-verifies its bearer token —
+// so an agent building a workspace in a few hundred calls paid that cost a few hundred
+// times. Once a secret has matched a row's hash on this instance, remember its sha256 for
+// that exact row id + hash and skip bcrypt when it comes back. The row is still read on
+// every request, so revocation and expiry keep applying immediately; a rotated hash is a
+// different key and simply misses.
+const verifiedSecrets = new Map<string, Buffer>();
+const VERIFIED_SECRETS_MAX = 2000;
+
+async function secretMatches(kind: string, rowId: string, tokenHash: string, secret: string): Promise<boolean> {
+  const key = `${kind}:${rowId}:${tokenHash}`;
+  const digest = createHash('sha256').update(secret).digest();
+  const known = verifiedSecrets.get(key);
+  if (known && timingSafeEqual(known, digest)) return true;
+  if (!await bcrypt.compare(secret, tokenHash)) return false;
+  if (verifiedSecrets.size >= VERIFIED_SECRETS_MAX) verifiedSecrets.clear();
+  verifiedSecrets.set(key, digest);
+  return true;
+}
 
 export async function verifyBearerToken(authHeader: string | null): Promise<TokenContext | AuthFailure> {
   console.log('[mcp/auth] enter', {
@@ -74,7 +95,7 @@ export async function verifyBearerToken(authHeader: string | null): Promise<Toke
       console.error('[mcp/auth] oauth_token_not_found', { prefix: prefix8 });
       return 'invalid_token';
     }
-    if (!await bcrypt.compare(secret, row.tokenHash)) {
+    if (!await secretMatches('oa', row.id, row.tokenHash, secret)) {
       console.error('[mcp/auth] oauth_token_hash_mismatch', { prefix: prefix8 });
       return 'invalid_token';
     }
@@ -100,7 +121,7 @@ export async function verifyBearerToken(authHeader: string | null): Promise<Toke
     .limit(1);
 
   if (!row) return 'invalid_token';
-  if (!await bcrypt.compare(secret, row.tokenHash)) return 'invalid_token';
+  if (!await secretMatches('pat', row.id, row.tokenHash, secret)) return 'invalid_token';
   if (row.expiresAt && row.expiresAt.getTime() < Date.now()) return 'invalid_token';
 
   db.update(agentTokens).set({ lastUsedAt: new Date() }).where(eq(agentTokens.id, row.id)).catch(() => {});

@@ -45,6 +45,31 @@ const FIRST_VISIT_WINDOW_DAYS = 7;
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-09-15-organized-agent-workspaces',
+    date: '2026-09-15',
+    category: 'improved',
+    title: {
+      en: 'Agent-built workspaces come organized',
+      tr: 'Yapay zekânın kurduğu çalışma alanları düzenli gelir',
+      de: 'Von KI-Assistenten eingerichtete Arbeitsbereiche sind geordnet',
+      es: 'Los espacios creados por asistentes de IA llegan organizados',
+      fr: 'Les espaces créés par un assistant IA arrivent organisés',
+      hi: 'AI असिस्टेंट के बनाए workspace व्यवस्थित आते हैं',
+      ru: 'Пространства, созданные ИИ-ассистентом, сразу упорядочены',
+      zh: 'AI 助手搭建的工作区更有条理',
+    },
+    summary: {
+      en: 'When an AI assistant sets up your workspace, pages now arrive nested under clear sections with icons, databases come with ready-made board and calendar views, and the whole setup finishes much faster.',
+      tr: 'Bir yapay zekâ asistanı çalışma alanınızı kurduğunda sayfalar artık ikonlarıyla net bölümlerin altında düzenli geliyor, veritabanları hazır pano ve takvim görünümleriyle açılıyor ve kurulum çok daha hızlı bitiyor.',
+      de: 'Wenn ein KI-Assistent Ihren Arbeitsbereich einrichtet, erscheinen Seiten jetzt mit Symbolen unter klaren Abschnitten, Datenbanken bringen fertige Board- und Kalenderansichten mit, und die Einrichtung ist deutlich schneller fertig.',
+      es: 'Cuando un asistente de IA configura tu espacio de trabajo, las páginas llegan ahora ordenadas en secciones claras y con iconos, las bases de datos traen vistas de tablero y calendario listas y todo termina mucho más rápido.',
+      fr: 'Quand un assistant IA configure votre espace de travail, les pages arrivent désormais rangées dans des sections claires avec des icônes, les bases de données ont déjà leurs vues tableau et calendrier, et le tout se termine bien plus vite.',
+      hi: 'जब कोई AI असिस्टेंट आपका workspace सेट करता है, तो पेज अब आइकन के साथ साफ़ सेक्शन के अंदर व्यवस्थित आते हैं, डेटाबेस में बोर्ड और कैलेंडर व्यू पहले से तैयार होते हैं, और पूरा सेटअप कहीं ज़्यादा तेज़ी से पूरा होता है।',
+      ru: 'Когда ИИ-ассистент настраивает ваше пространство, страницы теперь сразу разложены по понятным разделам и снабжены значками, у баз данных уже есть доски и календари, а вся настройка проходит гораздо быстрее.',
+      zh: '当 AI 助手为你搭建工作区时，页面现在会带着图标归入清晰的分区，数据库自带看板和日历视图，整个搭建过程也快得多。',
+    },
+  },
+  {
     id: '2026-09-15-project-window-signed-in',
     date: '2026-09-15',
     category: 'improved',
