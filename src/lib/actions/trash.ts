@@ -4,7 +4,8 @@ import { workspaceMembers, workspaces } from '@/db/schema';
 import { and, eq } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { getTranslations } from 'next-intl/server';
-import { getCurrentUser } from '@/lib/auth/session';
+import { getCurrentUserAllowingWorkspaceLock } from '@/lib/auth/session';
+import { assertWorkspaceLockAllows } from '@/lib/auth/workspaceLock';
 import { listTrashForWorkspaces, restoreSnapshot } from '@/lib/services/snapshots';
 import type { TrashEntry, RestoreResult } from '@/lib/services/snapshots';
 import { publish } from '@/lib/realtime/publish';
@@ -24,7 +25,9 @@ export type TrashWorkspaceGroup = {
 };
 
 async function assertWorkspaceAccess(workspaceId: string): Promise<string> {
-  const user = await getCurrentUser();
+  const user = await getCurrentUserAllowingWorkspaceLock();
+  // Project windows are confined to their workspace — checked before any admin shortcut.
+  await assertWorkspaceLockAllows(user, workspaceId);
   if (user.role === 'admin') return user.id;
 
   const [member] = await db
@@ -44,30 +47,33 @@ async function assertWorkspaceAccess(workspaceId: string): Promise<string> {
 // in actions/agentToken.ts (same "common ground" sidebar surface as the AI
 // Agents modal, not a per-workspace Settings tab).
 export async function getMyTrash(): Promise<TrashWorkspaceGroup[]> {
-  const user = await getCurrentUser();
+  const user = await getCurrentUserAllowingWorkspaceLock();
 
   const wsList = await db
     .select({ id: workspaces.id, name: workspaces.name, icon: workspaces.icon, iconColor: workspaces.iconColor })
     .from(workspaces)
     .innerJoin(workspaceMembers, and(eq(workspaceMembers.workspaceId, workspaces.id), eq(workspaceMembers.userId, user.id)))
     .orderBy(workspaces.name);
-  if (wsList.length === 0) return [];
+  // A project window only ever sees its own workspace's trash.
+  const visible = user.workspaceLock ? wsList.filter((w) => w.id === user.workspaceLock) : wsList;
+  if (visible.length === 0) return [];
 
-  const entries = await listTrashForWorkspaces(wsList.map((w) => w.id));
-  return wsList.map((ws) => ({ workspace: ws, entries: entries.filter((e) => e.workspaceId === ws.id) }));
+  const entries = await listTrashForWorkspaces(visible.map((w) => w.id));
+  return visible.map((ws) => ({ workspace: ws, entries: entries.filter((e) => e.workspaceId === ws.id) }));
 }
 
 // Sidebar badge count — same shape as `getUserAgentTokenCount`.
 export async function getUserTrashCount(): Promise<number> {
-  const user = await getCurrentUser();
+  const user = await getCurrentUserAllowingWorkspaceLock();
 
   const wsIds = await db
     .select({ id: workspaceMembers.workspaceId })
     .from(workspaceMembers)
     .where(eq(workspaceMembers.userId, user.id));
-  if (wsIds.length === 0) return 0;
+  const visible = user.workspaceLock ? wsIds.filter((w) => w.id === user.workspaceLock) : wsIds;
+  if (visible.length === 0) return 0;
 
-  const entries = await listTrashForWorkspaces(wsIds.map((w) => w.id));
+  const entries = await listTrashForWorkspaces(visible.map((w) => w.id));
   return entries.length;
 }
 

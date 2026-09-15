@@ -3,7 +3,8 @@ import { db } from '@/db';
 import { workspaceMembers } from '@/db/schema';
 import { and, eq } from 'drizzle-orm';
 import { getTranslations } from 'next-intl/server';
-import { getCurrentUser } from '@/lib/auth/session';
+import { getCurrentUserAllowingWorkspaceLock } from '@/lib/auth/session';
+import { assertWorkspaceLockAllows } from '@/lib/auth/workspaceLock';
 import {
   addPageComment,
   deletePageComment,
@@ -14,7 +15,9 @@ import {
 import { getAnyPageById } from '@/lib/services/workspace';
 
 async function assertWorkspaceAccess(workspaceId: string): Promise<{ userId: string; isOwner: boolean }> {
-  const user = await getCurrentUser();
+  const user = await getCurrentUserAllowingWorkspaceLock();
+  // Project windows are confined to their workspace — checked before any admin shortcut.
+  await assertWorkspaceLockAllows(user, workspaceId);
   if (user.role === 'admin') return { userId: user.id, isOwner: true };
 
   const [member] = await db
@@ -42,7 +45,7 @@ export async function getComments(
 }> {
   const { userId, isOwner } = await assertWorkspaceAccess(workspaceId);
   await getAnyPageById(workspaceId, pageId);
-  const [comments, user] = await Promise.all([listPageComments(pageId), getCurrentUser()]);
+  const [comments, user] = await Promise.all([listPageComments(pageId), getCurrentUserAllowingWorkspaceLock()]);
   return { comments, viewerUserId: userId, viewerName: user.name ?? null, viewerImage: user.image ?? null, isOwner };
 }
 
@@ -53,7 +56,7 @@ export async function addComment(
   kind: CommentKind = 'note',
 ) {
   const { userId } = await assertWorkspaceAccess(workspaceId);
-  const user = await getCurrentUser();
+  const user = await getCurrentUserAllowingWorkspaceLock();
   const authorLabel = user.name || user.email || 'Someone';
 
   return addPageComment({

@@ -4,7 +4,8 @@ import { workspaceMembers } from '@/db/schema';
 import { and, eq } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { getTranslations } from 'next-intl/server';
-import { getCurrentUser } from '@/lib/auth/session';
+import { getCurrentUserAllowingWorkspaceLock } from '@/lib/auth/session';
+import { assertWorkspaceLockAllows } from '@/lib/auth/workspaceLock';
 import { getAnyPageById } from '@/lib/services/workspace';
 import { listContentVersions, restoreContentVersion } from '@/lib/services/snapshots';
 import type { ContentVersion, RestoreVersionResult } from '@/lib/services/snapshots';
@@ -12,7 +13,9 @@ import type { ContentVersion, RestoreVersionResult } from '@/lib/services/snapsh
 export type { ContentVersion, RestoreVersionResult } from '@/lib/services/snapshots';
 
 async function assertWorkspaceAccess(workspaceId: string): Promise<string> {
-  const user = await getCurrentUser();
+  const user = await getCurrentUserAllowingWorkspaceLock();
+  // Project windows are confined to their workspace — checked before any admin shortcut.
+  await assertWorkspaceLockAllows(user, workspaceId);
   if (user.role === 'admin') return user.id;
 
   const [member] = await db
@@ -39,7 +42,7 @@ export async function getPageHistory(workspaceId: string, pageId: string): Promi
 // point of the edit. No MCP counterpart exists.
 export async function restoreVersion(workspaceId: string, pageId: string, snapshotId: string): Promise<RestoreVersionResult> {
   const userId = await assertWorkspaceAccess(workspaceId);
-  const user = await getCurrentUser();
+  const user = await getCurrentUserAllowingWorkspaceLock();
   const result = await restoreContentVersion(workspaceId, pageId, snapshotId, {
     kind: 'human', userId, label: user.name || user.email || 'Someone',
   });

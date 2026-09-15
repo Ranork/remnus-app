@@ -24,6 +24,7 @@ Primary sources: `AI.md`, `AGENTS.md`, `messages/`, `src/auth.config.ts`, `src/l
 
 ## Auth
 - NEVER call `auth()` directly in server actions/components — use `getCurrentUser()` from `src/lib/auth/session.ts` (React.cache wrapped)
+- Workspace-locked project-window sessions (`npx remnus open`) are DENY BY DEFAULT: `auth()` returns null for them, `getCurrentUser()` throws. Only workspace-content code opts in via `getCurrentUserAllowingWorkspaceLock()` / `getSessionAllowingWorkspaceLock()` and must then call `assertWorkspaceLockAllows(user, resolvedWorkspaceId)` before any admin shortcut. Raw `authWithWorkspaceLock` is for `session.ts` only. See AGENTS.md → Project Install §4.
 - All workspace actions → `assertWorkspaceAccess(workspaceId)`
 - All database/page actions → `assertDatabaseAccess(databaseId)`
 - Unauthenticated → `redirect('/login')`; unauthorized → throws

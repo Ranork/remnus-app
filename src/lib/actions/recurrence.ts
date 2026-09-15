@@ -4,7 +4,8 @@ import { db } from '@/db';
 import { pages, databases, workspaceItems, workspaceMembers } from '@/db/schema';
 import { and, eq, inArray } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
-import { getCurrentUser } from '@/lib/auth/session';
+import { getCurrentUserAllowingWorkspaceLock } from '@/lib/auth/session';
+import { assertWorkspaceLockAllows } from '@/lib/auth/workspaceLock';
 import { deleteWorkspaceItem } from './workspace';
 import { publish } from '@/lib/realtime/publish';
 import { recordDeletionTombstone } from '@/lib/services/workspace';
@@ -33,7 +34,7 @@ import { normalizeRule, type RecurrenceRule } from '@/lib/recurrence/rule';
 // other open clients exactly like a normal row edit does.
 
 async function assertDatabaseAccess(databaseId: string): Promise<{ userId: string; workspaceId: string }> {
-  const user = await getCurrentUser();
+  const user = await getCurrentUserAllowingWorkspaceLock();
 
   const [row] = await db
     .select({ workspaceId: workspaceItems.workspaceId })
@@ -43,6 +44,9 @@ async function assertDatabaseAccess(databaseId: string): Promise<{ userId: strin
     .limit(1);
 
   if (!row) throw new Error('Database not found');
+
+  // Project windows are confined to their workspace — checked before any admin shortcut.
+  await assertWorkspaceLockAllows(user, row.workspaceId);
 
   if (user.role !== 'admin') {
     const [member] = await db

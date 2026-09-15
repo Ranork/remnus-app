@@ -136,7 +136,7 @@ Do not guess a schema, and do not re-run `info` before every call.
 
 ## Project Install (`npx remnus init`)
 
-Turns any directory into a Remnus-connected project: **one project = one workspace**. Three pieces, in dependency order.
+Turns any directory into a Remnus-connected project: **one project = one workspace**. Four pieces, in dependency order.
 
 ### 1. Workspace-pinned MCP endpoint
 
@@ -170,6 +170,27 @@ Standalone ESM Node package, **zero dependencies**, published to npm as `remnus`
 - `.mcp.json` runs `npx remnus mcp` rather than a direct HTTP transport, so no secret sits in a committed file, both auth modes produce the same file, and there is one place that notices a broken connection. `--http` opts out.
 - `mcp` is a stdio↔HTTPS bridge. **Nothing but protocol bytes may touch stdout** — every log in the package goes to stderr ([cli/src/lib/ui.js](cli/src/lib/ui.js)). On 401/403 it answers the request with a JSON-RPC error (never leave an agent hanging) *and* tells the human to run `remnus init`.
 - OAuth mode delegates to `mcp-remote` against the pinned URL.
+
+### 4. Signed-in project windows (workspace-locked sessions)
+
+`npx remnus open` (and the Claude Code `SessionStart` hook that runs it) opens the workspace **already signed in**, but only to that project's workspace.
+
+**Flow:** CLI `POST /api/window/ticket` with the project PAT → server returns a path to `/api/window/activate?ticket=…` → CLI opens it with Chromium `--app` in a **per-workspace browser profile** (`--user-data-dir` under the OS app-data dir, [cli/src/lib/window.js](cli/src/lib/window.js)) → activate route calls `signIn('workspace-window')` → redirect to `/w/<id>`.
+
+**The lock** ([src/lib/auth/workspaceLock.ts](src/lib/auth/workspaceLock.ts)): the session may do what the project's write token could already do over MCP — content inside that one workspace — and nothing at account or workspace-management level. It is **deny by default** at two chokepoints:
+- `auth()` from `@/auth` is a wrapper that reads a locked session as **signed out**. Only [src/lib/auth/session.ts](src/lib/auth/session.ts) may call the raw `authWithWorkspaceLock`.
+- `getCurrentUser()` **throws** for a locked session.
+
+Code that must work in a window opts in via `getCurrentUserAllowingWorkspaceLock()` / `getSessionAllowingWorkspaceLock()` and then **must** call `assertWorkspaceLockAllows(user, resolvedWorkspaceId)` — on the workspace it resolved, **before** any admin shortcut. Opted in today: the private access helpers in `actions/{workspace,page,database,recurrence,comments,history,trash}.ts`, workspace listing/active-workspace (filtered to the lock), page knowledge (context policy stays strict), `getWorkspaceMembers`, download signing, the three content routes, the `(app)` layout + `/app`, `/api/upload` (must name the lock workspace), the download proxy, `/api/activity/ping` (change signal scoped to the lock). Workspace management (delete/rename/icon/hide) uses the strict `assertWorkspaceManagementAccess`.
+
+**Invariants — do not break these:**
+- A new server action or route uses `getCurrentUser()` / `auth()` unless it is content inside a workspace **and** confines itself to the lock. A forgotten opt-in is a feature that errors in the window; a careless opt-in is an escape.
+- The `jwt` callback writes the lock claims on **every** sign-in (a normal login must clear an old lock) and **never** reads them from a client `session` update. A `workspace-window` sign-in without lock claims throws (fail closed).
+- Locked sessions are re-validated per request in `session.ts`: 12h lock TTL, PAT not revoked/expired, write scope, `createdBy` = user, still a member. JWTs are stateless — without this, revoking the token would not close the window.
+- Tickets ([src/lib/services/windowTicket.ts](src/lib/services/windowTicket.ts)): 32 random bytes, stored as `win_<sha256>` in `client_auth_tokens`, 60s, single-use via delete-`returning`. The ticket route requires a **write-scoped PAT** whose owner is still a member.
+- The ticket route returns a **path**, not a URL — the CLI joins it onto its configured server and never follows a sign-in link to another origin.
+- `activate` does not replace an existing **full** session of the same user with a locked one. The CLI only requests a ticket when it can open an isolated profile (`hasAppWindowBrowser`), and `openAppWindow` never falls back to a normal tab for a sign-in link.
+- `/api/window/` is public in `auth.config.ts`; both routes authenticate themselves.
 
 ## Color Theme
 

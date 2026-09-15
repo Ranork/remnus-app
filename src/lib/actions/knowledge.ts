@@ -4,7 +4,8 @@ import { and, eq } from 'drizzle-orm';
 import { getTranslations } from 'next-intl/server';
 import { db } from '@/db';
 import { workspaceMembers } from '@/db/schema';
-import { getCurrentUser } from '@/lib/auth/session';
+import { getCurrentUser, getCurrentUserAllowingWorkspaceLock } from '@/lib/auth/session';
+import { assertWorkspaceLockAllows } from '@/lib/auth/workspaceLock';
 import {
   getContextPolicy,
   getKnowledgeItem,
@@ -15,8 +16,15 @@ import {
   type KnowledgeMetadataInput,
 } from '@/lib/services/knowledge';
 
-async function requireWorkspaceRole(workspaceId: string, write = false, ownerOnly = false) {
-  const user = await getCurrentUser();
+async function requireWorkspaceRole(workspaceId: string, write = false, ownerOnly = false, allowProjectWindow = false) {
+  // A page's knowledge metadata is content, so a project window may use it for its own
+  // workspace; the workspace-wide context policy is a setting and stays closed to it.
+  const user = allowProjectWindow
+    ? await getCurrentUserAllowingWorkspaceLock()
+    : await getCurrentUser();
+  if (allowProjectWindow) {
+    await assertWorkspaceLockAllows(user as { workspaceLock?: string | null }, workspaceId);
+  }
   const [member] = await db
     .select({ role: workspaceMembers.role })
     .from(workspaceMembers)
@@ -30,17 +38,17 @@ async function requireWorkspaceRole(workspaceId: string, write = false, ownerOnl
 }
 
 export async function getPageKnowledge(workspaceId: string, itemId: string) {
-  await requireWorkspaceRole(workspaceId);
+  await requireWorkspaceRole(workspaceId, false, false, true);
   return getKnowledgeItem(workspaceId, itemId);
 }
 
 export async function updatePageKnowledge(workspaceId: string, itemId: string, input: KnowledgeMetadataInput) {
-  const user = await requireWorkspaceRole(workspaceId, true);
+  const user = await requireWorkspaceRole(workspaceId, true, false, true);
   return saveKnowledgeMetadata(workspaceId, itemId, input, user.id);
 }
 
 export async function markPageKnowledgeReviewed(workspaceId: string, itemId: string) {
-  const user = await requireWorkspaceRole(workspaceId, true);
+  const user = await requireWorkspaceRole(workspaceId, true, false, true);
   return reviewKnowledgeItem(workspaceId, itemId, user.id);
 }
 

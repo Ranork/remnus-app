@@ -1,4 +1,4 @@
-import { auth } from '@/auth';
+import { getSessionAllowingWorkspaceLock } from '@/lib/auth/session';
 import { getActiveWorkspaceId, getAllWorkspaceItems, type WorkspaceItemRow } from '@/lib/actions/workspace';
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
@@ -29,7 +29,7 @@ export default async function AppRedirectPage({
 }: {
   searchParams: Promise<{ billing?: string }>;
 }) {
-  const session = await auth();
+  const session = await getSessionAllowingWorkspaceLock();
 
   if (!session?.user) {
     redirect('/login');

@@ -3,7 +3,8 @@ import { db } from '@/db';
 import { pages, databases, workspaceItems, workspaceMembers, agentTokens, oauthAccessTokens, oauthClients } from '@/db/schema';
 import { eq, asc, and, sql, inArray } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
-import { getCurrentUser } from '@/lib/auth/session';
+import { getCurrentUserAllowingWorkspaceLock } from '@/lib/auth/session';
+import { assertWorkspaceLockAllows } from '@/lib/auth/workspaceLock';
 import { deleteWorkspaceItem } from './workspace';
 import { publish } from '@/lib/realtime/publish';
 import { isCloudinaryUrl, deleteCloudinaryImage } from '@/lib/cloudinary';
@@ -28,7 +29,7 @@ function getSchemaDefaults(schema: DatabaseColumn[]): Record<string, any> {
 // Verify user has access to the workspace that owns this database.
 // Returns { userId, workspaceId } so callers can emit realtime events.
 async function assertDatabaseAccess(databaseId: string): Promise<{ userId: string; workspaceId: string }> {
-  const user = await getCurrentUser();
+  const user = await getCurrentUserAllowingWorkspaceLock();
 
   const [row] = await db
     .select({ workspaceId: workspaceItems.workspaceId })
@@ -38,6 +39,9 @@ async function assertDatabaseAccess(databaseId: string): Promise<{ userId: strin
     .limit(1);
 
   if (!row) throw new Error('Database not found');
+
+  // Project windows are confined to their workspace — checked before any admin shortcut.
+  await assertWorkspaceLockAllows(user, row.workspaceId);
 
   if (user.role !== 'admin') {
     const [member] = await db
@@ -178,7 +182,7 @@ export async function updatePageContent(id: string, content: string) {
   let workspaceId: string | null = null;
   if (page[0]) {
     ({ workspaceId } = await assertDatabaseAccess(page[0].databaseId));
-    const user = await getCurrentUser();
+    const user = await getCurrentUserAllowingWorkspaceLock();
     await maybeSnapshotContentUpdate({
       workspaceId, originalId: id, itemType: 'database_row', title: page[0].title,
       priorContent: page[0].content ?? '', newContent: content,
@@ -193,20 +197,25 @@ export async function updatePageContent(id: string, content: string) {
 export async function deletePage(id: string, databaseId: string) {
   const { userId, workspaceId } = await assertDatabaseAccess(databaseId);
 
-  // Clean up any nested workspace items under this page
-  const subItems = await db.select({ id: workspaceItems.id }).from(workspaceItems).where(eq(workspaceItems.parentId, id));
-  for (const item of subItems) {
-    await deleteWorkspaceItem(item.id);
-  }
-
+  // Access above is checked on `databaseId`, which the caller supplies next to `id` —
+  // so the row has to be confirmed to live in that database before anything is
+  // touched. Without this, your own database id plus someone else's row id deleted a
+  // row in a workspace you have no access to.
   const [row] = await db
     .select({
       title: pages.title, content: pages.content, properties: pages.properties,
       icon: pages.icon, iconColor: pages.iconColor, sortOrder: pages.sortOrder,
     })
     .from(pages)
-    .where(eq(pages.id, id))
+    .where(and(eq(pages.id, id), eq(pages.databaseId, databaseId)))
     .limit(1);
+  if (!row) return;
+
+  // Clean up any nested workspace items under this page
+  const subItems = await db.select({ id: workspaceItems.id }).from(workspaceItems).where(eq(workspaceItems.parentId, id));
+  for (const item of subItems) {
+    await deleteWorkspaceItem(item.id);
+  }
 
   // If this row is one occurrence of a recurring series, record the deletion on
   // the rule BEFORE dropping the row. Otherwise the next materialization sees a
@@ -215,7 +224,7 @@ export async function deletePage(id: string, databaseId: string) {
   // silently undo itself. Best-effort: a failure here must not block the delete.
   await exdateOccurrenceForPage(id).catch(() => {});
 
-  const user = await getCurrentUser();
+  const user = await getCurrentUserAllowingWorkspaceLock();
   await snapshotBeforeDelete({
     workspaceId, originalId: id, itemType: 'database_row', title: row?.title ?? '',
     content: row?.content, properties: row?.properties, icon: row?.icon, iconColor: row?.iconColor,
@@ -236,7 +245,9 @@ export async function deletePage(id: string, databaseId: string) {
 export async function duplicatePage(id: string, databaseId: string) {
   const { userId, workspaceId } = await assertDatabaseAccess(databaseId);
 
-  const source = await db.select().from(pages).where(eq(pages.id, id));
+  // Same reason as deletePage: the source row must belong to the database access was
+  // checked on, or this copied another workspace's row into yours.
+  const source = await db.select().from(pages).where(and(eq(pages.id, id), eq(pages.databaseId, databaseId)));
   if (!source[0]) return;
 
   const newId = crypto.randomUUID();
@@ -287,7 +298,8 @@ export async function reorderPages(databaseId: string, orderedIds: string[]) {
   await db.transaction(async (tx) => {
     for (let i = 0; i < orderedIds.length; i++) {
       if (currentSortOrder.get(orderedIds[i]) === i) continue;
-      await tx.update(pages).set({ sortOrder: i }).where(eq(pages.id, orderedIds[i]));
+      // Scoped to the authorized database so a forged id list can't reorder rows elsewhere.
+      await tx.update(pages).set({ sortOrder: i }).where(and(eq(pages.id, orderedIds[i]), eq(pages.databaseId, databaseId)));
     }
   });
   revalidatePath(`/db/${databaseId}`);

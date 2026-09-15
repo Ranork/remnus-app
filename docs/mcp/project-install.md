@@ -1,9 +1,8 @@
 # Project Install
 
 This is the fastest way to connect a project to Remnus: one command, one sign-in,
-and the workspace is ready to use. No dashboard, no manual database setup. A human
-who wants their AI coding agent to set this up can point it at this page and ask it
-to follow the steps below.
+and the workspace is ready to use. No dashboard, no manual database setup. To have
+your AI coding agent do it for you, see [Hand it to your agent](#hand-it-to-your-agent).
 
 `remnus` is the open-source CLI for this project. The next section is the complete
 account of what it talks to and writes.
@@ -14,6 +13,20 @@ it by hand. Project Install instead creates (or picks) the workspace *for* this
 project and wires up your editor automatically — use whichever matches what you
 already have; see [Two ways to connect](README.md#two-ways-to-connect) for the
 difference.
+
+## Hand it to your agent
+
+From the project's root directory, give your coding agent this prompt:
+
+```text
+Set up Remnus in this project by following https://github.com/Ranork/remnus-app/blob/master/docs/mcp/project-install.md, then calibrate the workspace to this project.
+```
+
+Hand over the GitHub copy of this page rather than the wiki one. From there the agent
+can open the [`cli/`](https://github.com/Ranork/remnus-app/tree/master/cli) source
+that `npx remnus init` runs and the [calibration guide](calibrate.md) in the same
+repository, so it reads the steps and the code they run together. The prompt works
+in any language.
 
 ## What this does, in full
 
@@ -78,13 +91,15 @@ and where it's logged.
 ## Step 3 — See it, verify it
 
 ```bash
-npx remnus open      # open this project's workspace in your browser
+npx remnus open      # open this project's workspace in its own signed-in window
 npx remnus doctor    # check whether the connection is healthy
 ```
 
 In Claude Code, a fresh session already does the `open` part on its own — the hook
 `init` wrote fires on `startup` (not on resumes), so a human sees the workspace
-without a separate step. `doctor` reports exactly which command fixes a broken
+without a separate step. The window opens already signed in, to this project's
+workspace only — account settings, billing and your other workspaces stay behind a
+normal login. `doctor` reports exactly which command fixes a broken
 connection, and separately nudges you if a newer `remnus` has shipped since this
 project was pinned. Every project connected this way gets its own MCP endpoint
 (`/api/mcp/w/<workspace-id>`), so two projects on one machine never share a

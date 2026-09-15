@@ -143,6 +143,7 @@ Repository monorepo değildir. Ana npm uygulamasına ek olarak dağıtım için 
 - Kullanıcıya görünen tüm uygulama metni next-intl üzerinden gelir. Yeni key'i 8 dosyaya (`en`, `tr`, `hi`, `es`, `fr`, `de`, `zh`, `ru`) ekle; 31 namespace vardır.
 - Client'ta `useTranslations`, server component/action'da `getTranslations`; tarih locale'ini hardcode etme.
 - Server action/component'ta doğrudan `auth()` çağırma; `src/lib/auth/session.ts` içindeki `getCurrentUser()` kullan.
+- Proje pencereleri workspace'e kilitli oturum kullanır ve kilit **varsayılan-ret**tir: `auth()` kilitli oturumu çıkış yapmış sayar, `getCurrentUser()` hata fırlatır. Bir action yalnızca workspace içeriğiyse `getCurrentUserAllowingWorkspaceLock()` kullanıp çözdüğü workspace için `assertWorkspaceLockAllows()` çağırmalıdır (admin kısayolundan önce). Ayrıntı: `AGENTS.md` → **Project Install** §4.
 - Workspace/database erişiminde sırasıyla `assertWorkspaceAccess` veya `assertDatabaseAccess` uygula.
 - Workspace UI flat/borderless ve üç katmanlı neutral palette kullanır; auth sayfalarının rounded-card stili bilinçli istisnadır.
 - Yapısal sidebar mutasyonları dışında content editlerinde `revalidatePath('/')` kullanma; optimistic client akışını koru.

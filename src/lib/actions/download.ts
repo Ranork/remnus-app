@@ -1,6 +1,6 @@
 'use server';
 
-import { getCurrentUser } from '@/lib/auth/session';
+import { getCurrentUserAllowingWorkspaceLock } from '@/lib/auth/session';
 import { buildSignedDownloadPath } from '@/lib/server/downloadLink';
 
 const CLOUDINARY_HOST = 'res.cloudinary.com';
@@ -20,7 +20,9 @@ const CLOUDINARY_HOST = 'res.cloudinary.com';
  * Returns a relative path; the caller resolves it against its own origin.
  */
 export async function createSignedDownloadUrl(url: string, name: string): Promise<string | null> {
-  await getCurrentUser(); // redirects when unauthenticated
+  // Redirects when unauthenticated. A project window may download too: this only ever
+  // gated on being signed in (see above), so there is no workspace to confine it to.
+  await getCurrentUserAllowingWorkspaceLock();
 
   let parsed: URL;
   try {

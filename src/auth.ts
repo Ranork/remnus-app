@@ -12,6 +12,8 @@ import { createSeedWorkspace } from '@/lib/seed';
 import { cookies } from 'next/headers';
 import { captureServer, isCaptureAllowedFromRequest } from '@/lib/analytics/server';
 import { sendWelcomeEmailTo } from '@/lib/email/lifecycle';
+import { consumeWindowTicket } from '@/lib/services/windowTicket';
+import { WINDOW_SESSION_TTL_MS } from '@/lib/auth/workspaceLock';
 
 // ── Type augmentation ─────────────────────────────────────────────────────────
 
@@ -20,10 +22,17 @@ declare module 'next-auth' {
     user: {
       id: string;
       role: string;
+      /** Set only on a project-window session — see src/lib/auth/workspaceLock.ts. */
+      workspaceLock?: string | null;
+      workspaceLockTokenId?: string | null;
+      workspaceLockExpiresAt?: number | null;
     } & DefaultSession['user'];
   }
   interface User {
     role?: string;
+    // Nullable to match Session.user: Auth.js intersects the two for the session callback.
+    workspaceLock?: string | null;
+    workspaceLockTokenId?: string | null;
   }
 }
 
@@ -31,12 +40,15 @@ declare module '@auth/core/jwt' {
   interface JWT {
     id?: string;
     role?: string;
+    workspaceLock?: string;
+    workspaceLockTokenId?: string;
+    workspaceLockExpiresAt?: number;
   }
 }
 
 // ── Auth config ───────────────────────────────────────────────────────────────
 
-export const { handlers, auth, signIn, signOut, unstable_update: update } = NextAuth({
+export const { handlers, auth: authWithWorkspaceLock, signIn, signOut, unstable_update: update } = NextAuth({
   ...authConfig,
   adapter: DrizzleAdapter(db, {
     usersTable: users,
@@ -68,6 +80,33 @@ export const { handlers, auth, signIn, signOut, unstable_update: update } = Next
         } catch {
           return null;
         }
+      },
+    }),
+    // Project window (`npx remnus open`): the CLI trades the project's write token for a
+    // single-use ticket, and the window redeems it here for a session LOCKED to that project's
+    // workspace. See src/lib/auth/workspaceLock.ts for what the lock allows.
+    Credentials({
+      id: 'workspace-window',
+      credentials: { ticket: { type: 'text' } },
+      async authorize({ ticket }) {
+        if (!ticket || typeof ticket !== 'string') return null;
+        const pending = await consumeWindowTicket(ticket);
+        if (!pending) return null;
+        const [user] = await db
+          .select()
+          .from(users)
+          .where(eq(users.id, pending.userId))
+          .limit(1);
+        if (!user) return null;
+        return {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          image: user.image,
+          role: user.role,
+          workspaceLock: pending.workspaceId,
+          workspaceLockTokenId: pending.tokenId,
+        };
       },
     }),
   ],
@@ -109,7 +148,7 @@ export const { handlers, auth, signIn, signOut, unstable_update: update } = Next
 
       return true;
     },
-    async jwt({ token, user, trigger, session }) {
+    async jwt({ token, user, account, trigger, session }) {
       if (user?.id) {
         // Fetch fresh from DB so we get the role set by createUser event
         const [dbUser] = await db
@@ -118,6 +157,20 @@ export const { handlers, auth, signIn, signOut, unstable_update: update } = Next
           .where(eq(users.id, user.id));
         token.id = user.id;
         token.role = dbUser?.role ?? 'user';
+
+        // Written on EVERY sign-in, not only a project-window one: a normal login in a browser
+        // profile that previously held a project-window session must come out unlocked instead
+        // of inheriting the old lock. Never read from `session` below — a client-sent session
+        // update must not be able to set or clear it.
+        const lockedTo = user.workspaceLock;
+        if (account?.provider === 'workspace-window' && (!lockedTo || !user.workspaceLockTokenId)) {
+          // Fail closed: a project-window sign-in that lost its lock on the way here must never
+          // become a full account session.
+          throw new Error('Project window sign-in is missing its workspace lock');
+        }
+        token.workspaceLock = lockedTo ?? undefined;
+        token.workspaceLockTokenId = lockedTo ? (user.workspaceLockTokenId ?? undefined) : undefined;
+        token.workspaceLockExpiresAt = lockedTo ? Date.now() + WINDOW_SESSION_TTL_MS : undefined;
       }
       // Profile self-edit (updateMyProfile → update({ user })): reflect the new
       // display name / avatar in the session without forcing a re-login.
@@ -134,6 +187,9 @@ export const { handlers, auth, signIn, signOut, unstable_update: update } = Next
     async session({ session, token }) {
       session.user.id = token.id as string;
       session.user.role = token.role as string;
+      session.user.workspaceLock = token.workspaceLock ?? null;
+      session.user.workspaceLockTokenId = token.workspaceLockTokenId ?? null;
+      session.user.workspaceLockExpiresAt = token.workspaceLockExpiresAt ?? null;
       return session;
     },
   },
@@ -231,3 +287,16 @@ export const { handlers, auth, signIn, signOut, unstable_update: update } = Next
     },
   },
 });
+
+// ── Session for everything that does not handle project windows ──────────────────────
+//
+// Deny by default: a workspace-locked project-window session reads as signed out here, so
+// every direct `auth()` caller — API routes, admin pages, account actions, the Tauri sign-in
+// bridge — refuses it without having to know project windows exist. The places that serve a
+// project window use `getSessionAllowingWorkspaceLock()` from src/lib/auth/session.ts
+// instead, which also re-validates the lock. Only that module calls `authWithWorkspaceLock`.
+export async function auth() {
+  const session = await authWithWorkspaceLock();
+  if (session?.user?.workspaceLock) return null;
+  return session;
+}

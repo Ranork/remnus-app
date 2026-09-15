@@ -1,6 +1,8 @@
 import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
-import { auth, signOut } from '@/auth';
+import { signOut } from '@/auth';
+import { getSessionAllowingWorkspaceLock } from '@/lib/auth/session';
+import { lockClaimsOf } from '@/lib/auth/workspaceLock';
 import { getTranslations } from 'next-intl/server';
 import { getAllWorkspaceItems, getWorkspaces } from '@/lib/actions/workspace';
 import WorkspaceSidebar from '@/components/features/WorkspaceSidebar';
@@ -25,7 +27,9 @@ export default async function AppGroupLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const session = await auth();
+  // Project windows (workspace-locked sessions) render this shell too; everything it
+  // loads below confines itself to that one workspace.
+  const session = await getSessionAllowingWorkspaceLock();
   if (!session?.user) redirect('/login');
 
   const t = await getTranslations('Layout');
@@ -71,6 +75,29 @@ export default async function AppGroupLayout({
     </div>
   ) : undefined;
 
+  // Says why account settings, billing and other workspaces are unavailable here, and
+  // offers the way to a full session: signing out lands on the normal login page.
+  const projectWindowBanner = lockClaimsOf(session.user).workspaceLock ? (
+    <div key="project-window-banner" className="shrink-0 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-4 px-4 py-2 bg-neutral-900 border-b border-neutral-800">
+      <span className="text-xs text-neutral-400 truncate min-w-0">
+        {t('projectWindowNotice', { workspace: activeWorkspace?.name ?? '' })}
+      </span>
+      <form
+        action={async () => {
+          'use server';
+          await signOut({ redirectTo: '/login' });
+        }}
+      >
+        <button
+          type="submit"
+          className="shrink-0 text-xs font-medium text-neutral-300 hover:text-neutral-100 transition-colors self-start sm:self-auto"
+        >
+          {t('projectWindowSignIn')}
+        </button>
+      </form>
+    </div>
+  ) : undefined;
+
   return (
     <>
       <ActivityTracker />
@@ -106,7 +133,7 @@ export default async function AppGroupLayout({
               currentUser={currentUser}
             />
           }
-          demoBanner={demoBanner}
+          demoBanner={demoBanner ?? projectWindowBanner}
         >
           {children}
         </AppShell>

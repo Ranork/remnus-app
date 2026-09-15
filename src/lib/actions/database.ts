@@ -3,7 +3,8 @@ import { db } from '@/db';
 import { databases, workspaceItems, workspaceMembers, pages, users } from '@/db/schema';
 import { eq, and } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
-import { getCurrentUser } from '@/lib/auth/session';
+import { getCurrentUserAllowingWorkspaceLock } from '@/lib/auth/session';
+import { assertWorkspaceLockAllows } from '@/lib/auth/workspaceLock';
 import { createWorkspaceDatabase, getActiveWorkspaceId } from './workspace';
 import { publish } from '@/lib/realtime/publish';
 import { SELECT_COLOR_ORDER, normalizeOption, type SelectOption } from '@/lib/types/properties';
@@ -11,7 +12,7 @@ import { SELECT_COLOR_ORDER, normalizeOption, type SelectOption } from '@/lib/ty
 // Verify user has access to the workspace that owns this database.
 // Returns { userId, workspaceId } so callers can emit realtime events.
 async function assertDatabaseAccess(databaseId: string): Promise<{ userId: string; workspaceId: string }> {
-  const user = await getCurrentUser();
+  const user = await getCurrentUserAllowingWorkspaceLock();
 
   const [row] = await db
     .select({ workspaceId: workspaceItems.workspaceId })
@@ -21,6 +22,9 @@ async function assertDatabaseAccess(databaseId: string): Promise<{ userId: strin
     .limit(1);
 
   if (!row) throw new Error('Database not found');
+
+  // Project windows are confined to their workspace — checked before any admin shortcut.
+  await assertWorkspaceLockAllows(user, row.workspaceId);
 
   if (user.role !== 'admin') {
     const [member] = await db
@@ -46,10 +50,6 @@ export async function createDatabase(name: string) {
   const { dbId } = await createWorkspaceDatabase(workspaceId, name);
   revalidatePath('/', 'layout');
   return dbId;
-}
-
-export async function getDatabases() {
-  return db.select().from(databases);
 }
 
 export async function getDatabase(id: string) {

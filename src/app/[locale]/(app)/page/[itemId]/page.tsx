@@ -1,5 +1,7 @@
 import { getStandalonePageByItemId, getSubItems } from '@/lib/actions/workspace';
-import { getCurrentUser } from '@/lib/auth/session';
+// Opts in to project windows: every data call below confines itself to the window's
+// workspace, so the page itself may render for one.
+import { getCurrentUserAllowingWorkspaceLock } from '@/lib/auth/session';
 import StandalonePageEditor from '@/components/features/StandalonePageEditor';
 import NotFoundRedirect from '@/components/features/NotFoundRedirect';
 import { isTauriRequest } from '@/lib/server/platform';
@@ -14,7 +16,7 @@ export default async function StandalonePageRoute(
   const [data, subItems, user] = await Promise.all([
     getStandalonePageByItemId(itemId),
     getSubItems(itemId),
-    getCurrentUser(),
+    getCurrentUserAllowingWorkspaceLock(),
   ]);
   if (!data || !data.page) return <NotFoundRedirect />;
 

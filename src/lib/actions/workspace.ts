@@ -4,7 +4,8 @@ import { workspaces, workspaceItems, standalonePages, databases, pages, workspac
 import { eq, asc, and, inArray, sql, count } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { cookies } from 'next/headers';
-import { getCurrentUser } from '@/lib/auth/session';
+import { getCurrentUser, getCurrentUserAllowingWorkspaceLock } from '@/lib/auth/session';
+import { assertWorkspaceLockAllows } from '@/lib/auth/workspaceLock';
 import type { SchemaColumn } from '@/lib/templates';
 import type { DatabaseView } from '@/lib/types/views';
 import { getTranslations } from 'next-intl/server';
@@ -41,7 +42,9 @@ export type WorkspaceItemRow = {
 // ── Auth helpers ──────────────────────────────────────────────────────────────
 
 async function assertWorkspaceAccess(workspaceId: string): Promise<string> {
-  const user = await getCurrentUser();
+  const user = await getCurrentUserAllowingWorkspaceLock();
+  // Project windows are confined to their workspace — checked before any admin shortcut.
+  await assertWorkspaceLockAllows(user, workspaceId);
   if (user.role === 'admin') return user.id;
 
   const [member] = await db
@@ -64,8 +67,22 @@ async function assertWorkspaceAccess(workspaceId: string): Promise<string> {
 
 // ── Workspace ─────────────────────────────────────────────────────────────────
 
+/**
+ * The same membership check, closed to project windows. Renaming, re-iconing, hiding or
+ * deleting the workspace itself is workspace management rather than content, so a
+ * workspace-locked session is refused here even for its own workspace.
+ */
+async function assertWorkspaceManagementAccess(workspaceId: string): Promise<string> {
+  await getCurrentUser(); // throws for a workspace-locked session
+  return assertWorkspaceAccess(workspaceId);
+}
+
 export async function getActiveWorkspaceId(): Promise<string | null> {
-  const user = await getCurrentUser();
+  const user = await getCurrentUserAllowingWorkspaceLock();
+
+  // A project window is pinned to its workspace (membership already re-checked when the
+  // session was loaded). The cookie belongs to whatever this browser profile browsed last.
+  if (user.workspaceLock) return user.workspaceLock;
 
   const cookieStore = await cookies();
   const workspaceId = cookieStore.get('remnus_workspace_id')?.value;
@@ -90,7 +107,7 @@ export async function getActiveWorkspaceId(): Promise<string | null> {
 }
 
 export async function getWorkspaces() {
-  const user = await getCurrentUser();
+  const user = await getCurrentUserAllowingWorkspaceLock();
 
   // Always filter by membership — admins see all workspaces only via the admin panel
   const memberships = await db
@@ -98,9 +115,11 @@ export async function getWorkspaces() {
     .from(workspaceMembers)
     .where(eq(workspaceMembers.userId, user.id));
 
-  if (memberships.length === 0) return [];
-
-  const ids = memberships.map((m) => m.workspaceId);
+  // A project window lists only its own workspace, so the switcher offers nothing else.
+  const ids = memberships
+    .map((m) => m.workspaceId)
+    .filter((id) => !user.workspaceLock || id === user.workspaceLock);
+  if (ids.length === 0) return [];
   // Join the caller's membership row so `hidden` is per-user (not workspace-global).
   return db
     .select({
@@ -158,7 +177,7 @@ export async function createWorkspace(name: string) {
 }
 
 export async function deleteWorkspace(id: string) {
-  const userId = await assertWorkspaceAccess(id);
+  const userId = await assertWorkspaceManagementAccess(id);
   const t = await getTranslations('Errors');
   const tSharing = await getTranslations('Sharing');
 
@@ -197,7 +216,7 @@ export async function deleteWorkspace(id: string) {
 }
 
 export async function renameWorkspace(id: string, name: string) {
-  const userId = await assertWorkspaceAccess(id);
+  const userId = await assertWorkspaceManagementAccess(id);
   await db.update(workspaces)
     .set({ name: name.trim() || 'Untitled', updatedAt: new Date() })
     .where(eq(workspaces.id, id));
@@ -208,7 +227,7 @@ export async function renameWorkspace(id: string, name: string) {
 }
 
 export async function updateWorkspaceIcon(id: string, icon: string | null, iconColor: string | null) {
-  const userId = await assertWorkspaceAccess(id);
+  const userId = await assertWorkspaceManagementAccess(id);
 
   const [old] = await db.select({ icon: workspaces.icon }).from(workspaces).where(eq(workspaces.id, id)).limit(1);
   if (isCloudinaryUrl(old?.icon) && old.icon !== icon) {
@@ -224,7 +243,7 @@ export async function updateWorkspaceIcon(id: string, icon: string | null, iconC
 }
 
 export async function setWorkspaceHidden(id: string, hidden: boolean) {
-  const userId = await assertWorkspaceAccess(id);
+  const userId = await assertWorkspaceManagementAccess(id);
 
   // Per-user preference — only flips the caller's own membership row, never other members'.
   await db.update(workspaceMembers)
@@ -286,11 +305,15 @@ export async function getWorkspaceItems(workspaceId: string): Promise<WorkspaceI
 }
 
 export async function getAllWorkspaceItems(): Promise<WorkspaceItemRow[]> {
-  const user = await getCurrentUser();
+  const user = await getCurrentUserAllowingWorkspaceLock();
 
   let accessibleWorkspaceIds: string[];
 
-  if (user.role === 'admin') {
+  if (user.workspaceLock) {
+    // Before the admin branch: a project window stays inside its workspace even when the
+    // account behind it is an admin.
+    accessibleWorkspaceIds = [user.workspaceLock];
+  } else if (user.role === 'admin') {
     const all = await db.select({ id: workspaces.id }).from(workspaces);
     accessibleWorkspaceIds = all.map((w) => w.id);
   } else {
@@ -468,7 +491,7 @@ export async function updateStandalonePageContent(itemId: string, content: strin
   if (item[0]) {
     await assertWorkspaceAccess(item[0].workspaceId);
     const [current] = await db.select({ content: standalonePages.content }).from(standalonePages).where(eq(standalonePages.itemId, itemId)).limit(1);
-    const user = await getCurrentUser();
+    const user = await getCurrentUserAllowingWorkspaceLock();
     await maybeSnapshotContentUpdate({
       workspaceId: item[0].workspaceId, originalId: itemId, itemType: 'page', title: item[0].title,
       priorContent: current?.content ?? '', newContent: content,
@@ -532,7 +555,7 @@ export async function deleteWorkspaceItem(itemId: string) {
 
   const userId = await assertWorkspaceAccess(item[0].workspaceId);
   const { workspaceId } = item[0];
-  const user = await getCurrentUser();
+  const user = await getCurrentUserAllowingWorkspaceLock();
   const actor: SnapshotActor = { kind: 'human', userId, label: user.name || user.email || 'Someone' };
 
   await deleteWorkspaceItemRecursive(
@@ -826,7 +849,7 @@ export async function updateWorkspaceItemsOrder(itemIds: string[]) {
     }
   });
   revalidatePath('/', 'layout');
-  const userId = await getCurrentUser().then((u) => u.id);
+  const userId = await getCurrentUserAllowingWorkspaceLock().then((u) => u.id);
   for (const wsId of checkedWorkspaces) {
     publish({ scope: 'sidebar', workspaceId: wsId, actorId: userId });
   }
@@ -913,7 +936,9 @@ export async function moveWorkspaceItemToWorkspace(itemId: string, targetWorkspa
 
   for (let i = 0; i < itemIdsOrder.length; i++) {
     const id = itemIdsOrder[i];
-    await db.update(workspaceItems).set({ sortOrder: i }).where(eq(workspaceItems.id, id));
+    // Scoped to the authorized target workspace (same fix reparentWorkspaceItem has) so a
+    // forged id list can't rewrite sortOrder on rows in other workspaces.
+    await db.update(workspaceItems).set({ sortOrder: i }).where(and(eq(workspaceItems.id, id), eq(workspaceItems.workspaceId, targetWorkspaceId)));
   }
 
   revalidatePath('/', 'layout');

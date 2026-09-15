@@ -65,6 +65,30 @@ function findChromiumMac() {
   return ['Microsoft Edge', 'Google Chrome'].find((name) => fs.existsSync(`/Applications/${name}.app`)) ?? null;
 }
 
+/** First Chromium-family browser found on PATH (Linux), or null. */
+function findChromiumLinux() {
+  const names = ['google-chrome', 'google-chrome-stable', 'chromium', 'chromium-browser', 'microsoft-edge'];
+  const dirs = (process.env.PATH || '').split(path.delimiter).filter(Boolean);
+  for (const name of names) {
+    for (const dir of dirs) {
+      const candidate = path.join(dir, name);
+      if (fs.existsSync(candidate)) return candidate;
+    }
+  }
+  return null;
+}
+
+/**
+ * Whether `openAppWindow` can open a real app window on this machine rather than falling back
+ * to a tab. `open` only signs a window in when this is true: a sign-in link that fell back into
+ * the user's everyday browser profile would land in the wrong cookie jar.
+ */
+export function hasAppWindowBrowser() {
+  if (process.platform === 'win32') return Boolean(findChromiumWindows());
+  if (process.platform === 'darwin') return Boolean(findChromiumMac());
+  return Boolean(findChromiumLinux());
+}
+
 /**
  * Opens a URL as its own minimal window — no tabs, no address bar, no toolbar —
  * instead of a tab in whatever the default browser is. Chrome/Edge's `--app` mode
@@ -76,30 +100,33 @@ function findChromiumMac() {
  * detected Chromium browser and falls straight back to `openBrowser` (a normal
  * tab) otherwise — never worse than before, just not always the nicer window.
  */
-export function openAppWindow(url) {
+export function openAppWindow(url, { profileDir } = {}) {
   const args = [`--app=${url}`];
+  // With a profile directory the window runs in its own browser profile (see lib/window.js).
+  // In that mode there is no tab fallback: the URL is a sign-in link, and it must never be
+  // opened in the everyday profile instead.
+  if (profileDir) args.push(`--user-data-dir=${profileDir}`, '--no-first-run', '--no-default-browser-check');
+  const fallback = () => (profileDir ? false : openBrowser(url));
 
   try {
     if (process.platform === 'win32') {
       const exe = findChromiumWindows();
-      if (!exe) return openBrowser(url);
+      if (!exe) return fallback();
       spawn(exe, args, { detached: true, stdio: 'ignore' }).unref();
       return true;
     }
     if (process.platform === 'darwin') {
       const app = findChromiumMac();
-      if (!app) return openBrowser(url);
+      if (!app) return fallback();
       spawn('open', ['-na', app, '--args', ...args], { detached: true, stdio: 'ignore' }).unref();
       return true;
     }
-    // Linux: no reliable file-existence check across distros' package managers —
-    // try common binary names on PATH and fall back on ENOENT instead of probing first.
-    const child = spawn('google-chrome', args, { detached: true, stdio: 'ignore' });
-    child.on('error', () => openBrowser(url));
-    child.unref();
+    const exe = findChromiumLinux();
+    if (!exe) return fallback();
+    spawn(exe, args, { detached: true, stdio: 'ignore' }).unref();
     return true;
   } catch {
-    return openBrowser(url);
+    return fallback();
   }
 }
 

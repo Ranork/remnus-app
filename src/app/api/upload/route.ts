@@ -3,7 +3,7 @@ import { and, eq } from 'drizzle-orm';
 import { db } from '@/db';
 import { workspaceMembers } from '@/db/schema';
 import { cloudinary } from '@/lib/cloudinary';
-import { getCurrentUser } from '@/lib/auth/session';
+import { getCurrentUserAllowingWorkspaceLock } from '@/lib/auth/session';
 import { recordAsset } from '@/lib/services/assets';
 import { checkWithinStorage } from '@/lib/services/billing';
 
@@ -42,7 +42,7 @@ function upload(buffer: Buffer, options: Record<string, unknown>): Promise<Cloud
 }
 
 export async function POST(req: NextRequest) {
-  const user = await getCurrentUser();
+  const user = await getCurrentUserAllowingWorkspaceLock();
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const formData = await req.formData();
@@ -55,6 +55,11 @@ export async function POST(req: NextRequest) {
   // caller is actually a member, otherwise reject (prevents IDOR-style
   // mis-attribution of usage to a workspace the user doesn't belong to).
   const requestedWorkspaceId = (formData.get('workspaceId') as string | null) || null;
+  // A project window may upload into its own workspace only, and has to name it so the
+  // asset is attributed (and storage-limited) there rather than left unscoped.
+  if (user.workspaceLock && requestedWorkspaceId !== user.workspaceLock) {
+    return NextResponse.json({ error: 'Forbidden workspace' }, { status: 403 });
+  }
   if (requestedWorkspaceId) {
     const member = await db
       .select({ id: workspaceMembers.id })

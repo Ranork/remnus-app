@@ -1,6 +1,8 @@
 'use server';
 import { signOut, update } from '@/auth';
 import { auth } from '@/auth';
+import { getCurrentUserAllowingWorkspaceLock } from '@/lib/auth/session';
+import { assertWorkspaceLockAllows } from '@/lib/auth/workspaceLock';
 import { db } from '@/db';
 import { users, workspaces, workspaceMembers, workspaceInvites, accounts, sessions, userSessions, agentTokens, subscriptions } from '@/db/schema';
 import { eq, ne, and, sql, isNull } from 'drizzle-orm';
@@ -201,8 +203,22 @@ export async function removeFromWorkspace(workspaceId: string, userId: string) {
 }
 
 export async function getWorkspaceMembers(workspaceId: string) {
-  const session = await auth();
-  if (!session?.user?.id) redirect('/login');
+  // Names, emails and roles are for people who can see the workspace. This used to check
+  // only "signed in", so any account could list any workspace's members by id. A project
+  // window needs the list for its own workspace (person columns, mentions).
+  const user = await getCurrentUserAllowingWorkspaceLock();
+  await assertWorkspaceLockAllows(user, workspaceId);
+  if (user.role !== 'admin') {
+    const [member] = await db
+      .select({ id: workspaceMembers.id })
+      .from(workspaceMembers)
+      .where(and(eq(workspaceMembers.workspaceId, workspaceId), eq(workspaceMembers.userId, user.id)))
+      .limit(1);
+    if (!member) {
+      const t = await getTranslations('Errors');
+      throw new Error(t('unauthorized'));
+    }
+  }
 
   return db
     .select({

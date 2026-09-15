@@ -1,7 +1,9 @@
 import { getDatabase } from '@/lib/actions/database';
 import { getPages } from '@/lib/actions/page';
 import { getWorkspaceMembers } from '@/lib/actions/auth';
-import { getCurrentUser } from '@/lib/auth/session';
+// Opts in to project windows: every data call below confines itself to the window's
+// workspace, so the page itself may render for one.
+import { getCurrentUserAllowingWorkspaceLock } from '@/lib/auth/session';
 import DatabaseView from '@/components/features/DatabaseView';
 import NotFoundRedirect from '@/components/features/NotFoundRedirect';
 import { isTauriRequest } from '@/lib/server/platform';
@@ -14,7 +16,7 @@ export default async function DatabasePage(props: { params: Promise<{ id: string
   const [db, pages, currentUser] = await Promise.all([
     getDatabase(params.id),
     getPages(params.id),
-    getCurrentUser(),
+    getCurrentUserAllowingWorkspaceLock(),
   ]);
 
   if (!db) return <NotFoundRedirect />;

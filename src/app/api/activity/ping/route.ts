@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { desc, eq, inArray, sql } from 'drizzle-orm';
 import type { SQLiteColumn } from 'drizzle-orm/sqlite-core';
-import { auth } from '@/auth';
+import { getSessionAllowingWorkspaceLock } from '@/lib/auth/session';
+import { lockClaimsOf } from '@/lib/auth/workspaceLock';
 import { db } from '@/db';
 import {
   userSessions,
@@ -92,13 +93,16 @@ async function touchDemoSession(userId: string, now: Date) {
     .where(eq(demoSessions.id, row.id));
 }
 
-async function computeChangeVersion(userId: string): Promise<number> {
+async function computeChangeVersion(userId: string, workspaceLock: string | null): Promise<number> {
   const memberships = await db
     .select({ workspaceId: workspaceMembers.workspaceId })
     .from(workspaceMembers)
     .where(eq(workspaceMembers.userId, userId));
 
-  const ids = memberships.map((m) => m.workspaceId);
+  // A project window only hears about its own workspace changing.
+  const ids = memberships
+    .map((m) => m.workspaceId)
+    .filter((id) => !workspaceLock || id === workspaceLock);
   if (ids.length === 0) return 0;
 
   const [items, sps, dbs, rows, comments] = await Promise.all([
@@ -144,7 +148,9 @@ async function computeChangeVersion(userId: string): Promise<number> {
 }
 
 export async function POST() {
-  const session = await auth();
+  // Project windows heartbeat too — live refresh is how a human watches an agent work —
+  // but only their own workspace counts toward the change signal.
+  const session = await getSessionAllowingWorkspaceLock();
   const userId = session?.user?.id;
   if (!userId) return NextResponse.json({ ok: false }, { status: 401 });
 
@@ -152,7 +158,7 @@ export async function POST() {
   // their tabs still reflect live edits.
   let changeVersion = 0;
   try {
-    changeVersion = await computeChangeVersion(userId);
+    changeVersion = await computeChangeVersion(userId, lockClaimsOf(session?.user).workspaceLock ?? null);
   } catch {
     // best-effort — a missing version just means "no refresh this tick"
   }

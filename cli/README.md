@@ -31,7 +31,7 @@ the marked section all survive a re-run.
 
 ```bash
 npx remnus init      # connect this project to a workspace
-npx remnus open      # open this project's workspace in your browser
+npx remnus open      # open this project's workspace in its own signed-in window
 npx remnus doctor    # check whether the connection still works
 npx remnus mcp       # run the MCP server (.mcp.json calls this for you)
 ```

@@ -45,6 +45,31 @@ const FIRST_VISIT_WINDOW_DAYS = 7;
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-09-15-project-window-signed-in',
+    date: '2026-09-15',
+    category: 'improved',
+    title: {
+      en: 'Project windows open signed in',
+      tr: 'Proje penceresi giriş yapmış olarak açılır',
+      de: 'Projektfenster öffnen sich angemeldet',
+      es: 'Las ventanas de proyecto se abren con la sesión iniciada',
+      fr: 'Les fenêtres de projet s’ouvrent déjà connectées',
+      hi: 'प्रोजेक्ट विंडो साइन-इन के साथ खुलती है',
+      ru: 'Окно проекта открывается уже с выполненным входом',
+      zh: '项目窗口打开时已登录',
+    },
+    summary: {
+      en: 'Opening a project’s workspace from your coding agent no longer asks you to sign in, and that window shows only that project’s workspace.',
+      tr: 'Kodlama asistanınızdan bir projenin çalışma alanını açtığınızda artık giriş yapmanız istenmiyor ve bu pencere yalnızca o projenin çalışma alanını gösteriyor.',
+      de: 'Wenn Sie den Arbeitsbereich eines Projekts aus Ihrem Coding-Agenten öffnen, müssen Sie sich nicht mehr anmelden, und dieses Fenster zeigt nur den Arbeitsbereich dieses Projekts.',
+      es: 'Al abrir el espacio de trabajo de un proyecto desde tu agente de programación ya no se te pide iniciar sesión, y esa ventana muestra solo el espacio de trabajo de ese proyecto.',
+      fr: 'Ouvrir l’espace de travail d’un projet depuis votre agent de code ne vous demande plus de vous connecter, et cette fenêtre n’affiche que l’espace de travail de ce projet.',
+      hi: 'अपने कोडिंग एजेंट से किसी प्रोजेक्ट का workspace खोलने पर अब साइन इन नहीं करना पड़ता, और वह विंडो सिर्फ़ उसी प्रोजेक्ट का workspace दिखाती है।',
+      ru: 'Когда вы открываете пространство проекта из своего ИИ-агента, входить больше не нужно, а это окно показывает только пространство этого проекта.',
+      zh: '从编码助手打开项目的工作区时不再需要登录，而且该窗口只显示这个项目的工作区。',
+    },
+  },
+  {
     id: '2026-09-14-workspace-opens-on-session-start',
     date: '2026-09-14',
     category: 'new',

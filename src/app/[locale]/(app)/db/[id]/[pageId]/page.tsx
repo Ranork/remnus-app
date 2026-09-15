@@ -2,7 +2,9 @@ import { getPage } from '@/lib/actions/page';
 import { getDatabase } from '@/lib/actions/database';
 import { getSubItems } from '@/lib/actions/workspace';
 import { getWorkspaceMembers } from '@/lib/actions/auth';
-import { getCurrentUser } from '@/lib/auth/session';
+// Opts in to project windows: every data call below confines itself to the window's
+// workspace, so the page itself may render for one.
+import { getCurrentUserAllowingWorkspaceLock } from '@/lib/auth/session';
 import PageEditor from '@/components/features/PageEditor';
 import { MembersProvider } from '@/components/features/MembersContext';
 import NotFoundRedirect from '@/components/features/NotFoundRedirect';
@@ -17,7 +19,7 @@ export default async function PageDetail(props: { params: Promise<{ id: string, 
     getDatabase(params.id),
     getPage(params.pageId),
     getSubItems(params.pageId),
-    getCurrentUser(),
+    getCurrentUserAllowingWorkspaceLock(),
   ]);
 
   if (!db || !page) return <NotFoundRedirect />;

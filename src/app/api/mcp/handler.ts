@@ -35,7 +35,7 @@ const TOKEN_PREFIX = process.env.MCP_TOKEN_PREFIX ?? 'rmns';
 // no Authorization header at all is `no_credential` and gets a bare challenge instead.
 type AuthFailure = 'no_credential' | 'invalid_token';
 
-async function verifyBearerToken(authHeader: string | null): Promise<TokenContext | AuthFailure> {
+export async function verifyBearerToken(authHeader: string | null): Promise<TokenContext | AuthFailure> {
   console.log('[mcp/auth] enter', {
     hasHeader: !!authHeader,
     headerPreview: authHeader ? authHeader.slice(0, 20) + '...' : null,

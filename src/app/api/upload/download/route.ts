@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { auth } from '@/auth';
+import { getSessionAllowingWorkspaceLock } from '@/lib/auth/session';
 import { verifySignedDownload } from '@/lib/server/downloadLink';
 
 // Only allow proxying Cloudinary URLs to prevent SSRF.
@@ -21,7 +21,8 @@ export async function GET(req: NextRequest) {
   // a 401.
   const signed = verifySignedDownload(url, name, searchParams.get('exp'), searchParams.get('sig'));
   if (!signed) {
-    const session = await auth();
+    // Any signed-in session, project windows included — this never checked a workspace.
+    const session = await getSessionAllowingWorkspaceLock();
     if (!session?.user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
