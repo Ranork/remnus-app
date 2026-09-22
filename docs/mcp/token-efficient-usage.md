@@ -1,6 +1,8 @@
 # Token-Efficient Usage
 
-Every MCP read costs an agent tokens, latency, and context-window space. Remnus exposes the workspace's existing structure — the tree, database schemas, the link graph — so an agent can read exactly what it needs instead of re-crawling everything. This guide collects the practical patterns that cut a typical read by 80–90%, with the tool parameters that do it.
+Every MCP read costs an agent tokens, latency, and context-window space — and so does simply *connecting*: tool definitions land in the model's context before a single word of the task. Remnus exposes the workspace's existing structure — the tree, database schemas, the link graph — so an agent can read exactly what it needs instead of re-crawling everything. This guide collects the practical patterns that cut a typical read by 80–90%, with the tool parameters that do it.
+
+Start from the cheapest thing that answers your question, in this order: **the local map → the delta → a targeted read → a search.** Everything below is that order, expanded.
 
 Most savings come from scoping reads down. The explicit exception is `prepare_context`: when necessary to honor its caller-supplied budget, it labels and truncates lower-priority content rather than silently overflowing the context window. For measured numbers on a real workspace, see the blog post [How Many Tokens Does Your Agent Burn Reading Your Notes?](/docs/agent-token-efficiency).
 
@@ -20,14 +22,22 @@ The result combines BM25 relevance, native OKF-aligned metadata, exact-revision 
 
 Do not force this call for greetings, formatting-only requests, or a single known page. That would add tokens instead of saving them. Smart mode targets meaningful product/coding work; Strict mode is an optional governance gate for Remnus mutations.
 
-## 2. Orient with the digest, not a full crawl
+## 2. Orient from the map, not a full crawl
 
-Before doing anything, an agent needs to know what exists. Don't list every item and read each body. Read the `remnus://workspace/{id}/digest` [resource](resources.md) once — it returns a compact one-line-per-item map (title, type, id, row count, last-updated), indented by nesting.
+Before doing anything, an agent needs to know what exists. Don't list every item and read each body. Read the `remnus://workspace/{id}/digest` [resource](resources.md) once — a compact one-line-per-item map (title, type, id, row count, body size, last-updated), indented by nesting, opening with a `cursor:` line.
 
-- **Do:** read the digest, then target specific items by id.
+In a project connected with [`remnus init`](project-install.md), that same map is already on disk as **`.remnus/workspace-map.md`**, refreshed whenever an agent session starts and after each write. Read it there first:
+
+- it costs no round-trip, so the first turn starts with the ids already in hand;
+- it can be grepped — an agent can pull the three lines it needs rather than the whole map, which an MCP response cannot do, it is all-or-nothing;
+- its header says when it was written and up to which cursor it is verified, so staleness is visible rather than assumed.
+
+It is a **cache**, not a source of truth. Before writing, or whenever it looks stale, take the cursor and ask for the delta (§5) — never re-crawl.
+
+- **Do:** read the map (local file, else the digest), then target specific items by id.
 - **Avoid:** `list_workspace` + `get_page` on everything just to see what's there.
 
-Measured: ~90% smaller than reading every page body to orient.
+Measured: ~87% smaller than reading every page body to orient.
 
 ## 3. Project database queries with `fields`
 
@@ -39,7 +49,7 @@ Measured: ~90% smaller than reading every page body to orient.
 
 Add `"content"` to `fields` only when you actually need the row bodies. See [query_database](read-tools.md#query_database).
 
-Measured: ~83% smaller on a typical board.
+Measured: ~82% smaller on a typical board, and ~74% from the body-free default alone.
 
 ## 4. Skim long pages with outline mode
 
@@ -52,11 +62,15 @@ Measured: ~83% smaller on a typical board.
 - **Do:** outline → decide → full-read the few that matter.
 - **Avoid:** full-reading a page to discover it wasn't relevant.
 
-Measured: ~80% smaller than a full read on a long page. See [get_page](read-tools.md#get_page).
+Measured: ~80% smaller than a full read on a long page. The digest and the local map print each page's body size, so you can pick outline mode before the first read. See [get_page](read-tools.md#get_page).
 
 ## 5. Sync the delta, don't re-crawl
 
-For anything recurring — a daily report, a memory refresh, a watcher — use [get_changes_since](read-tools.md#get_changes_since). The first call (no `since`/`cursor`) bootstraps the full state; save the `nextCursor` and pass it back on the next run to get only what was created, updated, or deleted since. An hourly agent against a workspace that changed twice reads two entries, not the whole tree.
+This is the session-start ritual, not an advanced trick: **read the map once, then live off the delta.**
+
+[`get_changes_since`](read-tools.md#get_changes_since) takes the `cursor` printed at the top of the digest / local map and returns only what was created, updated or deleted after it. It always returns a `nextCursor` — including when nothing changed — so there is always something to keep for the next call. An hourly agent against a workspace that changed twice reads two entries, not the whole tree.
+
+Only when you have no map at all does the full bootstrap (omit both `since` and `cursor`) make sense. Entries stamped in the cursor's own second may be reported once more, so dedupe by `id`.
 
 ## 6. Walk the graph before reading bodies
 
@@ -79,12 +93,26 @@ A session that orients, checks a board, and reads one page:
 
 | Step | Naive | Efficient |
 |---|---|---|
-| Orient | read every body (~1,379 tok) | digest (~136 tok) |
-| Board | full query (~3,706 tok) | `fields` (~632 tok) |
+| Orient | read every body (~1,379 tok) | digest / local map (~182 tok) |
+| Board | full query (~3,550 tok) | `fields` (~632 tok) |
 | Page | full read (~655 tok) | outline (~133 tok) |
-| **Total** | **~5,740 tok** | **~901 tok** |
+| **Total** | **~5,584 tok** | **~947 tok** |
 
-Same work, ~84% fewer tokens — before delta sync removes the re-orientation cost on every following turn.
+Same work, ~83% fewer tokens — before delta sync removes the re-orientation cost on every following turn. (Re-measured 2026-09-22 with `npm run bench:tokens` on the same fixture workspace; the map costs a few dozen tokens more than it used to because it now carries the sync cursor and each page's body size, which is what lets the next turn be a delta instead of another read.)
+
+## What connecting costs, before you read anything
+
+Tool definitions are a fixed per-session cost: they enter the model's context on connect, every session. Only a tool's **name, description and input schema** reach the model — output schemas and annotations travel between server and client only. Measured with `npm run bench:mcp-budget` (2026-09-22, MCP SDK 1.29):
+
+| Surface | Before | After |
+|---|---|---|
+| Write-scoped session, model-visible tool definitions | ~7,750 tok | ~5,410 tok |
+| Read-scoped session, model-visible tool definitions | ~7,750 tok | ~1,360 tok |
+| Server instructions (smart policy) | ~223 tok | ~269 tok |
+
+Two changes did this. Descriptions and input schemas were trimmed to the sentences that actually change an agent's behaviour — the merge semantics of `update_page`, the `confirm: true` rule, the refusal contract of a cross-database move — and everything restating a field's own name was dropped. And a **read-scoped token no longer receives the 14 write tools at all**: they used to be advertised and refused at call time, which cost every read-only integration thousands of tokens for tools it could never use.
+
+A tool result is sent twice on the wire — once as text, once as `structuredContent` — but each client forwards exactly one of those to the model (Claude Code keeps the structured half, Claude Desktop and Cursor keep the text), so the model-visible size is one copy. That is also what `agent_activity.response_bytes` records.
 
 ## See also
 

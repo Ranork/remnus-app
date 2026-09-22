@@ -79,11 +79,15 @@ export default function MobileNavWrapper({
   workspaces,
   activeWorkspace,
   currentUser,
+  isProjectWindow = false,
 }: {
   items: WorkspaceItemRow[];
   workspaces: WorkspaceType[];
   activeWorkspace: WorkspaceType;
   currentUser: CurrentUser;
+  /** Session locked to one workspace (`npx remnus open`) — leave out everything
+   *  account-level, which the server denies anyway. See the `(app)` layout. */
+  isProjectWindow?: boolean;
 }) {
   const t = useTranslations('MobileNav');
   const tw = useTranslations('Workspace');
@@ -167,6 +171,7 @@ export default function MobileNavWrapper({
             activeWorkspace={activeWorkspace}
             currentUser={currentUser}
             hideBrandHeader
+            isProjectWindow={isProjectWindow}
           />
         </div>
       </BottomSheet>
@@ -184,7 +189,7 @@ export default function MobileNavWrapper({
                 <span className="text-sm font-medium text-neutral-100 truncate">
                   {currentUser.name ?? currentUser.email ?? 'User'}
                 </span>
-                {currentUser.role === 'admin' && (
+                {currentUser.role === 'admin' && !isProjectWindow && (
                   <span className="shrink-0 flex items-center gap-0.5 text-[10px] font-semibold text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded">
                     <Shield size={9} /> Admin
                   </span>
@@ -196,7 +201,8 @@ export default function MobileNavWrapper({
             </div>
           </div>
 
-          {/* Account actions */}
+          {/* Account actions — every one of these is denied to a locked session */}
+          {!isProjectWindow && (
           <div className="border-t border-neutral-800 pt-3 flex flex-col gap-1">
             <button
               onClick={() => { setOpenSheet(null); setUserSettingsOpen(true); }}
@@ -220,6 +226,7 @@ export default function MobileNavWrapper({
               <span>{tw('planBilling')}</span>
             </button>
           </div>
+          )}
 
           {/* Language grid */}
           <div className="border-t border-neutral-800 pt-4">
@@ -242,14 +249,17 @@ export default function MobileNavWrapper({
             </div>
           </div>
 
-          {/* Logout */}
-          <button
-            onClick={() => logout()}
-            className="flex items-center gap-3 w-full px-4 py-3 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white transition-colors text-sm font-medium"
-          >
-            <LogOut size={16} />
-            <span>{t('signOut')}</span>
-          </button>
+          {/* Logout — in a project window this only ends the window's session, so the
+              banner carries it under that name instead. */}
+          {!isProjectWindow && (
+            <button
+              onClick={() => logout()}
+              className="flex items-center gap-3 w-full px-4 py-3 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white transition-colors text-sm font-medium"
+            >
+              <LogOut size={16} />
+              <span>{t('signOut')}</span>
+            </button>
+          )}
         </div>
       </BottomSheet>
 
@@ -274,7 +284,9 @@ export default function MobileNavWrapper({
           onOptimisticCreate={() => {}}
           onCreated={(type, navId) => {
             setIsTemplatePickerOpen(false);
-            router.push(type === 'database' ? `/db/${navId}` : `/page/${navId}`);
+            router.push(
+              type === 'database' ? `/db/${navId}` : type === 'dashboard' ? `/dashboard/${navId}` : `/page/${navId}`,
+            );
           }}
         />
       )}

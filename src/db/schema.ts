@@ -17,7 +17,10 @@ export const workspaces = sqliteTable('workspaces', {
 export const workspaceItems = sqliteTable('workspace_items', {
   id:          text('id').primaryKey(),
   workspaceId: text('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
-  type:        text('type', { enum: ['page', 'database'] }).notNull(),
+  // No DB-level CHECK (SQLite/Drizzle enums are TS-only), so widening this set
+  // needs no migration — only an audit of every `type === 'page' | 'database'`
+  // branch. See AGENTS.md → Dashboards for that list.
+  type:        text('type', { enum: ['page', 'database', 'dashboard'] }).notNull(),
   title:       text('title').notNull(),
   parentId:    text('parent_id'),
   sortOrder:   integer('sort_order').notNull().default(0),
@@ -38,6 +41,23 @@ export const standalonePages = sqliteTable('standalone_pages', {
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().default(sql`CURRENT_TIMESTAMP`),
 }, (table) => [
   index('standalone_pages_item_id_idx').on(table.itemId),
+]);
+
+/**
+ * Dashboard-type items (1:1 with `workspace_items`, same shape as
+ * `standalone_pages`). `spec` is the versioned JSON document validated by
+ * `src/lib/dashboard/schema.ts` — a list of blocks that each name a DATA
+ * SOURCE (databaseId + filters), never a copy of the rows themselves, so a
+ * dashboard cannot go stale. Migration `0050`.
+ */
+export const dashboards = sqliteTable('dashboards', {
+  id:        text('id').primaryKey(),
+  itemId:    text('item_id').notNull().references(() => workspaceItems.id, { onDelete: 'cascade' }),
+  spec:      text('spec', { mode: 'json' }).notNull().$type<unknown>(),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`CURRENT_TIMESTAMP`),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().default(sql`CURRENT_TIMESTAMP`),
+}, (table) => [
+  index('dashboards_item_id_idx').on(table.itemId),
 ]);
 
 export const databases = sqliteTable('databases', {
@@ -220,6 +240,34 @@ export const workspaceInvites = sqliteTable('workspace_invites', {
   uniqueIndex('workspace_invites_token_unique').on(table.token),
   index('workspace_invites_workspace_id_idx').on(table.workspaceId),
   index('workspace_invites_email_idx').on(table.email),
+])
+
+// The invite arrow pointing the other way: someone who already has the workspace id
+// (it sits in a committed `.remnus/config.json`) asks its owner to let them in, via
+// `npx remnus join`. `workspace_invites` cannot express this — that one is addressed
+// to an email the owner types, and it grants membership the moment it is accepted.
+//
+// One row per (workspace, user) forever, reused rather than re-inserted: it makes
+// "one open request per person" a database guarantee instead of a code convention,
+// and it keeps a denial on record so a refusal can hold for a cooling-off period
+// instead of being re-sendable on a loop. `projectName` is the directory name the
+// CLI carried up — display only, so the owner recognizes which project is asking.
+// Migration 0048.
+export const workspaceAccessRequests = sqliteTable('workspace_access_requests', {
+  id:          text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  workspaceId: text('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
+  userId:      text('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  scope:       text('scope', { enum: ['read', 'write'] }).notNull().default('write'),
+  status:      text('status', { enum: ['pending', 'approved', 'denied'] }).notNull().default('pending'),
+  projectName: text('project_name'),                          // display only, from the requester's disk
+  note:        text('note'),                                  // optional short message to the owner
+  createdAt:   integer('created_at', { mode: 'timestamp' }).notNull(),
+  updatedAt:   integer('updated_at', { mode: 'timestamp' }).notNull(),
+  resolvedAt:  integer('resolved_at', { mode: 'timestamp' }), // null while pending
+  resolvedBy:  text('resolved_by').references(() => users.id, { onDelete: 'set null' }),
+}, (table) => [
+  uniqueIndex('workspace_access_requests_workspace_user_unique').on(table.workspaceId, table.userId),
+  index('workspace_access_requests_workspace_status_idx').on(table.workspaceId, table.status),
 ])
 
 // Prospect invites — personalized, single-use gift-signup links for outreach
@@ -411,8 +459,25 @@ export const agentActivity = sqliteTable('agent_activity', {
   targetType:   text('target_type'),
   targetId:     text('target_id'),
   status:       text('status', { enum: ['success', 'error'] }).notNull(),
-  // Serialized response payload size in bytes (token estimate ≈ bytes/4). Migration 0034.
+  // Bytes of the serialized tool result, counted ONCE (token estimate ≈ bytes/4). Each
+  // tool sends that JSON twice on the wire — content[0].text and structuredContent —
+  // but the model sees one copy (Claude Code keeps structuredContent, Claude Desktop
+  // and Cursor keep the text), so one copy IS the model-visible size. Clients that
+  // forward both (claude.ai web, ChatGPT) see ~2×. See tools/read.ts. Migration 0034.
   responseBytes: integer('response_bytes'),
+  // What the SAME information would have cost the naive way, in bytes — only when
+  // that is exactly computable from data already in hand (full page vs outline,
+  // all-column query vs `fields` projection, reading every body vs the digest).
+  // NULL means no baseline could be derived and this call makes no savings claim;
+  // it is never an estimate. Saved = max(baseline_bytes - response_bytes, 0).
+  // Migration 0049.
+  baselineBytes: integer('baseline_bytes'),
+  // Server-side handling time for the request this call came in on, ms.
+  // Best-effort, like every other column here. Migration 0049.
+  durationMs:   integer('duration_ms'),
+  // Pages/rows one call created or updated. Set by the bulk tools only — a
+  // single-target call is worth 1 and leaves this NULL. Migration 0049.
+  itemsAffected: integer('items_affected'),
   createdAt:    integer('created_at', { mode: 'timestamp' }).notNull(),
 }, (table) => [
   index('agent_activity_workspace_id_idx').on(table.workspaceId),
@@ -518,7 +583,8 @@ export const pageSnapshots = sqliteTable('page_snapshots', {
   workspaceId:     text('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
   reason:          text('reason', { enum: ['delete', 'update'] }).notNull(),
   originalId:      text('original_id').notNull(),
-  itemType:        text('item_type', { enum: ['page', 'database', 'database_row'] }).notNull(),
+  // 'dashboard' rows carry the spec JSON in `content` (see snapshotBeforeDelete).
+  itemType:        text('item_type', { enum: ['page', 'database', 'database_row', 'dashboard'] }).notNull(),
   title:           text('title').notNull(),
   content:         text('content'),
   properties:      text('properties', { mode: 'json' }).$type<Record<string, any>>(),
@@ -566,7 +632,7 @@ export const emailLog = sqliteTable('email_log', {
   id:         text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
   userId:     text('user_id').references(() => users.id, { onDelete: 'set null' }),
   email:      text('email').notNull(),
-  kind:       text('kind', { enum: ['welcome', 'inactivity', 'agent_nudge', 'agent_connected', 'account_deletion', 'contact', 'newsletter', 'test'] }).notNull(),
+  kind:       text('kind', { enum: ['welcome', 'inactivity', 'agent_nudge', 'agent_connected', 'account_deletion', 'access_request', 'contact', 'newsletter', 'test'] }).notNull(),
   campaignId: text('campaign_id').references(() => emailCampaigns.id, { onDelete: 'set null' }),
   subject:    text('subject').notNull(),
   status:     text('status', { enum: ['sent', 'failed'] }).notNull(),
@@ -586,7 +652,7 @@ export const deletedItems = sqliteTable('deleted_items', {
   id:          text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
   workspaceId: text('workspace_id').notNull().references(() => workspaces.id, { onDelete: 'cascade' }),
   itemId:      text('item_id').notNull(),
-  itemType:    text('item_type', { enum: ['page', 'database', 'database_row'] }).notNull(),
+  itemType:    text('item_type', { enum: ['page', 'database', 'database_row', 'dashboard'] }).notNull(),
   title:       text('title'),
   deletedAt:   integer('deleted_at', { mode: 'timestamp' }).notNull(),
 }, (table) => [

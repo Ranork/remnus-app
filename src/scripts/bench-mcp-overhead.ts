@@ -1,3 +1,8 @@
+// SUPERSEDED by src/scripts/mcp-token-budget.ts (`npm run bench:mcp-budget`), which
+// measures the same surfaces per scope, separates what the MODEL sees (description +
+// inputSchema) from what stays on the wire (outputSchema, annotations), and models a
+// whole session against a real workspace. Kept only for its outputSchema-share column.
+//
 // Measures the FIXED context cost of connecting to the Remnus MCP:
 // tools/list + prompts/list + resource-template list payload sizes,
 // i.e. what an MCP client injects into the model's context at session start.

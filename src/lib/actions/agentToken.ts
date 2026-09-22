@@ -33,34 +33,23 @@ async function assertOwnerAccess(workspaceId: string): Promise<string> {
   return user.id;
 }
 
-export async function mintAgentToken(
+/**
+ * The actual token row + its two side effects (funnel capture, first-agent email),
+ * with no access check of its own.
+ *
+ * Private on purpose: every caller reaches it through a gate that has already
+ * decided who may mint here — `mintAgentToken` (owner-only, the AI Agents panel)
+ * or `mintProjectAgentToken` (any member, `remnus join`). Exporting it from a
+ * `'use server'` file would publish an unauthenticated mint endpoint.
+ */
+async function issueAgentToken(
   workspaceId: string,
+  userId: string,
   name: string,
   scope: 'read' | 'write',
-  agentName?: string,
-  expiresInDays?: number | null,
+  agentName: string | null,
+  expiresInDays: number | null | undefined,
 ): Promise<{ token: string }> {
-  const userId = await assertOwnerAccess(workspaceId);
-
-  // Agent limit — the billing owner's plan caps connected agents (PAT + OAuth).
-  const user = await getCurrentUser();
-  if (user.role !== 'admin') {
-    const code = await checkCanAddAgent(workspaceId);
-    if (code) {
-      // Funnel: a PAT mint was blocked by a plan limit — same "why can't they add
-      // an agent" signal as the OAuth agent_limit_reached path. Capture the exact code.
-      await captureServer({
-        event: 'mcp_token_mint_blocked',
-        userId,
-        allowed: await isCaptureAllowedFromRequest(),
-        role: user.role,
-        properties: { reason: code, type: 'pat', scope, workspaceId },
-      }).catch(() => {});
-      const t = await getTranslations('Errors');
-      throw new Error(t(code));
-    }
-  }
-
   const prefix8 = randomBytes(4).toString('hex'); // 8 hex chars
   const secret = randomBytes(32).toString('hex');  // 64 hex chars
   const fullToken = `${TOKEN_PREFIX}_${prefix8}_${secret}`;
@@ -101,6 +90,123 @@ export async function mintAgentToken(
   await maybeSendAgentConnectedEmail(userId);
 
   return { token: fullToken };
+}
+
+export async function mintAgentToken(
+  workspaceId: string,
+  name: string,
+  scope: 'read' | 'write',
+  agentName?: string,
+  expiresInDays?: number | null,
+): Promise<{ token: string }> {
+  const userId = await assertOwnerAccess(workspaceId);
+
+  // Agent limit — the billing owner's plan caps connected agents (PAT + OAuth).
+  const user = await getCurrentUser();
+  if (user.role !== 'admin') {
+    const code = await checkCanAddAgent(workspaceId);
+    if (code) {
+      // Funnel: a PAT mint was blocked by a plan limit — same "why can't they add
+      // an agent" signal as the OAuth agent_limit_reached path. Capture the exact code.
+      await captureServer({
+        event: 'mcp_token_mint_blocked',
+        userId,
+        allowed: await isCaptureAllowedFromRequest(),
+        role: user.role,
+        properties: { reason: code, type: 'pat', scope, workspaceId },
+      }).catch(() => {});
+      const t = await getTranslations('Errors');
+      throw new Error(t(code));
+    }
+  }
+
+  return issueAgentToken(workspaceId, userId, name, scope, agentName ?? null, expiresInDays);
+}
+
+/**
+ * The `remnus join` mint: a **member** (not only an owner) gets this project's own
+ * token for a workspace someone else connected.
+ *
+ * Kept separate from `mintAgentToken` rather than loosening that function's gate —
+ * the AI Agents panel mints there and must stay owner-only, and a silent widening
+ * of a shared function is exactly how a privilege escalation gets shipped.
+ *
+ * Three things this does that the owner path does not:
+ *
+ *  1. **Scope is clamped by role, never by the form.** A `viewer` may only ever hold
+ *     a read token; asking for write is refused rather than quietly downgraded, so
+ *     the CLI can say why instead of writing a credential that fails on first use.
+ *  2. **The project's previous token for this same person is revoked first.** Agent
+ *     quota counts every un-revoked PAT, and every join mints one — without this, the
+ *     same person joining from a second machine (or re-joining after deleting their
+ *     credentials) would eat the owner's quota over and over. Revoking before the
+ *     limit check also means a re-join cannot be blocked by the slot it is about to
+ *     free. The caller tells the human when this happened; it is never silent.
+ *  3. **The quota is the billing owner's, not the joiner's.** `checkCanAddAgent`
+ *     already resolves it that way; the caller turns the returned code into a
+ *     "this workspace is full, ask its owner" message instead of a raw error.
+ */
+export async function mintProjectAgentToken(
+  workspaceId: string,
+  name: string,
+  requestedScope: 'read' | 'write',
+): Promise<{ token: string; scope: 'read' | 'write'; replacedPrevious: boolean }> {
+  const user = await getCurrentUser();
+  const t = await getTranslations('Errors');
+
+  const [member] = await db
+    .select({ role: workspaceMembers.role })
+    .from(workspaceMembers)
+    .where(and(
+      eq(workspaceMembers.workspaceId, workspaceId),
+      eq(workspaceMembers.userId, user.id),
+    ))
+    .limit(1);
+
+  const isAdmin = user.role === 'admin';
+  if (!member && !isAdmin) throw new Error(t('unauthorized'));
+
+  const role = member?.role ?? 'owner';
+  if (role === 'viewer' && requestedScope === 'write') throw new Error(t('viewerCannotWrite'));
+  const scope: 'read' | 'write' = role === 'viewer' ? 'read' : requestedScope;
+
+  // Same workspace, same person, same project name → the token this join replaces.
+  // Matching on the name is what makes it "this project's" token: `init`/`join` both
+  // write `Remnus CLI · <project>`, and a person's tokens for *other* projects (or
+  // minted by hand in the AI Agents panel) carry different names and are left alone.
+  const previous = await db
+    .select({ id: agentTokens.id })
+    .from(agentTokens)
+    .where(and(
+      eq(agentTokens.workspaceId, workspaceId),
+      eq(agentTokens.createdBy, user.id),
+      eq(agentTokens.name, name),
+      isNull(agentTokens.revokedAt),
+    ));
+
+  if (previous.length > 0) {
+    await db
+      .update(agentTokens)
+      .set({ revokedAt: new Date() })
+      .where(inArray(agentTokens.id, previous.map((row) => row.id)));
+  }
+
+  if (!isAdmin) {
+    const code = await checkCanAddAgent(workspaceId);
+    if (code) {
+      await captureServer({
+        event: 'mcp_token_mint_blocked',
+        userId: user.id,
+        allowed: await isCaptureAllowedFromRequest(),
+        role: user.role,
+        properties: { reason: code, type: 'pat', scope, workspaceId, via: 'join' },
+      }).catch(() => {});
+      throw new Error(t('agentLimitReachedJoin'));
+    }
+  }
+
+  const { token } = await issueAgentToken(workspaceId, user.id, name, scope, null, null);
+  return { token, scope, replacedPrevious: previous.length > 0 };
 }
 
 export async function getAgentTokens(workspaceId: string) {

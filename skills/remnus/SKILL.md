@@ -30,7 +30,7 @@ Column types: `text` | `number` | `select` | `multi_select` | `date` | `datetime
 
 **Read (safe, always allowed):**
 - `prepare_context` — start meaningful multi-page product/coding work with Context Pack v2; returns a token-budgeted, reviewed/fresh pack and a short-lived `contextRunId`.
-- `search_workspace` — find pages/databases by title. Your usual entry point.
+- `search_workspace` — find pages/databases by text. The fallback when the workspace map has not already given you the id, not the first step.
 - `list_workspace` — list items, optionally under a `parentId`. Paginated.
 - `get_page` — full content of a page or row by ID. Auto-detects type.
 - `get_pages` — batch `get_page`: a specific known ID list (max 50), possibly across databases/types. One bad ID doesn't fail the rest — check each result's `ok`. For many rows in one database, prefer `query_database` instead.
@@ -38,12 +38,12 @@ Column types: `text` | `number` | `select` | `multi_select` | `date` | `datetime
 - `query_database` — schema + rows, with optional `filters`. Paginated.
 - `list_members` — workspace members and roles.
 - `query_audit_log` — history of MCP tool calls (yours and other agents').
-- `get_changes_since` — compact incremental change/deletion feed for recurring agents.
+- `get_changes_since` — the delta since a cursor (from the digest/map header or a previous call). The normal way to catch up; always returns a `nextCursor` to keep.
 - `get_related_pages` — parent, children, outgoing links, backlinks, and row siblings without bodies.
 
 **Write (needs a write-scoped token):**
 - `create_page` — new standalone page OR database row (see decision below).
-- `bulk_create_pages` — up to 50 pages/rows in one call, created in order; nest pages created in the same call with `ref`/`parentRef`. Prefer it whenever you'd create more than a couple of items.
+- `bulk_create_pages` — up to 100 pages/rows in one call, created in order; nest pages created in the same call with `ref`/`parentRef`. Prefer it whenever you'd create more than a couple of items.
 - `update_page` — change title/content/properties of one item.
 - `bulk_update_pages` — many updates in one call. Prefer this over a loop.
 - `delete_page` — delete a page, row, or whole database. **Guarded.**
@@ -61,7 +61,7 @@ If a write tool returns "This token only has read scope," the user connected a r
 Resources are read-only and listable; many clients let you attach them directly as context, which is cheaper and cleaner than a tool round-trip when you just need to *read*:
 
 - `remnus://workspace/{id}/schema` — every database in the workspace plus its columns, in one document. Best first pull to understand what databases exist and their shapes.
-- `remnus://workspace/{id}/digest` — token-cheap one-line map of titles, IDs, row counts, and update dates.
+- `remnus://workspace/{id}/digest` — token-cheap one-line map of titles, IDs, row counts, body sizes and update dates, headed by a sync `cursor`. In a project connected with `remnus init`, the same map is cached at `.remnus/workspace-map.md`, which you can grep without a round-trip — read that first and treat it as a snapshot verified up to its cursor.
 - `remnus://workspace/{id}/knowledge-health` — compact link/freshness/lifecycle/review coverage report; heuristic, not a correctness certificate.
 - `remnus://database/{id}/schema` — columns of one database (same data as `get_database_schema`).
 - `remnus://page/{id}` — a page or row rendered as markdown (title + properties + content). Listing returns the 20 most recently updated; any page is reachable by its ID.
@@ -85,8 +85,10 @@ These only *fetch and format* — the actual writing/analysis is yours. If a cli
 
 ## Core rules — do not skip these
 
-### 1. Inspect before you act
-For meaningful multi-page product or coding work, start with `prepare_context` (normally 2,000 tokens) and reuse its `contextRunId` on related writes. Do not call it for greetings, formatting-only work, or a single known page. If a write returns `CONTEXT_REQUIRED`, prepare the concrete task and retry once with the returned ID. For a single known item, don't guess IDs or column names: start from `search_workspace` or `list_workspace`, and run `get_database_schema` before `query_database` / before writing rows. You need real column IDs and exact `select` option strings.
+### 1. Inspect before you act — cheapest source first
+Orient in this order: **local map (`.remnus/workspace-map.md`) → `get_changes_since(cursor)` → targeted read → `search_workspace`.** Grep the map instead of listing the tree; before writing, or when the map looks stale, take its cursor and pull the delta rather than re-crawling. With no map file, read the digest resource once and keep its cursor.
+
+For meaningful multi-page product or coding work, start with `prepare_context` (normally 2,000 tokens) and reuse its `contextRunId` on related writes. Do not call it for greetings, formatting-only work, or a single known page. If a write returns `CONTEXT_REQUIRED`, prepare the concrete task and retry once with the returned ID. Don't guess IDs or column names: run `get_database_schema` before `query_database` / before writing rows. You need real column IDs and exact `select` option strings.
 
 ### 2. `update_page` MERGES properties — it never replaces
 Passing `properties: { status: "Done" }` changes only `status`; every other property is untouched. To *clear* a field, set it explicitly to `null`/`""`. Never re-send the whole property bag thinking you must preserve it — you don't, and doing so risks clobbering changes made since you read.
@@ -118,9 +120,11 @@ Creating several pages or rows? One `bulk_create_pages` call. Updating several r
 
 **"Implement feature X using our product decisions"** → `prepare_context` with the concrete task and a suitable `maxTokens` budget → keep `contextRunId` → `get_page` only for related IDs whose full detail is still needed → pass `contextRunId` to Remnus writes.
 
-**"Find X and show me"** → `search_workspace` → `get_page` on the best hit.
+**"Find X and show me"** → the workspace map if you have one, else `search_workspace` → `get_page` on the best hit.
 
-**"What's in my Tasks database?"** → `search_workspace` (or `list_workspace`) to get the DB id → `get_database_schema` → `query_database` (filter/paginate as needed).
+**"What's in my Tasks database?"** → the map (or `search_workspace`) for the DB id → `get_database_schema` → `query_database` (filter/paginate as needed).
+
+**"What changed since I last looked?"** → `get_changes_since` with the cursor from the map header or your last call — not a fresh crawl.
 
 **"Mark these tasks done" / bulk edits** → `get_database_schema` for the status column id and the "Done" option string → `query_database` to resolve row IDs → one `bulk_update_pages`.
 

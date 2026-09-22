@@ -9,6 +9,7 @@ import {
   workspaceItems,
   standalonePages,
   databases,
+  dashboards,
   pages,
   workspaceMembers,
   users,
@@ -21,8 +22,12 @@ import {
   pageComments,
 } from '@/db/schema';
 import { eq, ne, and, or, like, asc, desc, gte, lte, sql, inArray } from 'drizzle-orm';
-import { syncPageLinks, removePageLinksFor, purgeReferencesTo } from './pageLinks';
+import { syncPageLinks, syncPageLinksBulk, removePageLinksFor, purgeReferencesTo } from './pageLinks';
 import { snapshotBeforeDelete, maybeSnapshotContentUpdate, type SnapshotActor } from './snapshots';
+import { recordGeneratedKnowledgeBulk } from './knowledge';
+import { chunkRows } from './sqlChunk';
+import { computeChangeVersion } from './changeVersion';
+import { iconInputError } from '@/lib/icons';
 
 export type { SnapshotActor } from './snapshots';
 
@@ -321,6 +326,25 @@ export async function getPageById(workspaceId: string, itemId: string) {
     };
   }
 
+  if (item.type === 'dashboard') {
+    // Reading a dashboard returns its spec as the body. Without this branch it
+    // fell through to the database case below and came back claiming to be a
+    // database with a null databaseId — a silent lie to every MCP reader.
+    const [dash] = await db
+      .select({ spec: dashboards.spec })
+      .from(dashboards)
+      .where(eq(dashboards.itemId, itemId))
+      .limit(1);
+    return {
+      id: item.id,
+      type: 'dashboard' as const,
+      title: item.title,
+      content: dash ? JSON.stringify(dash.spec, null, 2) : '',
+      icon: item.icon,
+      properties: undefined,
+    };
+  }
+
   // Database item — find the associated DB record via item
   const [db_row] = await db
     .select({ id: databases.id })
@@ -546,34 +570,47 @@ export async function queryDatabaseRows(
       )
     : new Map<string, number>();
 
-  return {
-    schema: projectedSchema,
-    rows: page.map(({ sortOrder: _so, content, seriesId, seriesDetached, ...r }) => {
-      let properties = (r.properties ?? {}) as Record<string, unknown>;
-      if (allowedColIds) {
-        const trimmed: Record<string, unknown> = {};
-        for (const key of Object.keys(properties)) {
-          if (allowedColIds.has(key)) trimmed[key] = properties[key];
-        }
-        properties = trimmed;
+  const shapeRows = (projected: boolean) => page.map(({ sortOrder: _so, content, seriesId, seriesDetached, ...r }) => {
+    let properties = (r.properties ?? {}) as Record<string, unknown>;
+    if (projected && allowedColIds) {
+      const trimmed: Record<string, unknown> = {};
+      for (const key of Object.keys(properties)) {
+        if (allowedColIds.has(key)) trimmed[key] = properties[key];
       }
-      const commentCount = commentCounts.get(r.id);
-      return {
-        id: r.id,
-        title: r.title,
-        properties,
-        ...(includeContent ? { content } : {}),
-        // Absent on ordinary rows, so a database with no recurring rows pays
-        // nothing for this.
-        ...(seriesId ? { recurring: true, ...(seriesDetached ? { recurringDetached: true } : {}) } : {}),
-        // Absent when the row has no comments — a database with none pays
-        // nothing for this either.
-        ...(commentCount ? { commentCount } : {}),
-      };
-    }),
+      properties = trimmed;
+    }
+    const commentCount = commentCounts.get(r.id);
+    return {
+      id: r.id,
+      title: r.title,
+      properties,
+      ...(includeContent ? { content } : {}),
+      // Absent on ordinary rows, so a database with no recurring rows pays
+      // nothing for this.
+      ...(seriesId ? { recurring: true, ...(seriesDetached ? { recurringDetached: true } : {}) } : {}),
+      // Absent when the row has no comments — a database with none pays
+      // nothing for this either.
+      ...(commentCount ? { commentCount } : {}),
+    };
+  });
+
+  const result = {
+    schema: projectedSchema,
+    rows: shapeRows(true),
     hasMore,
     nextCursor: hasMore && last ? encodeCursor(last.sortOrder, last.id) : undefined,
   };
+
+  // What this same query would have returned WITHOUT the projection — every
+  // column of every row, plus the full schema. Serialized from rows already in
+  // memory, so it is an exact byte count, never an estimate. The savings card
+  // sums these (AGENTS.md → "Agent Savings Metrics"); callers that serialize the
+  // result strip the key first.
+  const baselineBytes = allowedColIds
+    ? Buffer.byteLength(JSON.stringify({ ...result, schema: dbRecord.schema, rows: shapeRows(false) }), 'utf8')
+    : undefined;
+
+  return { ...result, baselineBytes };
 }
 
 /**
@@ -619,7 +656,19 @@ export function buildContentOutline(markdown: string, snippetLength = 150): stri
  * row counts · last-updated), indented by nesting. One cheap read orients an
  * agent without paginating list_workspace or fetching page bodies.
  */
-export async function getWorkspaceDigest(workspaceId: string): Promise<string> {
+/**
+ * The workspace map, plus what skipping it would have cost.
+ *
+ * `naiveBytes` is the size of the only other way to learn the same thing —
+ * reading every page body and every database row. Summed with SQL `length()`
+ * over the exact same rows the digest is built from, so it is measured, not
+ * estimated. See AGENTS.md → "Agent Savings Metrics".
+ */
+export async function getWorkspaceDigest(workspaceId: string): Promise<{ text: string; naiveBytes: number }> {
+  // The cursor is taken BEFORE the item queries, so anything written while the
+  // digest is being assembled has a timestamp at or after it and shows up in the
+  // next get_changes_since(cursor) call rather than falling between the two.
+  const cursor = await getChangeHeadCursor(workspaceId);
   const [items, rowCounts] = await Promise.all([
     db
       .select({
@@ -630,13 +679,19 @@ export async function getWorkspaceDigest(workspaceId: string): Promise<string> {
         updatedAt: workspaceItems.updatedAt,
         sortOrder: workspaceItems.sortOrder,
         databaseId: databases.id,
+        contentChars: sql<number | null>`length(${standalonePages.content})`,
       })
       .from(workspaceItems)
       .leftJoin(databases, eq(databases.itemId, workspaceItems.id))
+      .leftJoin(standalonePages, eq(standalonePages.itemId, workspaceItems.id))
       .where(eq(workspaceItems.workspaceId, workspaceId))
       .orderBy(asc(workspaceItems.sortOrder), asc(workspaceItems.id)),
     db
-      .select({ databaseId: pages.databaseId, c: sql<number>`cast(count(*) as int)` })
+      .select({
+        databaseId: pages.databaseId,
+        c: sql<number>`cast(count(*) as int)`,
+        bytes: sql<number>`cast(coalesce(sum(length(${pages.title}) + length(${pages.content}) + length(${pages.properties})), 0) as int)`,
+      })
       .from(pages)
       .innerJoin(databases, eq(pages.databaseId, databases.id))
       .innerJoin(workspaceItems, eq(databases.itemId, workspaceItems.id))
@@ -659,9 +714,15 @@ export async function getWorkspaceDigest(workspaceId: string): Promise<string> {
       // Legacy rows can carry CURRENT_TIMESTAMP-as-text → Invalid Date (see the
       // createdAt gotcha in AGENTS.md); omit the date segment for those.
       const updated = isValidDate(item.updatedAt) ? `, updated: ${item.updatedAt.toISOString().slice(0, 10)}` : '';
+      // Body size lets an agent pick get_page mode:"outline" for a long page up
+      // front instead of paying for a full read to find out it was long.
       const extra = item.type === 'database'
         ? `, databaseId: ${item.databaseId}, rows: ${counts.get(item.databaseId!) ?? 0}`
-        : '';
+        // A dashboard has no markdown body, so a char count would always read 0
+        // and invite a pointless get_page for it.
+        : item.type === 'dashboard'
+          ? ''
+          : `, ${formatChars(item.contentChars ?? 0)}`;
       lines.push(`${'  '.repeat(depth)}- [${item.type}] ${item.title || 'Untitled'} (id: ${item.id}${extra}${updated})`);
       walk(item.id, depth + 1);
     }
@@ -669,17 +730,57 @@ export async function getWorkspaceDigest(workspaceId: string): Promise<string> {
   walk(null, 0);
 
   const pageCount = items.filter(i => i.type === 'page').length;
-  return (
+  const databaseCount = items.filter(i => i.type === 'database').length;
+  const dashboardCount = items.length - pageCount - databaseCount;
+  // Reading the workspace the long way = every page body and title, plus every
+  // row of every database. Both halves come straight off the queries above.
+  const naiveBytes =
+    items.reduce((sum, i) => sum + (i.contentChars ?? 0) + (i.title?.length ?? 0), 0) +
+    rowCounts.reduce((sum, r) => sum + Number(r.bytes ?? 0), 0);
+
+  const text =
     `# Workspace digest\n\n` +
-    `${items.length} items (${pageCount} pages, ${items.length - pageCount} databases). Dates are last-updated (YYYY-MM-DD).\n` +
-    `Read a page with get_page(id) — use mode:"outline" for a cheap skim — and rows with query_database(databaseId, fields:[…]).\n\n` +
-    lines.join('\n')
-  );
+    `cursor: ${cursor}\n` +
+    `${items.length} items (${pageCount} pages, ${databaseCount} databases${dashboardCount ? `, ${dashboardCount} dashboards` : ''}). Dates are last-updated (YYYY-MM-DD); chars = body size.\n` +
+    `Read a page with get_page(id) — mode:"outline" for a cheap skim of a long one — and rows with query_database(databaseId, fields:[…]).\n` +
+    `Later, sync with get_changes_since(cursor) instead of re-reading this.\n\n` +
+    lines.join('\n');
+
+  return { text, naiveBytes };
+}
+
+function formatChars(n: number): string {
+  return n >= 1000 ? `${(n / 1000).toFixed(n >= 10_000 ? 0 : 1)}k chars` : `${n} chars`;
+}
+
+/**
+ * A get_changes_since cursor positioned at the workspace's newest change, for a
+ * caller that has just read the current state (the digest, a local map) and wants
+ * to pick up only what happens next. Built from the same monotonic max the live
+ * UI polls, so it moves on deletes too.
+ */
+export async function getChangeHeadCursor(workspaceId: string): Promise<string> {
+  const seconds = await computeChangeVersion([workspaceId]);
+  return settledCursor(seconds * 1000);
+}
+
+// Timestamps are second-granular and writers concurrent, so a cursor that sits
+// on the newest second has to decide whether more writes can still land in it.
+// Within this margin of "now" the second is hot: the id half is left empty so
+// entries stamped in it are reported once more next time rather than risk a
+// miss (the keyset filter is `ts > cursor.ts || (ts == cursor.ts && id > cursor.id)`).
+// Once the second is older than the margin, nothing new can be stamped with it
+// and the id half becomes '~' — above every uuid — so an idle poll returns
+// nothing instead of replaying the last second's writes forever.
+const HOT_SECOND_MS = 2_000;
+
+function settledCursor(ts: number, hotId = ''): string {
+  return encodeChangeCursor(ts, Date.now() - ts >= HOT_SECOND_MS ? '~' : hotId);
 }
 
 export type ChangeEntry = {
   id: string;
-  type: 'page' | 'database' | 'database_row';
+  type: 'page' | 'database' | 'database_row' | 'dashboard';
   title: string;
   changeType: 'created' | 'updated' | 'deleted';
   updatedAt: string;
@@ -707,7 +808,7 @@ export async function getChangesSince(
   since?: string,
   cursor?: string,
   limit = 100,
-): Promise<{ changes: ChangeEntry[]; hasMore: boolean; nextCursor?: string }> {
+): Promise<{ changes: ChangeEntry[]; hasMore: boolean; nextCursor: string }> {
   const cursorData = cursor ? decodeChangeCursor(cursor) : null;
   let thresholdTs = 0;
   let thresholdId = '';
@@ -820,11 +921,18 @@ export async function getChangesSince(
   const page = hasMore ? changes.slice(0, limit) : changes;
   const last = page[page.length - 1];
 
-  return {
-    changes: page,
-    hasMore,
-    nextCursor: hasMore && last ? encodeChangeCursor(new Date(last.updatedAt).getTime(), last.id) : undefined,
-  };
+  // A cursor comes back on every call, not only when there is another page:
+  // the point of the feed is to save the cursor and ask for the delta next
+  // time, and a bootstrap that fit in one page had nothing to save before.
+  // Mid-pagination it is a keyset (ts + id) so the next page starts exactly
+  // after this one. At the end it is going to be kept for a while, so it is
+  // settled the same way as the digest's head cursor (see settledCursor).
+  let nextCursor: string;
+  if (hasMore && last) nextCursor = encodeChangeCursor(new Date(last.updatedAt).getTime(), last.id);
+  else if (last) nextCursor = settledCursor(new Date(last.updatedAt).getTime());
+  else nextCursor = settledCursor(thresholdTs, thresholdId); // nothing new: keep the caller's position
+
+  return { changes: page, hasMore, nextCursor };
 }
 
 export async function getAnyPageById(workspaceId: string, pageId: string) {
@@ -863,7 +971,9 @@ export async function getPagesByIds(workspaceId: string, pageIds: string[]) {
 export type RelatedPageRef = {
   id: string;
   title: string;
-  type: 'page' | 'database' | 'database_row';
+  /** 'dashboard' only ever appears as a parent/child in the tree walk — the
+   *  page_links graph itself never records one (see editor/pageLinkData.ts). */
+  type: 'page' | 'database' | 'database_row' | 'dashboard';
   databaseId?: string;
   linkKind?: 'page_link' | 'child_block';
 };
@@ -888,7 +998,7 @@ export async function getRelatedPages(workspaceId: string, pageId: string) {
     .where(eq(workspaceItems.id, pageId))
     .limit(1);
 
-  let subject: { id: string; title: string; type: 'page' | 'database' | 'database_row'; parentId: string | null };
+  let subject: { id: string; title: string; type: 'page' | 'database' | 'database_row' | 'dashboard'; parentId: string | null };
   let rowDatabaseId: string | null = null; // subject is a row of this database
   let itemDatabaseId: string | null = null; // subject is a database item; its databases.id
 
@@ -1080,10 +1190,21 @@ export async function bulkUpdatePages(
   }[],
   agentCtx?: { tokenId: string },
   actor?: SnapshotActor,
+  /** Stamps agent provenance on every updated item, batched into one statement.
+   *  The per-item `recordGeneratedKnowledge` needs a query just to learn each
+   *  id's type; `updatePageById` already knows it, so it reports it back. */
+  knowledge?: { generatedBy: string },
 ) {
   const results = await Promise.all(
     updates.map(({ pageId, ...patch }) => updatePageById(workspaceId, pageId, patch, agentCtx, actor)),
   );
+  if (knowledge) {
+    await recordGeneratedKnowledgeBulk(
+      workspaceId,
+      results.map((r, i) => ({ itemId: updates[i].pageId, itemType: r.itemType })),
+      knowledge.generatedBy,
+    ).catch(() => {});
+  }
   return results.map((r, i) => ({ id: updates[i].pageId, updated: r.updated }));
 }
 
@@ -1167,15 +1288,391 @@ export async function createPageInWorkspace(
 
   // Auto-share child if parent is shared
   if (input.parentId) {
-    autoShareIfParentShared(itemId, input.parentId, agentCtx?.tokenId ?? 'system').catch(() => {});
+    autoShareIfParentShared(itemId, input.parentId).catch(() => {});
   }
 
   return { id: itemId, type: 'page' as const };
 }
 
-async function autoShareIfParentShared(itemId: string, parentId: string, createdBy: string): Promise<void> {
+// ── Bulk create ───────────────────────────────────────────────────────────────
+
+export type BulkCreateEntry = {
+  ref?: string;
+  title: string;
+  content?: string;
+  parentId?: string;
+  parentRef?: string;
+  databaseId?: string;
+  properties?: Record<string, any>;
+  icon?: string;
+  iconColor?: string;
+};
+
+export type BulkCreateResult = {
+  index: number;
+  ok: boolean;
+  id?: string;
+  type?: 'page' | 'db-row';
+  ref?: string;
+  error?: string;
+};
+
+type ShareConfig = { permission: string; width: string | null; inSitemap: boolean; workspaceId: string; createdBy: string };
+
+/**
+ * `createPageInWorkspace` for a whole call, in a fixed number of round-trips.
+ *
+ * Why this exists: the sequential version costs ~7 statements per record
+ * (parent/database checks, a full `sortOrder` scan of the target database, a
+ * schema read, the inserts, a link sync, then a knowledge stamp), and against a
+ * remote Turso every one of those is a network turn. 100 records meant ~750
+ * sequential turns — minutes of watching nothing happen while an agent
+ * calibrates a project. Here the shape is flat instead: resolve every reference
+ * in one batched read, take every database's next sort position in one grouped
+ * query, then write everything as multi-row inserts inside a single batch.
+ *
+ * The contract is deliberately unchanged from the sequential path:
+ *   - Entries keep their own `ok`/`error`; one bad entry never sinks the rest.
+ *   - Everything that can fail is caught in memory BEFORE the batch runs, so
+ *     "valid entries are written, invalid ones report why" still holds.
+ *   - `parentRef` still only resolves backwards, to a *page* created earlier in
+ *     the same call. Input order is therefore already topological.
+ *   - Ids are generated up front (`crypto.randomUUID`), which is what lets
+ *     `ref`/`parentRef` be wired in memory instead of forcing serial inserts.
+ *   - `createdAt`/`updatedAt` are written explicitly as `Date`s — never left to
+ *     SQLite's `CURRENT_TIMESTAMP`, which writes TEXT into a timestamp-mode
+ *     column and leaves the row reading `Invalid Date` forever.
+ *
+ * Side effects (link graph, knowledge stamp, share inheritance) stay
+ * best-effort and run outside the content batch, so a failing link sync can
+ * never roll back the pages it was describing.
+ */
+export async function createPagesInWorkspaceBulk(
+  workspaceId: string,
+  entries: BulkCreateEntry[],
+  agentCtx?: { tokenId: string },
+  knowledge?: { generatedBy: string },
+): Promise<{ requested: number; succeeded: number; failed: number; results: BulkCreateResult[] }> {
+  const now = new Date();
+  const results: BulkCreateResult[] = entries.map((entry, index) => ({
+    index, ok: false, ...(entry.ref ? { ref: entry.ref } : {}),
+  }));
+
+  type Plan = {
+    index: number;
+    kind: 'page' | 'row';
+    /** workspace_items.id for a page, pages.id for a row. */
+    id: string;
+    /** standalone_pages.id — pages only. */
+    contentRowId?: string;
+    entry: BulkCreateEntry;
+    /** Resolved parent workspace item, existing or created in this call. */
+    parentId: string | null;
+    /** Set once the database reference has been resolved to databases.id. */
+    resolvedDbId?: string;
+  };
+
+  // ── 1. Validate in memory; nothing below touches the DB ─────────────────────
+  const plans: Plan[] = [];
+  const refToPlan = new Map<string, Plan>();
+  const takenRefs = new Set<string>();
+  const parentIdsToCheck = new Set<string>();
+  const databaseRefs = new Set<string>();
+
+  const fail = (index: number, message: string) => { results[index].error = message; };
+
+  for (let index = 0; index < entries.length; index++) {
+    const entry = entries[index];
+
+    const iconProblem = iconInputError(entry.icon, entry.iconColor);
+    if (iconProblem) { fail(index, iconProblem); continue; }
+    if (entry.parentRef && (entry.parentId || entry.databaseId)) {
+      fail(index, 'Pass parentRef on its own, not together with parentId or databaseId.');
+      continue;
+    }
+    if (entry.ref && takenRefs.has(entry.ref)) {
+      fail(index, `ref "${entry.ref}" is already used by an earlier entry in this call.`);
+      continue;
+    }
+    if (entry.ref) takenRefs.add(entry.ref);
+
+    let parentId: string | null = entry.parentId ?? null;
+    if (entry.parentRef) {
+      // Backwards-only, pages only — same rule the sequential path enforced by
+      // only registering a ref once its page had actually been created.
+      const target = refToPlan.get(entry.parentRef);
+      if (!target) {
+        fail(index, `parentRef "${entry.parentRef}" does not name a page created earlier in this call.`);
+        continue;
+      }
+      parentId = target.id;
+    } else if (entry.parentId) {
+      parentIdsToCheck.add(entry.parentId);
+    }
+
+    const plan: Plan = entry.databaseId
+      ? { index, kind: 'row', id: crypto.randomUUID(), entry, parentId: null }
+      : { index, kind: 'page', id: crypto.randomUUID(), contentRowId: crypto.randomUUID(), entry, parentId };
+    if (entry.databaseId) databaseRefs.add(entry.databaseId);
+    plans.push(plan);
+    // A `ref` on a row entry is never addressable as a parent — rows are not
+    // sidebar items. The sequential path had the same asymmetry.
+    if (entry.ref && plan.kind === 'page') refToPlan.set(entry.ref, plan);
+  }
+
+  if (plans.length === 0) {
+    return { requested: entries.length, succeeded: 0, failed: entries.length, results };
+  }
+
+  // ── 2. Resolve every reference in one round-trip ────────────────────────────
+  const parentIdList = [...parentIdsToCheck];
+  const databaseRefList = [...databaseRefs];
+
+  // All three reads ship as one batch: parent existence, the databases named by
+  // either id form (with their schema, so property resolution needs no second
+  // query), and the share rows that drive inheritance.
+  const reads: any[] = [];
+  const parentsAt = parentIdList.length
+    ? reads.push(
+        db.select({ id: workspaceItems.id })
+          .from(workspaceItems)
+          .where(and(eq(workspaceItems.workspaceId, workspaceId), inArray(workspaceItems.id, parentIdList))),
+      ) - 1
+    : -1;
+  const databasesAt = databaseRefList.length
+    // Accepts both databases.id and workspace_items.id, like assertDatabaseInWorkspace.
+    ? reads.push(
+        db.select({ dbId: databases.id, itemId: workspaceItems.id, schema: databases.schema })
+          .from(databases)
+          .innerJoin(workspaceItems, eq(databases.itemId, workspaceItems.id))
+          .where(and(
+            eq(workspaceItems.workspaceId, workspaceId),
+            or(inArray(databases.id, databaseRefList), inArray(workspaceItems.id, databaseRefList)),
+          )),
+      ) - 1
+    : -1;
+  const sharesAt = parentIdList.length
+    ? reads.push(
+        db.select({
+          pageId: sharedPages.pageId, permission: sharedPages.permission, width: sharedPages.width,
+          workspaceId: sharedPages.workspaceId, inSitemap: sharedPages.inSitemap, createdBy: sharedPages.createdBy,
+        })
+          .from(sharedPages)
+          .where(inArray(sharedPages.pageId, parentIdList)),
+      ) - 1
+    : -1;
+
+  const read = reads.length ? await db.batch(reads as [any, ...any[]]) : [];
+  const parentRows = (parentsAt >= 0 ? read[parentsAt] : []) as { id: string }[];
+  const databaseRows = (databasesAt >= 0 ? read[databasesAt] : []) as { dbId: string; itemId: string; schema: any[] }[];
+  const shareRows = (sharesAt >= 0 ? read[sharesAt] : []) as
+    { pageId: string; permission: string; width: string | null; workspaceId: string; inSitemap: boolean | null; createdBy: string }[];
+
+  const knownParents = new Set(parentRows.map(r => r.id));
+  const dbByRef = new Map<string, { dbId: string; schema: any[] }>();
+  for (const row of databaseRows) {
+    dbByRef.set(row.dbId, { dbId: row.dbId, schema: row.schema ?? [] });
+    dbByRef.set(row.itemId, { dbId: row.dbId, schema: row.schema ?? [] });
+  }
+
+  // ── 3. Resolve parents/databases, drop what does not exist ──────────────────
+  const live: Plan[] = [];
+  for (const plan of plans) {
+    if (plan.kind === 'row') {
+      const resolved = dbByRef.get(plan.entry.databaseId!);
+      if (!resolved) { fail(plan.index, 'Database not found or access denied'); continue; }
+      plan.resolvedDbId = resolved.dbId;
+    } else if (plan.entry.parentId && !knownParents.has(plan.entry.parentId)) {
+      fail(plan.index, 'Not found or access denied');
+      continue;
+    }
+    live.push(plan);
+  }
+
+  // A page whose parent was created in this call but then failed validation
+  // cannot be created either — cascade that, in order.
+  const deadIds = new Set(plans.filter(p => !live.includes(p)).map(p => p.id));
+  const created: Plan[] = [];
+  for (const plan of live) {
+    if (plan.parentId && deadIds.has(plan.parentId)) {
+      fail(plan.index, `parentRef "${plan.entry.parentRef}" does not name a page created earlier in this call.`);
+      deadIds.add(plan.id);
+      continue;
+    }
+    created.push(plan);
+  }
+
+  if (created.length === 0) {
+    return { requested: entries.length, succeeded: 0, failed: entries.length, results };
+  }
+
+  // ── 4. Next sort position per database, in one grouped query ────────────────
+  // The sequential path pulled EVERY row of the target database and took the
+  // max in JS — a cost that grew with the database. This reads one number per
+  // database and walks the increments in memory for rows sharing a database.
+  const rowPlans = created.filter(p => p.kind === 'row');
+  const targetDbIds = [...new Set(rowPlans.map(p => p.resolvedDbId!))];
+  const nextSort = new Map<string, number>();
+  if (targetDbIds.length) {
+    const maxima = await db
+      .select({ databaseId: pages.databaseId, maxSort: sql<number | null>`max(${pages.sortOrder})` })
+      .from(pages)
+      .where(inArray(pages.databaseId, targetDbIds))
+      .groupBy(pages.databaseId);
+    for (const row of maxima) nextSort.set(row.databaseId, Math.max(0, row.maxSort ?? 0));
+  }
+
+  // ── 5. Build the rows, then write them in one batch ─────────────────────────
+  const itemRows: (typeof workspaceItems.$inferInsert)[] = [];
+  const contentRows: (typeof standalonePages.$inferInsert)[] = [];
+  const dbRows: (typeof pages.$inferInsert)[] = [];
+
+  for (const plan of created) {
+    const entry = plan.entry;
+    if (plan.kind === 'row') {
+      const dbId = plan.resolvedDbId!;
+      const base = nextSort.get(dbId) ?? 0;
+      const sortOrder = base + 1;
+      nextSort.set(dbId, sortOrder);
+      const schema: Array<{ id: string; name: string }> = dbByRef.get(entry.databaseId!)?.schema ?? [];
+      const resolvedProps = entry.properties ? resolvePropertiesWithSchema(schema, entry.properties) : {};
+      dbRows.push({
+        id: plan.id,
+        databaseId: dbId,
+        title: entry.title,
+        content: entry.content ?? '',
+        properties: { title: entry.title, ...resolvedProps },
+        sortOrder,
+        createdAt: now,
+        updatedAt: now,
+        ...(entry.icon ? { icon: entry.icon } : {}),
+        ...(entry.iconColor ? { iconColor: entry.iconColor } : {}),
+        ...(agentCtx ? { agentEditedAt: now, agentTokenId: agentCtx.tokenId } : {}),
+      });
+    } else {
+      itemRows.push({
+        id: plan.id,
+        workspaceId,
+        type: 'page',
+        title: entry.title,
+        parentId: plan.parentId,
+        sortOrder: 0,
+        createdAt: now,
+        updatedAt: now,
+        ...(entry.icon ? { icon: entry.icon } : {}),
+        ...(entry.iconColor ? { iconColor: entry.iconColor } : {}),
+      });
+      contentRows.push({
+        id: plan.contentRowId!,
+        itemId: plan.id,
+        content: entry.content ?? '',
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
+  }
+
+  // Share inheritance, resolved in memory: a created page under a shared parent
+  // is shared, and then itself becomes a shared parent for its own children in
+  // this call. The sequential path fired one unawaited query per page for this,
+  // which made a grandchild's inheritance a race it usually lost.
+  const shareByParent = new Map<string, ShareConfig>();
+  for (const row of shareRows) {
+    shareByParent.set(row.pageId, {
+      permission: row.permission, width: row.width, inSitemap: Boolean(row.inSitemap),
+      workspaceId: row.workspaceId, createdBy: row.createdBy,
+    });
+  }
+  const shareInserts: (typeof sharedPages.$inferInsert)[] = [];
+  for (const plan of created) {
+    if (plan.kind !== 'page' || !plan.parentId) continue;
+    const inherited = shareByParent.get(plan.parentId);
+    if (!inherited) continue;
+    shareByParent.set(plan.id, inherited);
+    shareInserts.push({
+      id: crypto.randomUUID(),
+      slug: crypto.randomUUID(),
+      pageId: plan.id,
+      workspaceId: inherited.workspaceId,
+      permission: inherited.permission as 'read' | 'write',
+      width: (inherited.width ?? 'narrow') as 'narrow' | 'wide' | 'full',
+      inSitemap: inherited.inSitemap,
+      // Inherited from the parent share, NOT from the caller. `created_by` is an
+      // FK onto `user`, and an MCP caller has only a token id — writing that
+      // silently violated the constraint, which is why agent-created sub-pages
+      // never actually appeared in a published tree. The parent's owner is also
+      // the semantically right answer: this row exists because of THEIR decision
+      // to publish the subtree, and ON DELETE CASCADE should take the inherited
+      // children with the parent rather than with whoever's agent made them.
+      createdBy: inherited.createdBy,
+      createdAt: now,
+    });
+  }
+
+  // Parents before children — standalone_pages.item_id has an FK onto the item
+  // row, and libsql runs a batch in order inside one transaction.
+  const statements: any[] = [];
+  for (const chunk of chunkRows(itemRows, 10)) statements.push(db.insert(workspaceItems).values(chunk));
+  for (const chunk of chunkRows(contentRows, 5)) statements.push(db.insert(standalonePages).values(chunk));
+  for (const chunk of chunkRows(dbRows, 12)) statements.push(db.insert(pages).values(chunk));
+  await db.batch(statements as [any, ...any[]]);
+
+  for (const plan of created) {
+    results[plan.index].ok = true;
+    results[plan.index].id = plan.id;
+    results[plan.index].type = plan.kind === 'row' ? 'db-row' : 'page';
+  }
+
+  // ── 6. Best-effort side effects, outside the content batch ──────────────────
+  const linkSources = created
+    .filter(p => p.entry.content)
+    .map(p => ({
+      fromId: p.id,
+      fromType: (p.kind === 'row' ? 'database_row' : 'page') as 'page' | 'database_row',
+      content: p.entry.content!,
+    }));
+  await Promise.allSettled([
+    syncPageLinksBulk(workspaceId, linkSources),
+    knowledge
+      ? recordGeneratedKnowledgeBulk(
+          workspaceId,
+          created.map(p => ({ itemId: p.id, itemType: (p.kind === 'row' ? 'database_row' : 'page') as 'page' | 'database_row' })),
+          knowledge.generatedBy,
+        ).catch(() => {})
+      : Promise.resolve(),
+    // Outside the content batch on purpose: publishing a sub-page is a
+    // convenience, and a failure here (a parent unshared between the read and
+    // the write, a slug collision) must not roll back the pages themselves.
+    // Same best-effort contract as the single-page `autoShareIfParentShared`.
+    shareInserts.length
+      ? db.batch(chunkRows(shareInserts, 9).map(chunk => db.insert(sharedPages).values(chunk)) as [any, ...any[]]).catch(() => {})
+      : Promise.resolve(),
+  ]);
+
+  const succeeded = created.length;
+  return { requested: entries.length, succeeded, failed: entries.length - succeeded, results };
+}
+
+/**
+ * A page created under a publicly shared parent is published too — the public
+ * `/share/[...slug]` tree is built ONLY from items that have their own
+ * `shared_pages` row, so without this an agent's sub-page is invisible to
+ * visitors and its child-block button in the parent dead-ends.
+ *
+ * `created_by` is inherited from the parent share rather than taken from the
+ * caller: it is an FK onto `user`, and an MCP caller has only a token id. This
+ * used to be written as `agentCtx?.tokenId ?? 'system'`, which violated the
+ * constraint and made the whole insert fail silently (it is best-effort) — so
+ * MCP-created pages never inherited sharing at all. The parent's owner is also
+ * the right answer semantically: the row exists because THEY published the
+ * subtree, and ON DELETE CASCADE should retire the inherited children with them.
+ */
+async function autoShareIfParentShared(itemId: string, parentId: string): Promise<void> {
   const [parentShare] = await db
-    .select({ permission: sharedPages.permission, width: sharedPages.width, workspaceId: sharedPages.workspaceId, inSitemap: sharedPages.inSitemap })
+    .select({
+      permission: sharedPages.permission, width: sharedPages.width, workspaceId: sharedPages.workspaceId,
+      inSitemap: sharedPages.inSitemap, createdBy: sharedPages.createdBy,
+    })
     .from(sharedPages)
     .where(eq(sharedPages.pageId, parentId))
     .limit(1);
@@ -1196,7 +1693,7 @@ async function autoShareIfParentShared(itemId: string, parentId: string, created
     permission: parentShare.permission,
     width: parentShare.width ?? 'narrow',
     inSitemap: Boolean(parentShare.inSitemap),
-    createdBy,
+    createdBy: parentShare.createdBy,
     createdAt: new Date(),
   });
 }
@@ -1213,7 +1710,7 @@ async function autoShareIfParentShared(itemId: string, parentId: string, created
 export async function recordDeletionTombstone(
   workspaceId: string,
   itemId: string,
-  itemType: 'page' | 'database' | 'database_row',
+  itemType: 'page' | 'database' | 'database_row' | 'dashboard',
   title: string,
 ): Promise<void> {
   try {
@@ -1232,7 +1729,7 @@ export async function recordDeletionTombstone(
 async function deleteWorkspaceItemAndDescendants(
   workspaceId: string,
   itemId: string,
-  type: 'page' | 'database',
+  type: 'page' | 'database' | 'dashboard',
   title: string,
   meta: { parentId: string | null; icon: string | null; iconColor: string | null; sortOrder: number },
   actor: SnapshotActor,
@@ -1293,6 +1790,20 @@ async function deleteWorkspaceItemAndDescendants(
       });
     }
     await db.delete(databases).where(eq(databases.itemId, itemId));
+  } else if (type === 'dashboard') {
+    // Mirrors the web delete path: the spec is snapshotted as JSON in the
+    // `content` column so a restore brings the blocks back, not an empty shell.
+    const [dash] = await db
+      .select({ spec: dashboards.spec })
+      .from(dashboards)
+      .where(eq(dashboards.itemId, itemId))
+      .limit(1);
+    await snapshotBeforeDelete({
+      workspaceId, originalId: itemId, itemType: 'dashboard', title,
+      content: dash ? JSON.stringify(dash.spec) : undefined, icon: meta.icon, iconColor: meta.iconColor,
+      parentId: meta.parentId, sortOrder: meta.sortOrder, deletedBy: actor,
+    });
+    await db.delete(dashboards).where(eq(dashboards.itemId, itemId));
   } else {
     const [content] = await db
       .select({ content: standalonePages.content })
@@ -1333,7 +1844,7 @@ export async function deleteItemFromWorkspace(workspaceId: string, itemId: strin
       { parentId: item.parentId, icon: item.icon, iconColor: item.iconColor, sortOrder: item.sortOrder },
       actor,
     );
-    return { deleted: true, type: item.type as 'page' | 'database' };
+    return { deleted: true, type: item.type as 'page' | 'database' | 'dashboard' };
   }
 
   const [page] = await db
@@ -1416,19 +1927,66 @@ export async function moveItemInWorkspace(
 // (mirrors move_item's semantics, batched, same per-item result contract as
 // `bulkDeleteItemsFromWorkspace`). Workspace items (pages/databases) only —
 // database rows go through `bulkMoveRowsToDatabase` instead.
+//
+// Every item in a call lands under the SAME parent, which is what makes this
+// collapsible: the destination's ancestor chain — the only thing the subtree
+// check needs — is read once for the whole call instead of being re-walked per
+// item. Three statements total, whatever the batch size.
 export async function bulkMoveItemsInWorkspace(
   workspaceId: string,
   itemIds: string[],
   newParentId: string | null,
 ): Promise<{ id: string; ok: boolean; error?: string }[]> {
-  const settled = await Promise.allSettled(
-    itemIds.map((id) => moveItemInWorkspace(workspaceId, id, newParentId)),
+  if (itemIds.length === 0) return [];
+  const ids = [...new Set(itemIds)];
+  const lookup = [...new Set([...ids, ...(newParentId ? [newParentId] : [])])];
+
+  const present = new Set(
+    (await db
+      .select({ id: workspaceItems.id })
+      .from(workspaceItems)
+      .where(and(eq(workspaceItems.workspaceId, workspaceId), inArray(workspaceItems.id, lookup)))
+    ).map(r => r.id),
   );
-  return settled.map((result, i) => (
-    result.status === 'fulfilled'
-      ? { id: itemIds[i], ok: true }
-      : { id: itemIds[i], ok: false, error: String(result.reason?.message ?? result.reason) }
-  ));
+
+  // The destination itself plus everything above it. A moved item may not be
+  // any of them, or it would become its own ancestor. `depth < 100` is a cycle
+  // guard: the per-item walk this replaces would spin forever on corrupt data.
+  let forbidden = new Set<string>();
+  if (newParentId && present.has(newParentId)) {
+    const chain = await db.all<{ id: string }>(sql`
+      with recursive chain(id, parent_id, depth) as (
+        select id, parent_id, 0 from workspace_items where id = ${newParentId}
+        union all
+        select wi.id, wi.parent_id, chain.depth + 1
+          from workspace_items wi join chain on wi.id = chain.parent_id
+         where chain.depth < 100
+      )
+      select id from chain
+    `);
+    forbidden = new Set(chain.map(r => r.id));
+  }
+
+  const results: { id: string; ok: boolean; error?: string }[] = [];
+  const movable: string[] = [];
+  for (const id of itemIds) {
+    if (!present.has(id) || (newParentId !== null && !present.has(newParentId))) {
+      results.push({ id, ok: false, error: 'Not found or access denied' });
+    } else if (forbidden.has(id)) {
+      results.push({ id, ok: false, error: 'Cannot move an item into its own subtree' });
+    } else {
+      results.push({ id, ok: true });
+      movable.push(id);
+    }
+  }
+
+  if (movable.length) {
+    await db
+      .update(workspaceItems)
+      .set({ parentId: newParentId, updatedAt: new Date() })
+      .where(inArray(workspaceItems.id, [...new Set(movable)]));
+  }
+  return results;
 }
 
 // Cross-database row move (`.ai/FEATURE_BULK_AND_TRASH.md` §A.3): moving a row
@@ -1755,6 +2313,22 @@ export async function deleteDatabaseView(
   return { deleted: true };
 }
 
+/** Column-name → column-id property mapping, with the schema already in hand.
+ *  Split out so the bulk path can reuse a schema it fetched once for the whole
+ *  call instead of re-reading it per row. */
+function resolvePropertiesWithSchema(
+  schema: Array<{ id: string; name: string }>,
+  properties: Record<string, any>,
+): Record<string, any> {
+  const nameToId = new Map(schema.map(col => [col.name.toLowerCase(), col.id]));
+  const resolved: Record<string, any> = {};
+  for (const [key, value] of Object.entries(properties)) {
+    const colId = nameToId.get(key.toLowerCase());
+    resolved[colId ?? key] = value;
+  }
+  return resolved;
+}
+
 async function resolvePropertiesBySchema(
   databaseId: string,
   properties: Record<string, any>,
@@ -1765,15 +2339,7 @@ async function resolvePropertiesBySchema(
     .where(eq(databases.id, databaseId))
     .limit(1);
 
-  const schema: Array<{ id: string; name: string }> = dbRecord?.schema ?? [];
-  const nameToId = new Map(schema.map(col => [col.name.toLowerCase(), col.id]));
-
-  const resolved: Record<string, any> = {};
-  for (const [key, value] of Object.entries(properties)) {
-    const colId = nameToId.get(key.toLowerCase());
-    resolved[colId ?? key] = value;
-  }
-  return resolved;
+  return resolvePropertiesWithSchema(dbRecord?.schema ?? [], properties);
 }
 
 export async function updatePageById(
@@ -1851,7 +2417,7 @@ export async function updatePageById(
         .where(eq(standalonePages.itemId, itemId));
       await syncPageLinks(workspaceId, itemId, 'page', patch.content);
     }
-    return { updated: true };
+    return { updated: true, itemType: item.type as 'page' | 'database' };
   }
 
   // Try as DB row (pages table)
@@ -1899,5 +2465,5 @@ export async function updatePageById(
 
   await db.update(pages).set(updateData).where(eq(pages.id, itemId));
   if (patch.content !== undefined) await syncPageLinks(workspaceId, itemId, 'database_row', patch.content);
-  return { updated: true };
+  return { updated: true, itemType: 'database_row' as const };
 }

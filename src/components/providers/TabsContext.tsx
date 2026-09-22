@@ -108,13 +108,17 @@ function normalizePath(p: string): string {
 
 /**
  * A path that should live in a tab. Content routes (`/page/*`, `/db/*`) plus
- * `/admin` (and its subpages, e.g. `/admin/mailing`) — the admin dashboard is
- * NOT a keep-alive pane (see TabHost's pane filter), it just gets a real tab
- * so opening it doesn't leave the previously-active tab visually "stuck"
- * highlighted in the strip while unrelated content shows underneath it.
+ * `/dashboard/*` and `/admin` (and its subpages, e.g. `/admin/mailing`) —
+ * neither of the latter two is a keep-alive pane (see TabHost's pane filter),
+ * they just get a real tab so opening one doesn't leave the previously-active
+ * tab visually "stuck" highlighted in the strip while unrelated content shows
+ * underneath it. A dashboard is server-rendered end to end, so there is no
+ * client pane for `TabPane` to mount — hence tabbable but not kept alive.
  */
 function isTabbable(norm: string): boolean {
-  return /^\/(page|db)\//.test(norm) || norm === "/admin" || norm.startsWith("/admin/");
+  return (
+    /^\/(page|db|dashboard)\//.test(norm) || norm === "/admin" || norm.startsWith("/admin/")
+  );
 }
 
 /**
@@ -294,7 +298,7 @@ export function TabsProvider({
       if (parts[0] === "admin") {
         return { title: tAdminLabel, icon: "lucide:Shield", iconColor: "blue" };
       }
-      if (parts[0] === "page" && parts[1]) {
+      if ((parts[0] === "page" || parts[0] === "dashboard") && parts[1]) {
         const item = items.find((i) => i.id === parts[1]);
         if (item)
           return {
@@ -441,7 +445,7 @@ export function TabsProvider({
         const norm = normalizePath(t.href);
         if (isRowPath(norm)) continue;
         const parts = norm.split("/").filter(Boolean);
-        if (parts[0] === "page" && parts[1]) {
+        if ((parts[0] === "page" || parts[0] === "dashboard") && parts[1]) {
           if (!items.some((i) => i.id === parts[1])) dropIds.add(t.id);
         } else if (parts[0] === "db" && parts[1]) {
           if (!items.some((i) => i.databaseId === parts[1])) dropIds.add(t.id);

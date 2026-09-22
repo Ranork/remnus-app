@@ -3,7 +3,7 @@ import { useEffect, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   X, Shield, Globe, Mail, Calendar, Clock, Activity, Layers, FileText, Database, HardDrive, CreditCard, Sparkles,
-  Bot, Key, Zap, Crown, Trash2,
+  Bot, Key, Zap, Crown, Trash2, LayoutDashboard,
 } from 'lucide-react';
 import { useTranslations, useLocale } from 'next-intl';
 import { getUserDetail, type UserDetail } from '@/lib/actions/analytics';
@@ -14,12 +14,12 @@ import { formatDate, formatDuration, formatRelative, formatBytes, formatTokens }
 
 const PLAN_TIERS: PlanTier[] = ['free', 'startup', 'professional', 'enterprise'];
 
-function ItemIcon({ icon, type }: { icon: string | null; type: 'page' | 'database' }) {
+function ItemIcon({ icon, type }: { icon: string | null; type: 'page' | 'database' | 'dashboard' }) {
   const isEmoji = icon && [...icon].length <= 2;
   if (isEmoji) return <span className="text-sm leading-none" translate="no">{icon}</span>;
-  return type === 'database'
-    ? <Database size={13} className="text-neutral-500" />
-    : <FileText size={13} className="text-neutral-500" />;
+  if (type === 'database') return <Database size={13} className="text-neutral-500" />;
+  if (type === 'dashboard') return <LayoutDashboard size={13} className="text-neutral-500" />;
+  return <FileText size={13} className="text-neutral-500" />;
 }
 
 export default function AdminUserDetailModal({
@@ -374,7 +374,7 @@ export default function AdminUserDetailModal({
                                 <ItemIcon icon={item.icon} type={item.type} />
                                 <span className="text-xs text-neutral-300 truncate">{item.title}</span>
                                 <span className={`text-[10px] px-1.5 py-0.5 rounded shrink-0 ${item.type === 'database' ? 'bg-blue-500/10 text-blue-400' : 'bg-neutral-800 text-neutral-500'}`}>
-                                  {item.type === 'database' ? t('roleDatabase') : t('rolePage')}
+                                  {item.type === 'database' ? t('roleDatabase') : item.type === 'dashboard' ? t('roleDashboard') : t('rolePage')}
                                 </span>
                               </div>
                             ))}

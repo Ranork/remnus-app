@@ -23,6 +23,10 @@ export async function openCommand() {
 
   if (await openSignedInWindow(root, config)) {
     ok('Opened, signed in to this workspace.');
+    // That window runs in a browser profile of its own, and a page has no way to hand a
+    // link to the OS default browser. Printing the address here is the one reliable way
+    // for someone to carry on in the browser they actually use.
+    detail('For your own browser and the rest of your account, open the link above.');
     return 0;
   }
 

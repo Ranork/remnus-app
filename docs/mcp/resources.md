@@ -57,20 +57,26 @@ Get a compact, one-line-per-item map of the whole workspace — the cheapest way
 
 **Mime type** — `text/markdown`
 
-**Returns** — an indented markdown tree, one line per item, carrying titles, ids, database row counts, and last-updated dates:
+**Returns** — an indented markdown tree, one line per item, carrying titles, ids, database row counts, page body sizes and last-updated dates, under a header that opens with a sync cursor:
 
 ```markdown
 # Workspace digest
 
-4 items (3 pages, 1 databases). Dates are last-updated (YYYY-MM-DD).
-Read a page with get_page(id) — use mode:"outline" for a cheap skim — and rows with query_database(databaseId, fields:[…]).
+cursor: eyJ0cyI6MTc5MDA3MzYxMTAwMCwiaWQiOiJ-In0
+4 items (3 pages, 1 databases). Dates are last-updated (YYYY-MM-DD); chars = body size.
+Read a page with get_page(id) — mode:"outline" for a cheap skim of a long one — and rows with query_database(databaseId, fields:[…]).
+Later, sync with get_changes_since(cursor) instead of re-reading this.
 
-- [page] Start Here (id: a09c…, updated: 2026-06-28)
-  - [page] How This Was Built (id: 6e02…, updated: 2026-06-28)
+- [page] Start Here (id: a09c…, 820 chars, updated: 2026-06-28)
+  - [page] How This Was Built (id: 6e02…, 14k chars, updated: 2026-06-28)
 - [database] Sprint Board (id: f1c6…, databaseId: f0e6…, rows: 16, updated: 2026-07-01)
 ```
 
-**Token tip** — a whole workspace fits in a few hundred tokens here, versus paginating `list_workspace` and probing pages one by one. Read the digest first, then fetch only what you need.
+**The `cursor:` line** is taken *before* the map is assembled, so nothing can slip between the two. Keep it: [`get_changes_since(cursor)`](read-tools.md#get_changes_since) then returns the delta since this map rather than the tree again — the whole point of reading the digest once instead of every turn.
+
+**`chars`** is the page's body size, so you can pick `get_page` with `mode: "outline"` for a long page up front instead of paying for a full read to discover it was long.
+
+**Token tip** — a whole workspace fits in a few hundred tokens here, versus paginating `list_workspace` and probing pages one by one. Read the digest first, then fetch only what you need. In a project set up with [`remnus init`](project-install.md), this same map is cached on disk as `.remnus/workspace-map.md`, which an agent can grep without a round-trip.
 
 ---
 

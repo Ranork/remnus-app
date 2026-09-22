@@ -12,7 +12,7 @@
  */
 import crypto from 'crypto';
 import { db } from '@/db';
-import { pageSnapshots, workspaceItems, standalonePages, databases, pages } from '@/db/schema';
+import { pageSnapshots, workspaceItems, standalonePages, databases, dashboards, pages } from '@/db/schema';
 import { eq, and, lt, desc, asc, inArray, sql } from 'drizzle-orm';
 import { syncPageLinks } from './pageLinks';
 
@@ -32,7 +32,8 @@ export type SnapshotActor =
 type SnapshotInput = {
   workspaceId: string;
   originalId: string;
-  itemType: 'page' | 'database' | 'database_row';
+  /** 'dashboard' snapshots put the JSON spec in `content` — see the delete paths. */
+  itemType: 'page' | 'database' | 'database_row' | 'dashboard';
   title: string;
   content?: string | null;
   properties?: Record<string, any> | null;
@@ -179,7 +180,7 @@ export async function maybeSnapshotContentUpdate(input: ContentUpdateInput): Pro
 export type TrashEntry = {
   id: string;
   workspaceId: string;
-  itemType: 'page' | 'database' | 'database_row';
+  itemType: 'page' | 'database' | 'database_row' | 'dashboard';
   title: string;
   /** Ancestor titles, root-to-immediate-parent order, workspace name and the
    *  item's own title excluded (the workspace is shown as a section header,
@@ -284,7 +285,7 @@ export async function listTrashForWorkspaces(workspaceIds: string[]): Promise<Tr
 }
 
 export type RestoreResult =
-  | { restored: true; id: string; itemType: 'page' | 'database' | 'database_row'; databaseId?: string; rerootedToRoot?: boolean }
+  | { restored: true; id: string; itemType: 'page' | 'database' | 'database_row' | 'dashboard'; databaseId?: string; rerootedToRoot?: boolean }
   | { restored: false; reason: string };
 
 // Each snapshot restores on its own — restoring a database brings back the
@@ -300,7 +301,7 @@ export async function restoreSnapshot(workspaceId: string, snapshotId: string): 
 
   const now = new Date();
 
-  if (snap.itemType === 'page' || snap.itemType === 'database') {
+  if (snap.itemType === 'page' || snap.itemType === 'database' || snap.itemType === 'dashboard') {
     let parentId = snap.parentId;
     let rerooted = false;
     if (parentId) {
@@ -337,6 +338,25 @@ export async function restoreSnapshot(workspaceId: string, snapshotId: string): 
         id: crypto.randomUUID(),
         itemId: snap.originalId,
         content: snap.content ?? '',
+        createdAt: now,
+        updatedAt: now,
+      });
+    } else if (snap.itemType === 'dashboard') {
+      // The spec was snapshotted as JSON text in `content`. A spec that no
+      // longer parses restores as an empty dashboard rather than failing the
+      // restore — the item, its title and its place in the tree are what the
+      // user asked for back, and an unparseable block list can't be rendered
+      // anyway.
+      let spec: unknown = { version: 1, blocks: [] };
+      try {
+        if (snap.content) spec = JSON.parse(snap.content);
+      } catch {
+        // keep the empty spec
+      }
+      await db.insert(dashboards).values({
+        id: crypto.randomUUID(),
+        itemId: snap.originalId,
+        spec,
         createdAt: now,
         updatedAt: now,
       });

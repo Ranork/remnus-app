@@ -24,21 +24,46 @@ export function isDeviceIdShape(value: string | null | undefined): value is stri
   return typeof value === 'string' && DEVICE_ID_RE.test(value);
 }
 
+/**
+ * How the browser step ended.
+ *
+ * `remnus init` can only ever produce `connected`. `remnus join` adds the two
+ * outcomes where nothing was granted: the person is not a member of the workspace
+ * the project names, so they either just asked its owner for access (`requested`)
+ * or had already been refused (`denied`). Both come back through this same channel
+ * on purpose — a CLI sitting at a prompt should be told the answer, not left to
+ * time out after five minutes as if the browser had been abandoned.
+ */
+export type InstallStatus = 'connected' | 'requested' | 'denied';
+
 /** Everything the CLI needs to write the project's files, in one payload. */
 export interface InstallResult {
   kind: 'install';
+  /** Absent on results written before the join flow existed — read as `connected`. */
+  status?: InstallStatus;
   /**
    * Workspace-scoped agent token, delivered exactly once. Null in OAuth mode, where
    * the project stores no secret and the MCP client runs its own browser flow against
    * the workspace-pinned URL instead — this channel then only carries the choice of
-   * workspace, which is the one thing the CLI cannot work out on its own.
+   * workspace, which is the one thing the CLI cannot work out on its own. Also null
+   * for a non-`connected` status, where there is nothing to hand over.
    */
   token: string | null;
   workspaceId: string;
+  /**
+   * Display name for the workspace. For a non-`connected` status this is the
+   * *project* name the CLI supplied, never the real workspace name — that branch is
+   * reached by people who are not members, and they may learn nothing about it.
+   */
   workspaceName: string;
   scope: 'read' | 'write';
   /** Workspace-pinned MCP endpoint — what goes into the project's MCP config. */
   mcpUrl: string;
+  /** `join` only: a previous token for this same person + project was revoked to make
+   *  room for this one, so the CLI can say so instead of silently dropping a session. */
+  replacedPrevious?: boolean;
+  /** `denied` only: ISO timestamp after which asking again is allowed. */
+  retryAt?: string;
 }
 
 /** Same 5-minute window the Tauri bridge uses: long enough to sign in, short enough

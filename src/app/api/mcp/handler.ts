@@ -23,8 +23,8 @@ import { registerResources } from './resources';
 import { registerPrompts } from './prompts';
 import { registerReadTools } from './tools/read';
 import { registerWriteTools } from './tools/write';
-import type { TokenContext } from './context';
-import { getContextPolicy } from '@/lib/services/knowledge';
+import { mcpCallTiming, type TokenContext } from './context';
+import { getContextPolicy, type ContextPolicy } from '@/lib/services/knowledge';
 
 // ── Token verification ────────────────────────────────────────────────────────
 
@@ -178,15 +178,20 @@ function withMcpHeader(res: Response): Response {
 // for a system-prompt addition); for the full workspace map, point at the digest resource
 // instead of inlining it here — that scales with workspace size and shouldn't ride on every request.
 async function buildInstructions(ctx: TokenContext): Promise<string> {
-  const policy = await getContextPolicy(ctx.workspaceId);
+  return renderInstructions(ctx, await getContextPolicy(ctx.workspaceId));
+}
+
+// The text itself, separated from the policy lookup so it can be measured without a
+// database (scripts/mcp-token-budget). Every line here is a per-session token cost.
+export function renderInstructions(ctx: TokenContext, policy: Pick<ContextPolicy, 'mode' | 'autoMaxTokens'>): string {
   const digestUri = `remnus://workspace/${ctx.workspaceId}/digest`;
   const lines = [
     'This is a Remnus workspace: pages and databases an AI agent can read and, with a write-scoped token, edit directly.',
     policy.mode === 'manual'
       ? 'Context policy is manual. Use prepare_context(task, maxTokens?) when the task needs workspace knowledge; avoid pre-crawling the workspace.'
       : `Context policy is ${policy.mode}. For concrete multi-page product or coding work, call prepare_context first with about ${policy.autoMaxTokens} tokens; reuse its contextRunId for related Remnus writes.`,
-    `For broad orientation or an unclear task, read resource ${digestUri} for a compact map (titles, ids, row counts, last-updated).`,
-    'Two prompts exist specifically for cross-session memory: recall-context(topic) before starting work, save-memory(content, memory_type) after a decision, preference, or gotcha worth keeping.',
+    `To orient, read resource ${digestUri} once: a compact map (titles, ids, row counts, body sizes) that starts with a cursor. Afterwards call get_changes_since(cursor) for the delta instead of re-reading the map or crawling the tree. A project set up with \`remnus init\` keeps a cached copy at .remnus/workspace-map.md — read that first.`,
+    'Cross-session memory prompts: recall-context(topic) before starting work, save-memory(content, memory_type) after a decision, preference, or gotcha worth keeping.',
   ];
   if (ctx.scope === 'write') {
     lines.push(
@@ -271,7 +276,13 @@ async function authenticate(req: Request, endpoint: McpEndpoint): Promise<TokenC
   return result;
 }
 
-export async function handleMcpRequest(req: Request, endpoint: McpEndpoint = SHARED_ENDPOINT): Promise<Response> {
+export function handleMcpRequest(req: Request, endpoint: McpEndpoint = SHARED_ENDPOINT): Promise<Response> {
+  // Timer opened here, before auth, so a logged duration is the whole server-side
+  // cost the agent waited on (bcrypt included) rather than just the query.
+  return mcpCallTiming.run({ startedAt: performance.now() }, () => runMcpRequest(req, endpoint));
+}
+
+async function runMcpRequest(req: Request, endpoint: McpEndpoint): Promise<Response> {
   const ctx = await authenticate(req, endpoint);
   if (ctx instanceof Response) return ctx;
 
@@ -282,7 +293,12 @@ export async function handleMcpRequest(req: Request, endpoint: McpEndpoint = SHA
   registerResources(server, ctx);
   registerPrompts(server, ctx);
   registerReadTools(server, ctx);
-  registerWriteTools(server, ctx);
+  // A read-scoped session gets no write tools at all. They were registered
+  // unconditionally before and refused at call time, which cost every read-only
+  // integration ~30 KB of tools/list per session for schemas it could never use
+  // — and advertised capabilities the agent then tried. The scope is fixed for
+  // the token's lifetime, so there is nothing to re-check later.
+  if (ctx.scope === 'write') registerWriteTools(server, ctx);
 
   // Streamable HTTP (stateless) — the only transport we support. The previous
   // hand-rolled stateful SSE branch (for Cursor/Windsurf/Continue/Antigravity)

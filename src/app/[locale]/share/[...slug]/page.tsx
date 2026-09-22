@@ -88,6 +88,10 @@ async function resolveShare(slugParts: string[]) {
   if (!share) return null;
   try {
     const page = await getAnyPageById(share.workspaceId, share.pageId);
+    // Dashboards are not publishable in v1 (AGENTS.md -> Dashboards). The UI
+    // doesn't offer it, but a row written directly — or left behind by a later
+    // change — must not serve a public page whose body is the raw JSON spec.
+    if (page.type === 'dashboard') return null;
     return { share, page };
   } catch {
     return null;
@@ -105,6 +109,10 @@ async function getNormalRoute(pageId: string): Promise<string> {
 
   if (item) {
     if (item.type === 'page') return `/page/${pageId}`;
+    // Dashboards are not publishable in v1 (see AGENTS.md -> Dashboards), so a
+    // shared tree never contains one; if a row somehow points at one, the
+    // in-app route is still the honest destination.
+    if (item.type === 'dashboard') return `/dashboard/${pageId}`;
     // database: need the databases.id (not the workspace item id) for the /db/ route
     const [dbRow] = await db
       .select({ id: databases.id })

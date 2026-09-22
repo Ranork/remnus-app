@@ -112,7 +112,7 @@ interface PageIconProps {
   iconColor?: string | null | undefined;
   size?: number;
   className?: string;
-  fallbackType?: 'page' | 'database';
+  fallbackType?: 'page' | 'database' | 'dashboard';
   hideFallback?: boolean;
   /** Inline style, merged in last so it can override the color-class tinting
    *  above — e.g. forcing a lucide/emoji icon to white when it's painted on
@@ -139,6 +139,9 @@ export default function PageIcon({
     if (fallbackType === 'database') {
       return <LucideIcons.Database size={size} className={`${colorClass} shrink-0 ${className}`} style={style} />;
     }
+    if (fallbackType === 'dashboard') {
+      return <LucideIcons.LayoutDashboard size={size} className={`${colorClass} shrink-0 ${className}`} style={style} />;
+    }
     return <LucideIcons.FileText size={size} className={`${colorClass} shrink-0 ${className}`} style={style} />;
   }
 
@@ -157,7 +160,7 @@ export default function PageIcon({
   // Check if it's a Lucide icon
   if (icon.startsWith('lucide:')) {
     const iconName = icon.replace('lucide:', '');
-    const IconComp = (CURATED_ICONS as Record<string, React.ComponentType<any>>)[iconName] || (fallbackType === 'database' ? LucideIcons.Database : LucideIcons.FileText);
+    const IconComp = (CURATED_ICONS as Record<string, React.ComponentType<any>>)[iconName] || (fallbackType === 'database' ? LucideIcons.Database : fallbackType === 'dashboard' ? LucideIcons.LayoutDashboard : LucideIcons.FileText);
     return <IconComp size={size} className={`${colorClass} shrink-0 ${className}`} style={style} />;
   }
 

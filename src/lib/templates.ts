@@ -49,7 +49,28 @@ export interface DatabaseTemplateDefinition {
   seedRows?: SeedRow[];
 }
 
-export type TemplateDefinition = PageTemplateDefinition | DatabaseTemplateDefinition;
+/**
+ * A dashboard template carries a spec, not content or columns. v1 ships only
+ * the blank one: a seeded dashboard would have to name `databaseId`s that do
+ * not exist until the user creates them, so every block of a "sample" template
+ * would render as "source removed" on the first open. A dashboard's blocks come
+ * from an agent that can see the workspace.
+ */
+export interface DashboardTemplateDefinition {
+  id: string;
+  category: 'dashboard';
+  name: string;
+  description: string;
+  icon: string;
+  iconColor?: string;
+  /** Validated by `dashboardSpecSchema` before it reaches the database. */
+  spec: { version: 1; blocks: unknown[] };
+}
+
+export type TemplateDefinition =
+  | PageTemplateDefinition
+  | DatabaseTemplateDefinition
+  | DashboardTemplateDefinition;
 
 export const TEMPLATES: TemplateDefinition[] = [
   // ── Pages ──────────────────────────────────────────────────────────────────
@@ -125,6 +146,16 @@ A next-generation analytics dashboard that helps teams track key metrics in real
 - Engineering: Marcus Johnson, Kai Rivera
 - Design: Aisha Patel
 `,
+  },
+
+  // ── Dashboards ─────────────────────────────────────────────────────────────
+  {
+    id: 'dashboard-blank',
+    category: 'dashboard',
+    name: 'Blank Dashboard',
+    description: 'A status screen built from your databases',
+    icon: '📊',
+    spec: { version: 1, blocks: [] },
   },
 
   // ── Databases ──────────────────────────────────────────────────────────────

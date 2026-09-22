@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { X, Trash2, FileText, Database as DatabaseIcon, Loader2, RotateCcw, ChevronRight } from 'lucide-react';
+import { X, Trash2, FileText, Database as DatabaseIcon, LayoutDashboard, Loader2, RotateCcw, ChevronRight } from 'lucide-react';
 import { useTranslations, useLocale } from 'next-intl';
 import PageIcon from '@/components/features/PageIcon';
 import AgentMark from './agents/AgentMark';
@@ -10,6 +10,7 @@ const TYPE_ICON: Record<TrashEntry['itemType'], typeof FileText> = {
   page: FileText,
   database: DatabaseIcon,
   database_row: FileText,
+  dashboard: LayoutDashboard,
 };
 
 // Same Intl.RelativeTimeFormat helper as PageCommentsPanel — locale-aware

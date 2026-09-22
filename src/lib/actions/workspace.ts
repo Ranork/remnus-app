@@ -1,6 +1,6 @@
 'use server';
 import { db } from '@/db';
-import { workspaces, workspaceItems, standalonePages, databases, pages, workspaceMembers, users, sharedPages } from '@/db/schema';
+import { workspaces, workspaceItems, standalonePages, databases, dashboards, pages, workspaceMembers, users, sharedPages } from '@/db/schema';
 import { eq, asc, and, inArray, sql, count } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { cookies } from 'next/headers';
@@ -9,7 +9,6 @@ import { assertWorkspaceLockAllows } from '@/lib/auth/workspaceLock';
 import type { SchemaColumn } from '@/lib/templates';
 import type { DatabaseView } from '@/lib/types/views';
 import { getTranslations } from 'next-intl/server';
-import { publish } from '@/lib/realtime/publish';
 import { isCloudinaryUrl, deleteCloudinaryImage } from '@/lib/cloudinary';
 import { checkCanCreateWorkspace } from '@/lib/services/billing';
 import { recordDeletionTombstone, getRelatedPages } from '@/lib/services/workspace';
@@ -28,7 +27,7 @@ export interface CreateDatabaseOptions {
 export type WorkspaceItemRow = {
   id: string;
   workspaceId: string;
-  type: 'page' | 'database';
+  type: 'page' | 'database' | 'dashboard';
   title: string;
   parentId: string | null;
   sortOrder: number;
@@ -177,7 +176,7 @@ export async function createWorkspace(name: string) {
 }
 
 export async function deleteWorkspace(id: string) {
-  const userId = await assertWorkspaceManagementAccess(id);
+  await assertWorkspaceManagementAccess(id);
   const t = await getTranslations('Errors');
   const tSharing = await getTranslations('Sharing');
 
@@ -211,23 +210,21 @@ export async function deleteWorkspace(id: string) {
   }
 
   revalidatePath('/', 'layout');
-  publish({ scope: 'sidebar', workspaceId: id, actorId: userId });
   return { success: true };
 }
 
 export async function renameWorkspace(id: string, name: string) {
-  const userId = await assertWorkspaceManagementAccess(id);
+  await assertWorkspaceManagementAccess(id);
   await db.update(workspaces)
     .set({ name: name.trim() || 'Untitled', updatedAt: new Date() })
     .where(eq(workspaces.id, id));
 
   revalidatePath('/', 'layout');
-  publish({ scope: 'sidebar', workspaceId: id, actorId: userId });
   return { success: true };
 }
 
 export async function updateWorkspaceIcon(id: string, icon: string | null, iconColor: string | null) {
-  const userId = await assertWorkspaceManagementAccess(id);
+  await assertWorkspaceManagementAccess(id);
 
   const [old] = await db.select({ icon: workspaces.icon }).from(workspaces).where(eq(workspaces.id, id)).limit(1);
   if (isCloudinaryUrl(old?.icon) && old.icon !== icon) {
@@ -239,7 +236,6 @@ export async function updateWorkspaceIcon(id: string, icon: string | null, iconC
     .where(eq(workspaces.id, id));
 
   revalidatePath('/', 'layout');
-  publish({ scope: 'sidebar', workspaceId: id, actorId: userId });
 }
 
 export async function setWorkspaceHidden(id: string, hidden: boolean) {
@@ -251,7 +247,6 @@ export async function setWorkspaceHidden(id: string, hidden: boolean) {
     .where(and(eq(workspaceMembers.workspaceId, id), eq(workspaceMembers.userId, userId)));
 
   revalidatePath('/', 'layout');
-  publish({ scope: 'sidebar', workspaceId: id, actorId: userId });
 }
 
 export async function switchWorkspace(workspaceId: string) {
@@ -427,7 +422,6 @@ export async function createStandalonePage(
   if (parentId) autoShareIfParentShared(itemId, parentId, workspaceId, userId);
 
   revalidatePath('/', 'layout');
-  publish({ scope: 'sidebar', workspaceId, actorId: userId });
   return { itemId, pageId };
 }
 
@@ -472,7 +466,6 @@ export async function createWorkspaceDatabase(
   if (options?.parentId) autoShareIfParentShared(itemId, options.parentId, workspaceId, userId);
 
   revalidatePath('/', 'layout');
-  publish({ scope: 'sidebar', workspaceId, actorId: userId });
   return { itemId, dbId };
 }
 
@@ -509,8 +502,7 @@ export async function updateStandalonePageContent(itemId: string, content: strin
 
 export async function updateWorkspaceItemTitle(itemId: string, title: string) {
   const item = await db.select({ workspaceId: workspaceItems.workspaceId }).from(workspaceItems).where(eq(workspaceItems.id, itemId)).limit(1);
-  let userId: string | undefined;
-  if (item[0]) userId = await assertWorkspaceAccess(item[0].workspaceId);
+  if (item[0]) await assertWorkspaceAccess(item[0].workspaceId);
 
   await db.update(workspaceItems)
     .set({ title, updatedAt: new Date() })
@@ -521,7 +513,6 @@ export async function updateWorkspaceItemTitle(itemId: string, title: string) {
     .where(eq(databases.itemId, itemId));
 
   revalidatePath('/', 'layout');
-  if (item[0] && userId) publish({ scope: 'sidebar', workspaceId: item[0].workspaceId, actorId: userId });
 }
 
 export async function getDatabaseByItemId(itemId: string) {
@@ -534,8 +525,7 @@ export async function getDatabaseByItemId(itemId: string) {
 
 export async function updateWorkspaceItemIcon(itemId: string, icon: string | null, iconColor: string | null) {
   const item = await db.select({ workspaceId: workspaceItems.workspaceId, icon: workspaceItems.icon }).from(workspaceItems).where(eq(workspaceItems.id, itemId)).limit(1);
-  let userId: string | undefined;
-  if (item[0]) userId = await assertWorkspaceAccess(item[0].workspaceId);
+  if (item[0]) await assertWorkspaceAccess(item[0].workspaceId);
 
   if (isCloudinaryUrl(item[0]?.icon) && item[0].icon !== icon) {
     deleteCloudinaryImage(item[0].icon!);
@@ -546,7 +536,6 @@ export async function updateWorkspaceItemIcon(itemId: string, icon: string | nul
     .where(eq(workspaceItems.id, itemId));
 
   revalidatePath('/', 'layout');
-  if (item[0] && userId) publish({ scope: 'sidebar', workspaceId: item[0].workspaceId, actorId: userId });
 }
 
 export async function deleteWorkspaceItem(itemId: string) {
@@ -564,7 +553,6 @@ export async function deleteWorkspaceItem(itemId: string) {
     actor,
   );
   revalidatePath('/', 'layout');
-  publish({ scope: 'sidebar', workspaceId, actorId: userId });
 }
 
 export async function checkItemHasContent(itemId: string): Promise<boolean> {
@@ -591,6 +579,16 @@ export async function checkItemHasContent(itemId: string): Promise<boolean> {
       .where(eq(standalonePages.itemId, itemId))
       .limit(1);
     return !!(page?.content && page.content.trim().length > 0);
+  } else if (item.type === 'dashboard') {
+    // "Has content" gates the delete confirmation. A dashboard counts as
+    // non-empty once it has at least one block.
+    const [dash] = await db
+      .select({ spec: dashboards.spec })
+      .from(dashboards)
+      .where(eq(dashboards.itemId, itemId))
+      .limit(1);
+    const blocks = (dash?.spec as { blocks?: unknown[] } | null)?.blocks;
+    return Array.isArray(blocks) && blocks.length > 0;
   } else {
     // Has any database rows?
     const [row] = await db
@@ -606,7 +604,7 @@ export async function checkItemHasContent(itemId: string): Promise<boolean> {
 async function deleteWorkspaceItemRecursive(
   workspaceId: string,
   itemId: string,
-  type: 'page' | 'database',
+  type: 'page' | 'database' | 'dashboard',
   title: string,
   meta: { parentId: string | null; icon: string | null; iconColor: string | null; sortOrder: number },
   actor: SnapshotActor,
@@ -663,6 +661,21 @@ async function deleteWorkspaceItemRecursive(
       });
     }
     await db.delete(databases).where(eq(databases.itemId, itemId));
+  } else if (type === 'dashboard') {
+    // The spec rides in the snapshot's `content` column as JSON — a restore
+    // needs the whole document back, and a dashboard has no markdown body to
+    // compete for the slot.
+    const [dash] = await db
+      .select({ spec: dashboards.spec })
+      .from(dashboards)
+      .where(eq(dashboards.itemId, itemId))
+      .limit(1);
+    await snapshotBeforeDelete({
+      workspaceId, originalId: itemId, itemType: 'dashboard', title,
+      content: dash ? JSON.stringify(dash.spec) : undefined, icon: meta.icon, iconColor: meta.iconColor,
+      parentId: meta.parentId, sortOrder: meta.sortOrder, deletedBy: actor,
+    });
+    await db.delete(dashboards).where(eq(dashboards.itemId, itemId));
   } else {
     const [content] = await db
       .select({ content: standalonePages.content })
@@ -739,7 +752,7 @@ export async function duplicateWorkspaceItem(itemId: string) {
   const item = await db.select().from(workspaceItems).where(eq(workspaceItems.id, itemId));
   if (!item[0]) return null;
 
-  const userId = await assertWorkspaceAccess(item[0].workspaceId);
+  await assertWorkspaceAccess(item[0].workspaceId);
   const { workspaceId } = item[0];
 
   const newItemId = crypto.randomUUID();
@@ -757,6 +770,21 @@ export async function duplicateWorkspaceItem(itemId: string) {
     updatedAt: now,
   });
 
+  if (item[0].type === 'dashboard') {
+    const [dash] = await db.select().from(dashboards).where(eq(dashboards.itemId, itemId));
+    await db.insert(dashboards).values({
+      id: crypto.randomUUID(),
+      itemId: newItemId,
+      // The spec is copied as-is: its blocks point at the same databases, in
+      // the same workspace, so the duplicate shows the same live numbers.
+      spec: dash?.spec ?? { version: 1, blocks: [] },
+      createdAt: now,
+      updatedAt: now,
+    });
+    revalidatePath('/', 'layout');
+    return { type: 'dashboard' as const, itemId: newItemId };
+  }
+
   if (item[0].type === 'page') {
     const sp = await db.select().from(standalonePages).where(eq(standalonePages.itemId, itemId));
     await db.insert(standalonePages).values({
@@ -768,11 +796,10 @@ export async function duplicateWorkspaceItem(itemId: string) {
     });
     if (sp[0]?.content) await syncPageLinks(workspaceId, newItemId, 'page', sp[0].content);
     revalidatePath('/', 'layout');
-    publish({ scope: 'sidebar', workspaceId, actorId: userId });
     return { type: 'page' as const, itemId: newItemId };
   } else {
     const dbRow = await db.select().from(databases).where(eq(databases.itemId, itemId));
-    if (!dbRow[0]) { revalidatePath('/', 'layout'); publish({ scope: 'sidebar', workspaceId, actorId: userId }); return null; }
+    if (!dbRow[0]) { revalidatePath('/', 'layout'); return null; }
 
     const newDbId = crypto.randomUUID();
     await db.insert(databases).values({
@@ -804,7 +831,6 @@ export async function duplicateWorkspaceItem(itemId: string) {
     }
 
     revalidatePath('/', 'layout');
-    publish({ scope: 'sidebar', workspaceId, actorId: userId });
     return { type: 'database' as const, dbId: newDbId };
   }
 }
@@ -849,10 +875,6 @@ export async function updateWorkspaceItemsOrder(itemIds: string[]) {
     }
   });
   revalidatePath('/', 'layout');
-  const userId = await getCurrentUserAllowingWorkspaceLock().then((u) => u.id);
-  for (const wsId of checkedWorkspaces) {
-    publish({ scope: 'sidebar', workspaceId: wsId, actorId: userId });
-  }
 }
 
 /**
@@ -876,7 +898,7 @@ export async function reparentWorkspaceItem(
     throw new Error(t('itemNotFound'));
   }
 
-  const userId = await assertWorkspaceAccess(item.workspaceId);
+  await assertWorkspaceAccess(item.workspaceId);
   if (targetWorkspaceId !== item.workspaceId) await assertWorkspaceAccess(targetWorkspaceId);
 
   // Cycle guard: a new parent must not be the item itself or one of its descendants.
@@ -916,10 +938,6 @@ export async function reparentWorkspaceItem(
   });
 
   revalidatePath('/', 'layout');
-  publish({ scope: 'sidebar', workspaceId: item.workspaceId, actorId: userId });
-  if (targetWorkspaceId !== item.workspaceId) {
-    publish({ scope: 'sidebar', workspaceId: targetWorkspaceId, actorId: userId });
-  }
 }
 
 export async function moveWorkspaceItemToWorkspace(itemId: string, targetWorkspaceId: string, itemIdsOrder: string[]) {
@@ -929,7 +947,7 @@ export async function moveWorkspaceItemToWorkspace(itemId: string, targetWorkspa
     throw new Error(t('itemNotFound'));
   }
 
-  const userId = await assertWorkspaceAccess(item[0].workspaceId);
+  await assertWorkspaceAccess(item[0].workspaceId);
   await assertWorkspaceAccess(targetWorkspaceId);
 
   await db.update(workspaceItems).set({ workspaceId: targetWorkspaceId }).where(eq(workspaceItems.id, itemId));
@@ -942,8 +960,6 @@ export async function moveWorkspaceItemToWorkspace(itemId: string, targetWorkspa
   }
 
   revalidatePath('/', 'layout');
-  publish({ scope: 'sidebar', workspaceId: item[0].workspaceId, actorId: userId });
-  publish({ scope: 'sidebar', workspaceId: targetWorkspaceId, actorId: userId });
 }
 
 export async function getAdminWorkspacesOverview() {

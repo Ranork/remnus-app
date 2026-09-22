@@ -797,9 +797,12 @@ export default function TableLayout({
                 );
               })
             )}
-            {pages.length > 0 && (
+            {/* Only when the caller can actually create a row. The dashboard
+                embed passes no handler, and a "New" row that quietly did
+                nothing would be worse than no row at all. */}
+            {pages.length > 0 && onCreatePage && (
               <tr
-                onClick={() => onCreatePage?.()}
+                onClick={() => onCreatePage()}
                 className="hover:bg-neutral-800/10 cursor-pointer text-neutral-500 hover:text-neutral-300 transition-colors border-b border-neutral-800/40 group/newrow"
               >
                 <td colSpan={visibleCols.length} className="py-2 px-3 text-xs font-medium">

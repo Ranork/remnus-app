@@ -64,7 +64,9 @@ List workspace items (pages and databases). Supports cursor-based pagination and
 | `limit` | number | | `100` | Items per page |
 | `cursor` | string | | | Pagination cursor from a previous `nextCursor` |
 
-**Returns** — `{ items: [...], hasMore: boolean, nextCursor?: string }`, where each item has `{ id, type, title, parentId, icon, databaseId? }`.
+**Returns** — `{ items: [...], hasMore: boolean, nextCursor?: string }`, where each item has `{ id, type, title, databaseId? }` plus `parentId` and `icon` when they are set (a root item simply has no `parentId`).
+
+**Token tip** — for orientation the workspace map is cheaper and needs no pagination: read the [digest resource](resources.md), or the cached `.remnus/workspace-map.md` in a project set up with `remnus init`. Reach for `list_workspace` when you need one branch of the tree, not the shape of the whole thing.
 
 ---
 
@@ -81,7 +83,7 @@ Get the content of a workspace page or database row. Auto-detects the type — n
 
 **Returns** — `{ id, title, content, properties, type }`. In outline mode the response also carries `mode: "outline"` and `fullContentChars` (the size of the full body), so you can decide whether a `"full"` re-fetch is worth it.
 
-**Token tip** — on long pages, skim with `mode: "outline"` first (typically 80–90% smaller), then fetch `"full"` only when the outline shows the page is relevant.
+**Token tip** — on long pages, skim with `mode: "outline"` first (~80% smaller), then fetch `"full"` only when the outline shows the page is relevant. The workspace map prints each page's body size, so you can choose outline mode before the first read rather than after.
 
 ---
 
@@ -156,7 +158,7 @@ When you only need a few columns (e.g. checking statuses on a board), pass `fiel
 }
 ```
 
-On a typical board this returns ~85% fewer tokens than a full query.
+On a typical board this returns ~82% fewer tokens than a query that also pulls row bodies — and the body-free default is already ~74% of that saving on its own.
 
 **Returns** — `{ schema, rows, hasMore, nextCursor? }` (`schema` trimmed to the requested fields when projecting)
 
@@ -213,14 +215,18 @@ Get a compact, chronological list of everything that changed in the workspace si
 | `updatedAt` | string | When the change happened (ISO 8601) — for `deleted`, when the deletion happened |
 | `databaseId` | string? | Parent database ID, present for `database_row` entries |
 
-**Bootstrapping a sync** — omit both `since` and `cursor` on the first call to crawl everything (every item comes back as `created`). Save the last page's `nextCursor`, or the `updatedAt` of the most recent change, and pass it back as `cursor`/`since` on the next call to pick up only what changed since.
+**`nextCursor` is always returned**, even when `hasMore` is false and even when nothing changed — that is the value to keep for the next call. (It used to be present only mid-pagination, which left a one-page bootstrap with nothing to save.)
+
+**Starting from the map, not from a crawl** — the [digest resource](resources.md) and the cached `.remnus/workspace-map.md` both begin with a `cursor:` line taken before the map was built. Read the map once, then pass that cursor here: you get the delta since the map, not the tree again. Only when you have no map at all is a full bootstrap (omit both `since` and `cursor`) the right first call — every item then comes back as `created`.
+
+**Re-reported entries** — a cursor that lands on the current second is deliberately inclusive of that second, since timestamps are second-granular and another agent may still be writing into it. An entry can therefore appear once more on the following call; dedupe by `id` rather than assuming exactly-once delivery.
 
 ```json
 { "changes": [
   { "id": "…", "type": "page", "title": "Sprint Notes", "changeType": "updated", "updatedAt": "2026-07-04T09:12:00.000Z" },
   { "id": "…", "type": "database_row", "title": "Fix login bug", "changeType": "created", "updatedAt": "2026-07-04T10:03:00.000Z", "databaseId": "…" },
   { "id": "…", "type": "page", "title": "Old Draft", "changeType": "deleted", "updatedAt": "2026-07-04T11:20:00.000Z" }
-], "hasMore": false }
+], "hasMore": false, "nextCursor": "eyJ0cyI6MTc…" }
 ```
 
 **What counts as a change** — a page's own content edit, a database's schema edit, a database row's title/content/property edit, or moving/renaming an item. Deletions are tracked separately as tombstones, so a deleted item still shows up here (with its last known title) even though it no longer exists.

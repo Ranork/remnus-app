@@ -17,6 +17,7 @@ import UpdateBanner from '@/components/features/UpdateBanner';
 import DownloadToast from '@/components/features/DownloadToast';
 import DemoFeedbackPrompt from '@/components/features/DemoFeedbackPrompt';
 import PwaInstallNudge from '@/components/features/PwaInstallNudge';
+import ProjectWindowBanner from '@/components/features/ProjectWindowBanner';
 
 // Layout for the authenticated in-app routes (app / db / page / admin). Lives in the
 // (app) route group so it is NOT shared with public routes (share, marketing, auth) —
@@ -39,6 +40,11 @@ export default async function AppGroupLayout({
     getAllWorkspaceItems(),
     cookies(),
   ]);
+
+  // The one source of truth for "this is a project window" — the session's lock claim.
+  // Never guessed client-side (user agent, window size): the lock is what actually
+  // decides which of the surfaces below would work at all.
+  const isProjectWindow = !!lockClaimsOf(session.user).workspaceLock;
 
   const activeWorkspaceId = cookieStore.get('remnus_workspace_id')?.value;
   const activeWorkspace = workspacesList.find((w) => w.id === activeWorkspaceId) || workspacesList[0];
@@ -75,32 +81,15 @@ export default async function AppGroupLayout({
     </div>
   ) : undefined;
 
-  // Says why account settings, billing and other workspaces are unavailable here, and
-  // offers the way to a full session: signing out lands on the normal login page.
-  const projectWindowBanner = lockClaimsOf(session.user).workspaceLock ? (
-    <div key="project-window-banner" className="shrink-0 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-4 px-4 py-2 bg-neutral-900 border-b border-neutral-800">
-      <span className="text-xs text-neutral-400 truncate min-w-0">
-        {t('projectWindowNotice', { workspace: activeWorkspace?.name ?? '' })}
-      </span>
-      <form
-        action={async () => {
-          'use server';
-          await signOut({ redirectTo: '/login' });
-        }}
-      >
-        <button
-          type="submit"
-          className="shrink-0 text-xs font-medium text-neutral-300 hover:text-neutral-100 transition-colors self-start sm:self-auto"
-        >
-          {t('projectWindowSignIn')}
-        </button>
-      </form>
-    </div>
+  // Says why account settings, billing and other workspaces are unavailable here,
+  // and how to reach the full account from a browser that isn't this isolated profile.
+  const projectWindowBanner = isProjectWindow ? (
+    <ProjectWindowBanner key="project-window-banner" workspaceName={activeWorkspace?.name ?? ''} />
   ) : undefined;
 
   return (
     <>
-      <ActivityTracker />
+      <ActivityTracker isProjectWindow={isProjectWindow} />
       <LastPathTracker ownerTag={lastPathOwnerTag(session.user.id)} />
       {session.user.role === 'demo' && <DemoFeedbackPrompt />}
       {session.user.role !== 'demo' && <PwaInstallNudge />}
@@ -122,6 +111,7 @@ export default async function AppGroupLayout({
               currentUser={currentUser}
               density={sidebarDensity}
               showOnboarding
+              isProjectWindow={isProjectWindow}
             />
           }
           mobileNav={
@@ -131,6 +121,7 @@ export default async function AppGroupLayout({
               workspaces={workspacesList}
               activeWorkspace={activeWorkspace ?? { id: '', name: 'Workspace' }}
               currentUser={currentUser}
+              isProjectWindow={isProjectWindow}
             />
           }
           demoBanner={demoBanner ?? projectWindowBanner}

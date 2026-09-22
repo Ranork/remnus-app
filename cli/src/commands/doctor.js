@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 import { findProjectRoot, readConfig, readCredentials } from '../lib/project.js';
+import { MAP_FILE, readMapMeta, refreshWorkspaceMap } from '../lib/map.js';
 import { bold, detail, dim, fail, ok, say, warn } from '../lib/ui.js';
 
 // Answers one question: is this project's Remnus connection actually working right
@@ -99,6 +100,7 @@ export async function doctorCommand() {
   if (!config?.workspaceId) {
     fail('This project is not connected to Remnus.');
     detail('Run `npx remnus init` in the project directory.');
+    detail('(If a teammate connected it already, make sure you pulled `.remnus/config.json`.)');
     return 1;
   }
 
@@ -114,14 +116,14 @@ export async function doctorCommand() {
   if (!fs.existsSync(mcpFile)) {
     problems += 1;
     fail('.mcp.json is missing, so agents in this project cannot see Remnus.');
-    detail('Run `npx remnus init` to write it again.');
+    detail('Run `npx remnus join` to write it (or `npx remnus init --reconnect` to set this project up again).');
   } else {
     try {
       const doc = JSON.parse(fs.readFileSync(mcpFile, 'utf8'));
       if (!doc?.mcpServers?.remnus) {
         problems += 1;
         fail('.mcp.json has no `remnus` server entry.');
-        detail('Run `npx remnus init` to write it again.');
+        detail('Run `npx remnus join` to write it (or `npx remnus init --reconnect` to set this project up again).');
       } else {
         ok('.mcp.json points at Remnus');
         pinnedVersion = pinnedVersionFrom(doc);
@@ -129,7 +131,7 @@ export async function doctorCommand() {
     } catch {
       problems += 1;
       fail('.mcp.json is not valid JSON.');
-      detail('Fix the file, then run `npx remnus init`.');
+      detail('Fix the file, then run `npx remnus init --reconnect`.');
     }
   }
 
@@ -153,12 +155,12 @@ export async function doctorCommand() {
     if (latest && pinnedVersion && latest !== pinnedVersion) {
       warn(`A newer remnus is available: ${pinnedVersion} → ${bold(latest)}.`);
       detail(`This project is pinned and won't pick it up on its own. In .mcp.json, change`);
-      detail(`"remnus@${pinnedVersion}" to "remnus@${latest}" (or run \`npx remnus init\` to reconnect on it).`);
+      detail(`"remnus@${pinnedVersion}" to "remnus@${latest}" (or run \`npx remnus init --reconnect\` to move the pin).`);
     }
     if (latest && pinnedHookVersion && latest !== pinnedHookVersion) {
       warn(`The SessionStart hook is also pinned to an older remnus: ${pinnedHookVersion} → ${bold(latest)}.`);
       detail(`In .claude/settings.json, change "remnus@${pinnedHookVersion} open" to`);
-      detail(`"remnus@${latest} open" (or run \`npx remnus init\` to reconnect on it).`);
+      detail(`"remnus@${latest} open" (or run \`npx remnus init --reconnect\` to move the pin).`);
     }
   }
 
@@ -172,8 +174,17 @@ export async function doctorCommand() {
   const credentials = readCredentials(root);
   if (!credentials?.token) {
     problems += 1;
-    fail('This project has no stored token.');
-    detail('Run `npx remnus init` to reconnect.');
+    // This is the normal state of a fresh clone, not a broken install: `config.json`
+    // is committed and `credentials.json` is not, so everyone after the first person
+    // arrives here. Saying "init" would send them to a screen offering to replace the
+    // project's connection — the one thing they must not do.
+    fail('This project is connected, but you have no token for it on this machine.');
+    detail('Run `npx remnus join` to get your own.');
+    detail('(Normal after cloning — the token file is personal and never committed.)');
+    // Whether a request is already pending can only be answered by the server, and
+    // this branch is precisely the one with no credential to ask it with. So the
+    // waiting state is described rather than detected: re-running `join` reports it.
+    detail('Already asked the owner for access? Run it again once they approve.');
     return 1;
   }
   ok('Project token is present');
@@ -186,20 +197,41 @@ export async function doctorCommand() {
     warn('.remnus/credentials.json is not listed in .gitignore.');
     detail('Add it before committing — it holds this project\'s token.');
   }
+  // The map is only diff noise if it slips in unintended; not a problem, just a nudge.
+  // Only worth saying when the ignore block exists but predates the map — a project
+  // with no block at all already got the louder warning above.
+  else if (!config.trackMap && !ignoreText.includes(`.remnus/${MAP_FILE}`)) {
+    warn(`.remnus/${MAP_FILE} is not git-ignored (this .gitignore block predates the workspace map).`);
+    detail('Run `npx remnus sync --untrack` to add it, or `npx remnus sync --track` to commit it on purpose.');
+  }
 
   say();
   const probe = await probeConnection(config, credentials.token);
 
   if (probe.state === 'ok') {
     ok('Remnus answered — the connection works.');
+    // While we are here: a connection that works can also refresh the map, which is
+    // what an agent reads first. Failure is reported, not counted — the map is a cache.
+    try {
+      const { cursor } = await refreshWorkspaceMap(root, config, credentials.token);
+      ok(`Refreshed .remnus/${MAP_FILE}`);
+      detail(`cursor ${cursor || '(none)'}`);
+    } catch (err) {
+      const meta = readMapMeta(root);
+      warn(`Could not refresh .remnus/${MAP_FILE}: ${err?.message ?? err}`);
+      detail(meta?.generated ? `The copy from ${meta.generated} is still there.` : 'Agents will read the digest resource instead.');
+    }
   } else if (probe.state === 'revoked') {
     problems += 1;
     fail('Remnus rejected the token — it was revoked or has expired.');
-    detail('Run `npx remnus init` to reconnect.');
+    // Also what someone sees after joining from a second machine: each join revokes
+    // this person's previous token for this project, so the older one stops working.
+    detail('Run `npx remnus join` to get a fresh one.');
+    detail('If you are also connected from another machine, that one replaced this token.');
   } else if (probe.state === 'wrong-workspace') {
     problems += 1;
     fail('The token belongs to a different workspace than this project is configured for.');
-    detail('Run `npx remnus init` to reconnect.');
+    detail('Run `npx remnus join` to get a token for the workspace this project names.');
   } else if (probe.state === 'unreachable') {
     problems += 1;
     fail(`Could not reach Remnus (${probe.message ?? 'network error'}).`);

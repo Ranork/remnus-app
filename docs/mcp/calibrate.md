@@ -226,7 +226,7 @@ later with `create_database_view`:
 
 Give select/status columns real options; they're colored automatically.
 
-**Build in batches.** `bulk_create_pages` creates up to 50 pages or rows per call — use it
+**Build in batches.** `bulk_create_pages` creates up to 100 pages or rows per call — use it
 for every database's rows and for each section's pages. One `create_page` per row turns a
 ten-minute job into a forty-minute one.
 

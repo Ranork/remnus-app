@@ -2,23 +2,25 @@
 import { useEffect, useRef, useState, useTransition } from 'react';
 import { ArrowLeft, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { TEMPLATES, type TemplateDefinition, type DatabaseTemplateDefinition, type PageTemplateDefinition } from '@/lib/templates';
+import { TEMPLATES, type TemplateDefinition, type DashboardTemplateDefinition, type DatabaseTemplateDefinition, type PageTemplateDefinition } from '@/lib/templates';
 import { createStandalonePage, createWorkspaceDatabase, switchWorkspace } from '@/lib/actions/workspace';
+import { createDashboard } from '@/lib/actions/dashboard';
 import { createPage } from '@/lib/actions/page';
 
 interface TemplatePickerModalProps {
   workspaceId: string;
   activeWorkspaceId: string;
   onClose: () => void;
-  /** navId = URL id (dbId for databases, itemId for pages), sidebarItemId = workspace_items.id */
-  onCreated: (type: 'page' | 'database', navId: string, tempId: string, sidebarItemId?: string) => void;
+  /** navId = URL id (dbId for databases, itemId for pages and dashboards), sidebarItemId = workspace_items.id */
+  onCreated: (type: 'page' | 'database' | 'dashboard', navId: string, tempId: string, sidebarItemId?: string) => void;
   /** Called immediately on Create click with a temp ID — for optimistic sidebar insertion */
-  onOptimisticCreate?: (type: 'page' | 'database', tempId: string, title: string, icon: string | null, iconColor: string | null) => void;
+  onOptimisticCreate?: (type: 'page' | 'database' | 'dashboard', tempId: string, title: string, icon: string | null, iconColor: string | null) => void;
   parentId?: string;
 }
 
-const BLANK_TEMPLATES = TEMPLATES.filter(t => t.id === 'page-blank' || t.id === 'db-blank');
-const OTHER_TEMPLATES = TEMPLATES.filter(t => t.id !== 'page-blank' && t.id !== 'db-blank');
+const BLANK_IDS = ['page-blank', 'db-blank', 'dashboard-blank'];
+const BLANK_TEMPLATES = TEMPLATES.filter(t => BLANK_IDS.includes(t.id));
+const OTHER_TEMPLATES = TEMPLATES.filter(t => !BLANK_IDS.includes(t.id));
 
 export default function TemplatePickerModal({
   workspaceId,
@@ -37,6 +39,7 @@ export default function TemplatePickerModal({
       'Meeting Notes': t('meetingNotes'),
       'Project Brief': t('projectBrief'),
       'Blank Database': t('blankDatabase'),
+      'Blank Dashboard': t('blankDashboard'),
       'Task Tracker': t('taskTracker'),
       'Event Calendar': t('eventCalendar'),
       'Reading List': t('readingList'),
@@ -51,6 +54,7 @@ export default function TemplatePickerModal({
       'Meeting Notes': t('meetingNotesDesc'),
       'Project Brief': t('projectBriefDesc'),
       'Blank Database': t('blankDatabaseDesc'),
+      'Blank Dashboard': t('blankDashboardDesc'),
       'Task Tracker': t('taskTrackerDesc'),
       'Event Calendar': t('eventCalendarDesc'),
       'Reading List': t('readingListDesc'),
@@ -92,7 +96,7 @@ export default function TemplatePickerModal({
   const handleCreate = () => {
     if (!selectedTemplate || !title.trim() || isPending) return;
 
-    const type = selectedTemplate.category as 'page' | 'database';
+    const type = selectedTemplate.category as 'page' | 'database' | 'dashboard';
     const tempId = `temp-${crypto.randomUUID().slice(0, 8)}`;
     const icon = selectedTemplate.icon ?? null;
     const iconColor = selectedTemplate.iconColor ?? null;
@@ -106,7 +110,15 @@ export default function TemplatePickerModal({
       if (workspaceId !== activeWorkspaceId) {
         await switchWorkspace(workspaceId);
       }
-      if (type === 'page') {
+      if (type === 'dashboard') {
+        const dashTpl = selectedTemplate as DashboardTemplateDefinition;
+        const { itemId } = await createDashboard(workspaceId, title.trim(), parentId, {
+          spec: dashTpl.spec,
+          icon,
+          iconColor,
+        });
+        onCreated('dashboard', itemId, tempId);
+      } else if (type === 'page') {
         const pageTpl = selectedTemplate as PageTemplateDefinition;
         const { itemId } = await createStandalonePage(workspaceId, title.trim(), parentId, {
           initialContent: pageTpl.initialContent,
@@ -166,7 +178,7 @@ export default function TemplatePickerModal({
               <p className="text-[10px] font-semibold text-neutral-500 uppercase tracking-widest mb-3">
                 {t('groupBlank')}
               </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
                 {BLANK_TEMPLATES.map(template => (
                   <TemplateCard
                     key={template.id}

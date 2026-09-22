@@ -68,7 +68,7 @@ Strict; write scope, yetkilendirme veya yıkıcı işlem onayının yerini almaz
 | `get_changes_since` | read | Belirli bir timestamp'ten beri olan tüm değişiklikleri çekme (delta-sync) |
 | `get_related_pages` | read | Link graph analizi (parent/child/backlink bulma) |
 | `create_page` | write | Yeni doküman veya task (satır) oluşturma |
-| `bulk_create_pages` | write | **(Ajanlara Özel)** Tek çağrıda en fazla 50 sayfa veya satır oluşturma; aynı çağrıda oluşturulan sayfaları iç içe yerleştirme |
+| `bulk_create_pages` | write | **(Ajanlara Özel)** Tek çağrıda en fazla 100 sayfa veya satır oluşturma; aynı çağrıda oluşturulan sayfaları iç içe yerleştirme |
 | `update_page` | write | Mevcut sayfanın içeriğini veya properties (durum, etiket vb.) güncelleme |
 | `bulk_update_pages` | write | **(Ajanlara Özel)** Tek çağrıda onlarca satırı (örn: 50 taskın durumunu) güncelleme |
 | `delete_page` | write | Sayfa silme (`confirm: true` zorunlu koruması ile) |

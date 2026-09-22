@@ -1,7 +1,11 @@
+// Results carry the JSON twice (content text + structuredContent) on purpose, and
+// only `description` + `inputSchema` reach the model — see the note at the top of
+// tools/read.ts before trimming either.
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import {
   createPageInWorkspace,
+  createPagesInWorkspaceBulk,
   updatePageById,
   bulkUpdatePages,
   deleteItemFromWorkspace,
@@ -17,7 +21,6 @@ import {
   getAnyPageById,
   type SnapshotActor,
 } from '@/lib/services/workspace';
-import { publish } from '@/lib/realtime/publish';
 import { logActivity, type TokenContext } from '../context';
 import { recordGeneratedKnowledge, validateContextRunForWrite } from '@/lib/services/knowledge';
 import { applyRecurrenceInput, changeRecurrenceForRow } from '@/lib/services/recurrence';
@@ -25,7 +28,10 @@ import { addPageComment, MAX_COMMENT_LENGTH } from '@/lib/services/comments';
 import { iconInputError, ICON_COLOR_KEYS } from '@/lib/icons';
 
 const READ_ONLY_ERROR = 'Error: This token only has read scope. A write-scoped token is required.';
-const CONTEXT_RUN_ID = z.string().uuid().optional().describe('prepare_context contextRunId. Required for mutations when the workspace uses Strict context.');
+// Not `.uuid()`: the format check serialized as a ~180-byte regex in every one of
+// the 14 write tools' schemas, and the run is looked up by id anyway — a malformed
+// value fails exactly like an unknown one.
+const CONTEXT_RUN_ID = z.string().max(64).optional().describe('From prepare_context; required in Strict context');
 // Flattened rule (`until`/`count` instead of the nested `end` union) — a tool
 // schema reads better without a discriminated union, and every field beyond
 // `freq` is optional so the common "every Monday" call stays one line.
@@ -37,11 +43,11 @@ const RECURRENCE_INPUT = z.object({
   byWeekday: z.array(z.enum(['MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU'])).optional(),
   monthlyMode: z.enum(['dayOfMonth', 'nthWeekday', 'lastDay']).optional(),
   byMonthDay: z.number().int().min(1).max(31).optional(),
-  bySetPos: z.union([z.literal(-1), z.literal(1), z.literal(2), z.literal(3), z.literal(4)]).optional().describe('-1 = last'),
+  bySetPos: z.literal([-1, 1, 2, 3, 4]).optional().describe('-1 = last'),
   until: z.string().optional().describe('YYYY-MM-DD, inclusive'),
   count: z.number().int().min(1).max(500).optional(),
   dateColumn: z.string().optional().describe('Column id or name; defaults to the first date column'),
-}).optional().describe('Repeat this database row on a schedule. Occurrences are created as real rows.');
+}).optional().describe('Repeat this row on a schedule; occurrences become real rows');
 
 const KNOWLEDGE_INPUT = z.object({
   conceptType: z.string().max(120).optional(),
@@ -50,7 +56,7 @@ const KNOWLEDGE_INPUT = z.object({
   sources: z.array(z.object({ resource: z.string().max(2_000), title: z.string().max(300).optional() })).max(20).optional(),
   status: z.enum(['draft', 'stable', 'deprecated']).optional(),
   staleAfter: z.string().max(40).optional(),
-}).optional().describe('Optional OKF-aligned knowledge metadata. Agent-authored knowledge remains draft/machine-confirmed until a Remnus user reviews the exact revision.');
+}).optional().describe('OKF knowledge metadata; agent-authored entries stay draft until a human reviews that revision');
 
 // Icons the sidebar can draw: an emoji or a curated Lucide name. Names are checked in the
 // handlers (iconInputError) rather than listed here — tools/list is a fixed per-session
@@ -59,6 +65,11 @@ const ICON_INPUT = z.string().max(32).optional().describe('Emoji or "lucide:Name
 const ICON_COLOR_INPUT = z.enum(ICON_COLOR_KEYS).optional().describe('Color for a lucide icon');
 const ICON_PATCH_INPUT = z.string().max(32).nullable().optional().describe('Emoji or "lucide:Name"; null clears');
 const ICON_COLOR_PATCH_INPUT = z.enum(ICON_COLOR_KEYS).nullable().optional().describe('Color for a lucide icon; null clears');
+const COLUMN_INPUT = z.object({
+  name: z.string(),
+  type: z.string().describe('text | number | select | multi_select | status | user | multi_user | date | datetime | checkbox | url | email | phone'),
+  options: z.array(z.any()).optional().describe('For select/multi_select/status; a status option may carry group: "todo" | "in_progress" | "complete". user/multi_user need none.'),
+});
 const VIEW_INPUT = z.object({
   name: z.string().max(80),
   type: z.enum(['table', 'kanban', 'calendar']),
@@ -101,13 +112,13 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
   server.registerTool(
     'create_page',
     {
-      description: 'Create a new standalone page (use parentId to nest it) or a database row (use databaseId). Give it an icon so the sidebar reads well; for several pages or rows use bulk_create_pages. For rows, `properties` keys may be column names or ids (matched case-insensitively); `title` is always mirrored into the row\'s own title property.',
+      description: 'Create a standalone page (parentId to nest it) or a database row (databaseId). Give it an icon. For several, use bulk_create_pages. Row `properties` keys may be column names or ids (case-insensitive); `title` is mirrored into the row\'s title property.',
       inputSchema: {
-        title: z.string().describe('Page title'),
-        content: z.string().optional().describe('Initial markdown content'),
-        parentId: z.string().optional().describe('Parent workspace item ID (for standalone pages)'),
-        databaseId: z.string().optional().describe('Database ID (creates a database row instead of a page)'),
-        properties: z.record(z.string(), z.any()).optional().describe('Initial properties (for database rows)'),
+        title: z.string(),
+        content: z.string().optional().describe('Markdown'),
+        parentId: z.string().optional().describe('Nest under this item (pages only)'),
+        databaseId: z.string().optional().describe('Create a row here instead of a page'),
+        properties: z.record(z.string(), z.any()).optional().describe('Row properties'),
         icon: ICON_INPUT,
         iconColor: ICON_COLOR_INPUT,
         recurrence: RECURRENCE_INPUT,
@@ -154,7 +165,6 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
         const out = { id: result.id, type: result.type, knowledgeCaptured, ...series };
         const text = JSON.stringify(out);
         await logActivity(ctx, 'create_page', 'success', result.type, result.id, text);
-        publish({ scope: databaseId ? 'database' : 'sidebar', workspaceId: ctx.workspaceId, resourceId: databaseId, actorId: actorId(ctx) });
         return { content: [{ type: 'text' as const, text }], structuredContent: out };
       } catch (err) {
         await logActivity(ctx, 'create_page', 'error');
@@ -166,17 +176,17 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
   server.registerTool(
     'update_page',
     {
-      description: 'Update a page or database row. Only the fields you pass are changed — omit a field to leave it untouched. For rows, `properties` are merged into the existing values (not replaced), and `title` also updates the row\'s title property so the change shows up in table views.',
+      description: 'Update a page or row. Only the fields you pass change. `content` replaces the whole body; row `properties` are merged into the existing values, not replaced; `title` also updates the row\'s title property.',
       inputSchema: {
-        pageId: z.string().describe('The workspace item ID or database row ID to update'),
-        title: z.string().optional().describe('New title'),
-        content: z.string().optional().describe('New markdown content'),
-        properties: z.record(z.string(), z.any()).optional().describe('Properties to merge (for database rows)'),
+        pageId: z.string().describe('Page or row id'),
+        title: z.string().optional(),
+        content: z.string().optional().describe('Markdown; replaces the body'),
+        properties: z.record(z.string(), z.any()).optional().describe('Merged into the row\'s properties'),
         icon: ICON_PATCH_INPUT,
         iconColor: ICON_COLOR_PATCH_INPUT,
         recurrence: RECURRENCE_INPUT,
         recurrenceScope: z.enum(['thisAndFollowing', 'all']).optional()
-          .describe('Required when the row ALREADY repeats: "thisAndFollowing" leaves earlier cards untouched, "all" re-rhythms the whole series. Ask the user rather than guessing.'),
+          .describe('Required when the row ALREADY repeats: "thisAndFollowing" leaves earlier cards untouched, "all" re-rhythms the whole series. Ask the user rather than guess.'),
         knowledge: KNOWLEDGE_INPUT,
         contextRunId: CONTEXT_RUN_ID,
       },
@@ -222,7 +232,6 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
         const out = { updated: true, id: pageId, knowledgeCaptured, ...series };
         const text = JSON.stringify(out);
         await logActivity(ctx, 'update_page', 'success', 'page', pageId, text);
-        publish({ scope: 'page', workspaceId: ctx.workspaceId, resourceId: pageId, actorId: actorId(ctx) });
         return { content: [{ type: 'text' as const, text }], structuredContent: out };
       } catch (err) {
         await logActivity(ctx, 'update_page', 'error', 'page', pageId);
@@ -234,16 +243,16 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
   server.registerTool(
     'bulk_update_pages',
     {
-      description: 'Update multiple pages or database rows in one call — same merge semantics as update_page per entry (partial patch, properties merged, title synced). Updates run concurrently and are NOT atomic: if one entry fails the call returns an error, but entries that already succeeded stay applied and the error does not say which ones. Validate ids first for large batches, and re-read before retrying after a failure.',
+      description: 'Update many pages/rows in one call, each with update_page\'s rules (partial patch, properties merged, title synced). Concurrent and NOT atomic: on an error, entries that already succeeded stay applied and the error does not say which — re-read before retrying.',
       inputSchema: {
         updates: z.array(z.object({
-          pageId: z.string().describe('The workspace item ID or database row ID to update'),
-          title: z.string().optional().describe('New title'),
-          content: z.string().optional().describe('New markdown content'),
-          properties: z.record(z.string(), z.any()).optional().describe('Properties to merge'),
+          pageId: z.string().describe('Page or row id'),
+          title: z.string().optional(),
+          content: z.string().optional().describe('Replaces the body'),
+          properties: z.record(z.string(), z.any()).optional().describe('Merged'),
           icon: ICON_PATCH_INPUT,
           iconColor: ICON_COLOR_PATCH_INPUT,
-        })).describe('List of updates to apply'),
+        })),
         contextRunId: CONTEXT_RUN_ID,
       },
       outputSchema: z.object({
@@ -267,11 +276,11 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
         return iconErrorResult(iconProblem);
       }
       try {
-        const results = await bulkUpdatePages(ctx.workspaceId, updates, { tokenId: ctx.tokenId }, agentActor(ctx));
-        await Promise.allSettled(updates.map(update => recordGeneratedKnowledge(ctx.workspaceId, update.pageId, actorId(ctx))));
+        const results = await bulkUpdatePages(ctx.workspaceId, updates, { tokenId: ctx.tokenId }, agentActor(ctx), { generatedBy: actorId(ctx) });
         const text = JSON.stringify(results);
-        await logActivity(ctx, 'bulk_update_pages', 'success', undefined, undefined, text);
-        publish({ scope: 'database', workspaceId: ctx.workspaceId, actorId: actorId(ctx) });
+        await logActivity(ctx, 'bulk_update_pages', 'success', undefined, undefined, text, {
+          itemsAffected: results.filter(r => r.updated).length,
+        });
         return { content: [{ type: 'text' as const, text }], structuredContent: { results } };
       } catch (err) {
         await logActivity(ctx, 'bulk_update_pages', 'error');
@@ -283,19 +292,19 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
   server.registerTool(
     'bulk_create_pages',
     {
-      description: 'Create up to 50 standalone pages and/or database rows in one call — the fast way to fill a database or lay out a section. Entries run in order and are NOT atomic: each reports its own ok/error. Nest a page under one created earlier in the same call with `ref` + `parentRef`.',
+      description: 'Create up to 100 pages and/or rows in one call — the fast way to fill a database or lay out a section. In order, NOT atomic: each entry reports its own ok/error. Nest under an entry created earlier in the call with `ref` + `parentRef`.',
       inputSchema: {
         pages: z.array(z.object({
-          ref: z.string().max(64).optional().describe('Label that later entries can use as parentRef'),
-          title: z.string().describe('Page title (plain text)'),
-          content: z.string().optional().describe('Markdown content'),
-          parentId: z.string().optional().describe('Existing parent item ID'),
-          parentRef: z.string().max(64).optional().describe('ref of a page created earlier in this call'),
-          databaseId: z.string().optional().describe('Creates a row in this database'),
+          ref: z.string().max(64).optional().describe('Label for parentRef of later entries'),
+          title: z.string(),
+          content: z.string().optional().describe('Markdown'),
+          parentId: z.string().optional().describe('Existing parent id'),
+          parentRef: z.string().max(64).optional().describe('ref of an earlier entry in this call'),
+          databaseId: z.string().optional().describe('Creates a row here'),
           properties: z.record(z.string(), z.any()).optional().describe('Row properties'),
           icon: ICON_INPUT,
           iconColor: ICON_COLOR_INPUT,
-        })).min(1).max(50).describe('Pages or rows to create, in order'),
+        })).min(1).max(100),
         contextRunId: CONTEXT_RUN_ID,
       },
       outputSchema: z.object({
@@ -321,63 +330,27 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
       const contextError = await requireContext(ctx, contextRunId, 'bulk_create_pages');
       if (contextError) return contextError;
 
-      // Sequential on purpose: a row takes the next sort position in its database, and a
-      // parentRef can only resolve to an entry that has already been created.
-      const createdByRef = new Map<string, string>();
-      const results: Array<{ index: number; ok: boolean; id?: string; type?: string; ref?: string; error?: string }> = [];
-      const touchedDatabases = new Set<string>();
-      let touchedSidebar = false;
-
-      for (let index = 0; index < entries.length; index++) {
-        const entry = entries[index];
-        const base = { index, ...(entry.ref ? { ref: entry.ref } : {}) };
-        try {
-          const iconProblem = iconInputError(entry.icon, entry.iconColor);
-          if (iconProblem) throw new Error(iconProblem);
-          if (entry.parentRef && (entry.parentId || entry.databaseId)) {
-            throw new Error('Pass parentRef on its own, not together with parentId or databaseId.');
-          }
-          if (entry.ref && createdByRef.has(entry.ref)) {
-            throw new Error(`ref "${entry.ref}" is already used by an earlier entry in this call.`);
-          }
-          let parentId = entry.parentId;
-          if (entry.parentRef) {
-            parentId = createdByRef.get(entry.parentRef);
-            if (!parentId) throw new Error(`parentRef "${entry.parentRef}" does not name a page created earlier in this call.`);
-          }
-
-          const result = await createPageInWorkspace(
-            ctx.workspaceId,
-            {
-              title: entry.title,
-              content: entry.content,
-              parentId,
-              databaseId: entry.databaseId,
-              properties: entry.properties,
-              icon: entry.icon,
-              iconColor: entry.iconColor,
-            },
-            { tokenId: ctx.tokenId },
-          );
-          if (entry.ref && result.type === 'page') createdByRef.set(entry.ref, result.id);
-          if (entry.databaseId) touchedDatabases.add(entry.databaseId);
-          else touchedSidebar = true;
-          results.push({ ...base, ok: true, id: result.id, type: result.type });
-        } catch (err) {
-          results.push({ ...base, ok: false, error: err instanceof Error ? err.message : String(err) });
-        }
+      // One batched write for the whole call — per-entry ok/error is unchanged,
+      // it is just decided in memory before the batch runs rather than by
+      // letting each entry take its own trip to the database. See
+      // createPagesInWorkspaceBulk.
+      let out;
+      try {
+        out = await createPagesInWorkspaceBulk(
+          ctx.workspaceId,
+          entries,
+          { tokenId: ctx.tokenId },
+          { generatedBy: actorId(ctx) },
+        );
+      } catch (err) {
+        await logActivity(ctx, 'bulk_create_pages', 'error');
+        return { content: [{ type: 'text' as const, text: `Error: ${String(err)}` }], isError: true };
       }
 
-      const createdIds = results.flatMap((r) => (r.ok && r.id ? [r.id] : []));
-      await Promise.allSettled(createdIds.map((id) => recordGeneratedKnowledge(ctx.workspaceId, id, actorId(ctx))));
-
-      const out = { requested: entries.length, succeeded: createdIds.length, failed: entries.length - createdIds.length, results };
       const text = JSON.stringify(out);
-      await logActivity(ctx, 'bulk_create_pages', createdIds.length > 0 ? 'success' : 'error', undefined, undefined, text);
-      if (touchedSidebar) publish({ scope: 'sidebar', workspaceId: ctx.workspaceId, actorId: actorId(ctx) });
-      for (const databaseId of touchedDatabases) {
-        publish({ scope: 'database', workspaceId: ctx.workspaceId, resourceId: databaseId, actorId: actorId(ctx) });
-      }
+      await logActivity(ctx, 'bulk_create_pages', out.succeeded > 0 ? 'success' : 'error', undefined, undefined, text, {
+        itemsAffected: out.succeeded,
+      });
       return { content: [{ type: 'text' as const, text }], structuredContent: out };
     },
   );
@@ -385,10 +358,10 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
   server.registerTool(
     'delete_page',
     {
-      description: 'Delete a workspace page, database, or database row. Requires confirm: true to execute — omit or set false to preview what would be deleted.',
+      description: 'Delete a page, database or row. Without confirm: true it only returns a preview of what would be deleted.',
       inputSchema: {
-        pageId: z.string().describe('The workspace item ID or database row ID to delete'),
-        confirm: z.boolean().optional().default(false).describe('Set to true to confirm deletion. Without this flag, returns a preview of what would be deleted.'),
+        pageId: z.string().describe('Page or row id'),
+        confirm: z.boolean().optional().default(false),
         contextRunId: CONTEXT_RUN_ID,
       },
       outputSchema: z.object({
@@ -415,7 +388,6 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
         const out = { deleted: true, id: pageId };
         const text = JSON.stringify(out);
         await logActivity(ctx, 'delete_page', 'success', result.type, pageId, text);
-        publish({ scope: result.type === 'db-row' ? 'database' : 'sidebar', workspaceId: ctx.workspaceId, actorId: actorId(ctx) });
         return { content: [{ type: 'text' as const, text }], structuredContent: out };
       } catch (err) {
         await logActivity(ctx, 'delete_page', 'error', 'page', pageId);
@@ -427,10 +399,10 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
   server.registerTool(
     'bulk_delete_pages',
     {
-      description: 'Delete multiple workspace pages, databases, or database rows in one call (max 100). Requires confirm: true to execute — omit or set false to preview what would be deleted. Deletions run concurrently and each entry reports its own ok/error, so one bad id cannot sink the rest of the batch (unlike bulk_update_pages).',
+      description: 'Delete up to 100 pages, databases or rows. Without confirm: true it only previews. Each entry reports its own ok/error, so one bad id does not sink the batch.',
       inputSchema: {
-        pageIds: z.array(z.string()).max(100).describe('Workspace item IDs or database row IDs to delete'),
-        confirm: z.boolean().optional().default(false).describe('Set to true to confirm deletion. Without this flag, returns a preview of what would be deleted.'),
+        pageIds: z.array(z.string()).max(100),
+        confirm: z.boolean().optional().default(false),
         contextRunId: CONTEXT_RUN_ID,
       },
       outputSchema: z.object({
@@ -478,7 +450,6 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
         const out = { deleted: true, requested: pageIds.length, succeeded, failed: results.length - succeeded, results };
         const text = JSON.stringify(out);
         await logActivity(ctx, 'bulk_delete_pages', 'success', undefined, undefined, text);
-        publish({ scope: 'sidebar', workspaceId: ctx.workspaceId, actorId: actorId(ctx) });
         return { content: [{ type: 'text' as const, text }], structuredContent: out };
       } catch (err) {
         await logActivity(ctx, 'bulk_delete_pages', 'error');
@@ -490,10 +461,10 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
   server.registerTool(
     'move_item',
     {
-      description: 'Move a sidebar item (page or database) to a new parent within the workspace. Pass null to move to workspace root.',
+      description: 'Move a page or database under a new parent; null = workspace root.',
       inputSchema: {
-        itemId: z.string().describe('The workspace item ID to move'),
-        newParentId: z.string().nullish().describe('New parent item ID. Pass null or omit to move to workspace root.'),
+        itemId: z.string(),
+        newParentId: z.string().nullish().describe('null or omitted = root'),
         contextRunId: CONTEXT_RUN_ID,
       },
       outputSchema: z.object({
@@ -512,7 +483,6 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
         const result = await moveItemInWorkspace(ctx.workspaceId, itemId, newParentId ?? null);
         const text = JSON.stringify(result);
         await logActivity(ctx, 'move_item', 'success', 'item', itemId, text);
-        publish({ scope: 'sidebar', workspaceId: ctx.workspaceId, actorId: actorId(ctx) });
         return { content: [{ type: 'text' as const, text }], structuredContent: result };
       } catch (err) {
         await logActivity(ctx, 'move_item', 'error', 'item', itemId);
@@ -524,11 +494,11 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
   server.registerTool(
     'bulk_move_items',
     {
-      description: 'Move multiple items in one call (max 100). Pass newParentId to reparent workspace items (pages/databases) within the sidebar — same semantics as move_item, batched. Pass targetDatabaseId to move database rows to a DIFFERENT database — refused entirely (no rows moved) if the target database\'s columns don\'t cover the source columns by name and type, naming the missing/mismatched columns; never silently drops a property. Exactly one of newParentId or targetDatabaseId must be given.',
+      description: 'Move up to 100 items. newParentId: reparent pages/databases in the sidebar (null = root). targetDatabaseId: move rows to another database — refused entirely, naming the columns, unless the target covers every source column by name and type; never silently drops a property. Pass exactly one of the two.',
       inputSchema: {
-        itemIds: z.array(z.string()).max(100).describe('IDs to move'),
-        newParentId: z.string().nullable().optional().describe('Sidebar mode: new parent item ID, or null for workspace root'),
-        targetDatabaseId: z.string().optional().describe('Cross-database mode: destination database ID for row(s)'),
+        itemIds: z.array(z.string()).max(100),
+        newParentId: z.string().nullable().optional().describe('Sidebar mode; null = root'),
+        targetDatabaseId: z.string().optional().describe('Row mode: destination database'),
         contextRunId: CONTEXT_RUN_ID,
       },
       outputSchema: z.object({
@@ -564,7 +534,6 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
         const out = { requested: itemIds.length, succeeded, failed: results.length - succeeded, results };
         const text = JSON.stringify(out);
         await logActivity(ctx, 'bulk_move_items', 'success', undefined, undefined, text);
-        publish({ scope: hasTarget ? 'database' : 'sidebar', workspaceId: ctx.workspaceId, actorId: actorId(ctx) });
         return { content: [{ type: 'text' as const, text }], structuredContent: out };
       } catch (err) {
         await logActivity(ctx, 'bulk_move_items', 'error');
@@ -576,18 +545,14 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
   server.registerTool(
     'create_database',
     {
-      description: 'Create a new database with a custom schema (a "Title" column is always prepended). Give it an icon, and pass `views` for the kanban/calendar views people will use — a Table view always exists.',
+      description: 'Create a database (a Title column is always first). Give it an icon, and pass `views` for the kanban/calendar views people will use — a Table view always exists.',
       inputSchema: {
-        name: z.string().describe('Database name'),
-        parentId: z.string().optional().describe('Parent workspace item ID (omit for root)'),
-        schema: z.array(z.object({
-          name: z.string().describe('Column name'),
-          type: z.string().describe('Column type: text | number | select | multi_select | status | user | multi_user | date | datetime | checkbox | url | email | phone'),
-          options: z.array(z.any()).optional().describe('Options for select/multi_select/status columns. For status, each option may include a group: "todo" | "in_progress" | "complete". user/multi_user store workspace member user ids and need no options.'),
-        })).optional().describe('Column definitions. Omit to use default schema (Title + Status).'),
+        name: z.string(),
+        parentId: z.string().optional().describe('Omit for root'),
+        schema: z.array(COLUMN_INPUT).optional().describe('Omit for the default Title + Status'),
         icon: ICON_INPUT,
         iconColor: ICON_COLOR_INPUT,
-        views: z.array(VIEW_INPUT).max(5).optional().describe('Extra views to create with it'),
+        views: z.array(VIEW_INPUT).max(5).optional(),
         knowledge: KNOWLEDGE_INPUT,
         contextRunId: CONTEXT_RUN_ID,
       },
@@ -628,7 +593,6 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
         const out = { id: result.id, databaseId: result.databaseId, knowledgeCaptured, ...(viewResults.length ? { views: viewResults } : {}) };
         const text = JSON.stringify(out);
         await logActivity(ctx, 'create_database', 'success', 'database', result.databaseId, text);
-        publish({ scope: 'sidebar', workspaceId: ctx.workspaceId, actorId: actorId(ctx) });
         return { content: [{ type: 'text' as const, text }], structuredContent: out };
       } catch (err) {
         await logActivity(ctx, 'create_database', 'error');
@@ -640,16 +604,12 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
   server.registerTool(
     'update_database_schema',
     {
-      description: 'Add or remove columns from a database schema. Removing columns is destructive (data loss) and requires confirm: true. The title column cannot be removed.',
+      description: 'Add or remove columns. Removing is destructive (data loss) and needs confirm: true. The title column cannot be removed.',
       inputSchema: {
-        databaseId: z.string().describe('Database ID (from list_workspace or search)'),
-        addColumns: z.array(z.object({
-          name: z.string().describe('Column name'),
-          type: z.string().describe('Column type: text | number | select | multi_select | status | user | multi_user | date | datetime | checkbox | url | email | phone'),
-          options: z.array(z.any()).optional().describe('Options for select/multi_select/status columns. For status, each option may include a group: "todo" | "in_progress" | "complete". user/multi_user store workspace member user ids and need no options.'),
-        })).optional().describe('Columns to add'),
-        removeColumnIds: z.array(z.string()).optional().describe('Column IDs to remove (use get_database_schema to find IDs). Cannot remove the title column.'),
-        confirm: z.boolean().optional().default(false).describe('Required when removing columns. Set to true to confirm the destructive operation.'),
+        databaseId: z.string(),
+        addColumns: z.array(COLUMN_INPUT).optional(),
+        removeColumnIds: z.array(z.string()).optional().describe('Ids from get_database_schema'),
+        confirm: z.boolean().optional().default(false).describe('Required to remove columns'),
         contextRunId: CONTEXT_RUN_ID,
       },
       outputSchema: z.object({
@@ -669,7 +629,6 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
         const result = await updateDatabaseSchemaById(ctx.workspaceId, databaseId, { addColumns, removeColumnIds }, confirm ?? false);
         const text = JSON.stringify(result);
         await logActivity(ctx, 'update_database_schema', 'success', 'database', databaseId, text);
-        publish({ scope: 'database', workspaceId: ctx.workspaceId, resourceId: databaseId, actorId: actorId(ctx) });
         return { content: [{ type: 'text' as const, text }], structuredContent: result };
       } catch (err) {
         await logActivity(ctx, 'update_database_schema', 'error', 'database', databaseId);
@@ -689,15 +648,15 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
   server.registerTool(
     'create_database_view',
     {
-      description: 'Add a new saved view (table, kanban, or calendar) to a database. Kanban groups by a select/status column (auto-picks one if omitted); calendar places cards by a date/datetime column (auto-picks one if omitted). Use get_database_schema first to see column ids/names.',
+      description: 'Add a table, kanban or calendar view. Kanban groups by a select/status column and calendar places cards by a date/datetime column — each auto-picked when omitted.',
       inputSchema: {
-        databaseId: z.string().describe('Database ID (from list_workspace or search)'),
-        name: z.string().describe('Name for the new view (e.g. "By Assignee")'),
-        type: z.enum(['table', 'kanban', 'calendar']).describe('View type'),
-        groupByCol: z.string().optional().describe('Kanban only: select/status column id or name to group by. Auto-picks the first status/select column if omitted.'),
-        dateCol: z.string().optional().describe('Calendar only: date/datetime column id or name to place cards on. Auto-picks the first date/datetime column if omitted.'),
-        icon: z.string().optional().describe('Emoji, "lucide:Name", or image URL for the view tab'),
-        iconColor: z.string().optional().describe('Theme color for a lucide icon'),
+        databaseId: z.string(),
+        name: z.string(),
+        type: z.enum(['table', 'kanban', 'calendar']),
+        groupByCol: z.string().optional().describe('Kanban: select/status column id or name'),
+        dateCol: z.string().optional().describe('Calendar: date/datetime column id or name'),
+        icon: z.string().optional().describe('Emoji, "lucide:Name" or image URL'),
+        iconColor: z.string().optional().describe('Color for a lucide icon'),
         contextRunId: CONTEXT_RUN_ID,
       },
       outputSchema: z.object({
@@ -717,7 +676,6 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
         const result = await createDatabaseView(ctx.workspaceId, databaseId, { name, type, groupByCol, dateCol, icon, iconColor });
         const text = JSON.stringify(result);
         await logActivity(ctx, 'create_database_view', 'success', 'database', databaseId, text);
-        publish({ scope: 'database', workspaceId: ctx.workspaceId, resourceId: databaseId, actorId: actorId(ctx) });
         return { content: [{ type: 'text' as const, text }], structuredContent: result };
       } catch (err) {
         await logActivity(ctx, 'create_database_view', 'error', 'database', databaseId);
@@ -729,14 +687,14 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
   server.registerTool(
     'update_database_view',
     {
-      description: 'Rename a database view, change its icon, or patch fields within its existing config (filters, sorts, groupByCol, dateCol, cardProperties, etc — merged into the current config). The view\'s type (table/kanban/calendar) cannot be changed; create a new view instead. Use get_database_schema to find view ids and current config shape.',
+      description: 'Rename a view, change its icon, or merge fields into its config (filters, sorts, groupByCol, dateCol, cardProperties…). The type cannot change — create a new view instead. get_database_schema shows view ids and the config shape.',
       inputSchema: {
-        databaseId: z.string().describe('Database ID (from list_workspace or search)'),
-        viewId: z.string().describe('View ID (from get_database_schema)'),
-        name: z.string().optional().describe('New view name'),
-        icon: z.string().optional().describe('Emoji, "lucide:Name", or image URL'),
-        iconColor: z.string().optional().describe('Theme color for a lucide icon'),
-        config: z.record(z.string(), z.any()).optional().describe('Partial config fields to merge in, e.g. { "groupByCol": "col_abc123" } or { "filters": [...] }'),
+        databaseId: z.string(),
+        viewId: z.string(),
+        name: z.string().optional(),
+        icon: z.string().optional().describe('Emoji, "lucide:Name" or image URL'),
+        iconColor: z.string().optional().describe('Color for a lucide icon'),
+        config: z.record(z.string(), z.any()).optional().describe('Partial config to merge, e.g. { "groupByCol": "col_abc" }'),
         contextRunId: CONTEXT_RUN_ID,
       },
       outputSchema: z.object({
@@ -756,7 +714,6 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
         const result = await updateDatabaseView(ctx.workspaceId, databaseId, viewId, { name, icon, iconColor, config });
         const text = JSON.stringify(result);
         await logActivity(ctx, 'update_database_view', 'success', 'database', databaseId, text);
-        publish({ scope: 'database', workspaceId: ctx.workspaceId, resourceId: databaseId, actorId: actorId(ctx) });
         return { content: [{ type: 'text' as const, text }], structuredContent: result };
       } catch (err) {
         await logActivity(ctx, 'update_database_view', 'error', 'database', databaseId);
@@ -768,11 +725,11 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
   server.registerTool(
     'delete_database_view',
     {
-      description: 'Delete a saved view from a database. Requires confirm: true. A database must always keep at least one view.',
+      description: 'Delete a view (confirm: true required). The last view of a database cannot be deleted.',
       inputSchema: {
-        databaseId: z.string().describe('Database ID (from list_workspace or search)'),
-        viewId: z.string().describe('View ID (from get_database_schema)'),
-        confirm: z.boolean().optional().default(false).describe('Set to true to confirm deletion.'),
+        databaseId: z.string(),
+        viewId: z.string(),
+        confirm: z.boolean().optional().default(false),
         contextRunId: CONTEXT_RUN_ID,
       },
       outputSchema: z.object({
@@ -793,7 +750,6 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
         const result = await deleteDatabaseView(ctx.workspaceId, databaseId, viewId, confirm ?? false);
         const text = JSON.stringify(result);
         await logActivity(ctx, 'delete_database_view', 'success', 'database', databaseId, text);
-        publish({ scope: 'database', workspaceId: ctx.workspaceId, resourceId: databaseId, actorId: actorId(ctx) });
         return { content: [{ type: 'text' as const, text }], structuredContent: result };
       } catch (err) {
         await logActivity(ctx, 'delete_database_view', 'error', 'database', databaseId);
@@ -805,11 +761,11 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
   server.registerTool(
     'add_comment',
     {
-      description: `Add a comment to a page or database row, in a thread separate from its markdown body — a place to leave running notes or a closure note as you work. Comments you add here cannot be edited or deleted by you afterward (max ${MAX_COMMENT_LENGTH} characters); use update_page for content you need to revise.`,
+      description: 'Add a comment to a page or row — a thread separate from the body, for running notes or a closure note. Agent comments cannot be edited or deleted afterwards; use update_page for content you may need to revise.',
       inputSchema: {
-        pageId: z.string().describe('The workspace item ID or database row ID to comment on'),
-        body: z.string().max(MAX_COMMENT_LENGTH).describe(`Comment text (max ${MAX_COMMENT_LENGTH} characters)`),
-        kind: z.enum(['note', 'closure']).optional().default('note').describe('"closure" highlights this as a wrap-up note for the card'),
+        pageId: z.string().describe('Page or row id'),
+        body: z.string().max(MAX_COMMENT_LENGTH),
+        kind: z.enum(['note', 'closure']).optional().default('note').describe('"closure" marks a wrap-up note'),
         contextRunId: CONTEXT_RUN_ID,
       },
       outputSchema: z.object({
@@ -838,7 +794,6 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
         });
         const text = JSON.stringify(result);
         await logActivity(ctx, 'add_comment', 'success', 'page', pageId, text);
-        publish({ scope: 'page', workspaceId: ctx.workspaceId, resourceId: pageId, actorId: actorId(ctx) });
         return { content: [{ type: 'text' as const, text }], structuredContent: result };
       } catch (err) {
         await logActivity(ctx, 'add_comment', 'error', 'page', pageId);

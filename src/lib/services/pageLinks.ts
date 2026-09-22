@@ -22,6 +22,7 @@
 import { db } from '@/db';
 import { pageLinks, pages, standalonePages } from '@/db/schema';
 import { eq, inArray, or } from 'drizzle-orm';
+import { chunkRows } from './sqlChunk';
 
 export type PageRef = {
   toId: string;
@@ -104,6 +105,55 @@ export async function syncPageLinks(
         createdAt: now,
       })),
     );
+  } catch {
+    // Swallow — see module doc comment.
+  }
+}
+
+/**
+ * `syncPageLinks` for many source pages at once, collapsed into ONE round-trip.
+ *
+ * Same delete-then-insert contract per `from_id` as the single-page version —
+ * but the whole set ships as one libsql `batch()` (a delete over `from_id IN
+ * (…)` plus one multi-row insert) instead of two statements per page. The bulk
+ * write path creates 50-150 pages in a call and each round-trip to a remote
+ * Turso costs real latency, so this is the difference between a link sync that
+ * is free and one that dominates the call.
+ *
+ * Best-effort like the rest of this module: a failure here leaves the graph
+ * stale, it must never fail the write that produced the content.
+ */
+export async function syncPageLinksBulk(
+  workspaceId: string,
+  sources: { fromId: string; fromType: 'page' | 'database_row'; content: string }[],
+): Promise<void> {
+  if (sources.length === 0) return;
+  try {
+    const fromIds = [...new Set(sources.map(s => s.fromId))];
+    // Deduped by (from_id, to_id, link_kind) — the table's unique index. A
+    // source listed twice in one call would otherwise collide with itself.
+    const rows = new Map<string, {
+      workspaceId: string; fromId: string; fromType: 'page' | 'database_row';
+      toId: string; toType: PageRef['toType']; linkKind: PageRef['linkKind']; createdAt: Date;
+    }>();
+    const now = new Date();
+    for (const source of sources) {
+      for (const ref of extractPageRefs(source.content)) {
+        if (ref.toId === source.fromId) continue;
+        rows.set(`${source.fromId}|${ref.toId}|${ref.linkKind}`, {
+          workspaceId, fromId: source.fromId, fromType: source.fromType,
+          toId: ref.toId, toType: ref.toType, linkKind: ref.linkKind, createdAt: now,
+        });
+      }
+    }
+
+    const statements: any[] = [db.delete(pageLinks).where(inArray(pageLinks.fromId, fromIds))];
+    // 8 bind params per row (id comes from $defaultFn) — chunked well under
+    // SQLite's bind-parameter ceiling.
+    for (const chunk of chunkRows([...rows.values()], 8)) {
+      statements.push(db.insert(pageLinks).values(chunk));
+    }
+    await db.batch(statements as [any, ...any[]]);
   } catch {
     // Swallow — see module doc comment.
   }

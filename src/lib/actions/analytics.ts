@@ -819,7 +819,7 @@ export type UserDetailWorkspace = {
   name: string;
   role: string;
   storageBytes: number; // total bytes uploaded into this workspace (all members)
-  items: { id: string; type: 'page' | 'database'; title: string; icon: string | null }[];
+  items: { id: string; type: 'page' | 'database' | 'dashboard'; title: string; icon: string | null }[];
 };
 
 export type UserSubscription = {
@@ -1005,8 +1005,12 @@ export async function getUserDetail(userId: string): Promise<UserDetail> {
   let pageCount = 0;
   let databaseCount = 0;
   for (const r of itemTypeRows) {
+    // Explicit per type: the old `else` lumped every non-database row into
+    // pageCount, so a dashboard would have silently inflated the page total.
+    // Dashboards get no admin tile of their own yet, so they are simply not
+    // counted here rather than counted as something they aren't.
     if (r.type === 'database') databaseCount = Number(r.c);
-    else pageCount = Number(r.c);
+    else if (r.type === 'page') pageCount = Number(r.c);
   }
   const [recordAgg] = wsIds.length
     ? await db

@@ -1,3 +1,4 @@
+import { AsyncLocalStorage } from 'async_hooks';
 import { db } from '@/db';
 import { agentActivity } from '@/db/schema';
 import { captureAgentCall } from '@/lib/analytics/server';
@@ -13,6 +14,26 @@ export type TokenContext = {
   ownerUserId: string | null;
 };
 
+/**
+ * Request-scoped start time, so every tool can be timed without threading a
+ * stopwatch through ~30 handlers. Set once in handleMcpRequest; read here when
+ * the call is logged. A tool reached outside that wrapper (a script, a test)
+ * simply logs no duration.
+ */
+export const mcpCallTiming = new AsyncLocalStorage<{ startedAt: number }>();
+
+/** Extra measurements a call can report. Everything here is optional by design. */
+export type ActivityMetrics = {
+  /**
+   * Bytes the same information would have cost the naive way. Pass it ONLY when
+   * it is computed from data already in hand — never estimated. See
+   * AGENTS.md → "Agent Savings Metrics".
+   */
+  baselineBytes?: number;
+  /** Pages/rows this call created or updated, for bulk tools. */
+  itemsAffected?: number;
+};
+
 export async function logActivity(
   ctx: TokenContext,
   tool: string,
@@ -20,7 +41,10 @@ export async function logActivity(
   targetType?: string,
   targetId?: string,
   responseText?: string,
+  metrics?: ActivityMetrics,
 ) {
+  const startedAt = mcpCallTiming.getStore()?.startedAt;
+
   db.insert(agentActivity)
     .values({
       tokenId: ctx.tokenKind === 'pat' ? ctx.tokenId : null,
@@ -32,6 +56,9 @@ export async function logActivity(
       targetId: targetId ?? null,
       status,
       responseBytes: responseText != null ? Buffer.byteLength(responseText, 'utf8') : null,
+      baselineBytes: metrics?.baselineBytes ?? null,
+      durationMs: startedAt != null ? Math.round(performance.now() - startedAt) : null,
+      itemsAffected: metrics?.itemsAffected ?? null,
       createdAt: new Date(),
     })
     .catch(() => {});

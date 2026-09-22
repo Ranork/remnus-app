@@ -5,6 +5,7 @@ import { useTabs, isKeepAlivePane } from './TabsContext';
 import { CHANGE_EVENT } from './ActivityTracker';
 import TabPane from '@/components/features/tabs/TabPane';
 import { invalidateTabHref } from '@/components/features/tabs/keys';
+import { createInteractionGate } from '@/lib/interactionGate';
 
 // Memoized so the once-a-minute `now` tick (which changes the suspendedIds Set
 // identity and re-renders TabHost) doesn't re-render every pane's editor — only
@@ -89,8 +90,9 @@ export default function TabHost({ isAdmin, currentUserId }: { isAdmin: boolean; 
  * Keeps the ACTIVE pane's data fresh when another user/agent edits the workspace.
  * In Tauri the content is client-fetched, so the sidebar's `router.refresh()`
  * (which re-fetches the now-null server route) doesn't update the panes. This
- * mirrors `useWorkspaceEvents`: it listens to the activity heartbeat's
- * `CHANGE_EVENT` and, only while the user is idle (no interaction for 10s),
+ * mirrors `useWorkspaceEvents`: it listens to the activity poll's
+ * `CHANGE_EVENT` and, unless the user is mid-edit (the shared
+ * `createInteractionGate` — moving the mouse is not a reason to wait),
  * invalidates the active pane's queries. Hidden panes are never touched, so a
  * background refresh can't wipe a kept-alive tab's in-memory state.
  */
@@ -103,22 +105,16 @@ function useActivePaneAutoRefresh(activeHref: string | null, enabled: boolean) {
 
   useEffect(() => {
     if (!enabled) return; // web build: no in-app tabs, nothing to refresh
-    const idleRef = { current: true };
     const pendingRef = { current: false };
     let lastVersion: number | null = null;
-    let idleTimer: ReturnType<typeof setTimeout>;
 
     const flush = () => {
-      if (!idleRef.current || !pendingRef.current) return;
+      if (!pendingRef.current || gate.isBlocked()) return;
       pendingRef.current = false;
       if (activeHrefRef.current) invalidateTabHref(queryClient, activeHrefRef.current);
     };
-    const goIdle = () => { idleRef.current = true; flush(); };
-    const onActivity = () => {
-      idleRef.current = false;
-      clearTimeout(idleTimer);
-      idleTimer = setTimeout(goIdle, 10_000);
-    };
+    const gate = createInteractionGate(() => flush());
+
     const onChange = (e: Event) => {
       const v = (e as CustomEvent<number>).detail;
       if (!Number.isFinite(v)) return;
@@ -126,15 +122,11 @@ function useActivePaneAutoRefresh(activeHref: string | null, enabled: boolean) {
       if (v > lastVersion) { lastVersion = v; pendingRef.current = true; flush(); }
     };
 
-    const activityEvents = ['mousemove', 'keydown', 'click', 'scroll', 'touchstart', 'mousedown'];
-    activityEvents.forEach((ev) => window.addEventListener(ev, onActivity, { passive: true }));
     window.addEventListener(CHANGE_EVENT, onChange);
-    idleTimer = setTimeout(goIdle, 10_000);
 
     return () => {
-      activityEvents.forEach((ev) => window.removeEventListener(ev, onActivity));
       window.removeEventListener(CHANGE_EVENT, onChange);
-      clearTimeout(idleTimer);
+      gate.dispose();
     };
   }, [queryClient, enabled]);
 }

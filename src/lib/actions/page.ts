@@ -6,7 +6,6 @@ import { revalidatePath } from 'next/cache';
 import { getCurrentUserAllowingWorkspaceLock } from '@/lib/auth/session';
 import { assertWorkspaceLockAllows } from '@/lib/auth/workspaceLock';
 import { deleteWorkspaceItem } from './workspace';
-import { publish } from '@/lib/realtime/publish';
 import { isCloudinaryUrl, deleteCloudinaryImage } from '@/lib/cloudinary';
 import { recordDeletionTombstone } from '@/lib/services/workspace';
 import { snapshotBeforeDelete, maybeSnapshotContentUpdate } from '@/lib/services/snapshots';
@@ -68,7 +67,7 @@ export async function createPage(
   icon?: string | null,
   iconColor?: string | null
 ) {
-  const { userId, workspaceId } = await assertDatabaseAccess(databaseId);
+  await assertDatabaseAccess(databaseId);
 
   const id = crypto.randomUUID();
   const existing = await db.select({ sortOrder: pages.sortOrder }).from(pages).where(eq(pages.databaseId, databaseId));
@@ -90,7 +89,6 @@ export async function createPage(
     updatedAt: now,
   });
   revalidatePath(`/db/${databaseId}`);
-  publish({ scope: 'database', workspaceId, resourceId: databaseId, actorId: userId });
   return id;
 }
 
@@ -239,11 +237,10 @@ export async function deletePage(id: string, databaseId: string) {
   await purgeReferencesTo([id]);
   await removePageLinksFor(id);
   revalidatePath(`/db/${databaseId}`);
-  publish({ scope: 'database', workspaceId, resourceId: databaseId, actorId: userId });
 }
 
 export async function duplicatePage(id: string, databaseId: string) {
-  const { userId, workspaceId } = await assertDatabaseAccess(databaseId);
+  const { workspaceId } = await assertDatabaseAccess(databaseId);
 
   // Same reason as deletePage: the source row must belong to the database access was
   // checked on, or this copied another workspace's row into yours.
@@ -275,12 +272,11 @@ export async function duplicatePage(id: string, databaseId: string) {
 
   if (sourcePage.content) await syncPageLinks(workspaceId, newId, 'database_row', sourcePage.content);
   revalidatePath(`/db/${databaseId}`);
-  publish({ scope: 'database', workspaceId, resourceId: databaseId, actorId: userId });
   return newId;
 }
 
 export async function reorderPages(databaseId: string, orderedIds: string[]) {
-  const { userId, workspaceId } = await assertDatabaseAccess(databaseId);
+  await assertDatabaseAccess(databaseId);
 
   // A single Kanban/Calendar/Table drag only actually moves one card, but
   // `orderedIds` is the full page list re-expressed in its new order — most
@@ -303,14 +299,13 @@ export async function reorderPages(databaseId: string, orderedIds: string[]) {
     }
   });
   revalidatePath(`/db/${databaseId}`);
-  publish({ scope: 'database', workspaceId, resourceId: databaseId, actorId: userId });
 }
 
 export async function updatePageIcon(id: string, icon: string | null, iconColor: string | null) {
   const page = await db.select().from(pages).where(eq(pages.id, id));
   if (!page[0]) return;
 
-  const { userId, workspaceId } = await assertDatabaseAccess(page[0].databaseId);
+  await assertDatabaseAccess(page[0].databaseId);
 
   if (isCloudinaryUrl(page[0].icon) && page[0].icon !== icon) {
     deleteCloudinaryImage(page[0].icon!);
@@ -322,21 +317,19 @@ export async function updatePageIcon(id: string, icon: string | null, iconColor:
 
   revalidatePath(`/db/${page[0].databaseId}`);
   revalidatePath(`/db/${page[0].databaseId}/${id}`);
-  publish({ scope: 'database', workspaceId, resourceId: page[0].databaseId, actorId: userId });
 }
 
 export async function updatePageCardCollapsed(id: string, collapsed: boolean) {
   const page = await db.select({ databaseId: pages.databaseId }).from(pages).where(eq(pages.id, id));
   if (!page[0]) return;
 
-  const { userId, workspaceId } = await assertDatabaseAccess(page[0].databaseId);
+  await assertDatabaseAccess(page[0].databaseId);
 
   await db.update(pages)
     .set({ cardCollapsed: collapsed })
     .where(eq(pages.id, id));
 
   revalidatePath(`/db/${page[0].databaseId}`);
-  publish({ scope: 'database', workspaceId, resourceId: page[0].databaseId, actorId: userId });
 }
 
 /**
@@ -357,7 +350,7 @@ export async function updatePagesCardCollapsed(ids: string[], collapsed: boolean
   const databaseId = rows[0].databaseId;
   const targetIds = rows.filter((r) => r.databaseId === databaseId).map((r) => r.id);
 
-  const { userId, workspaceId } = await assertDatabaseAccess(databaseId);
+  await assertDatabaseAccess(databaseId);
 
   // Chunked so a very busy column stays well under SQLite's bound-parameter cap.
   for (let i = 0; i < targetIds.length; i += 100) {
@@ -367,7 +360,6 @@ export async function updatePagesCardCollapsed(ids: string[], collapsed: boolean
   }
 
   revalidatePath(`/db/${databaseId}`);
-  publish({ scope: 'database', workspaceId, resourceId: databaseId, actorId: userId });
 }
 
 // ── Bulk add / update (paste-driven, for fast web-based bulk entry) ───────────────
@@ -381,7 +373,7 @@ export async function bulkCreatePages(
   databaseId: string,
   rows: Record<string, unknown>[],
 ): Promise<{ created: number; errors: { row: number; message: string }[]; addedOptions: BulkAddedOption[] }> {
-  const { userId, workspaceId } = await assertDatabaseAccess(databaseId);
+  const { workspaceId } = await assertDatabaseAccess(databaseId);
 
   if (!rows.length) return { created: 0, errors: [], addedOptions: [] };
   if (rows.length > MAX_BULK_ROWS) throw new Error(`Too many rows: max ${MAX_BULK_ROWS} per import`);
@@ -454,7 +446,6 @@ export async function bulkCreatePages(
 
   if (toInsert.length > 0) {
     revalidatePath(`/db/${databaseId}`);
-    publish({ scope: 'database', workspaceId, resourceId: databaseId, actorId: userId });
   }
 
   return { created: toInsert.length, errors, addedOptions };
@@ -465,7 +456,7 @@ export async function bulkUpdatePagesByMatch(
   matchColumnId: string,
   rows: Record<string, unknown>[],
 ): Promise<{ updated: number; unmatched: number[]; errors: { row: number; message: string }[]; addedOptions: BulkAddedOption[] }> {
-  const { userId, workspaceId } = await assertDatabaseAccess(databaseId);
+  const { workspaceId } = await assertDatabaseAccess(databaseId);
 
   if (!rows.length) return { updated: 0, unmatched: [], errors: [], addedOptions: [] };
   if (rows.length > MAX_BULK_ROWS) throw new Error(`Too many rows: max ${MAX_BULK_ROWS} per import`);
@@ -560,7 +551,6 @@ export async function bulkUpdatePagesByMatch(
 
   if (updates.length > 0) {
     revalidatePath(`/db/${databaseId}`);
-    publish({ scope: 'database', workspaceId, resourceId: databaseId, actorId: userId });
   }
 
   return { updated: updates.length, unmatched, errors, addedOptions };

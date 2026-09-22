@@ -12,7 +12,15 @@ npx tsc --noEmit         # Strict TypeScript check when TS shapes change
 npm run start            # Start an existing production build
 npm run test:okf         # Targeted OKF/context-pack check (pure, no DB)
 npm run test:recurrence  # Recurrence rule engine — 26 pure-function assertions, no DB
+npm run test:access      # Workspace access requests (npx remnus join) — writes+cleans up rows, LOCAL DB ONLY:
+#                           DATABASE_URL="file:local.db" npm run test:access
 npm run bench:context    # Synthetic Context Pack ranking/token regression
+npm run bench:tokens     # Read-shaping savings (digest vs crawl, fields, outline) — needs a DB:
+#                           DATABASE_URL="file:local.db" npm run bench:tokens
+npm run bench:mcp-budget # Per-session MCP context cost: tools/list per tool + per scope,
+#                           model-visible (description+inputSchema) vs wire-only, prompts,
+#                           resources, instructions, AGENTS.md block, and a modelled session.
+#                           DATABASE_URL="file:local.db" npm run bench:mcp-budget [-- <workspaceId>] [--dump=tools.json]
 ```
 
 There is still no general unit/integration/e2e test runner or `test` script — do not invent one. The three commands above are targeted, self-contained checks, not a suite. Run `npm run build` only when build behavior changed, before release, or when explicitly requested.

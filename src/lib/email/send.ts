@@ -16,7 +16,7 @@ import { db } from '@/db';
 import { emailLog, users } from '@/db/schema';
 import { SITE_URL } from './theme';
 
-export type EmailKind = 'welcome' | 'inactivity' | 'agent_nudge' | 'agent_connected' | 'account_deletion' | 'contact' | 'newsletter' | 'test';
+export type EmailKind = 'welcome' | 'inactivity' | 'agent_nudge' | 'agent_connected' | 'account_deletion' | 'access_request' | 'contact' | 'newsletter' | 'test';
 
 // ── Transport (lazy singleton) ────────────────────────────────────────────────
 
@@ -96,8 +96,10 @@ export function canReceiveEmail(user: MailableUser, kind: EmailKind): boolean {
   if (user.emailSuppressed) return false;
   // welcome + account_deletion are purely transactional — an unsubscribe from
   // marketing mail must never block a security-critical confirmation the user
-  // themselves just requested.
-  if (user.emailUnsubscribedAt && kind !== 'welcome' && kind !== 'account_deletion') return false;
+  // themselves just requested. access_request joins them: it is an operational
+  // notice about the recipient's own workspace, and someone is blocked until they
+  // answer it. Suppression (bounce/complaint) still mutes all three.
+  if (user.emailUnsubscribedAt && kind !== 'welcome' && kind !== 'account_deletion' && kind !== 'access_request') return false;
   return true;
 }
 

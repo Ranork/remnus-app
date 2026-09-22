@@ -113,11 +113,13 @@ export default function TabBar() {
   const displayMeta = (tab: Tab) => {
     const live = resolveMeta(tab.href);
     const isDatabase = tab.href.startsWith('/db/') && tab.href.split('/').filter(Boolean).length === 2;
+    const isDashboard = tab.href.startsWith('/dashboard/');
     return {
       title: (live?.title || tab.title || t('tabUntitled')),
       icon: live ? live.icon : tab.icon,
       iconColor: live ? live.iconColor : tab.iconColor,
       isDatabase,
+      isDashboard,
     };
   };
 
@@ -172,7 +174,7 @@ export default function TabBar() {
                 icon={meta.icon}
                 iconColor={meta.iconColor}
                 size={14}
-                fallbackType={meta.isDatabase ? 'database' : 'page'}
+                fallbackType={meta.isDatabase ? 'database' : meta.isDashboard ? 'dashboard' : 'page'}
               />
               <span className="truncate flex-1 min-w-0 text-xs">{meta.title}</span>
               {(isKeepAlivePane(tab.href) || isActive) && (

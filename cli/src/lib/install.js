@@ -8,9 +8,18 @@ export function newDeviceId() {
   return randomUUID();
 }
 
-export function installUrl(serverUrl, { deviceId, projectName, authMode }) {
+/**
+ * The browser URL for either flow.
+ *
+ * `workspaceId` is what turns the page into the `join` screen: it names the
+ * workspace this project already belongs to, so the person is not asked to pick
+ * one. It is **not** a credential — it comes out of a committed file — and the
+ * server re-checks membership on every request regardless of what is in this URL.
+ */
+export function installUrl(serverUrl, { deviceId, projectName, authMode, workspaceId }) {
   const params = new URLSearchParams({ device_id: deviceId, project: projectName });
   if (authMode === 'oauth') params.set('mode', 'oauth');
+  if (workspaceId) params.set('workspace', workspaceId);
   return `${serverUrl}/install?${params.toString()}`;
 }
 
@@ -130,9 +139,23 @@ export function openAppWindow(url, { profileDir } = {}) {
   }
 }
 
-const POLL_INTERVAL_MS = 2000;
+/**
+ * Poll fast while the user is most likely to be finishing the browser step, then
+ * back off. A flat 2s put up to two seconds of dead air between "approved" in the
+ * browser and the terminal moving on — the one moment of the install the person is
+ * actually watching. Backing off afterwards keeps a walked-away install from
+ * hammering the server for the full five minutes.
+ */
+const POLL_SCHEDULE = [
+  { untilMs: 60 * 1000, intervalMs: 750 },
+  { untilMs: 3 * 60 * 1000, intervalMs: 2000 },
+];
+const POLL_INTERVAL_MAX_MS = 3000;
 /** Matches the server's own install-session lifetime; waiting longer cannot succeed. */
 const POLL_TIMEOUT_MS = 5 * 60 * 1000;
+
+const pollIntervalAt = (elapsedMs) =>
+  POLL_SCHEDULE.find((step) => elapsedMs < step.untilMs)?.intervalMs ?? POLL_INTERVAL_MAX_MS;
 
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
@@ -144,9 +167,10 @@ const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
  * hiccup or a redeploy mid-wait should not abandon an install the user is in the
  * middle of approving. Only the deadline ends the wait.
  */
-export async function waitForInstall(serverUrl, deviceId, { signal } = {}) {
+export async function waitForInstall(serverUrl, deviceId, { signal, command = 'init' } = {}) {
   const url = `${serverUrl}/api/install/poll?device_id=${encodeURIComponent(deviceId)}`;
-  const deadline = Date.now() + POLL_TIMEOUT_MS;
+  const startedAt = Date.now();
+  const deadline = startedAt + POLL_TIMEOUT_MS;
   let warnedOffline = false;
 
   while (Date.now() < deadline) {
@@ -168,10 +192,12 @@ export async function waitForInstall(serverUrl, deviceId, { signal } = {}) {
         detail(err?.message ?? String(err));
       }
     }
-    await sleep(POLL_INTERVAL_MS);
+    await sleep(pollIntervalAt(Date.now() - startedAt));
   }
 
+  // Names the command the caller actually ran: telling someone who ran `join` to
+  // run `init` would send them to the one screen they must not use.
   throw new Error(
-    'Timed out waiting for the browser step. The setup link is valid for five minutes — run `remnus init` again for a fresh one.',
+    `Timed out waiting for the browser step. The link is valid for five minutes — run \`remnus ${command}\` again for a fresh one.`,
   );
 }

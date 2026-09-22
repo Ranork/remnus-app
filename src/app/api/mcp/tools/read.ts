@@ -1,3 +1,16 @@
+// Every tool here answers with the same JSON twice: `content[0].text` and
+// `structuredContent`. That is deliberate, not an oversight to trim (measured and
+// decided 2026-09-22, see docs/mcp/token-efficient-usage.md):
+//   • Claude Code hands the model ONLY structuredContent when both are present
+//     (anthropics/claude-code#55677, #79944), Claude Desktop and Cursor hand it
+//     ONLY the text block (blockscout/mcp-server#324 broke exactly by shortening
+//     the text). Dropping either copy blinds one family of clients; keeping both
+//     costs the model nothing, since each client forwards one.
+//   • The MCP SDK refuses a result without structuredContent once a tool declares
+//     outputSchema, and outputSchema itself never reaches the model (the tools
+//     API has no output-schema field) — only `description` + `inputSchema` do.
+//     Those two are the per-session token cost, so they are kept terse; output
+//     schemas and annotations are wire-only and may stay descriptive.
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { z } from 'zod';
 import {
@@ -21,13 +34,13 @@ export function registerReadTools(server: McpServer, ctx: TokenContext) {
   server.registerTool(
     'prepare_context',
     {
-      description: 'Build one task-specific, token-budgeted context pack from relevant workspace pages. Ranks lexical matches, prefers human-reviewed OKF knowledge, penalizes stale/deprecated concepts, and adds the top result\'s link-graph neighbors. Use this before multi-page product or coding work instead of many search/get_page calls.',
+      description: 'Build a task-specific, token-budgeted context pack from the most relevant pages: lexical rank, human-reviewed knowledge preferred, stale/deprecated concepts penalized, plus the top hit\'s link neighbors. Use it before multi-page product or coding work instead of many search/get_page calls.',
       inputSchema: {
-        task: z.string().min(3).max(2_000).describe('The concrete task or question to gather context for'),
-        maxTokens: z.number().int().min(1_000).max(16_000).optional().default(2_000).describe('Approximate maximum tokens in the returned JSON'),
-        maxConcepts: z.number().int().min(1).max(16).optional().default(6).describe('Maximum page concepts to include'),
+        task: z.string().min(3).max(2_000).describe('The concrete task or question'),
+        maxTokens: z.number().int().min(1_000).max(16_000).optional().default(2_000).describe('Budget for the returned JSON, approx. tokens'),
+        maxConcepts: z.number().int().min(1).max(16).optional().default(6),
         trustPolicy: z.enum(['any', 'prefer-human-reviewed', 'human-reviewed-only']).optional().default('prefer-human-reviewed'),
-        includeRelated: z.boolean().optional().default(true).describe('Include title/id references from the top concept\'s graph neighborhood'),
+        includeRelated: z.boolean().optional().default(true).describe('Add title/id refs from the top concept\'s link neighborhood'),
       },
       outputSchema: z.object({
         profile: z.literal('remnus-context-pack-v2'),
@@ -68,10 +81,10 @@ export function registerReadTools(server: McpServer, ctx: TokenContext) {
   server.registerTool(
     'search_workspace',
     {
-      description: 'Search the workspace by title and content. Matches standalone pages, databases, and database rows (each row is a page) on their title or body text. Use it to locate an item before reading or updating it.',
+      description: 'Case-insensitive substring search over titles and bodies of pages, databases and rows. Use it to locate an item by text when the workspace map does not already give you its id.',
       inputSchema: {
-        query: z.string().describe('Text to match against item titles and content (case-insensitive substring)'),
-        limit: z.number().optional().default(10).describe('Maximum results (default 10)'),
+        query: z.string(),
+        limit: z.number().optional().default(10),
       },
       outputSchema: z.object({
         results: z.array(z.object({
@@ -103,11 +116,11 @@ export function registerReadTools(server: McpServer, ctx: TokenContext) {
   server.registerTool(
     'list_workspace',
     {
-      description: 'List workspace items (pages and databases). Optionally filter by parent. Supports cursor-based pagination.',
+      description: 'List sidebar items (pages and databases), optionally under one parent; paginated. For orientation the workspace digest/map is cheaper.',
       inputSchema: {
-        parentId: z.string().optional().describe('Parent item ID (omit for root items)'),
-        limit: z.number().optional().default(100).describe('Maximum items per page (default 100)'),
-        cursor: z.string().optional().describe('Pagination cursor from a previous response\'s nextCursor field'),
+        parentId: z.string().optional().describe('Omit for root items'),
+        limit: z.number().optional().default(100),
+        cursor: z.string().optional().describe('nextCursor from the previous page'),
       },
       outputSchema: z.object({
         items: z.array(z.object({
@@ -125,7 +138,13 @@ export function registerReadTools(server: McpServer, ctx: TokenContext) {
     },
     async ({ parentId, limit, cursor }) => {
       try {
-        const result = await listWorkspaceItems(ctx.workspaceId, parentId, limit ?? 100, cursor);
+        const listed = await listWorkspaceItems(ctx.workspaceId, parentId, limit ?? 100, cursor);
+        // `parentId: null` (root) and `icon: null` are ~15% of this payload on a
+        // typical tree; both are optional in the schema and absence reads the same.
+        const result = {
+          ...listed,
+          items: listed.items.map(({ parentId: p, icon, ...item }) => ({ ...item, ...(p ? { parentId: p } : {}), ...(icon ? { icon } : {}) })),
+        };
         const text = JSON.stringify(result);
         await logActivity(ctx, 'list_workspace', 'success', undefined, undefined, text);
         return { content: [{ type: 'text' as const, text }], structuredContent: result };
@@ -139,11 +158,11 @@ export function registerReadTools(server: McpServer, ctx: TokenContext) {
   server.registerTool(
     'get_page',
     {
-      description: 'Get content of a workspace page or database row by its ID. Auto-detects the type — no flags needed. Pass mode: "outline" for a token-cheap skim (headings + first line of each section) before deciding whether to fetch the full content.',
+      description: 'Read a page or database row by id (type auto-detected). mode: "outline" returns headings + first line per section — a cheap skim for a long page (the map shows body sizes) before a full read.',
       inputSchema: {
-        pageId: z.string().describe('The workspace item ID or database row ID'),
-        mode: z.enum(['full', 'outline']).optional().default('full').describe('"full" (default) returns the whole markdown body; "outline" returns only headings + the first line of each section — use it to skim long pages cheaply, then re-fetch with "full" if needed'),
-        includeComments: z.boolean().optional().default(false).describe('Include the page\'s comment thread (default false, so ordinary reads stay cheap)'),
+        pageId: z.string().describe('Page or row id'),
+        mode: z.enum(['full', 'outline']).optional().default('full'),
+        includeComments: z.boolean().optional().default(false).describe('Also return the comment thread'),
       },
       outputSchema: z.object({
         id: z.string(),
@@ -170,15 +189,24 @@ export function registerReadTools(server: McpServer, ctx: TokenContext) {
     async ({ pageId, mode, includeComments }) => {
       try {
         const page = await getAnyPageById(ctx.workspaceId, pageId);
-        const payload: Record<string, unknown> = mode === 'outline' && page.content
-          ? { ...page, content: buildContentOutline(page.content), mode: 'outline', fullContentChars: page.content.length }
-          : page;
+        const body = page.content ?? '';
+        const collapsed = mode === 'outline' && body.length > 0;
+        const payload: Record<string, unknown> = collapsed
+          ? { ...page, content: buildContentOutline(body), mode: 'outline', fullContentChars: body.length }
+          : { ...page };
+        let comments: unknown[] | undefined;
         if (includeComments) {
-          const comments = await listPageComments(pageId);
-          payload.comments = comments.map(({ authorUserId: _authorUserId, authorImage: _authorImage, ...c }) => c);
+          const listed = await listPageComments(pageId);
+          comments = listed.map(({ authorUserId: _authorUserId, authorImage: _authorImage, ...c }) => c);
+          payload.comments = comments;
         }
         const text = JSON.stringify(payload);
-        await logActivity(ctx, 'get_page', 'success', 'page', pageId, text);
+        // An outline's naive alternative is mode:"full" — the object already in
+        // hand, so this is the real byte count rather than a guess.
+        const baselineBytes = collapsed
+          ? Buffer.byteLength(JSON.stringify(comments ? { ...page, comments } : page), 'utf8')
+          : undefined;
+        await logActivity(ctx, 'get_page', 'success', 'page', pageId, text, { baselineBytes });
         return { content: [{ type: 'text' as const, text }], structuredContent: payload };
       } catch (err) {
         await logActivity(ctx, 'get_page', 'error', 'page', pageId);
@@ -190,10 +218,10 @@ export function registerReadTools(server: McpServer, ctx: TokenContext) {
   server.registerTool(
     'get_pages',
     {
-      description: 'Get multiple workspace pages or database rows by ID in one call — for a specific, already-known, possibly mixed list of IDs (e.g. from search_workspace, get_related_pages, or get_changes_since). One missing/inaccessible ID does not fail the batch — check each entry\'s "ok" field. For many rows that share one database, prefer query_database with filters/fields instead of this — it is one query, not N lookups.',
+      description: 'Read several pages/rows by id in one call, for a known, possibly mixed id list. A bad id fails only its own entry — check each "ok". For rows of one database use query_database with filters/fields instead: one query, not N lookups.',
       inputSchema: {
-        pageIds: z.array(z.string()).min(1).max(50).describe('Page/row IDs to fetch (max 50)'),
-        mode: z.enum(['full', 'outline']).optional().default('full').describe('Same as get_page — "outline" collapses each body to headings + first line per section'),
+        pageIds: z.array(z.string()).min(1).max(50),
+        mode: z.enum(['full', 'outline']).optional().default('full').describe('As in get_page'),
       },
       outputSchema: z.object({
         results: z.array(z.object({
@@ -214,7 +242,13 @@ export function registerReadTools(server: McpServer, ctx: TokenContext) {
             : r,
         );
         const text = JSON.stringify({ results: shaped });
-        await logActivity(ctx, 'get_pages', 'success', undefined, undefined, text);
+        // Same reasoning as get_page: in outline mode the full-body answer is
+        // the array we already built. Equal sizes (nothing was long enough to
+        // collapse) simply record a zero saving.
+        const baselineBytes = mode === 'outline'
+          ? Buffer.byteLength(JSON.stringify({ results }), 'utf8')
+          : undefined;
+        await logActivity(ctx, 'get_pages', 'success', undefined, undefined, text, { baselineBytes });
         return { content: [{ type: 'text' as const, text }], structuredContent: { results: shaped } };
       } catch (err) {
         await logActivity(ctx, 'get_pages', 'error');
@@ -226,9 +260,9 @@ export function registerReadTools(server: McpServer, ctx: TokenContext) {
   server.registerTool(
     'get_database_schema',
     {
-      description: 'Get the column schema and saved views of a database, without fetching any rows. Use this to inspect column names/types/options before querying, or view ids/configs before calling create_database_view / update_database_view / delete_database_view.',
+      description: 'Columns (id, name, type, options) and saved views of a database, without rows. Check it before writing rows or changing views.',
       inputSchema: {
-        databaseId: z.string().describe('Database ID (from list_workspace or search)'),
+        databaseId: z.string(),
       },
       outputSchema: z.object({
         name: z.string(),
@@ -253,13 +287,13 @@ export function registerReadTools(server: McpServer, ctx: TokenContext) {
   server.registerTool(
     'query_audit_log',
     {
-      description: 'Query the MCP agent activity audit log for this workspace. Supports filtering by tool name, status, and date range.',
+      description: 'Agent activity log for this workspace, filterable by tool, status and date range.',
       inputSchema: {
-        tool: z.string().optional().describe('Filter by tool name (e.g. "create_page", "query_database")'),
-        status: z.enum(['success', 'error']).optional().describe('Filter by call status'),
-        from: z.string().optional().describe('Start of date range (ISO 8601, e.g. "2025-01-01T00:00:00Z")'),
-        to: z.string().optional().describe('End of date range (ISO 8601, e.g. "2025-12-31T23:59:59Z")'),
-        limit: z.number().optional().default(50).describe('Maximum results (default 50)'),
+        tool: z.string().optional().describe('Tool name'),
+        status: z.enum(['success', 'error']).optional(),
+        from: z.string().optional().describe('ISO 8601'),
+        to: z.string().optional().describe('ISO 8601'),
+        limit: z.number().optional().default(50),
       },
       outputSchema: z.object({
         entries: z.array(z.object({
@@ -291,7 +325,7 @@ export function registerReadTools(server: McpServer, ctx: TokenContext) {
   server.registerTool(
     'list_members',
     {
-      description: 'List all members of the workspace with their roles and join dates.',
+      description: 'Workspace members with roles and join dates.',
       inputSchema: {},
       outputSchema: z.object({
         members: z.array(z.object({
@@ -320,13 +354,13 @@ export function registerReadTools(server: McpServer, ctx: TokenContext) {
   server.registerTool(
     'query_database',
     {
-      description: 'Get schema and rows of a database. Row markdown bodies are NOT included by default — add "content" to fields when you need them, or get_page a single row. Optionally filter rows by property values, and project with fields to fetch only the columns you need (much cheaper on wide tables). Supports cursor-based pagination.',
+      description: 'Rows (and the matching schema) of a database, paginated. Row bodies are NOT included unless "content" is in fields. Use filters to narrow and fields to project only the columns you need — much cheaper on wide tables.',
       inputSchema: {
-        databaseId: z.string().describe('Database ID (from list_workspace or search)'),
-        limit: z.number().optional().default(50).describe('Maximum rows per page (default 50)'),
-        filters: z.record(z.string(), z.any()).optional().describe('Filter rows by property value, e.g. {"status": "Done"} or {"col_xxx": ["Tag1"]}'),
-        fields: z.array(z.string()).optional().describe('Only return these columns (match by column id or name, case-insensitive); row title is always included. Add "content" to include row markdown bodies (omitted by default). Omit fields for all columns without bodies.'),
-        cursor: z.string().optional().describe('Pagination cursor from a previous response\'s nextCursor field'),
+        databaseId: z.string(),
+        limit: z.number().optional().default(50),
+        filters: z.record(z.string(), z.any()).optional().describe('By property value, e.g. {"status": "Done"} or {"col_xxx": ["Tag1"]}'),
+        fields: z.array(z.string()).optional().describe('Column ids or names (case-insensitive); title is always included. Add "content" for row bodies.'),
+        cursor: z.string().optional().describe('nextCursor from the previous page'),
       },
       outputSchema: z.object({
         schema: z.any().optional().describe('Column schema (trimmed when projecting with fields)'),
@@ -338,9 +372,10 @@ export function registerReadTools(server: McpServer, ctx: TokenContext) {
     },
     async ({ databaseId, limit, filters, fields, cursor }) => {
       try {
-        const result = await queryDatabaseRows(ctx.workspaceId, databaseId, limit ?? 50, filters, cursor, fields);
+        // baselineBytes is measurement, not payload — stripped before it reaches the agent.
+        const { baselineBytes, ...result } = await queryDatabaseRows(ctx.workspaceId, databaseId, limit ?? 50, filters, cursor, fields);
         const text = JSON.stringify(result);
-        await logActivity(ctx, 'query_database', 'success', 'database', databaseId, text);
+        await logActivity(ctx, 'query_database', 'success', 'database', databaseId, text, { baselineBytes });
         return { content: [{ type: 'text' as const, text }], structuredContent: result };
       } catch (err) {
         await logActivity(ctx, 'query_database', 'error', 'database', databaseId);
@@ -352,11 +387,11 @@ export function registerReadTools(server: McpServer, ctx: TokenContext) {
   server.registerTool(
     'get_changes_since',
     {
-      description: 'Get a compact list of everything that changed in the workspace since a given time or a previous call\'s cursor — pages/databases edited, database rows edited, and items deleted. Built for recurring agents (daily report, standup, memory refresh) so they can sync incrementally instead of re-reading the whole workspace every run. Omit both `since` and `cursor` to bootstrap a full crawl, saving the returned `nextCursor` (or the latest `updatedAt`) for the next call.',
+      description: 'Everything created, updated or deleted since a cursor (from the workspace digest/map or a previous call) or an ISO time — pages, databases, rows and deletions, oldest first. Omit both to bootstrap. Always keep nextCursor for the next call: this is how to catch up instead of re-reading the tree. An entry stamped in the cursor\'s own second may appear once more — dedupe by id.',
       inputSchema: {
-        since: z.string().optional().describe('ISO 8601 timestamp — only return changes after this time (e.g. "2026-07-01T00:00:00Z"). Ignored when cursor is provided. Omit both for a full crawl.'),
-        cursor: z.string().optional().describe('Pagination cursor from a previous response\'s nextCursor field — takes priority over since for resuming a sync'),
-        limit: z.number().optional().default(100).describe('Maximum changes per page (default 100)'),
+        since: z.string().optional().describe('ISO 8601; ignored when cursor is given'),
+        cursor: z.string().optional().describe('From the digest/map header or a previous nextCursor'),
+        limit: z.number().optional().default(100),
       },
       outputSchema: z.object({
         changes: z.array(z.object({
@@ -368,7 +403,7 @@ export function registerReadTools(server: McpServer, ctx: TokenContext) {
           databaseId: z.string().optional().describe('Present for database_row entries'),
         }).passthrough()).describe('Chronological, oldest first'),
         hasMore: z.boolean(),
-        nextCursor: z.string().optional().describe('Pass back as cursor to continue or resume a later sync'),
+        nextCursor: z.string().describe('Always present — pass back as cursor to continue or resume a later sync'),
       }),
       annotations: { title: 'Get changes since', readOnlyHint: true, openWorldHint: false },
     },
@@ -396,9 +431,9 @@ export function registerReadTools(server: McpServer, ctx: TokenContext) {
   server.registerTool(
     'get_related_pages',
     {
-      description: 'Get a page\'s knowledge-graph neighborhood in one compact call: its parent, child pages, outgoing links (pages its body references via inline @-links or child blocks), backlinks (pages whose bodies reference it), and — for database rows — sibling rows in the same database. Titles and IDs only, no page bodies, so it costs a fraction of re-reading pages; follow up with get_page on the neighbors that matter.',
+      description: 'A page\'s link-graph neighborhood, titles and ids only: parent, children, outgoing links (@-links and child blocks), backlinks, and for rows the same-database siblings. Read the neighbors that matter with get_page.',
       inputSchema: {
-        pageId: z.string().describe('Page ID — a standalone page, database, or database row (same IDs get_page accepts)'),
+        pageId: z.string().describe('Page, database or row id'),
       },
       outputSchema: z.object({
         page: z.object({

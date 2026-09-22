@@ -55,7 +55,7 @@ async function main() {
   }
 
   // 3) workspace digest vs naive "read every page body"
-  const digest = await getWorkspaceDigest(ws.id);
+  const { text: digest } = await getWorkspaceDigest(ws.id);
   let naive = 0;
   for (const it of items.filter(i => i.type === 'page')) {
     try { const pg = await getAnyPageById(ws.id, it.id); naive += (pg.content ?? '').length + (pg.title ?? '').length; } catch { /* skip */ }

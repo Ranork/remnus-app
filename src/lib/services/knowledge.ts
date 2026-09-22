@@ -15,6 +15,7 @@ import {
   workspaceContextPolicies,
   workspaceItems,
 } from '@/db/schema';
+import { chunkRows } from './sqlChunk';
 
 export type ContextActor = {
   tokenId: string;
@@ -125,6 +126,11 @@ async function resolveKnowledgeItem(workspaceId: string, itemId: string): Promis
 
   if (item) {
     if (item.workspaceId !== workspaceId) throw new Error('Access denied');
+    // Dashboards carry no knowledge metadata: the OKF model describes
+    // documents and their review state, and a dashboard is a live view over
+    // data that is already covered by its source databases. Treated as
+    // not-found here rather than given a fake concept type.
+    if (item.type === 'dashboard') throw new Error('Not found');
     return {
       id: item.id,
       itemType: item.type,
@@ -294,6 +300,61 @@ export async function recordGeneratedKnowledge(
   });
 }
 
+/**
+ * `recordGeneratedKnowledge` for a whole batch, in ONE statement.
+ *
+ * The per-item version resolves each id back to its type with a query first;
+ * the bulk write paths already know what they just created, so the caller
+ * passes `itemType` and the resolution round-trips disappear entirely. No
+ * metadata input: this is the "an agent authored this" stamp every bulk-created
+ * item gets, not the curated-metadata path.
+ *
+ * Best-effort by contract — the caller swallows failures, because losing a
+ * provenance stamp must not undo the content it describes.
+ */
+export async function recordGeneratedKnowledgeBulk(
+  workspaceId: string,
+  items: { itemId: string; itemType: KnowledgeItemType }[],
+  generatedBy: string,
+): Promise<void> {
+  if (items.length === 0) return;
+  const now = new Date();
+  // The table is unique on (workspace_id, item_id, item_type) — a duplicate id
+  // inside one call would make the statement conflict with itself.
+  const seen = new Set<string>();
+  const rows = items.flatMap(item => {
+    const key = `${item.itemId}|${item.itemType}`;
+    if (seen.has(key)) return [];
+    seen.add(key);
+    return [{
+      workspaceId,
+      itemId: item.itemId,
+      itemType: item.itemType,
+      conceptType: null,
+      description: null,
+      tags: [],
+      sources: [],
+      status: 'draft' as const,
+      staleAfter: null,
+      generatedBy,
+      generatedAt: now,
+      createdAt: now,
+      updatedAt: now,
+    }];
+  });
+
+  // 14 bind params per row (id comes from $defaultFn). Several chunks still
+  // ship as one batch, so the round-trip count stays flat as the call grows.
+  const statements = chunkRows(rows, 14).map(chunk =>
+    db.insert(knowledgeMetadata).values(chunk).onConflictDoUpdate({
+      target: [knowledgeMetadata.workspaceId, knowledgeMetadata.itemId, knowledgeMetadata.itemType],
+      set: { generatedBy, generatedAt: now, updatedAt: now },
+    }),
+  );
+  if (statements.length === 1) await statements[0];
+  else if (statements.length > 1) await db.batch(statements as [any, ...any[]]);
+}
+
 export async function recordImportedKnowledge(
   workspaceId: string,
   itemId: string,
@@ -400,6 +461,8 @@ export async function listKnowledgeCorpus(workspaceId: string): Promise<Knowledg
   const now = new Date();
   const corpus: KnowledgeCorpusItem[] = [];
   for (const raw of nativeItems) {
+    // See resolveKnowledgeItem: dashboards are not knowledge items.
+    if (raw.type === 'dashboard') continue;
     const item: ResolvedKnowledgeItem = {
       id: raw.id,
       itemType: raw.type,

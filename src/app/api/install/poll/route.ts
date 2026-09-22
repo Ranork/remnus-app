@@ -30,11 +30,17 @@ export async function GET(request: Request) {
   return new Response(
     JSON.stringify({
       ready: true,
+      // Defaulted rather than passed through: a CLI old enough to predate `join`
+      // only ever receives `connected` results anyway, and a new CLI should not
+      // have to distinguish "absent" from "connected".
+      status: result.status ?? 'connected',
       token: result.token,
       workspaceId: result.workspaceId,
       workspaceName: result.workspaceName,
       scope: result.scope,
       mcpUrl: result.mcpUrl,
+      replacedPrevious: result.replacedPrevious ?? false,
+      retryAt: result.retryAt ?? null,
     }),
     { headers: NO_STORE },
   );

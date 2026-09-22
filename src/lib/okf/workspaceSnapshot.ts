@@ -98,7 +98,15 @@ export async function getOkfWorkspaceSnapshot(workspaceId: string): Promise<OkfW
 
   return {
     workspace: { id: workspace.id, name: workspace.name, updatedAt: safeIso(workspace.updatedAt) },
-    items: itemRows.map(item => ({ ...item, updatedAt: safeIso(item.updatedAt) })),
+    // Dashboards are excluded from the OKF snapshot, and therefore from every
+    // consumer of it (export bundle, manifest, import round-trip). The format
+    // carries knowledge documents; a dashboard is a live view whose data is
+    // already exported through its source databases, and its body is a JSON
+    // spec nothing outside Remnus can read. This is the ONE place the
+    // exclusion lives — see AGENTS.md -> Dashboards.
+    items: itemRows
+      .filter(item => item.type !== 'dashboard')
+      .map(item => ({ ...item, type: item.type as 'page' | 'database', updatedAt: safeIso(item.updatedAt) })),
     standalonePages: standaloneRows.map(page => ({ ...page, updatedAt: safeIso(page.updatedAt) })),
     databases: databaseRows.map(database => ({
       id: database.id,

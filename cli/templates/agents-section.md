@@ -9,12 +9,21 @@ populated for this project yet. If it's `false`, a one-time setup guide is avail
 at {{CALIBRATE_URL}} — optional, for whichever agent wants to run it; the workspace
 also works as-is without it.
 
-**Using it:**
-- Search first (`search_workspace`/`list_workspace`) before creating anything.
-- Call `prepare_context` before non-trivial work; keep its `contextRunId` for related writes.
+**Using it, in this order:**
+1. Orient from `.remnus/workspace-map.md` (cached: titles, ids, row counts, body
+   sizes) — grep it instead of listing the tree over MCP. Its `cursor:` line marks
+   how far it is verified.
+2. Before writing, or if it looks stale, `get_changes_since` with that cursor —
+   never re-crawl. No map file? Call it once with no cursor.
+3. Read narrowly: `get_page` (`mode: "outline"` for long pages), `query_database`
+   with `fields`; `prepare_context` before non-trivial work, keeping its
+   `contextRunId` for related writes.
+4. `search_workspace` last, not first.
 - Write down decisions, gotchas, and state changes as they happen — not just in conversation.
-- `update_page` merges (send only what changed); check a database's schema
-  (`get_database_schema`) before writing rows; batch edits with `bulk_update_pages`;
-  destructive calls need `confirm: true` (preview first, confirm only with the human).
+- `update_page` merges (send only what changed); check `get_database_schema` before
+  writing rows; batch with `bulk_*`; destructive calls need `confirm: true`
+  (preview first, confirm only with the human).
 - Rejected or wrong-workspace token → tell the human to run `npx remnus doctor`;
   don't work around a broken connection with local notes instead.
+- No Remnus tools here and no `.remnus/credentials.json`? That is a fresh clone —
+  tell the human to run `npx remnus join` (not `init`).

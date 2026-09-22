@@ -19,6 +19,8 @@ import {
   writeSessionStartHook,
 } from '../lib/files.js';
 import { installUrl, newDeviceId, openBrowser, waitForInstall } from '../lib/install.js';
+import { MAP_FILE, ignorePatternsFor, refreshWorkspaceMap } from '../lib/map.js';
+import { joinCommand } from './join.js';
 import { bold, detail, dim, ok, say, step, warn } from '../lib/ui.js';
 
 const TEMPLATE_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', '..', 'templates');
@@ -65,6 +67,22 @@ export async function initCommand(options) {
   const authMode = options.oauth ? 'oauth' : 'pat';
 
   const existing = readConfig(root);
+  if (existing?.workspaceId && !options.reconnect) {
+    // A project that is already connected almost always means "someone else set this
+    // up and I just cloned it" — so `init` hands over to `join`, which only writes
+    // this person's own credentials.
+    //
+    // Replacing the connection stays possible but has to be asked for (`--reconnect`).
+    // Quietly re-pointing a committed `.remnus/config.json` at a different workspace
+    // is the most expensive mistake this flow allows: the rest of the team keeps
+    // writing to the old workspace while whoever ran it writes to a new empty one,
+    // and nobody notices until the shared memory has already forked.
+    say(dim(`Already connected to ${bold(existing.workspaceName ?? existing.workspaceId)} — joining it instead.`));
+    say(dim('To connect this project to a different workspace, run `npx remnus init --reconnect`.'));
+    say();
+    return joinCommand(options);
+  }
+
   if (existing?.workspaceId) {
     warn(`This project is already connected to ${bold(existing.workspaceName ?? existing.workspaceId)}.`);
     detail('Continuing will replace that connection with a new one.');
@@ -105,6 +123,9 @@ export async function initCommand(options) {
     authMode,
     scope: result.scope ?? null,
     calibrated: false,
+    // Whether .remnus/workspace-map.md is committed; `remnus sync --track` flips it.
+    // A re-connect keeps the team's earlier choice.
+    trackMap: existing?.trackMap === true,
     connectedAt: new Date().toISOString(),
   };
 
@@ -123,8 +144,17 @@ export async function initCommand(options) {
     });
     detail('.remnus/credentials.json  (git-ignored)');
 
-    const gitignore = ensureGitignore(root, ['.remnus/credentials.json']);
+    const gitignore = ensureGitignore(root, ignorePatternsFor(config));
     if (gitignore !== 'unchanged') detail(`.gitignore  (${gitignore})`);
+
+    // The first session's cold start: the agent reads this file before its first
+    // MCP call. Best-effort — the bridge rewrites it whenever a session starts.
+    try {
+      await refreshWorkspaceMap(root, config, result.token);
+      detail(`.remnus/${MAP_FILE}  (${config.trackMap ? 'committed' : 'git-ignored'})`);
+    } catch {
+      // The bridge will retry on the next session; nothing to report at install time.
+    }
   }
 
   const mcpState = writeMcpConfig(root, mcpEntryFor(config, { direct: options.http }));

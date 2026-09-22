@@ -130,7 +130,9 @@ export default function SubItemsPanel({ parentId, workspaceId }: SubItemsPanelPr
   const hrefFor = (item: WorkspaceItemRow) =>
     item.type === 'database' && item.databaseId
       ? `/db/${item.databaseId}`
-      : `/page/${item.id}`;
+      : item.type === 'dashboard'
+        ? `/dashboard/${item.id}`
+        : `/page/${item.id}`;
 
   if (loading) {
     return <div className="mb-6 h-5" />;

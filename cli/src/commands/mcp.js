@@ -2,6 +2,8 @@ import { spawn } from 'node:child_process';
 import { createInterface } from 'node:readline';
 
 import { findProjectRoot, readConfig, readCredentials } from '../lib/project.js';
+import { refreshWorkspaceMap } from '../lib/map.js';
+import { parseSseData } from '../lib/rpc.js';
 import { detail, fail, warn } from '../lib/ui.js';
 
 // The MCP server an agent actually talks to. It is a thin bridge: JSON-RPC arrives on
@@ -11,8 +13,25 @@ import { detail, fail, warn } from '../lib/ui.js';
 // The bridge exists so the project's .mcp.json can be committed without a secret in
 // it, so the token and OAuth modes look identical to the agent, and so there is one
 // place that notices the connection is broken and says which command fixes it.
+//
+// Because every message passes through here, it is also where the local workspace
+// map (`.remnus/workspace-map.md`, see lib/map.js) is kept fresh: once at start-up,
+// and again after every write tool call that succeeds. Both happen off to the side
+// — a separate HTTPS request whose result goes to the file, never to stdout.
 
 const DEFAULT_PROTOCOL_VERSION = '2025-06-18';
+
+// Writes are learned from the tools/list reply (`readOnlyHint: false`), so a tool
+// added server-side later counts without a CLI release. This list only covers the
+// window before that reply has been seen.
+const KNOWN_WRITE_TOOLS = new Set([
+  'create_page', 'update_page', 'bulk_create_pages', 'bulk_update_pages', 'delete_page',
+  'bulk_delete_pages', 'move_item', 'bulk_move_items', 'create_database',
+  'update_database_schema', 'create_database_view', 'update_database_view',
+  'delete_database_view', 'add_comment',
+]);
+// A burst of writes (a bulk fill, an agent editing several pages) becomes one refresh.
+const MAP_REFRESH_DEBOUNCE_MS = 1500;
 
 function writeMessage(message) {
   process.stdout.write(`${JSON.stringify(message)}\n`);
@@ -24,22 +43,9 @@ function replyWithError(request, code, message) {
   writeMessage({ jsonrpc: '2.0', id: request.id, error: { code, message } });
 }
 
-/** Server-Sent Events fallback: the server normally answers with plain JSON, but the
- *  transport is allowed to stream, and a streamed reply must not be dropped. */
-function* parseSseData(text) {
-  for (const block of text.split(/\r?\n\r?\n/)) {
-    const data = block
-      .split(/\r?\n/)
-      .filter((line) => line.startsWith('data:'))
-      .map((line) => line.slice(5).trim())
-      .join('');
-    if (data) yield data;
-  }
-}
-
 function missingInstall(root) {
   return new Error(
-    `No Remnus setup found in ${root}. Run \`npx remnus init\` in your project directory first.`,
+    `No Remnus setup found in ${root}. Run \`npx remnus init\` in your project directory first (or \`npx remnus join\` if a teammate has already connected it).`,
   );
 }
 
@@ -52,19 +58,70 @@ export async function mcpCommand() {
 
   const credentials = readCredentials(root);
   if (!credentials?.token) {
+    // `init` would be the wrong advice here. The project *is* connected — its
+    // committed config says so — and only this person's credentials file is
+    // missing, which is exactly the state a fresh clone starts in. `join` writes
+    // that one file; `init` would offer to replace the whole connection.
     throw new Error(
-      `This project's Remnus token is missing (${root}/.remnus/credentials.json). Run \`npx remnus init\` to reconnect.`,
+      `This project's Remnus token is missing (${root}/.remnus/credentials.json). Run \`npx remnus join\` to get your own.`,
     );
   }
 
-  return runTokenBridge(config, credentials.token);
+  return runTokenBridge(root, config, credentials.token);
 }
 
-function runTokenBridge(config, token) {
+/**
+ * Keeps `.remnus/workspace-map.md` current from inside the bridge. Best-effort by
+ * design: the map is a cache, the agent is told so in its header, and a failed
+ * refresh must never turn into a failed tool call. One warning per process at most.
+ */
+function createMapRefresher(root, config, token) {
+  let timer = null;
+  let inFlight = false;
+  let dirty = false;
+  let reported = false;
+
+  const run = async () => {
+    timer = null;
+    if (inFlight) { dirty = true; return; }
+    inFlight = true;
+    try {
+      await refreshWorkspaceMap(root, config, token);
+    } catch (err) {
+      if (!reported) {
+        reported = true;
+        warn(`Could not refresh .remnus/workspace-map.md: ${err?.message ?? err}`);
+      }
+    } finally {
+      inFlight = false;
+      if (dirty) { dirty = false; schedule(0); }
+    }
+  };
+
+  const schedule = (delayMs) => {
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(run, delayMs);
+    // A pending refresh must not keep the process alive once the client has gone.
+    timer.unref?.();
+  };
+
+  return { schedule, cancel: () => { if (timer) clearTimeout(timer); timer = null; } };
+}
+
+function runTokenBridge(root, config, token) {
   let protocolVersion = null;
   // One 401/403 is worth shouting about; repeating it once per call would bury the
   // agent's own output in noise.
   let reportedAuthFailure = false;
+
+  const map = createMapRefresher(root, config, token);
+  const writeTools = new Set(KNOWN_WRITE_TOOLS);
+  // tools/call requests by id, so the reply can be matched back to a tool name.
+  const pendingCalls = new Map();
+  let learnedTools = false;
+
+  // A fresh map for the first turn of this session; the agent may already be reading it.
+  map.schedule(0);
 
   const rl = createInterface({ input: process.stdin });
 
@@ -78,6 +135,10 @@ function runTokenBridge(config, token) {
     } catch {
       warn('Ignored a line from the client that was not valid JSON.');
       return;
+    }
+
+    if (message?.method === 'tools/call' && message.id !== undefined && message.id !== null) {
+      pendingCalls.set(message.id, message.params?.name);
     }
 
     const headers = {
@@ -102,14 +163,17 @@ function runTokenBridge(config, token) {
               ? 'Remnus rejected this project\'s token — it was revoked or has expired.'
               : 'This project\'s token does not belong to the workspace it is configured for.',
           );
-          detail('Run `npx remnus init` in this project to reconnect.');
+          // `join`, not `init`: the project's connection is fine, this person's
+          // credential is not. `init` on an already-connected project now hands
+          // over to `join` anyway, but saying the right command saves a detour.
+          detail('Run `npx remnus join` in this project to get a fresh token.');
         }
         replyWithError(
           message,
           -32001,
           res.status === 401
-            ? 'Remnus rejected this project\'s token. Run `npx remnus init` to reconnect.'
-            : 'This token belongs to a different workspace. Run `npx remnus init` to reconnect.',
+            ? 'Remnus rejected this project\'s token. Run `npx remnus join` to get a fresh one.'
+            : 'This token belongs to a different workspace. Run `npx remnus join` to get a fresh one.',
         );
         return;
       }
@@ -137,6 +201,22 @@ function runTokenBridge(config, token) {
       }
       writeMessage(parsed);
       reportedAuthFailure = false;
+
+      // Learn which tools write from the server's own annotations, then refresh the
+      // map after each write that the server reports as having succeeded.
+      if (message?.method === 'tools/list' && Array.isArray(parsed?.result?.tools)) {
+        if (!learnedTools) { writeTools.clear(); learnedTools = true; }
+        for (const tool of parsed.result.tools) {
+          if (tool?.annotations?.readOnlyHint === false) writeTools.add(tool.name);
+        }
+      }
+      const calledTool = pendingCalls.get(message?.id);
+      if (calledTool !== undefined) {
+        pendingCalls.delete(message.id);
+        if (writeTools.has(calledTool) && !parsed?.error && !parsed?.result?.isError) {
+          map.schedule(MAP_REFRESH_DEBOUNCE_MS);
+        }
+      }
     } catch (err) {
       // Leaving a request unanswered hangs the agent, so a transport failure is
       // reported back through the protocol as well as to the terminal.
@@ -146,7 +226,7 @@ function runTokenBridge(config, token) {
   });
 
   return new Promise((resolve) => {
-    rl.on('close', resolve);
+    rl.on('close', () => { map.cancel(); resolve(); });
   });
 }
 

@@ -71,13 +71,13 @@ Update multiple pages or database rows in a single call.
 
 ## bulk_create_pages
 
-Create up to 50 standalone pages and/or database rows in one call — the fast way to fill a database or lay out a section. Entries are created **in order**, and the call is **not atomic**: each entry reports its own `ok`/`error`, and one bad entry never stops the rest.
+Create up to 100 standalone pages and/or database rows in one call — the fast way to fill a database or lay out a section. Entries are created **in order**, and the call is **not atomic**: each entry reports its own `ok`/`error`, and one bad entry never stops the rest.
 
 **Parameters**
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
-| `pages` | array | ✓ | 1–50 entries, created in order |
+| `pages` | array | ✓ | 1–100 entries, created in order |
 | `contextRunId` | string | | Context preflight ID (required in Strict mode) |
 
 **Entry**

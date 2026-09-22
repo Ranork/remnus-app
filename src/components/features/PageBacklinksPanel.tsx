@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ChevronRight, Link2, FileText, Database as DatabaseIcon } from 'lucide-react';
+import { ChevronRight, Link2, FileText, Database as DatabaseIcon, LayoutDashboard } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { getPageRelations, type RelatedPageRef } from '@/lib/actions/workspace';
 
@@ -9,11 +9,15 @@ const TYPE_ICON: Record<RelatedPageRef['type'], typeof FileText> = {
   page: FileText,
   database: DatabaseIcon,
   database_row: FileText,
+  // A dashboard reaches this panel only as a page's parent or child, never as
+  // a link — see editor/pageLinkData.ts.
+  dashboard: LayoutDashboard,
 };
 
 function hrefFor(ref: RelatedPageRef): string {
   if (ref.type === 'database') return `/db/${ref.databaseId || ref.id}`;
   if (ref.type === 'database_row') return `/db/${ref.databaseId}/${ref.id}`;
+  if (ref.type === 'dashboard') return `/dashboard/${ref.id}`;
   return `/page/${ref.id}`;
 }
 

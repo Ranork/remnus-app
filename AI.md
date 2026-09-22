@@ -140,7 +140,7 @@ Repository monorepo değildir. Ana npm uygulamasına ek olarak dağıtım için 
 
 ## Critical conventions
 
-- Kullanıcıya görünen tüm uygulama metni next-intl üzerinden gelir. Yeni key'i 8 dosyaya (`en`, `tr`, `hi`, `es`, `fr`, `de`, `zh`, `ru`) ekle; 31 namespace vardır.
+- Kullanıcıya görünen tüm uygulama metni next-intl üzerinden gelir. Yeni key'i 8 dosyaya (`en`, `tr`, `hi`, `es`, `fr`, `de`, `zh`, `ru`) ekle; 37 namespace vardır.
 - Client'ta `useTranslations`, server component/action'da `getTranslations`; tarih locale'ini hardcode etme.
 - Server action/component'ta doğrudan `auth()` çağırma; `src/lib/auth/session.ts` içindeki `getCurrentUser()` kullan.
 - Proje pencereleri workspace'e kilitli oturum kullanır ve kilit **varsayılan-ret**tir: `auth()` kilitli oturumu çıkış yapmış sayar, `getCurrentUser()` hata fırlatır. Bir action yalnızca workspace içeriğiyse `getCurrentUserAllowingWorkspaceLock()` kullanıp çözdüğü workspace için `assertWorkspaceLockAllows()` çağırmalıdır (admin kısayolundan önce). Ayrıntı: `AGENTS.md` → **Project Install** §4.

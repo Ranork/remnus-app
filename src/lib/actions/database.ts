@@ -6,7 +6,6 @@ import { revalidatePath } from 'next/cache';
 import { getCurrentUserAllowingWorkspaceLock } from '@/lib/auth/session';
 import { assertWorkspaceLockAllows } from '@/lib/auth/workspaceLock';
 import { createWorkspaceDatabase, getActiveWorkspaceId } from './workspace';
-import { publish } from '@/lib/realtime/publish';
 import { SELECT_COLOR_ORDER, normalizeOption, type SelectOption } from '@/lib/types/properties';
 
 // Verify user has access to the workspace that owns this database.
@@ -76,7 +75,7 @@ export async function getDatabase(id: string) {
 }
 
 export async function updateDatabaseSchema(id: string, newSchema: any[]) {
-  const { userId, workspaceId } = await assertDatabaseAccess(id);
+  const { workspaceId } = await assertDatabaseAccess(id);
 
   // 1. Fetch current database schema to compare
   const [dbRow] = await db
@@ -243,11 +242,9 @@ export async function updateDatabaseSchema(id: string, newSchema: any[]) {
   await db.update(databases).set({ schema: newSchema, updatedAt: new Date() }).where(eq(databases.id, id));
 
   revalidatePath(`/db/${id}`);
-  publish({ scope: 'database', workspaceId, resourceId: id, actorId: userId });
 }
 
 export async function updateDatabaseViews(id: string, views: any[]) {
-  const { userId, workspaceId } = await assertDatabaseAccess(id);
+  await assertDatabaseAccess(id);
   await db.update(databases).set({ views, updatedAt: new Date() }).where(eq(databases.id, id));
-  publish({ scope: 'database', workspaceId, resourceId: id, actorId: userId });
 }

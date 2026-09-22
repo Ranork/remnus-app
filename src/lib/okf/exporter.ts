@@ -315,6 +315,8 @@ export async function buildOkfBundle(snapshot: OkfWorkspaceSnapshot, exportedAt 
   };
 
   for (const item of snapshot.items) {
+    // Only pages and databases reach here — `buildWorkspaceSnapshot` filters
+    // dashboards out of `snapshot.items` (see its comment for why).
     if (item.type === 'page') pathById.set(item.id, `pages/${conceptFilename(item.title, item.id)}`);
     else {
       const database = databaseByItem.get(item.id);

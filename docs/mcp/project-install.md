@@ -7,6 +7,11 @@ your AI coding agent do it for you, see [Hand it to your agent](#hand-it-to-your
 `remnus` is the open-source CLI for this project. The next section is the complete
 account of what it talks to and writes.
 
+**Someone already connected this project?** Then this is not your page. A cloned
+repository carries `.remnus/config.json` (which workspace it belongs to) but never
+`.remnus/credentials.json` (your token) — so you have the address and no key. Run
+`npx remnus join`, not `init`: see [Join a Connected Project](project-join.md).
+
 It's a different starting point than [Getting Started](getting-started.md), which
 assumes a workspace already exists and walks a human through connecting an editor to
 it by hand. Project Install instead creates (or picks) the workspace *for* this
@@ -67,11 +72,42 @@ connect an existing one), then writes, without overwriting anything already ther
 | `.mcp.json` | yes | How agents in this project reach Remnus |
 | `.remnus/config.json` | yes | Which workspace this project belongs to |
 | `.remnus/credentials.json` | no | This project's token — auto-added to `.gitignore` |
+| `.remnus/workspace-map.md` | no | Cached map of the workspace, so an agent starts with the ids in hand |
 | `AGENTS.md` / `CLAUDE.md` | yes | Tells any agent how to use the workspace |
 | `.claude/settings.json` | yes | A `SessionStart` hook that opens the workspace on a fresh Claude Code session |
 
+Only the first person runs this. Everyone else on the team runs
+[`npx remnus join`](project-join.md), which writes only `.remnus/credentials.json` and
+leaves every committed file above untouched. Running `init` in a project that is
+already connected joins it too — reconnecting it to a *different* workspace would fork
+the team's shared memory, so that has to be asked for with `--reconnect`.
+
 Self-hosting? Add `--server https://your-instance` (or set `REMNUS_SERVER_URL`).
 `--oauth` skips storing a token at all and lets the MCP client sign in itself instead.
+
+### The local workspace map
+
+`.remnus/workspace-map.md` is a cached copy of the [workspace digest](resources.md) —
+one line per page and database with its id, row count, body size and last-updated date.
+It exists so an agent's *first* turn already knows where things are: it can grep the
+file for the three lines it needs instead of pulling the whole tree over MCP and
+waiting for a round-trip to do it.
+
+It is kept current without anyone asking: `npx remnus mcp` — the bridge every agent
+session runs — refreshes it when a session starts and again after each write that
+succeeds, on a separate request that never touches the protocol stream. `npx remnus
+sync` does it on demand, and `npx remnus doctor` does it whenever the connection
+checks out.
+
+It is a **cache and says so in its own header**, with the cursor it was verified up
+to. The rule the `AGENTS.md` block gives every agent is: read the map, then
+`get_changes_since(cursor)` for the delta before writing or whenever it looks stale —
+never re-crawl the tree.
+
+It is git-ignored by default, because a file that changes on every agent write would
+appear in every diff. A team that would rather share one copy runs `npx remnus sync
+--track` (stored in the committed `config.json`, so everyone's CLI agrees);
+`--untrack` reverts.
 
 ## Step 2 — Set the workspace up for this project
 
@@ -97,6 +133,7 @@ Claude Code: `/mcp`, then reconnect `remnus`, or start a new session).
 ```bash
 npx remnus open      # open this project's workspace in its own signed-in window
 npx remnus doctor    # check whether the connection is healthy
+npx remnus sync      # rewrite the local workspace map from the live workspace
 ```
 
 In Claude Code, a fresh session already does the `open` part on its own — the hook

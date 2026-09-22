@@ -3,7 +3,7 @@ import { db } from '@/db';
 import { workspaceItems, pages, databases, agentActivity, pageLinks } from '@/db/schema';
 import { eq, and, desc } from 'drizzle-orm';
 import { listWorkspaceItems, getDatabaseSchema, getAnyPageById, getWorkspaceDigest } from '@/lib/services/workspace';
-import type { TokenContext } from './context';
+import { logActivity, type TokenContext } from './context';
 import { analyzeKnowledgeHealth } from '@/lib/okf/health';
 import { getOkfWorkspaceSnapshot } from '@/lib/okf/workspaceSnapshot';
 
@@ -105,8 +105,13 @@ export function registerResources(server: McpServer, ctx: TokenContext) {
       const workspaceId = variables.id as string;
       if (workspaceId !== ctx.workspaceId) throw new Error('Access denied or workspace not found');
 
-      const digest = await getWorkspaceDigest(ctx.workspaceId);
-      return { contents: [{ uri: uri.href, mimeType: 'text/markdown', text: digest }] };
+      const { text, naiveBytes } = await getWorkspaceDigest(ctx.workspaceId);
+      // The one resource read worth logging: it is how an agent orients, and it
+      // is the single biggest saving the product makes (a map instead of every
+      // body). Logged under a `resource:` name so it can never be confused with
+      // a callable tool in the audit log. Best-effort, like every logActivity.
+      await logActivity(ctx, 'resource:digest', 'success', 'workspace', ctx.workspaceId, text, { baselineBytes: naiveBytes });
+      return { contents: [{ uri: uri.href, mimeType: 'text/markdown', text }] };
     },
   );
 

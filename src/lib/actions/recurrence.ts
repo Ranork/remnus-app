@@ -7,7 +7,6 @@ import { revalidatePath } from 'next/cache';
 import { getCurrentUserAllowingWorkspaceLock } from '@/lib/auth/session';
 import { assertWorkspaceLockAllows } from '@/lib/auth/workspaceLock';
 import { deleteWorkspaceItem } from './workspace';
-import { publish } from '@/lib/realtime/publish';
 import { recordDeletionTombstone } from '@/lib/services/workspace';
 import { purgeReferencesTo, removePageLinksFor } from '@/lib/services/pageLinks';
 import {
@@ -77,9 +76,8 @@ async function assertPageAccess(pageId: string) {
   return { ...access, ...page };
 }
 
-function finish(databaseId: string, workspaceId: string, userId: string) {
+function finish(databaseId: string) {
   revalidatePath(`/db/${databaseId}`);
-  publish({ scope: 'database', workspaceId, resourceId: databaseId, actorId: userId });
 }
 
 /**
@@ -140,12 +138,12 @@ export async function loadRecurrenceState(
   databaseId: string,
   windowEnd?: string,
 ): Promise<{ series: SeriesSummary[]; created: number }> {
-  const { userId, workspaceId } = await assertDatabaseAccess(databaseId);
+  await assertDatabaseAccess(databaseId);
 
   const { created } = await topUpDatabaseSeries(databaseId, horizonFor(windowEnd));
   const series = await getSeriesForDatabase(databaseId);
 
-  if (created > 0) finish(databaseId, workspaceId, userId);
+  if (created > 0) finish(databaseId);
 
   return {
     created,
@@ -176,12 +174,12 @@ export async function setPageRecurrence(
   dateColId: string,
   rule: RecurrenceRule,
 ): Promise<{ seriesId: string; created: number } | null> {
-  const { userId, workspaceId, databaseId } = await assertPageAccess(pageId);
+  const { userId, databaseId } = await assertPageAccess(pageId);
 
   if (!normalizeRule(rule)) throw new Error('Invalid recurrence rule');
 
   const result = await createSeriesFromPage(pageId, dateColId, rule, userId);
-  finish(databaseId, workspaceId, userId);
+  finish(databaseId);
   return result;
 }
 
@@ -201,7 +199,7 @@ export async function changeSeriesRule(
   newRule: RecurrenceRule,
   scope: 'thisAndFollowing' | 'all',
 ) {
-  const { userId, workspaceId, databaseId, seriesId, occurrenceDate } = await assertPageAccess(pageId);
+  const { userId, databaseId, seriesId, occurrenceDate } = await assertPageAccess(pageId);
   if (!seriesId) throw new Error('This card is not part of a series');
   if (!normalizeRule(newRule)) throw new Error('Invalid recurrence rule');
 
@@ -210,7 +208,7 @@ export async function changeSeriesRule(
       ? await replaceSeriesRule(seriesId, newRule)
       : await splitSeriesAt(seriesId, occurrenceDate ?? newRule.startDate, newRule, userId);
 
-  finish(databaseId, workspaceId, userId);
+  finish(databaseId);
   return result;
 }
 
@@ -220,28 +218,28 @@ export async function deleteRecurringPage(
   scope: RecurrenceScope,
   includeDirty = false,
 ): Promise<{ deleted: number; preserved: number }> {
-  const { userId, workspaceId, databaseId } = await assertPageAccess(pageId);
+  const { workspaceId, databaseId } = await assertPageAccess(pageId);
 
   const result = await deleteOccurrences(pageId, scope, includeDirty);
   if (!result) {
     // Not a series card after all — fall back to the plain single-row delete.
     await cleanUpDeletedPages([pageId], workspaceId);
-    finish(databaseId, workspaceId, userId);
+    finish(databaseId);
     return { deleted: 1, preserved: 0 };
   }
 
   await cleanUpDeletedPages(result.deletedIds, workspaceId);
   await pruneEmptySeries(databaseId);
-  finish(databaseId, workspaceId, userId);
+  finish(databaseId);
 
   return { deleted: result.deletedIds.length, preserved: result.preserved };
 }
 
 /** "Seriden çıkar" — the card stays, stops following the rule. */
 export async function detachPageFromSeries(pageId: string): Promise<boolean> {
-  const { userId, workspaceId, databaseId } = await assertPageAccess(pageId);
+  const { databaseId } = await assertPageAccess(pageId);
   const ok = await detachOccurrence(pageId);
-  if (ok) finish(databaseId, workspaceId, userId);
+  if (ok) finish(databaseId);
   return ok;
 }
 
@@ -257,7 +255,7 @@ export async function endSeriesRecurrence(
   pageId: string,
   scope: 'thisAndFollowing' | 'all',
 ): Promise<{ removed: number } | null> {
-  const { userId, workspaceId, databaseId, seriesId, occurrenceDate } = await assertPageAccess(pageId);
+  const { databaseId, seriesId, occurrenceDate } = await assertPageAccess(pageId);
   if (!seriesId) return null;
 
   const result =
@@ -266,6 +264,6 @@ export async function endSeriesRecurrence(
       : await endSeriesAt(seriesId, occurrenceDate);
   if (!result) return null;
 
-  finish(databaseId, workspaceId, userId);
+  finish(databaseId);
   return result;
 }

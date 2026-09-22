@@ -16,6 +16,11 @@ function resolveLastPath(lastPath: string | undefined, items: WorkspaceItemRow[]
     return items.some((i) => i.id === pageMatch[1] && i.type === 'page') ? lastPath : null;
   }
 
+  const dashboardMatch = lastPath.match(/^\/dashboard\/([^/?#]+)/);
+  if (dashboardMatch) {
+    return items.some((i) => i.id === dashboardMatch[1] && i.type === 'dashboard') ? lastPath : null;
+  }
+
   const dbMatch = lastPath.match(/^\/db\/([^/?#]+)/);
   if (dbMatch) {
     return items.some((i) => i.databaseId === dbMatch[1]) ? lastPath : null;
@@ -78,6 +83,8 @@ export default async function AppRedirectPage({
     if (first) {
       if (first.type === 'database' && first.databaseId) {
         redirect(`/db/${first.databaseId}${suffix}`);
+      } else if (first.type === 'dashboard') {
+        redirect(`/dashboard/${first.id}${suffix}`);
       } else {
         redirect(`/page/${first.id}${suffix}`);
       }

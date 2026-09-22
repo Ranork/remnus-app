@@ -34,6 +34,7 @@ import {
   History,
   Layers,
   Lock,
+  UserPlus,
 } from 'lucide-react';
 import { NotionMark, AppFlowyMark, AffineMark, ObsidianMark } from '@/components/docs/CompetitorMark';
 
@@ -61,6 +62,9 @@ export type WikiPage = {
 export const WIKI_PAGES: WikiPage[] = [
   { slug: '',                 file: 'README.md',           title: 'MCP Documentation',  icon: BookOpen,    order: 0 },
   { slug: 'project-install',  file: 'project-install.md',  title: 'Project Install',    icon: Terminal,    order: 1 },
+  // Visible, unlike `calibrate`: this one is read by humans as often as by agents —
+  // it is the answer to "I cloned the repo and the Remnus tools aren't there".
+  { slug: 'project-join',     file: 'project-join.md',     title: 'Join a Project',     icon: UserPlus,    order: 1.2 },
   { slug: 'calibrate',        file: 'calibrate.md',        title: 'Calibrate',          icon: Wrench,      order: 1.5, hidden: true },
   { slug: 'getting-started',  file: 'getting-started.md',  title: 'Getting Started',    icon: Rocket,      order: 2 },
   { slug: 'connect-editors',  file: 'connect-editors.md',  title: 'Connect Your Editor', icon: Plug,       order: 3 },

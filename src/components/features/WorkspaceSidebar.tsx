@@ -58,6 +58,7 @@ import TemplatePickerModal from './TemplatePickerModal';
 import WorkspaceSettingsModal from './WorkspaceSettingsModal';
 import { initDesktopZoom } from '@/lib/desktop/zoom';
 import AgentsModal from './AgentsModal';
+import AgentSavingsCard from './AgentSavingsCard';
 import TrashModal from './TrashModal';
 import OnboardingGuide from './onboarding/OnboardingGuide';
 import AgentDetectGuide from './agent-detect/AgentDetectGuide';
@@ -111,6 +112,7 @@ export default function WorkspaceSidebar({
   hideBrandHeader = false,
   density = 'comfortable',
   showOnboarding = false,
+  isProjectWindow = false,
 }: {
   items: WorkspaceItemRow[];
   workspaces: WorkspaceType[];
@@ -121,6 +123,14 @@ export default function WorkspaceSidebar({
   /** Render the new-user onboarding surface here. Set only on the always-mounted
    *  desktop sidebar so the welcome modal/checklist don't double up with the mobile drawer. */
   showOnboarding?: boolean;
+  /** This is a project window: a session locked to one workspace (`npx remnus open`).
+   *  Everything that isn't content inside that workspace is left out of the tree — not
+   *  hidden with CSS, so the modals' state and their extra server calls
+   *  (`getUserAgentTokenCount`, `getMyTier`) never run here either. Both of those call
+   *  `getCurrentUser()`, which throws for a locked session, so in a window they were
+   *  round-trips that could only fail. The flag comes from the server's lock claim
+   *  (see the `(app)` layout) — never guessed on the client. */
+  isProjectWindow?: boolean;
 }) {
   const t = useTranslations('Workspace');
   const tLayout = useTranslations('Layout');
@@ -320,12 +330,15 @@ export default function WorkspaceSidebar({
   // Subscribe to real-time events from other users / MCP agents
   useWorkspaceEvents(currentUser.id, isAnyModalOrPickerOpen);
 
-  // Load agent token count + current plan tier for the sidebar badges
+  // Load agent token count + current plan tier for the sidebar badges. Trash is the
+  // only one a project window asks for — the other two are account-level and their
+  // buttons aren't rendered there.
   useEffect(() => {
-    getUserAgentTokenCount().then(setAgentTokenCount).catch(() => {});
     getUserTrashCount().then(setTrashCount).catch(() => {});
+    if (isProjectWindow) return;
+    getUserAgentTokenCount().then(setAgentTokenCount).catch(() => {});
     getMyTier().then(setPlanTier).catch(() => {});
-  }, []);
+  }, [isProjectWindow]);
 
   // Remnus logo → first root-level item of the active workspace
   const logoHref = useMemo(() => {
@@ -334,6 +347,7 @@ export default function WorkspaceSidebar({
     );
     if (!first) return undefined;
     if (first.type === 'database' && first.databaseId) return `/db/${first.databaseId}`;
+    if (first.type === 'dashboard') return `/dashboard/${first.id}`;
     return `/page/${first.id}`;
   }, [localItems, activeWorkspace.id]);
 
@@ -347,10 +361,11 @@ export default function WorkspaceSidebar({
       if (matchingItem) return matchingItem.workspaceId;
     }
 
-    // If the path is a standalone page: /page/[itemId]
-    const pageMatch = pathname.match(/^\/page\/([^\/]+)/);
-    if (pageMatch) {
-      const itemId = pageMatch[1];
+    // If the path is a standalone page or a dashboard, both address the
+    // workspace item directly: /page/[itemId] · /dashboard/[itemId]
+    const itemMatch = pathname.match(/^\/(?:page|dashboard)\/([^\/]+)/);
+    if (itemMatch) {
+      const itemId = itemMatch[1];
       const matchingItem = localItems.find(i => i.id === itemId);
       if (matchingItem) return matchingItem.workspaceId;
     }
@@ -794,6 +809,7 @@ export default function WorkspaceSidebar({
     startTransition(async () => {
       const result = await duplicateWorkspaceItem(item.id);
       if (result?.type === 'page') router.push(`/page/${result.itemId}`);
+      else if (result?.type === 'dashboard') router.push(`/dashboard/${result.itemId}`);
       else if (result?.type === 'database') router.push(`/db/${result.dbId}`);
     });
   };
@@ -818,7 +834,9 @@ export default function WorkspaceSidebar({
 
     const href = item.type === 'database' && item.databaseId
       ? `/db/${item.databaseId}`
-      : `/page/${item.id}`;
+      : item.type === 'dashboard'
+        ? `/dashboard/${item.id}`
+        : `/page/${item.id}`;
 
     startTransition(async () => {
       try {
@@ -865,7 +883,11 @@ export default function WorkspaceSidebar({
           },
         } as MenuItem]
       : []),
-    { id: 'share', label: tSharing('shareButton'), icon: Globe, onSelect: () => setShareModalItemId(item.id) },
+    // Dashboards are not publishable in v1 (AGENTS.md -> Dashboards). Offering
+    // Share here would publish a page whose body is the raw JSON spec.
+    ...(item.type !== 'dashboard'
+      ? [{ id: 'share', label: tSharing('shareButton'), icon: Globe, onSelect: () => setShareModalItemId(item.id) } as MenuItem]
+      : []),
     { kind: 'separator' },
     { id: 'delete', label: t('delete'), icon: Trash, danger: true, onSelect: () => handleDeleteItem(item) },
   ];
@@ -886,11 +908,13 @@ export default function WorkspaceSidebar({
     if (item.type === 'database' && item.databaseId) {
       return pathname.startsWith(`/db/${item.databaseId}`);
     }
+    if (item.type === 'dashboard') return pathname === `/dashboard/${item.id}`;
     return pathname === `/page/${item.id}`;
   };
 
   const hrefFor = (item: WorkspaceItemRow) => {
     if (item.type === 'database' && item.databaseId) return `/db/${item.databaseId}`;
+    if (item.type === 'dashboard') return `/dashboard/${item.id}`;
     return `/page/${item.id}`;
   };
 
@@ -1011,13 +1035,16 @@ export default function WorkspaceSidebar({
                     {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                   </button>
 
-                  {/* Workspace icon / initials badge */}
+                  {/* Workspace icon / initials badge. Changing it is workspace management
+                      (`assertWorkspaceManagementAccess`), which a project window is denied,
+                      so there it's a plain badge. */}
                   <div className="relative shrink-0" onClick={(e) => e.stopPropagation()}>
                     <button
                       ref={(el) => { workspaceIconRefs.current[w.id] = el; }}
-                      onClick={() => setActiveWorkspaceIconPickerId(activeWorkspaceIconPickerId === w.id ? null : w.id)}
+                      onClick={() => { if (!isProjectWindow) setActiveWorkspaceIconPickerId(activeWorkspaceIconPickerId === w.id ? null : w.id); }}
                       className="flex items-center justify-center"
-                      title={t('changeIcon')}
+                      title={isProjectWindow ? undefined : t('changeIcon')}
+                      disabled={isProjectWindow}
                     >
                       {w.icon ? (
                         <PageIcon icon={w.icon} iconColor={w.iconColor} size={20} hideFallback={false} className="rounded" />
@@ -1061,23 +1088,29 @@ export default function WorkspaceSidebar({
                   >
                     <Plus size={12} />
                   </button>
-                  <button
-                    onClick={() => handleToggleWorkspaceHidden(w.id, !w.hidden)}
-                    className="p-1 rounded hover:bg-neutral-700 text-neutral-400 hover:text-neutral-50"
-                    title={w.hidden ? t('unhideWorkspace') : t('hideWorkspace')}
-                  >
-                    {w.hidden ? <EyeOff size={12} /> : <Eye size={12} />}
-                  </button>
-                  <button
-                    onClick={() => {
-                      setSettingsInitialTab('general');
-                      setSettingsModalWorkspace({ id: w.id, name: w.name, icon: w.icon, iconColor: w.iconColor });
-                    }}
-                    className="p-1 rounded hover:bg-neutral-700 text-neutral-400 hover:text-neutral-50"
-                    title={t('workspaceSettings')}
-                  >
-                    <Settings size={12} />
-                  </button>
+                  {/* Hiding and workspace settings are management, denied to a locked
+                      session — only the "new item" button above is content. */}
+                  {!isProjectWindow && (
+                    <>
+                      <button
+                        onClick={() => handleToggleWorkspaceHidden(w.id, !w.hidden)}
+                        className="p-1 rounded hover:bg-neutral-700 text-neutral-400 hover:text-neutral-50"
+                        title={w.hidden ? t('unhideWorkspace') : t('hideWorkspace')}
+                      >
+                        {w.hidden ? <EyeOff size={12} /> : <Eye size={12} />}
+                      </button>
+                      <button
+                        onClick={() => {
+                          setSettingsInitialTab('general');
+                          setSettingsModalWorkspace({ id: w.id, name: w.name, icon: w.icon, iconColor: w.iconColor });
+                        }}
+                        className="p-1 rounded hover:bg-neutral-700 text-neutral-400 hover:text-neutral-50"
+                        title={t('workspaceSettings')}
+                      >
+                        <Settings size={12} />
+                      </button>
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -1093,9 +1126,10 @@ export default function WorkspaceSidebar({
                       const isItemDragged = draggedItemId === item.id;
                       const isItemDragOver = dragOverItemId === item.id;
                       // Gray out items that can't receive a drop while dragging:
-                      // databases (can't hold children) and descendants of the dragged item.
+                      // databases and dashboards (neither holds children) and
+                      // descendants of the dragged item.
                       const isInvalidDropTarget = !!draggedItemId && !isItemDragged && (
-                        item.type === 'database' ||
+                        item.type !== 'page' ||
                         isDescendant(localItems, item.id, draggedItemId)
                       );
 
@@ -1281,8 +1315,8 @@ export default function WorkspaceSidebar({
           );
         })}
 
-        {/* Show / hide hidden workspaces toggle */}
-        {localWorkspaces.some((w) => w.hidden) && (
+        {/* Show / hide hidden workspaces toggle — workspace management, so not in a project window */}
+        {!isProjectWindow && localWorkspaces.some((w) => w.hidden) && (
           <button
             onClick={toggleShowHidden}
             className="flex items-center gap-1.5 px-2 py-1 text-[11px] text-neutral-500 hover:text-neutral-300 transition-colors"
@@ -1296,7 +1330,8 @@ export default function WorkspaceSidebar({
           </button>
         )}
 
-        {/* Add Workspace Action Row */}
+        {/* Add Workspace Action Row — a locked session can't create or switch workspaces */}
+        {!isProjectWindow && (
         <div className="pt-2">
           {isCreatingWorkspace ? (
             <div className="bg-neutral-850/40 border border-neutral-800/80 rounded-lg p-2.5 space-y-2">
@@ -1340,6 +1375,7 @@ export default function WorkspaceSidebar({
             </button>
           )}
         </div>
+        )}
       </div>
 
       {/* Item context menu — mobile: bottom sheet, desktop: floating dropdown */}
@@ -1375,16 +1411,19 @@ export default function WorkspaceSidebar({
               <Copy size={15} className="text-neutral-500 shrink-0" />
               {t('duplicate')}
             </button>
-            <button
-              onClick={() => {
-                setOpenMenuItemId(null);
-                setShareModalItemId(activeMenuItem.id);
-              }}
-              className="w-full flex items-center gap-3 px-4 py-3.5 text-sm text-neutral-300 active:bg-neutral-800 transition-colors"
-            >
-              <Globe size={15} className="text-neutral-500 shrink-0" />
-              {tSharing('shareButton')}
-            </button>
+            {/* Same reason as the desktop menu above: dashboards aren't publishable in v1. */}
+            {activeMenuItem.type !== 'dashboard' && (
+              <button
+                onClick={() => {
+                  setOpenMenuItemId(null);
+                  setShareModalItemId(activeMenuItem.id);
+                }}
+                className="w-full flex items-center gap-3 px-4 py-3.5 text-sm text-neutral-300 active:bg-neutral-800 transition-colors"
+              >
+                <Globe size={15} className="text-neutral-500 shrink-0" />
+                {tSharing('shareButton')}
+              </button>
+            )}
             <div className="border-t border-neutral-800 mx-4 my-1" />
             <button
               onClick={() => handleDeleteItem(activeMenuItem)}
@@ -1444,12 +1483,14 @@ export default function WorkspaceSidebar({
           }}
           onCreated={(type, navId, tempId, sidebarItemId) => {
             // Replace temp item with real item and navigate
-            const realSidebarId = type === 'page' ? navId : (sidebarItemId ?? navId);
+            const realSidebarId = type === 'database' ? (sidebarItemId ?? navId) : navId;
             setLocalItems(prev => prev.map(i => {
               if (i.id !== tempId) return i;
               return { ...i, id: realSidebarId, databaseId: type === 'database' ? navId : null };
             }));
-            router.push(type === 'page' ? `/page/${navId}` : `/db/${navId}`);
+            router.push(
+              type === 'database' ? `/db/${navId}` : type === 'dashboard' ? `/dashboard/${navId}` : `/page/${navId}`,
+            );
           }}
         />,
         sidebarOverlayContainer,
@@ -1594,7 +1635,18 @@ export default function WorkspaceSidebar({
         </div>
       )}
 
-      {/* AI Agents button */}
+      {/* What the agents have saved. Workspace-scoped in a project window (content
+          data the lock allows), account-wide otherwise; it hides itself when there
+          is nothing measured yet. */}
+      <AgentSavingsCard
+        workspaceId={isProjectWindow ? activeWorkspace.id : undefined}
+        onOpenDetail={isProjectWindow ? undefined : () => setAgentsModalOpen(true)}
+      />
+
+      {/* AI Agents button — account-level (tokens span every workspace the user is in),
+          and in a project window the modal is opened with a token that can't list them,
+          so it would show nothing useful. */}
+      {!isProjectWindow && (
       <div className="shrink-0 px-2 pt-1">
         <button
           onClick={() => setAgentsModalOpen(true)}
@@ -1618,6 +1670,7 @@ export default function WorkspaceSidebar({
           ) : null}
         </button>
       </div>
+      )}
 
       {/* Trash button — same "common ground" placement as AI Agents, not
           buried in a per-workspace Settings tab (deletions can happen in any
@@ -1638,7 +1691,8 @@ export default function WorkspaceSidebar({
         </button>
       </div>
 
-      {/* Plan / Billing button */}
+      {/* Plan / Billing button — account-level; the lock denies it server-side */}
+      {!isProjectWindow && (
       <div className="shrink-0 px-2">
         <button
           onClick={() => setBillingModalOpen(true)}
@@ -1656,15 +1710,21 @@ export default function WorkspaceSidebar({
           )}
         </button>
       </div>
+      )}
 
-      {/* Install app (PWA) button — web only, hidden in Tauri / when installed */}
-      <PwaInstallButton />
+      {/* Install app (PWA) button — web only, hidden in Tauri / when installed.
+          A project window is already its own installed-feeling window, and it lives in a
+          throwaway browser profile, so installing from here would produce an app pinned to
+          one project. */}
+      {!isProjectWindow && <PwaInstallButton />}
 
       {/* What's New — product changelog; badge counts entries shipped since the
-          last time this user opened the panel */}
+          last time this user opened the panel. Kept in project windows: it's product
+          news, not account state. */}
       <WhatsNewButton />
 
-      {/* Settings button */}
+      {/* Settings button — account settings, denied to a locked session */}
+      {!isProjectWindow && (
       <div className="shrink-0 px-2 pb-1">
         <button
           onClick={() => setUserSettingsOpen(true)}
@@ -1674,6 +1734,7 @@ export default function WorkspaceSidebar({
           <span className="truncate">{t('settings')}</span>
         </button>
       </div>
+      )}
 
       {/* User panel */}
       <div className="shrink-0 border-t border-neutral-800 px-3 py-2.5 flex items-center gap-2.5">
@@ -1702,7 +1763,8 @@ export default function WorkspaceSidebar({
             <span className="text-xs font-medium text-neutral-200 truncate">
               {currentUser.name ?? currentUser.email ?? 'User'}
             </span>
-            {currentUser.role === 'admin' && (
+            {/* Admin panel is account-level — a locked session can't open it. */}
+            {currentUser.role === 'admin' && !isProjectWindow && (
               <Link
                 href="/admin"
                 className={`shrink-0 flex items-center gap-0.5 text-[9px] font-semibold px-1 py-0.5 rounded transition-colors ${pathname.startsWith('/admin') ? 'text-blue-300 bg-blue-500/20' : 'text-blue-400 bg-blue-500/10 hover:bg-blue-500/20 hover:text-blue-300'}`}
@@ -1717,14 +1779,19 @@ export default function WorkspaceSidebar({
           )}
         </div>
 
-        {/* Logout */}
-        <button
-          onClick={() => logout()}
-          className="shrink-0 p-1.5 rounded text-neutral-500 hover:text-neutral-200 hover:bg-neutral-800 transition-colors cursor-pointer"
-          title={t('signOut')}
-        >
-          <LogOut size={13} />
-        </button>
+        {/* Logout — in a project window signing out only closes this window's session
+            (there is nothing to sign back into inside its isolated browser profile), so
+            the banner carries that action, labelled for what it does. The panel still
+            shows which account the window is running as. */}
+        {!isProjectWindow && (
+          <button
+            onClick={() => logout()}
+            className="shrink-0 p-1.5 rounded text-neutral-500 hover:text-neutral-200 hover:bg-neutral-800 transition-colors cursor-pointer"
+            title={t('signOut')}
+          >
+            <LogOut size={13} />
+          </button>
+        )}
       </div>
     </div>
   );

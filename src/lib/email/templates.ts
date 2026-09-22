@@ -137,7 +137,55 @@ export function accountDeletionConfirmEmail(name: string | null | undefined, con
   };
 }
 
-// ── 6. Contact form (instant, on submit — sent TO the team, not a user) ───────
+// ── 6. Workspace access request (instant, on request — to the workspace owner) ─
+
+/**
+ * Someone ran `npx remnus join` in a project pointing at this owner's workspace
+ * and is not a member of it. They are blocked until the owner answers, so this is
+ * an operational notice, not marketing (see `canReceiveEmail`).
+ *
+ * The requester's name, email and project name are all attacker-controllable in
+ * principle — anyone can sign up and ask — so every one of them is escaped, and
+ * nothing here is presented as verified beyond "this account asked".
+ */
+export function accessRequestEmail(
+  ownerName: string | null | undefined,
+  requester: { name: string | null; email: string | null },
+  workspaceName: string,
+  projectName: string | null,
+  note: string | null,
+  reviewUrl: string,
+): EmailContent {
+  const who = escapeHtml(requester.name?.trim() || requester.email || 'Someone');
+  const safeWorkspace = escapeHtml(workspaceName);
+
+  const bodyHtml =
+    para(`Hi ${escapeHtml(firstName(ownerName))},`) +
+    para(`<strong style="color:${P.soft};">${who}</strong> is asking to join your workspace <strong style="color:${P.soft};">${safeWorkspace}</strong>, so their AI agent can work in it from a project that is already connected to it.`) +
+    card(
+      `<p style="margin:0 0 10px;color:${P.body};font-size:13px;line-height:1.6;"><strong style="color:${P.soft};">Who:</strong> ${who}${requester.email ? ` &lt;${escapeHtml(requester.email)}&gt;` : ''}</p>` +
+      (projectName
+        ? `<p style="margin:0 0 10px;color:${P.body};font-size:13px;line-height:1.6;"><strong style="color:${P.soft};">Project:</strong> ${escapeHtml(projectName)}</p>`
+        : '') +
+      (note
+        ? `<p style="margin:0;color:${P.body};font-size:14px;line-height:1.7;white-space:pre-wrap;">${escapeHtml(note)}</p>`
+        : `<p style="margin:0;color:${P.body};font-size:13px;line-height:1.6;">No message was included.</p>`)
+    ) +
+    para(`Approving adds them to the workspace as a member and uses one seat of your plan. Nothing happens until you decide — you can approve or decline from the workspace's <strong style="color:${P.soft};">Members</strong> settings.`);
+
+  return {
+    subject: `${requester.name?.trim() || requester.email || 'Someone'} wants to join ${workspaceName}`,
+    html: renderEmailLayout({
+      preheader: `Approve or decline access to ${workspaceName}.`,
+      heading: 'Someone wants to join your workspace',
+      bodyHtml,
+      cta: { label: 'Review the request', url: reviewUrl },
+      footerNote: 'You received this email because you own a Remnus workspace someone asked to join.',
+    }),
+  };
+}
+
+// ── 7. Contact form (instant, on submit — sent TO the team, not a user) ───────
 
 export function contactFormEmail(name: string, email: string, message: string): EmailContent {
   const safeName = escapeHtml(name);
@@ -163,7 +211,7 @@ export function contactFormEmail(name: string, email: string, message: string): 
   };
 }
 
-// ── 7. Newsletter (admin-composed markdown) ───────────────────────────────────
+// ── 8. Newsletter (admin-composed markdown) ───────────────────────────────────
 
 // Email clients ignore stylesheets, so the markdown-rendered HTML gets its
 // styles injected inline per tag. Coarse but reliable across clients.

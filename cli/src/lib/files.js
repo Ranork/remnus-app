@@ -62,7 +62,7 @@ export function ensureGitignore(root, patterns) {
 
   const block = [
     GITIGNORE_START,
-    '# Holds this project\'s Remnus token — never commit it.',
+    '# Written by `npx remnus`. The token must never be committed; the map is a per-machine cache.',
     ...patterns,
     GITIGNORE_END,
   ].join(eol);

@@ -8,7 +8,6 @@ import { getCurrentUserAllowingWorkspaceLock } from '@/lib/auth/session';
 import { assertWorkspaceLockAllows } from '@/lib/auth/workspaceLock';
 import { listTrashForWorkspaces, restoreSnapshot } from '@/lib/services/snapshots';
 import type { TrashEntry, RestoreResult } from '@/lib/services/snapshots';
-import { publish } from '@/lib/realtime/publish';
 
 // Direct from-clause re-export — same pattern as `RelatedPageRef` in
 // actions/workspace.ts. A locally-bound `export type { X }` (import type X,
@@ -82,7 +81,7 @@ export async function getUserTrashCount(): Promise<number> {
 // deleted would make the delete meaningless (same reasoning as agent
 // comments being append-only). See `.ai/FEATURE_BULK_AND_TRASH.md` §B.3.
 export async function restoreTrashItem(workspaceId: string, snapshotId: string): Promise<RestoreResult> {
-  const userId = await assertWorkspaceAccess(workspaceId);
+  await assertWorkspaceAccess(workspaceId);
   const result = await restoreSnapshot(workspaceId, snapshotId);
   if (result.restored) {
     // Without this, the caller's own tab only picks the restore up on the
@@ -98,12 +97,6 @@ export async function restoreTrashItem(workspaceId: string, snapshotId: string):
     } else {
       revalidatePath('/', 'layout');
     }
-    publish({
-      scope: result.itemType === 'database_row' ? 'database' : 'sidebar',
-      workspaceId,
-      resourceId: result.itemType === 'database_row' ? result.databaseId : undefined,
-      actorId: userId,
-    });
   }
   return result;
 }

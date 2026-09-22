@@ -1,56 +1,24 @@
 import { NextResponse } from 'next/server';
-import { desc, eq, inArray, sql } from 'drizzle-orm';
-import type { SQLiteColumn } from 'drizzle-orm/sqlite-core';
+import { desc, eq } from 'drizzle-orm';
 import { getSessionAllowingWorkspaceLock } from '@/lib/auth/session';
 import { lockClaimsOf } from '@/lib/auth/workspaceLock';
 import { db } from '@/db';
-import {
-  userSessions,
-  demoSessions,
-  workspaceMembers,
-  workspaceItems,
-  standalonePages,
-  databases,
-  pages,
-  pageComments,
-} from '@/db/schema';
+import { userSessions, demoSessions } from '@/db/schema';
 import { isTauriRequest } from '@/lib/server/platform';
+import { changeVersionForUser } from '@/lib/services/changeVersion';
 
 // Heartbeat endpoint. The client pings while the user is active (see
 // ActivityTracker). Each ping extends the most recent open session, or opens a
 // new one if the last ping was longer than SESSION_GAP_MS ago. Best-effort:
 // failures never surface to the user.
 //
-// The response also carries a cheap `changeVersion` — the max `updatedAt`
-// (epoch seconds) across all of the caller's workspaces. Clients piggy-back on
-// this single heartbeat to decide whether anything changed (e.g. an edit by
-// another user or an MCP/AI agent) and only then call router.refresh(). This
-// replaced an unconditional 10s router.refresh() poll that re-fetched the full
-// RSC payload (~100 KB) every tick — the dominant Fast Origin Transfer driver.
+// The response also carries the cheap `changeVersion` (see
+// services/changeVersion.ts) so a tab that is only heartbeating still learns
+// that something changed. The dedicated poll for it is GET
+// /api/activity/changes, which runs at its own, much faster cadence and does no
+// session bookkeeping — this endpoint must not be called every few seconds, as
+// every call writes a session row.
 const SESSION_GAP_MS = 2 * 60 * 1000; // 2 minutes of inactivity ends a session
-
-/**
- * Highest `updatedAt` (epoch seconds) across the user's workspace items,
- * standalone-page content, and database rows. A few cheap indexed aggregates;
- * the returned number only ever needs to be compared for monotonic increase.
- *
- * Rows written before the explicit-timestamp fix (see the createdAt gotcha in
- * AGENTS.md) store `updated_at` as TEXT ('YYYY-MM-DD HH:MM:SS') rather than an
- * epoch integer. SQLite's type ordering ranks TEXT above INTEGER, so a bare
- * `max()` returns that TEXT value for the whole table and pins it there forever
- * — `Number()` then yields NaN, which JSON serializes to `null`, and the client
- * drops the tick. The result was that live refresh silently never fired in any
- * workspace containing even one legacy row. Ignore non-integer values so the
- * aggregate only ever considers real epoch timestamps.
- */
-const epochMax = (col: SQLiteColumn) =>
-  sql<number>`max(case when typeof(${col}) = 'integer' then ${col} else 0 end)`;
-
-/** Coerce a possibly-null/NaN aggregate into a comparable epoch number. */
-function toEpoch(value: unknown): number {
-  const n = Number(value ?? 0);
-  return Number.isFinite(n) ? n : 0;
-}
 
 /**
  * Extends the caller's durable demo-usage row (see `demo_sessions`, migration
@@ -93,60 +61,6 @@ async function touchDemoSession(userId: string, now: Date) {
     .where(eq(demoSessions.id, row.id));
 }
 
-async function computeChangeVersion(userId: string, workspaceLock: string | null): Promise<number> {
-  const memberships = await db
-    .select({ workspaceId: workspaceMembers.workspaceId })
-    .from(workspaceMembers)
-    .where(eq(workspaceMembers.userId, userId));
-
-  // A project window only hears about its own workspace changing.
-  const ids = memberships
-    .map((m) => m.workspaceId)
-    .filter((id) => !workspaceLock || id === workspaceLock);
-  if (ids.length === 0) return 0;
-
-  const [items, sps, dbs, rows, comments] = await Promise.all([
-    db
-      .select({ m: epochMax(workspaceItems.updatedAt) })
-      .from(workspaceItems)
-      .where(inArray(workspaceItems.workspaceId, ids)),
-    db
-      .select({ m: epochMax(standalonePages.updatedAt) })
-      .from(standalonePages)
-      .innerJoin(workspaceItems, eq(standalonePages.itemId, workspaceItems.id))
-      .where(inArray(workspaceItems.workspaceId, ids)),
-    // Database schema/view edits (e.g. renaming a view, adding a column) bump
-    // only `databases.updatedAt`, so without this a view change never refreshed.
-    db
-      .select({ m: epochMax(databases.updatedAt) })
-      .from(databases)
-      .innerJoin(workspaceItems, eq(databases.itemId, workspaceItems.id))
-      .where(inArray(workspaceItems.workspaceId, ids)),
-    db
-      .select({ m: epochMax(pages.updatedAt) })
-      .from(pages)
-      .innerJoin(databases, eq(pages.databaseId, databases.id))
-      .innerJoin(workspaceItems, eq(databases.itemId, workspaceItems.id))
-      .where(inArray(workspaceItems.workspaceId, ids)),
-    // page_comments carries its own workspaceId (it can point at either a
-    // standalone page or a database row) so no join is needed — otherwise an
-    // agent's MCP add_comment call would never show up for a viewer already
-    // on that page until they manually reloaded.
-    db
-      .select({ m: epochMax(pageComments.updatedAt) })
-      .from(pageComments)
-      .where(inArray(pageComments.workspaceId, ids)),
-  ]);
-
-  return Math.max(
-    toEpoch(items[0]?.m),
-    toEpoch(sps[0]?.m),
-    toEpoch(dbs[0]?.m),
-    toEpoch(rows[0]?.m),
-    toEpoch(comments[0]?.m),
-  );
-}
-
 export async function POST() {
   // Project windows heartbeat too — live refresh is how a human watches an agent work —
   // but only their own workspace counts toward the change signal.
@@ -158,7 +72,7 @@ export async function POST() {
   // their tabs still reflect live edits.
   let changeVersion = 0;
   try {
-    changeVersion = await computeChangeVersion(userId, lockClaimsOf(session?.user).workspaceLock ?? null);
+    changeVersion = await changeVersionForUser(userId, lockClaimsOf(session?.user).workspaceLock ?? null);
   } catch {
     // best-effort — a missing version just means "no refresh this tick"
   }

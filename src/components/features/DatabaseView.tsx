@@ -35,6 +35,9 @@ import type {
   ViewSort,
 } from '@/lib/types/views';
 import { isTableGroupableColumn } from '@/lib/tableGrouping';
+// Shared with the dashboard renderer (a server component), so a filter selects
+// the same rows in a view and in a dashboard block. See src/lib/tableFilters.ts.
+import { applyFilters, applySorts } from '@/lib/tableFilters';
 
 function uid() {
   return crypto.randomUUID().slice(0, 8);
@@ -112,86 +115,6 @@ function defaultCalendarView(schema: any[], name = 'Calendar'): DatabaseView {
       openBehavior: 'center',
     },
   };
-}
-
-function applyFilters(pages: any[], filters: ViewFilter[], schema: any[]): any[] {
-  if (!filters.length) return pages;
-  return pages.filter((page) =>
-    filters.every((f) => {
-      const raw = page.properties[f.columnId];
-      const str =
-        raw == null ? '' : Array.isArray(raw) ? raw.join(' ') : String(raw);
-
-      if (f.operator === 'is_empty') {
-        return !raw || str === '' || (Array.isArray(raw) && !raw.length);
-      }
-      if (f.operator === 'is_not_empty') {
-        return !!raw && str !== '' && (!Array.isArray(raw) || raw.length > 0);
-      }
-
-      let targetValues: string[] = [];
-      if (f.value) {
-        if (f.value.startsWith('[') && f.value.endsWith(']')) {
-          try {
-            targetValues = JSON.parse(f.value);
-          } catch (e) {
-            targetValues = [f.value];
-          }
-        } else {
-          targetValues = [f.value];
-        }
-      }
-
-      if (targetValues.length === 0) {
-        // Empty filters should usually not filter out everything, but for select lists we want it to match nothing
-        return false;
-      }
-
-      switch (f.operator) {
-        case 'equals': {
-          if (Array.isArray(raw)) {
-            return raw.some(v => targetValues.includes(String(v)));
-          }
-          return targetValues.includes(String(raw));
-        }
-        case 'not_equals': {
-          if (Array.isArray(raw)) {
-            return !raw.some(v => targetValues.includes(String(v)));
-          }
-          return !targetValues.includes(String(raw));
-        }
-        case 'contains': {
-          if (Array.isArray(raw)) {
-            return raw.some(v => targetValues.some(tv => String(v).toLowerCase().includes(tv.toLowerCase())));
-          }
-          return targetValues.some(tv => String(raw).toLowerCase().includes(tv.toLowerCase()));
-        }
-        case 'not_contains': {
-          if (Array.isArray(raw)) {
-            return !raw.some(v => targetValues.some(tv => String(v).toLowerCase().includes(tv.toLowerCase())));
-          }
-          return !targetValues.some(tv => String(raw).toLowerCase().includes(tv.toLowerCase()));
-        }
-        default:
-          return true;
-      }
-    })
-  );
-}
-
-function applySorts(pages: any[], sorts: ViewSort[]): any[] {
-  if (!sorts.length) return pages;
-  return [...pages].sort((a, b) => {
-    for (const s of sorts) {
-      const aV = a.properties[s.columnId];
-      const bV = b.properties[s.columnId];
-      const aStr = aV == null ? '' : String(aV);
-      const bStr = bV == null ? '' : String(bV);
-      const cmp = aStr.localeCompare(bStr, 'en');
-      if (cmp !== 0) return s.direction === 'asc' ? cmp : -cmp;
-    }
-    return 0;
-  });
 }
 
 // Select/status columns with a configured default option pre-fill new rows,
@@ -540,8 +463,8 @@ export default function DatabaseView({
   );
 
   const processedPages = useMemo(
-    () => applySorts(applyFilters(localPages, config.filters, schema), config.sorts),
-    [localPages, config.filters, config.sorts, schema]
+    () => applySorts(applyFilters(localPages, config.filters), config.sorts),
+    [localPages, config.filters, config.sorts]
   );
 
   // Fetch page content when peeking a page
