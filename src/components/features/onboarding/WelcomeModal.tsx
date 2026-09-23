@@ -64,7 +64,7 @@ export default function WelcomeModal({ onConnect, onExplore, onClose }: Props) {
             <span className="w-9 h-9 rounded-lg bg-blue-500/15 border border-blue-500/30 flex items-center justify-center">
               <Plug size={18} className="text-blue-300" />
             </span>
-            <span className="text-sm font-semibold text-blue-100">{t('welcomeConnectTitle')}</span>
+            <span className="text-sm font-semibold text-blue-400">{t('welcomeConnectTitle')}</span>
             <span className="text-[11px] leading-snug text-neutral-400">{t('welcomeConnectDesc')}</span>
             <span className="mt-1 inline-flex items-center gap-1 text-[11px] font-semibold text-blue-300 group-hover:gap-1.5 transition-all">
               {t('welcomeConnectCta')} <ArrowRight size={12} />

@@ -28,7 +28,7 @@ function WorkspacePicker({
   accent: 'blue' | 'emerald';
 }) {
   const activeCls = accent === 'emerald' ? 'bg-emerald-500/10 border-emerald-500/40' : 'bg-blue-500/10 border-blue-500/40';
-  const activeText = accent === 'emerald' ? 'text-emerald-100' : 'text-blue-100';
+  const activeText = accent === 'emerald' ? 'text-emerald-400' : 'text-blue-400';
   const activeCheck = accent === 'emerald' ? 'text-emerald-400' : 'text-blue-400';
   return (
     <div className="space-y-1 max-h-40 overflow-y-auto pr-0.5">
@@ -161,7 +161,7 @@ function StepChoose({
               </span>
               <span className="min-w-0 flex flex-col gap-0.5">
                 <span className="flex items-center gap-1.5">
-                  <span className={`text-sm font-semibold ${selected ? 'text-blue-100' : 'text-neutral-200 group-hover:text-white'}`}>
+                  <span className={`text-sm font-semibold ${selected ? 'text-blue-400' : 'text-neutral-200 group-hover:text-neutral-50'}`}>
                     {label}
                   </span>
                   {isDetected && (
@@ -763,7 +763,7 @@ function StepTest({
             <PartyPopper size={17} className="text-emerald-400" />
           </span>
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-emerald-100">{t('connectAutoCompleteTitle')}</p>
+            <p className="text-sm font-semibold text-emerald-400">{t('connectAutoCompleteTitle')}</p>
             <p className="text-[11px] text-emerald-400/80">{t('connectAutoCompleteHint', { tool: autoConnectedTool })}</p>
           </div>
         </div>

@@ -53,12 +53,12 @@ export default function GettingStartedChecklist({
       <div className="mx-2 mt-1 rounded-lg border border-green-500/25 bg-green-500/10 px-3 py-2.5 flex items-center gap-2.5">
         <PartyPopper size={15} className="text-green-400 shrink-0" />
         <div className="min-w-0 flex-1">
-          <p className="text-xs font-semibold text-green-300 truncate">{t('checklistDoneTitle')}</p>
+          <p className="text-xs font-semibold text-green-400 truncate">{t('checklistDoneTitle')}</p>
           <p className="text-[10px] text-green-400/70 truncate">{t('checklistDoneHint')}</p>
         </div>
         <button
           onClick={onDismiss}
-          className="shrink-0 text-[10px] font-semibold text-green-300/80 hover:text-green-200 transition-colors"
+          className="shrink-0 text-[10px] font-semibold text-green-400/80 hover:text-green-400 transition-colors"
         >
           {t('checklistDismiss')}
         </button>
@@ -129,7 +129,7 @@ export default function GettingStartedChecklist({
               {isActive && (
                 <button
                   onClick={onConnect}
-                  className="ml-auto shrink-0 inline-flex items-center gap-0.5 text-[10px] font-semibold text-blue-300 hover:text-blue-200 bg-blue-500/10 hover:bg-blue-500/15 border border-blue-500/20 px-1.5 py-0.5 rounded transition-colors"
+                  className="ml-auto shrink-0 inline-flex items-center gap-0.5 text-[10px] font-semibold text-blue-300 hover:text-blue-400 bg-blue-500/10 hover:bg-blue-500/15 border border-blue-500/20 px-1.5 py-0.5 rounded transition-colors"
                 >
                   {t('checklistGo')} <ArrowRight size={10} />
                 </button>

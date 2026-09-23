@@ -31,7 +31,7 @@ function ClientLoginForm() {
             alt="Remnus"
             className="w-14 h-14 object-contain rounded-xl mb-4 shadow-lg"
           />
-          <h1 className="text-2xl font-bold text-white tracking-tight">Remnus</h1>
+          <h1 className="text-2xl font-bold text-neutral-50 tracking-tight">Remnus</h1>
           <p className="text-neutral-400 text-sm mt-1 text-center max-w-xs">
             {t('clientLoginSubtitle')}
           </p>

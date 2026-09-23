@@ -110,7 +110,7 @@ function LoginForm() {
           alt="Remnus"
           className="w-16 h-16 object-contain rounded-2xl mb-5"
         />
-        <h1 className="text-xl font-semibold text-white mb-10 tracking-tight">Remnus</h1>
+        <h1 className="text-xl font-semibold text-neutral-50 mb-10 tracking-tight">Remnus</h1>
 
         {tauriState === 'idle' && (
           <button
@@ -190,7 +190,7 @@ function LoginForm() {
               alt="Remnus"
               className="w-14 h-14 object-contain rounded-xl mb-4 shadow-lg"
             />
-            <h1 className="text-2xl font-bold text-white tracking-tight">Remnus</h1>
+            <h1 className="text-2xl font-bold text-neutral-50 tracking-tight">Remnus</h1>
           </Link>
           <p className="text-neutral-400 text-sm mt-1">{t('signInSubtitle')}</p>
         </div>
