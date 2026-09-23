@@ -6,6 +6,7 @@ import type { ResolvedBlock, ResolvedDashboard } from '@/lib/dashboard/data';
 import { blockWidth } from '@/lib/dashboard/schema';
 import DashboardHeader from './DashboardHeader';
 import DashboardBlockActions from './DashboardBlockActions';
+import DashboardAddBlock from './DashboardAddBlock';
 import DashboardDatabaseEmbed from './DashboardDatabaseEmbed';
 import {
   ActivityBlockView,
@@ -78,7 +79,7 @@ export default async function DashboardView({
       )}
 
       {blocks.length === 0 && !resolved.fatal ? (
-        <EmptyDashboard />
+        <EmptyDashboard itemId={item.id} />
       ) : (
         <div className="grid grid-cols-1 gap-3 lg:grid-cols-4">
           {blocks.map((entry, index) => {
@@ -99,6 +100,7 @@ export default async function DashboardView({
                     <DashboardBlockActions
                       itemId={item.id}
                       blockId={id}
+                      block={entry.kind === 'invalid' ? undefined : entry.block}
                       canMoveUp={index > 0}
                       canMoveDown={index < blocks.length - 1}
                     />
@@ -113,11 +115,12 @@ export default async function DashboardView({
         </div>
       )}
 
-      {/* v1 has no visual block builder. Saying so beats letting a reader hunt
-          for an "add block" button that isn't there. */}
-      <p className="mt-6 border-t border-neutral-850 pt-4 text-[11px] leading-relaxed text-neutral-600">
-        {t('agentEditedNote')}
-      </p>
+      {(blocks.length > 0 || resolved.fatal) && (
+        <div className="mt-6 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-neutral-850 pt-4">
+          <p className="text-[11px] leading-relaxed text-neutral-600">{t('agentEditedNote')}</p>
+          <DashboardAddBlock itemId={item.id} />
+        </div>
+      )}
     </div>
   );
 }
@@ -168,13 +171,16 @@ async function DatabaseEmbedBody({
   );
 }
 
-async function EmptyDashboard() {
+async function EmptyDashboard({ itemId }: { itemId: string }) {
   const t = await getTranslations('Dashboard');
   return (
     <div className="border border-dashed border-neutral-800 px-6 py-14 text-center">
       <LayoutDashboard size={22} className="mx-auto mb-3 text-neutral-700" />
       <p className="text-sm font-medium text-neutral-300">{t('emptyTitle')}</p>
       <p className="mx-auto mt-1.5 max-w-md text-xs leading-relaxed text-neutral-500">{t('emptyBody')}</p>
+      <div className="mt-5">
+        <DashboardAddBlock itemId={itemId} prominent />
+      </div>
     </div>
   );
 }

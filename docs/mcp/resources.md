@@ -1,6 +1,6 @@
 # Resources
 
-MCP resources provide structured, addressable data that clients can subscribe to or read on demand. Remnus exposes six resource templates.
+MCP resources provide structured, addressable data that clients can subscribe to or read on demand. Remnus exposes seven resources: five templates addressed by id, plus the static dashboard catalog and recent audit log.
 
 ---
 
@@ -114,6 +114,16 @@ Get the column schema of a specific database.
   ]
 }
 ```
+
+---
+
+## remnus://dashboard/catalog
+
+The reference an agent reads before [`create_dashboard`](write-tools.md#create_dashboard): every block type with its fields (generated from the same schema the write tools enforce, so it cannot drift), the rules for sources, filters and column references, and three ready-made templates (`project-status`, `backlog-health`, `weekly-pulse`) to fill in instead of designing from scratch.
+
+**URI** — `remnus://dashboard/catalog`
+
+**Returns** — Markdown, about 6 KB (~1,500 tokens). It lives here rather than in the tool schemas because `tools/list` is paid by every session and this only by one that builds a dashboard. Human-readable copy: [Dashboards](dashboards.md).
 
 ---
 

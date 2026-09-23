@@ -45,6 +45,31 @@ const FIRST_VISIT_WINDOW_DAYS = 7;
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-09-23-agent-built-dashboards',
+    date: '2026-09-23',
+    category: 'new',
+    title: {
+      en: 'Your agent builds dashboards, you fine-tune them',
+      tr: 'Panoyu ajanınız kurar, siz ince ayarını yaparsınız',
+      de: 'Ihr Agent baut Dashboards, Sie feilen daran',
+      es: 'Tu agente crea paneles y tú los ajustas',
+      fr: 'Votre agent crée les tableaux de bord, vous les peaufinez',
+      hi: 'आपका एजेंट डैशबोर्ड बनाता है, आप उसे निखारते हैं',
+      ru: 'Агент собирает дашборды, а вы их донастраиваете',
+      zh: '智能体搭建仪表板，你来微调',
+    },
+    summary: {
+      en: 'Ask your AI agent for a status dashboard and it builds and updates one straight from your databases, while you can add blocks and change any block\'s settings yourself right on the page.',
+      tr: 'Yapay zekâ ajanınızdan bir durum panosu isteyin, doğrudan veritabanlarınızdan kurup güncellesin; siz de sayfanın üzerinden blok ekleyip her bloğun ayarlarını kendiniz değiştirebilirsiniz.',
+      de: 'Bitten Sie Ihren KI-Agenten um ein Status-Dashboard, und er baut und aktualisiert es direkt aus Ihren Datenbanken, während Sie selbst auf der Seite Blöcke hinzufügen und die Einstellungen jedes Blocks ändern können.',
+      es: 'Pide a tu agente de IA un panel de estado y lo crea y actualiza directamente a partir de tus bases de datos, mientras tú puedes añadir bloques y cambiar los ajustes de cualquiera desde la propia página.',
+      fr: 'Demandez un tableau de bord de suivi à votre agent IA et il le construit et le met à jour directement à partir de vos bases de données, tandis que vous pouvez ajouter des blocs et modifier les réglages de chacun depuis la page.',
+      hi: 'अपने AI एजेंट से एक स्टेटस डैशबोर्ड माँगें और वह उसे सीधे आपके डेटाबेस से बनाकर अपडेट करता है, जबकि आप खुद पेज पर ही ब्लॉक जोड़ सकते हैं और किसी भी ब्लॉक की सेटिंग्स बदल सकते हैं।',
+      ru: 'Попросите ИИ-агента сделать дашборд статуса — он соберёт и будет обновлять его прямо по вашим базам данных, а вы сами можете добавлять блоки и менять настройки любого из них прямо на странице.',
+      zh: '让你的 AI 智能体做一个状态仪表板，它会直接基于你的数据库搭建并持续更新，而你也可以在页面上自己添加区块、修改任意区块的设置。',
+    },
+  },
+  {
     id: '2026-09-22-dashboards',
     date: '2026-09-22',
     category: 'new',

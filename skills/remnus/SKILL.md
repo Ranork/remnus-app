@@ -32,7 +32,7 @@ Column types: `text` | `number` | `select` | `multi_select` | `date` | `datetime
 - `prepare_context` — start meaningful multi-page product/coding work with Context Pack v2; returns a token-budgeted, reviewed/fresh pack and a short-lived `contextRunId`.
 - `search_workspace` — find pages/databases by text. The fallback when the workspace map has not already given you the id, not the first step.
 - `list_workspace` — list items, optionally under a `parentId`. Paginated.
-- `get_page` — full content of a page or row by ID. Auto-detects type.
+- `get_page` — full content of a page or row by ID. Auto-detects type. A dashboard comes back as its block `spec` (`mode: "outline"` → just the block ids/types/titles).
 - `get_pages` — batch `get_page`: a specific known ID list (max 50), possibly across databases/types. One bad ID doesn't fail the rest — check each result's `ok`. For many rows in one database, prefer `query_database` instead.
 - `get_database_schema` — columns only, no rows. Cheap; call before querying.
 - `query_database` — schema + rows, with optional `filters`. Paginated.
@@ -46,12 +46,14 @@ Column types: `text` | `number` | `select` | `multi_select` | `date` | `datetime
 - `bulk_create_pages` — up to 100 pages/rows in one call, created in order; nest pages created in the same call with `ref`/`parentRef`. Prefer it whenever you'd create more than a couple of items.
 - `update_page` — change title/content/properties of one item.
 - `bulk_update_pages` — many updates in one call. Prefer this over a loop.
-- `delete_page` — delete a page, row, or whole database. **Guarded.**
+- `delete_page` — delete a page, row, dashboard, or whole database. **Guarded.**
 - `bulk_delete_pages` — delete up to 100 pages/rows/databases in one call. **Guarded**, same preview/confirm shape as `delete_page`. Response reports each id's own ok/error — never all-or-nothing.
 - `move_item` — reparent a sidebar item; `newParentId: null` → root.
 - `bulk_move_items` — move up to 100 items in one call: pass `newParentId` to reparent (batched `move_item`), or `targetDatabaseId` to move database rows to a different database. Cross-database moves are refused entirely if the target's columns don't cover the source's by name and type.
 - `create_database` — new database with a custom schema; pass an `icon` and the `views` people will use (kanban on status, calendar on dates).
 - `update_database_schema` — add/remove columns. Removing is **guarded.**
+- `create_dashboard` — a live status screen (metrics, charts, lists, embedded views, text) over this workspace's databases, written as JSON blocks. Read `remnus://dashboard/catalog` first — it has the fields and three templates to fill in. Column fields take names. The result gives the page `url` to show the user and `warnings` for blocks that will render empty or broken — act on them, you cannot see the screen.
+- `update_dashboard` — patch a dashboard by block id: `add`, `update` (`{id, ...changed fields}`, merged), `remove`, `order`. Never resend the whole spec. All-or-nothing.
 - `add_comment` — leave a note or closure comment on a page/row, in a thread separate from its content. **Append-only** — you cannot edit or delete your own comment afterward, so use `update_page` instead if the content itself needs to change.
 
 If a write tool returns "This token only has read scope," the user connected a read-only token — tell them; do not retry.
@@ -65,6 +67,7 @@ Resources are read-only and listable; many clients let you attach them directly 
 - `remnus://workspace/{id}/knowledge-health` — compact link/freshness/lifecycle/review coverage report; heuristic, not a correctness certificate.
 - `remnus://database/{id}/schema` — columns of one database (same data as `get_database_schema`).
 - `remnus://page/{id}` — a page or row rendered as markdown (title + properties + content). Listing returns the 20 most recently updated; any page is reachable by its ID.
+- `remnus://dashboard/catalog` — dashboard block types, their fields, and ready-made templates. Read it only when you are about to build or change a dashboard.
 - `remnus://audit-log/recent` — the last 50 activity entries for *this* token.
 
 Rule of thumb: if the user just wants you to **read/understand**, prefer attaching the resource. If you need to **filter, paginate, or act**, use the equivalent tool (`query_database`, `get_page`, etc.). The schema resources and the `get_database_schema` tool return the same thing — either is fine.

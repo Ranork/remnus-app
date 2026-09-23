@@ -6,6 +6,7 @@ Remnus MCP is a [Model Context Protocol](https://modelcontextprotocol.io) server
 
 - Query pages and databases with full-text search and property filters
 - Create and update pages, database rows, and entire databases
+- Build live dashboards — metrics, charts and lists over your databases — from a few hundred tokens of JSON
 - Automate reports, task extraction, and kanban triage with built-in prompts
 - Monitor all agent activity through a structured audit log
 - Prepare compact, OKF-aware task context and optionally require it before MCP writes
@@ -41,9 +42,10 @@ New project instead? Skip straight to [Project Install](project-install.md).
 | [Getting Started](getting-started.md) | OAuth connect, PAT fallback, first call |
 | [Connect Your Editor](connect-editors.md) | Windsurf, Continue, Antigravity, Cline, Zed & more — ready configs + OAuth |
 | [Authentication](authentication.md) | Bearer tokens, scopes, rate limits |
-| [Read Tools](read-tools.md) | 10 read-only tools |
-| [Write Tools](write-tools.md) | 14 write tools |
-| [Resources](resources.md) | 6 MCP resource templates |
+| [Read Tools](read-tools.md) | 11 read-only tools |
+| [Write Tools](write-tools.md) | 16 write tools |
+| [Dashboards](dashboards.md) | Live status screens an agent builds from JSON blocks |
+| [Resources](resources.md) | 7 MCP resources |
 | [Prompts](prompts.md) | 7 built-in prompt templates |
 | [Agent Memory](agent-memory.md) | Save & recall durable memory over MCP |
 | [Token-Efficient Usage](token-efficient-usage.md) | Cut a typical read 80–90% with projection, outline, digest & delta |

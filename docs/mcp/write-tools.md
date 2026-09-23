@@ -6,7 +6,7 @@ Every write tool also accepts optional `contextRunId`. In a workspace using **St
 
 `create_page`, `update_page`, and `create_database` additionally accept optional `knowledge` (`conceptType`, `description`, `tags`, `sources`, `status`, `staleAfter`). Agent-created or agent-updated items are recorded as machine-generated drafts; only a signed-in Remnus user can review the exact revision.
 
-`create_page`, `bulk_create_pages`, `update_page`, `bulk_update_pages` and `create_database` accept `icon` — an emoji (`"🗺️"`) or `"lucide:Name"` for one of the icons the sidebar can draw (for example `lucide:Map`, `lucide:Layers`, `lucide:Target`) — and `iconColor`: `default`, `red`, `orange`, `yellow`, `green`, `teal`, `blue`, `purple` or `pink` (applies to Lucide icons). An unknown Lucide name is refused with the list of valid ones, and image URLs can't be set over MCP. In updates, `null` clears.
+`create_page`, `bulk_create_pages`, `update_page`, `bulk_update_pages`, `create_database`, `create_dashboard` and `update_dashboard` accept `icon` — an emoji (`"🗺️"`) or `"lucide:Name"` for one of the icons the sidebar can draw (for example `lucide:Map`, `lucide:Layers`, `lucide:Target`) — and `iconColor`: `default`, `red`, `orange`, `yellow`, `green`, `teal`, `blue`, `purple` or `pink` (applies to Lucide icons). An unknown Lucide name is refused with the list of valid ones, and image URLs can't be set over MCP. In updates, `null` clears.
 
 ---
 
@@ -111,7 +111,7 @@ Create up to 100 standalone pages and/or database rows in one call — the fast 
 
 ## delete_page
 
-Delete a workspace page, database, or database row. Requires `confirm: true` to execute. Without it, the tool returns a description of what would be deleted and makes no changes.
+Delete a workspace page, database, dashboard, or database row. Requires `confirm: true` to execute. Without it, the tool returns a description of what would be deleted and makes no changes.
 
 **Parameters**
 
@@ -291,6 +291,49 @@ Delete a saved view. Requires `confirm: true`. A database must always keep at le
 | `confirm` | boolean | | `false` | Set to `true` to confirm deletion |
 
 **Returns** — `{ deleted: true }`
+
+---
+
+## create_dashboard
+
+Create a [dashboard](dashboards.md) — metric, chart, list, table-view and text blocks that read live from this workspace's databases — in one call. The block catalog and ready-made templates are the resource [`remnus://dashboard/catalog`](resources.md#remnusdashboardcatalog); they are deliberately not in this tool's schema.
+
+**Parameters**
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `title` | string | ✓ | Dashboard name |
+| `parentId` | string | | A **page** to nest under (only pages hold children); omit for root |
+| `icon` / `iconColor` | string | | See the icon note above |
+| `blocks` | array | | Up to 40 block objects, see the catalog. `id` may be omitted — one is generated and returned |
+| `contextRunId` | string | | Context preflight ID (required in Strict mode) |
+
+Column fields take a column **name or id** (case-insensitive) and store the id; `databaseId` may be the database id or its item id. A database the workspace does not have — another workspace's included — refuses the whole call.
+
+**Returns** — `{ id, url, blocks, warnings? }`: the in-app `url` to show a human, every block id in order, and `warnings` for blocks that will render empty or broken (unknown column, a filter value that is no option, no matching rows). An invalid block is an error naming the entry, the field and what was expected.
+
+---
+
+## update_dashboard
+
+Patch a dashboard **by block id** — send only what changes, never the whole spec.
+
+**Parameters**
+
+| Parameter | Type | Required | Description |
+|---|---|---|---|
+| `dashboardId` | string | ✓ | The dashboard's item id |
+| `title` | string | | New name |
+| `icon` / `iconColor` | string \| null | | `null` clears |
+| `add` | array | | New blocks, appended |
+| `update` | array | | `{ id, ...fields }` merged into that block; `null` removes a field; `type` cannot change |
+| `remove` | string[] | | Block ids to delete |
+| `order` | string[] | | Block ids in their new order; unlisted blocks follow in their current order |
+| `contextRunId` | string | | Context preflight ID (required in Strict mode) |
+
+All-or-nothing, applied remove → update → add → order: one bad entry refuses the call and says which. Blocks the call does not touch are passed through untouched, even ones this build cannot read. Concurrent patches to different blocks both land (compare-and-swap on the stored spec).
+
+**Returns** — same shape as `create_dashboard`. Emptiness warnings cover only the blocks this call touched; a broken block is reported wherever it is.
 
 ---
 

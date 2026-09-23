@@ -34,7 +34,8 @@ This does not let an MCP server control local files, shell commands, or Git. Rep
 
 - **Pages** — Markdown editor with slash commands, nested sub-pages, and icons
 - **Databases** — Customizable columns, Table / Kanban / Calendar views, filters, sorts
-- **MCP Server** — 25 tools + 6 resources + 7 prompts over stateless Streamable HTTP
+- **Dashboards** — Live status screens (metrics, charts, lists, embedded views) that an agent builds from a few hundred tokens of JSON and a human can edit block by block
+- **MCP Server** — 27 tools + 7 resources + 7 prompts over stateless Streamable HTTP
 - **OKF-native context** — Portable knowledge metadata, exact-revision reviews, Context Pack v2, and Smart/Strict MCP policies
 - **Agent auth** — One-click OAuth 2.1 + PKCE (RFC 7591 dynamic registration) for editors, or scoped read/write personal access tokens for headless agents
 - **Multi-workspace** — Invite members, role-based access (owner / member / viewer)
@@ -134,7 +135,7 @@ Swap `--client` for `cursor`, `vscode`, `codex`, `windsurf`, etc. Either way, th
 | `prepare_context` | read | Build Context Pack v2 (BM25 + OKF metadata + graph) and return a short-lived `contextRunId` |
 | `search_workspace` | read | Full-text search across pages and databases |
 | `list_workspace` | read | List sidebar items with pagination |
-| `get_page` | read | Get a page or database row by ID |
+| `get_page` | read | Get a page, database row or dashboard (as its block spec) by ID |
 | `get_pages` | read | Get multiple pages/rows by ID in one call (batch `get_page`) |
 | `get_database_schema` | read | Get column schema of a database |
 | `query_database` | read | Query rows with filters and pagination |
@@ -146,7 +147,7 @@ Swap `--client` for `cursor`, `vscode`, `codex`, `windsurf`, etc. Either way, th
 | `bulk_create_pages` | write | Create up to 50 pages or rows in one call, nesting pages via `ref`/`parentRef` |
 | `update_page` | write | Update title, content, or properties |
 | `bulk_update_pages` | write | Update multiple rows in one call |
-| `delete_page` | write | Delete a page (requires `confirm: true`) |
+| `delete_page` | write | Delete a page, database, dashboard or row (requires `confirm: true`) |
 | `bulk_delete_pages` | write | Delete up to 100 pages/rows/databases in one call (requires `confirm: true`) |
 | `move_item` | write | Move item to a new parent |
 | `bulk_move_items` | write | Move up to 100 items in one call, reparenting or moving rows to a different database |
@@ -155,6 +156,8 @@ Swap `--client` for `cursor`, `vscode`, `codex`, `windsurf`, etc. Either way, th
 | `create_database_view` | write | Add a table/kanban/calendar view |
 | `update_database_view` | write | Rename a view or patch its config |
 | `delete_database_view` | write | Delete a saved view (requires `confirm: true`) |
+| `create_dashboard` | write | Create a live dashboard from JSON blocks; returns its URL and warnings for blocks that would render empty |
+| `update_dashboard` | write | Patch a dashboard by block id — add, update, remove, reorder |
 | `add_comment` | write | Add a comment to a page or row (agent comments are append-only) |
 
 ## Tech Stack

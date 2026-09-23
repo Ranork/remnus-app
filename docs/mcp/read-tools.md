@@ -72,7 +72,7 @@ List workspace items (pages and databases). Supports cursor-based pagination and
 
 ## get_page
 
-Get the content of a workspace page or database row. Auto-detects the type — no flags needed.
+Get the content of a workspace page, database row or dashboard. Auto-detects the type — no flags needed.
 
 **Parameters**
 
@@ -84,6 +84,8 @@ Get the content of a workspace page or database row. Auto-detects the type — n
 **Returns** — `{ id, title, content, properties, type }`. In outline mode the response also carries `mode: "outline"` and `fullContentChars` (the size of the full body), so you can decide whether a `"full"` re-fetch is worth it.
 
 **Token tip** — on long pages, skim with `mode: "outline"` first (~80% smaller), then fetch `"full"` only when the outline shows the page is relevant. The workspace map prints each page's body size, so you can choose outline mode before the first read rather than after.
+
+**Dashboards** — a [dashboard](dashboards.md) comes back as `{ id, type: "dashboard", title, icon, url, spec }`: its block spec as an object (not an escaped string), plus the in-app `url`. In outline mode `spec` is replaced by `blocks: [{ id, type, title }]` — all you need to pick ids for [`update_dashboard`](write-tools.md#update_dashboard). There is no comment thread, so `includeComments` adds nothing. `get_pages` shapes dashboards the same way.
 
 ---
 

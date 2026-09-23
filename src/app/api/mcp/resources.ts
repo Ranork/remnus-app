@@ -6,6 +6,7 @@ import { listWorkspaceItems, getDatabaseSchema, getAnyPageById, getWorkspaceDige
 import { logActivity, type TokenContext } from './context';
 import { analyzeKnowledgeHealth } from '@/lib/okf/health';
 import { getOkfWorkspaceSnapshot } from '@/lib/okf/workspaceSnapshot';
+import { renderDashboardCatalog } from '@/lib/dashboard/catalog';
 
 export function registerResources(server: McpServer, ctx: TokenContext) {
   const knowledgeHealthTemplate = new ResourceTemplate('remnus://workspace/{id}/knowledge-health', {
@@ -198,7 +199,22 @@ export function registerResources(server: McpServer, ctx: TokenContext) {
     },
   );
 
-  // 5. Audit Log — remnus://audit-log/recent
+  // 5. Dashboard block catalog — remnus://dashboard/catalog
+  // The reference create_dashboard / update_dashboard point at. It lives here
+  // rather than in their schemas because tools/list is paid by every session and
+  // this only by one that builds a dashboard. Static per build.
+  server.registerResource(
+    'Dashboard Catalog',
+    'remnus://dashboard/catalog',
+    { mimeType: 'text/markdown', description: 'Dashboard block types, their fields and ready-made templates — read before create_dashboard' },
+    async (uri) => {
+      const text = renderDashboardCatalog();
+      await logActivity(ctx, 'resource:dashboard-catalog', 'success', undefined, undefined, text);
+      return { contents: [{ uri: uri.href, mimeType: 'text/markdown', text }] };
+    },
+  );
+
+  // 6. Audit Log — remnus://audit-log/recent
   server.registerResource(
     'Recent Audit Log',
     'remnus://audit-log/recent',

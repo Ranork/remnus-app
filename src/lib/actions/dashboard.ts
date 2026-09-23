@@ -1,6 +1,6 @@
 'use server';
 import { db } from '@/db';
-import { dashboards, workspaceItems, workspaceMembers } from '@/db/schema';
+import { dashboards, databases, workspaceItems, workspaceMembers } from '@/db/schema';
 import { and, eq } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
 import { getTranslations } from 'next-intl/server';
@@ -8,6 +8,7 @@ import { getCurrentUserAllowingWorkspaceLock } from '@/lib/auth/session';
 import { assertWorkspaceLockAllows } from '@/lib/auth/workspaceLock';
 import { DASHBOARD_SPEC_VERSION, EMPTY_DASHBOARD_SPEC, validateDashboardSpec } from '@/lib/dashboard/schema';
 import { resolveDashboard, type ResolvedDashboard } from '@/lib/dashboard/data';
+import { DashboardInputError, patchDashboard, type DashboardPatch } from '@/lib/services/dashboards';
 
 /**
  * Session-aware actions for dashboard items. The cookie-free half (spec
@@ -189,17 +190,29 @@ export async function setDashboardSpec(itemId: string, rawSpec: unknown): Promis
 }
 
 /**
- * Blocks are addressed by id, never by index — see the spec module's header.
- * A block that carries no id at all cannot be removed from here; that shape is
+ * Every block edit a human makes goes through the same service as an agent's
+ * `update_dashboard` (`src/lib/services/dashboards.ts`): addressed by id,
+ * compare-and-swap on the stored spec, unknown blocks passed through verbatim.
+ * A block that carries no id at all cannot be edited from here; that shape is
  * only reachable by writing the spec straight into the database, and
  * `setDashboardSpec` is the repair path for it.
  */
-export async function deleteDashboardBlock(itemId: string, blockId: string): Promise<{ ok: boolean }> {
-  const { version, blocks } = await loadSpecForWrite(itemId);
-  const next = blocks.filter((entry) => rawBlockId(entry) !== blockId);
-  if (next.length === blocks.length) return { ok: false };
-  await writeSpec(itemId, { version, blocks: next });
+async function patchAsUser(itemId: string, patch: DashboardPatch): Promise<{ ok: true } | { ok: false; error: string }> {
+  const { workspaceId } = await loadSpecForWrite(itemId);
+  try {
+    await patchDashboard(workspaceId, itemId, patch);
+  } catch (err) {
+    // The service's messages are written for agents, in English; the editor
+    // shows its own localized error and the detail goes to the console.
+    if (err instanceof DashboardInputError) return { ok: false, error: err.message };
+    throw err;
+  }
+  revalidatePath(`/dashboard/${itemId}`);
   return { ok: true };
+}
+
+export async function deleteDashboardBlock(itemId: string, blockId: string): Promise<{ ok: boolean }> {
+  return patchAsUser(itemId, { remove: [blockId] });
 }
 
 export async function moveDashboardBlock(
@@ -207,14 +220,82 @@ export async function moveDashboardBlock(
   blockId: string,
   direction: 'up' | 'down',
 ): Promise<{ ok: boolean }> {
-  const { version, blocks } = await loadSpecForWrite(itemId);
-  const index = blocks.findIndex((entry) => rawBlockId(entry) === blockId);
-  if (index < 0) return { ok: false };
+  const { blocks } = await loadSpecForWrite(itemId);
+  const ids = blocks.map(rawBlockId);
+  const index = ids.indexOf(blockId);
   const target = direction === 'up' ? index - 1 : index + 1;
-  if (target < 0 || target >= blocks.length) return { ok: false };
+  if (index < 0 || target < 0 || target >= ids.length || !ids[target]) return { ok: false };
+  // The two ids to swap, by id: whatever else moved meanwhile stays put.
+  const order = ids.filter((id): id is string => !!id);
+  const a = order.indexOf(blockId);
+  const b = order.indexOf(ids[target] as string);
+  [order[a], order[b]] = [order[b], order[a]];
+  return patchAsUser(itemId, { order });
+}
 
-  const next = [...blocks];
-  [next[index], next[target]] = [next[target], next[index]];
-  await writeSpec(itemId, { version, blocks: next });
-  return { ok: true };
+/** Add a new block, or swap an existing one (same id) for the edited version. */
+export async function saveDashboardBlock(
+  itemId: string,
+  block: Record<string, unknown>,
+  mode: 'add' | 'replace',
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  return patchAsUser(itemId, mode === 'add' ? { add: [block] } : { replace: [block] });
+}
+
+export type DashboardEditorDatabase = {
+  id: string;
+  name: string;
+  columns: { id: string; name: string; type: string; options: string[] }[];
+  views: { id: string; name: string; type: string }[];
+};
+
+export type DashboardEditorOptions = {
+  databases: DashboardEditorDatabase[];
+  items: { id: string; title: string; type: 'page' | 'database' | 'dashboard' }[];
+};
+
+/**
+ * What the block editor's pickers offer: this workspace's databases (columns,
+ * select options, views) and its sidebar items for link blocks. Loaded when
+ * the editor opens, not with the page — a reader who never edits never pays.
+ */
+export async function getDashboardEditorOptions(itemId: string): Promise<DashboardEditorOptions> {
+  const { workspaceId } = await loadSpecForWrite(itemId);
+  const [dbRows, items] = await Promise.all([
+    db
+      .select({ id: databases.id, name: databases.name, schema: databases.schema, views: databases.views })
+      .from(databases)
+      .innerJoin(workspaceItems, eq(databases.itemId, workspaceItems.id))
+      .where(eq(workspaceItems.workspaceId, workspaceId)),
+    db
+      .select({ id: workspaceItems.id, title: workspaceItems.title, type: workspaceItems.type })
+      .from(workspaceItems)
+      .where(eq(workspaceItems.workspaceId, workspaceId)),
+  ]);
+
+  return {
+    databases: dbRows
+      .map((d) => ({
+        id: d.id,
+        name: d.name,
+        columns: ((d.schema ?? []) as { id?: unknown; name?: unknown; type?: unknown; options?: unknown[] }[])
+          .filter((c) => typeof c?.id === 'string')
+          .map((c) => ({
+            id: c.id as string,
+            name: String(c.name ?? c.id),
+            type: String(c.type ?? 'text'),
+            options: (c.options ?? [])
+              .map((o) => (typeof o === 'string' ? o : (o as { value?: unknown })?.value))
+              .filter((v): v is string => typeof v === 'string'),
+          })),
+        views: ((d.views ?? []) as { id?: unknown; name?: unknown; config?: { type?: unknown } }[])
+          .filter((v) => typeof v?.id === 'string' && (v.config?.type === 'table' || v.config?.type === 'kanban'))
+          .map((v) => ({ id: v.id as string, name: String(v.name ?? ''), type: String(v.config?.type) })),
+      }))
+      .sort((a, b) => a.name.localeCompare(b.name)),
+    items: items
+      .filter((i) => i.id !== itemId)
+      .map((i) => ({ id: i.id, title: i.title, type: i.type }))
+      .sort((a, b) => a.title.localeCompare(b.title)),
+  };
 }

@@ -35,6 +35,7 @@ import {
   Layers,
   Lock,
   UserPlus,
+  LayoutDashboard,
 } from 'lucide-react';
 import { NotionMark, AppFlowyMark, AffineMark, ObsidianMark } from '@/components/docs/CompetitorMark';
 
@@ -71,6 +72,9 @@ export const WIKI_PAGES: WikiPage[] = [
   { slug: 'authentication',   file: 'authentication.md',   title: 'Authentication',     icon: KeyRound,    order: 4 },
   { slug: 'read-tools',       file: 'read-tools.md',       title: 'Read Tools',         icon: Search,      order: 5 },
   { slug: 'write-tools',      file: 'write-tools.md',      title: 'Write Tools',        icon: PencilLine,  order: 6 },
+  // Not `hidden` like calibrate: this is a reference a human browses as much as an
+  // agent reads, and the README table and write-tools both link to it.
+  { slug: 'dashboards',       file: 'dashboards.md',       title: 'Dashboards',         icon: LayoutDashboard, order: 6.5 },
   { slug: 'resources',        file: 'resources.md',        title: 'Resources',          icon: Package,     order: 7 },
   { slug: 'prompts',          file: 'prompts.md',          title: 'Prompts',            icon: Lightbulb,   order: 8 },
   { slug: 'agent-memory',     file: 'agent-memory.md',     title: 'Agent Memory',       icon: Brain,       order: 9 },

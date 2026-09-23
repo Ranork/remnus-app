@@ -335,11 +335,13 @@ export async function getPageById(workspaceId: string, itemId: string) {
       .from(dashboards)
       .where(eq(dashboards.itemId, itemId))
       .limit(1);
+    // Compact on purpose: this string is what an agent pays for, and
+    // indentation alone added about a third to it.
     return {
       id: item.id,
       type: 'dashboard' as const,
       title: item.title,
-      content: dash ? JSON.stringify(dash.spec, null, 2) : '',
+      content: dash ? JSON.stringify(dash.spec) : '',
       icon: item.icon,
       properties: undefined,
     };

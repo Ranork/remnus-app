@@ -52,7 +52,7 @@ Strict; write scope, yetkilendirme veya yıkıcı işlem onayının yerini almaz
 *   **Rate limit:** Token başına dakikada 60 istek.
 *   **İzlenebilirlik (Audit Log):** Her tool çağrısı (hangi sayfa okundu, hangi property değiştirildi) workspace audit log'una yazılır.
 
-### 25 MCP Tool (Ajanların Yetenekleri)
+### 27 MCP Tool (Ajanların Yetenekleri)
 
 | Tool | Scope | Ne Yapar (Ajanlar İçin) |
 |---|---|---|
@@ -78,15 +78,17 @@ Strict; write scope, yetkilendirme veya yıkıcı işlem onayının yerini almaz
 | `create_database` | write | Sıfırdan şemalı yeni bir hafıza tablosu/iş akışı kurma |
 | `update_database_schema` | write | Veritabanına yeni tipli kolonlar ekleme/çıkarma |
 | `create/update/delete_database_view` | write | İnsanların görmesi için tablo/kanban görünümleri yaratma ve yönetme |
+| `create_dashboard` / `update_dashboard` | write | JSON bloklardan canlı bir durum ekranı kurma, sonra blok blok yamalama |
 | `add_comment` | write | Sayfa/satıra, içeriğinden ayrı bir akışta çalışma notu veya kapanış notu ekleme |
 
-### 6 MCP Resource (Ucuz Context Kanalları)
+### 7 MCP Resource (Ucuz Context Kanalları)
 Ajanların hızlıca oryantasyon sağlaması için URI üzerinden abone olabildiği veriler:
 *   `remnus://workspace/{id}/knowledge-health` (Link, güncellik, yaşam döngüsü ve insan onayı raporu)
 *   `remnus://workspace/{id}/schema` (Tüm workspace'in yapısı)
 *   `remnus://workspace/{id}/digest` (Tek satır tldr özet harita)
 *   `remnus://page/{id}`
 *   `remnus://database/{id}/schema`
+*   `remnus://dashboard/catalog` (Dashboard blok türleri, alanları ve şablonları — yalnız dashboard kurulurken okunur)
 *   `remnus://audit-log/recent` (Son 50 güvenlik kaydı)
 
 ### 7 MCP Prompt (Yerleşik Ajan Şablonları)
@@ -124,7 +126,7 @@ Planlar insan sayısından ziyade ajan yoğunluğuna göre ölçeklenir: **Free 
 |---|---|
 | Kategori | Human-Agent Collaborative Workspace |
 | MCP endpoint | `https://www.remnus.com/api/mcp` |
-| Tool / Resource / Prompt | 25 / 6 / 7 |
+| Tool / Resource / Prompt | 27 / 7 / 7 |
 | Auth Modeli | Agent-First: OAuth 2.1 + PKCE, PAT |
 | Güvenlik/Güven | Tam Kapsamlı Workspace Audit Log |
 | Lisans | AGPL-3.0 |

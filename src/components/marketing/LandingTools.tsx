@@ -42,6 +42,8 @@ const TOOLS = [
   { scope: 'write', tool: 'create_database_view' },
   { scope: 'write', tool: 'update_database_view' },
   { scope: 'write', tool: 'delete_database_view' },
+  { scope: 'write', tool: 'create_dashboard' },
+  { scope: 'write', tool: 'update_dashboard' },
   { scope: 'write', tool: 'add_comment' },
 ] as const;
 
@@ -51,6 +53,7 @@ const RESOURCES = [
   { uri: 'remnus://workspace/{id}/digest' },
   { uri: 'remnus://page/{id}' },
   { uri: 'remnus://database/{id}/schema' },
+  { uri: 'remnus://dashboard/catalog' },
   { uri: 'remnus://audit-log/recent' },
 ] as const;
 
@@ -64,7 +67,7 @@ const PROMPTS = [
   { name: 'recall-context' },
 ] as const;
 
-// Curated highlights shown as cards on the landing page — the full 24-tool
+// Curated highlights shown as cards on the landing page — the full tool
 // reference table lives at /wiki/read-tools. Picked to span discovery, query,
 // live sync, creation, bulk ops, and schema control (3 read + 3 write).
 const FLAGSHIP_TOOLS = [

@@ -21,7 +21,8 @@ import {
   getAnyPageById,
   type SnapshotActor,
 } from '@/lib/services/workspace';
-import { logActivity, type TokenContext } from '../context';
+import { appUrl, logActivity, type TokenContext } from '../context';
+import { createDashboardInWorkspace, patchDashboard } from '@/lib/services/dashboards';
 import { recordGeneratedKnowledge, validateContextRunForWrite } from '@/lib/services/knowledge';
 import { applyRecurrenceInput, changeRecurrenceForRow } from '@/lib/services/recurrence';
 import { addPageComment, MAX_COMMENT_LENGTH } from '@/lib/services/comments';
@@ -78,6 +79,20 @@ const VIEW_INPUT = z.object({
   icon: ICON_INPUT,
   iconColor: ICON_COLOR_INPUT,
 });
+
+// Blocks are validated in the handler against src/lib/dashboard/schema.ts, not
+// here: seven block shapes in the schema would be the single largest entry in
+// tools/list, paid by every session. The catalog is a resource instead, read only
+// by an agent that is about to build a dashboard.
+// `z.any()` items: a record schema serialized `propertyNames` + `additionalProperties`
+// into every one of the four block arrays, and the handler checks shape anyway.
+const BLOCKS_INPUT = z.array(z.any()).max(40);
+const DASHBOARD_RESULT = z.object({
+  id: z.string().describe('Workspace item id of the dashboard'),
+  url: z.string().describe('Where a human can see it'),
+  blocks: z.array(z.string()).describe('Every block id, in display order'),
+  warnings: z.array(z.string()).optional().describe('Blocks that will render empty or broken'),
+}).passthrough();
 
 function iconErrorResult(message: string) {
   return { content: [{ type: 'text' as const, text: `Error: ${message}` }], isError: true as const };
@@ -358,7 +373,7 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
   server.registerTool(
     'delete_page',
     {
-      description: 'Delete a page, database or row. Without confirm: true it only returns a preview of what would be deleted.',
+      description: 'Delete a page, database, dashboard or row. Without confirm: true it only returns a preview of what would be deleted.',
       inputSchema: {
         pageId: z.string().describe('Page or row id'),
         confirm: z.boolean().optional().default(false),
@@ -754,6 +769,91 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
       } catch (err) {
         await logActivity(ctx, 'delete_database_view', 'error', 'database', databaseId);
         return { content: [{ type: 'text' as const, text: `Error: ${String(err)}` }], isError: true };
+      }
+    },
+  );
+
+  server.registerTool(
+    'create_dashboard',
+    {
+      description: 'Create a dashboard: metric, chart, list, table and text blocks that read live from this workspace\'s databases, written as JSON (no HTML). Read the block catalog and templates first: resource remnus://dashboard/catalog (or remnus.com/wiki/dashboards). The result has the page url and warnings for blocks that will render empty or broken.',
+      inputSchema: {
+        title: z.string(),
+        parentId: z.string().optional().describe('A page to nest under; omit for root'),
+        icon: ICON_INPUT,
+        iconColor: ICON_COLOR_INPUT,
+        blocks: BLOCKS_INPUT.optional().describe('Block objects, see the catalog'),
+        contextRunId: CONTEXT_RUN_ID,
+      },
+      outputSchema: DASHBOARD_RESULT,
+      annotations: { title: 'Create dashboard', readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+    },
+    async ({ title, parentId, icon, iconColor, blocks, contextRunId }) => {
+      if (ctx.scope !== 'write') {
+        await logActivity(ctx, 'create_dashboard', 'error');
+        return { content: [{ type: 'text' as const, text: READ_ONLY_ERROR }], isError: true };
+      }
+      const contextError = await requireContext(ctx, contextRunId, 'create_dashboard');
+      if (contextError) return contextError;
+      const iconProblem = iconInputError(icon, iconColor);
+      if (iconProblem) {
+        await logActivity(ctx, 'create_dashboard', 'error');
+        return iconErrorResult(iconProblem);
+      }
+      try {
+        const result = await createDashboardInWorkspace(ctx.workspaceId, { title, parentId, icon, iconColor, blocks });
+        const out = { id: result.id, url: appUrl(ctx, `/dashboard/${result.id}`), blocks: result.blocks, ...(result.warnings ? { warnings: result.warnings } : {}) };
+        const text = JSON.stringify(out);
+        await logActivity(ctx, 'create_dashboard', 'success', 'dashboard', result.id, text, { itemsAffected: result.blocks.length });
+        return { content: [{ type: 'text' as const, text }], structuredContent: out };
+      } catch (err) {
+        await logActivity(ctx, 'create_dashboard', 'error');
+        return { content: [{ type: 'text' as const, text: `Error: ${err instanceof Error ? err.message : String(err)}` }], isError: true };
+      }
+    },
+  );
+
+  server.registerTool(
+    'update_dashboard',
+    {
+      description: 'Patch a dashboard by block id — send only what changes, never the whole spec. All-or-nothing, applied remove → update → add → order. `update` entries are {id, ...fields}, merged into that block (null removes a field; type cannot change). Same result as create_dashboard.',
+      inputSchema: {
+        dashboardId: z.string(),
+        title: z.string().optional(),
+        icon: ICON_PATCH_INPUT,
+        iconColor: ICON_COLOR_PATCH_INPUT,
+        add: BLOCKS_INPUT.optional().describe('New blocks, appended'),
+        update: BLOCKS_INPUT.optional(),
+        remove: z.array(z.string()).optional().describe('Block ids'),
+        order: z.array(z.string()).optional().describe('Block ids in their new order; unlisted ones follow'),
+        contextRunId: CONTEXT_RUN_ID,
+      },
+      outputSchema: DASHBOARD_RESULT,
+      annotations: { title: 'Update dashboard', readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
+    },
+    async ({ dashboardId, title, icon, iconColor, add, update, remove, order, contextRunId }) => {
+      if (ctx.scope !== 'write') {
+        await logActivity(ctx, 'update_dashboard', 'error', 'dashboard', dashboardId);
+        return { content: [{ type: 'text' as const, text: READ_ONLY_ERROR }], isError: true };
+      }
+      const contextError = await requireContext(ctx, contextRunId, 'update_dashboard', dashboardId);
+      if (contextError) return contextError;
+      const iconProblem = iconInputError(icon, iconColor);
+      if (iconProblem) {
+        await logActivity(ctx, 'update_dashboard', 'error', 'dashboard', dashboardId);
+        return iconErrorResult(iconProblem);
+      }
+      try {
+        const result = await patchDashboard(ctx.workspaceId, dashboardId, { add, update, remove, order }, { title, icon, iconColor });
+        const out = { id: result.id, url: appUrl(ctx, `/dashboard/${result.id}`), blocks: result.blocks, ...(result.warnings ? { warnings: result.warnings } : {}) };
+        const text = JSON.stringify(out);
+        await logActivity(ctx, 'update_dashboard', 'success', 'dashboard', dashboardId, text, {
+          itemsAffected: (add?.length ?? 0) + (update?.length ?? 0) + (remove?.length ?? 0),
+        });
+        return { content: [{ type: 'text' as const, text }], structuredContent: out };
+      } catch (err) {
+        await logActivity(ctx, 'update_dashboard', 'error', 'dashboard', dashboardId);
+        return { content: [{ type: 'text' as const, text: `Error: ${err instanceof Error ? err.message : String(err)}` }], isError: true };
       }
     },
   );

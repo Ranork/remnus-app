@@ -3,15 +3,14 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
+import { ChevronDown, ChevronUp, SlidersHorizontal, Trash2 } from 'lucide-react';
 import { ConfirmDialog } from '@/components/features/ConfirmDialog';
 import { deleteDashboardBlock, moveDashboardBlock } from '@/lib/actions/dashboard';
+import DashboardBlockEditor from './DashboardBlockEditor';
 
 /**
- * The human's half of dashboard editing in v1: remove a block, move it up or
- * down. Adding and configuring blocks is an agent's job (MCP, P7) — the page
- * says so in as many words rather than leaving a reader hunting for a "+"
- * button that doesn't exist.
+ * Per-block controls: edit settings, move up or down, remove. Adding a block
+ * lives in `DashboardAddBlock`.
  *
  * Every operation addresses the block by its id, never by position, so two
  * people reordering at once can't swap the wrong pair.
@@ -19,17 +18,21 @@ import { deleteDashboardBlock, moveDashboardBlock } from '@/lib/actions/dashboar
 export default function DashboardBlockActions({
   itemId,
   blockId,
+  block,
   canMoveUp,
   canMoveDown,
 }: {
   itemId: string;
   blockId: string;
+  /** The readable block, for the editor. Absent for a block that could not be read — it can only be removed. */
+  block?: Record<string, unknown>;
   canMoveUp: boolean;
   canMoveDown: boolean;
 }) {
   const t = useTranslations('Dashboard');
   const router = useRouter();
   const [confirming, setConfirming] = useState(false);
+  const [editing, setEditing] = useState(false);
   const [pending, startTransition] = useTransition();
 
   const run = (fn: () => Promise<unknown>) =>
@@ -44,6 +47,18 @@ export default function DashboardBlockActions({
   return (
     <>
       <div className="flex items-center gap-0.5 opacity-0 transition-opacity focus-within:opacity-100 group-hover/block:opacity-100">
+        {block && (
+          <button
+            type="button"
+            className={buttonClass}
+            title={t('editBlock')}
+            aria-label={t('editBlock')}
+            disabled={pending}
+            onClick={() => setEditing(true)}
+          >
+            <SlidersHorizontal size={13} />
+          </button>
+        )}
         <button
           type="button"
           className={buttonClass}
@@ -75,6 +90,8 @@ export default function DashboardBlockActions({
           <Trash2 size={13} />
         </button>
       </div>
+
+      {editing && block && <DashboardBlockEditor itemId={itemId} block={block} onClose={() => setEditing(false)} />}
 
       {confirming && (
         <ConfirmDialog

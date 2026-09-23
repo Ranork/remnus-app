@@ -12,7 +12,16 @@ export type TokenContext = {
   agentName: string | null;
   /** The user who owns the token (PAT creator / OAuth grantee) — for funnel attribution. */
   ownerUserId: string | null;
+  /** Origin the MCP request reached (the app is served from the same one) — for links
+   *  an agent can hand to a human. Unset outside a real request (scripts, benchmarks). */
+  appOrigin?: string;
 };
+
+/** Absolute in-app URL for `path` (e.g. `/dashboard/<id>`), so an agent can say "look here". */
+export function appUrl(ctx: TokenContext, path: string): string {
+  const origin = ctx.appOrigin ?? process.env.NEXT_PUBLIC_APP_URL ?? 'https://www.remnus.com';
+  return `${origin.replace(/\/$/, '')}${path}`;
+}
 
 /**
  * Request-scoped start time, so every tool can be timed without threading a

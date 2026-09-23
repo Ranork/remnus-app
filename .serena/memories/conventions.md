@@ -51,6 +51,8 @@ Primary sources: `AI.md`, `AGENTS.md`, `messages/`, `src/auth.config.ts`, `src/l
 - The dashboard spec (`src/lib/dashboard/schema.ts`) is the single zod source of truth for renderer AND MCP writes. Never write a second schema for it. Blocks are addressed **by `id`, never by array index**, and carry a data SOURCE, never rows.
 - Row filtering/sorting for BOTH database views and dashboard blocks lives in `src/lib/tableFilters.ts` (pure, no 'use client'). `DatabaseView.tsx` imports it — do not inline a copy back into a component.
 - A dashboard route is server-rendered end to end: resolve block data in `src/lib/dashboard/data.ts`, never per-block client fetches.
+- Every dashboard write (MCP tools AND web actions) goes through `src/lib/services/dashboards.ts` (`createDashboardInWorkspace` / `patchDashboard`). Don't add a second write path: it owns per-block validation of touched blocks only, reference normalization, compare-and-swap, and the `warnings` self-check. Keep block shapes OUT of MCP `inputSchema` (`z.array(z.any())`) — the catalog is the `remnus://dashboard/catalog` resource, generated from zod so it cannot drift.
+- Service error text (`DashboardInputError`) is English and agent-facing; the web editor logs it and shows its own localized message.
 
 ## Component Patterns
 - Optimistic mutations: apply locally first, revalidate in background

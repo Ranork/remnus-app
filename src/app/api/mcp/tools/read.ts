@@ -28,7 +28,35 @@ import {
 } from '@/lib/services/workspace';
 import { prepareContextPack } from '@/lib/services/contextPack';
 import { listPageComments } from '@/lib/services/comments';
-import { logActivity, type TokenContext } from '../context';
+import { appUrl, logActivity, type TokenContext } from '../context';
+
+type PageRead = Awaited<ReturnType<typeof getAnyPageById>>;
+
+/**
+ * A dashboard's body is its spec. `get_page` hands it back as an object under
+ * `spec` rather than as the JSON string the service stores in `content` — an
+ * escaped string costs a backslash per quote — and in outline mode as just the
+ * block list, which is all an agent needs to pick ids for update_dashboard.
+ */
+function shapeDashboardRead(page: PageRead, mode: 'full' | 'outline', ctx: TokenContext): Record<string, unknown> {
+  // `properties` is always undefined for a dashboard, so it drops out of the JSON on its own.
+  const { content, ...rest } = page;
+  let spec: { blocks?: unknown } | null = null;
+  try {
+    spec = content ? JSON.parse(content) : null;
+  } catch {
+    spec = null;
+  }
+  const url = appUrl(ctx, `/dashboard/${page.id}`);
+  if (mode !== 'outline') return { ...rest, url, spec };
+  const blocks = Array.isArray(spec?.blocks) ? (spec.blocks as Record<string, unknown>[]) : [];
+  return {
+    ...rest,
+    url,
+    mode: 'outline',
+    blocks: blocks.map((b) => ({ id: b?.id, type: b?.type, ...(b?.title ? { title: b.title } : {}) })),
+  };
+}
 
 export function registerReadTools(server: McpServer, ctx: TokenContext) {
   server.registerTool(
@@ -158,7 +186,7 @@ export function registerReadTools(server: McpServer, ctx: TokenContext) {
   server.registerTool(
     'get_page',
     {
-      description: 'Read a page or database row by id (type auto-detected). mode: "outline" returns headings + first line per section — a cheap skim for a long page (the map shows body sizes) before a full read.',
+      description: 'Read a page, database row or dashboard by id (type auto-detected; a dashboard comes back as its block `spec`). mode: "outline" returns headings + first line per section — a cheap skim for a long page (the map shows body sizes) before a full read.',
       inputSchema: {
         pageId: z.string().describe('Page or row id'),
         mode: z.enum(['full', 'outline']).optional().default('full'),
@@ -166,9 +194,11 @@ export function registerReadTools(server: McpServer, ctx: TokenContext) {
       },
       outputSchema: z.object({
         id: z.string(),
-        type: z.string().describe('page | database'),
+        type: z.string().describe('page | database | database_row | dashboard'),
         title: z.string().optional(),
-        content: z.string().optional().describe('Markdown body (collapsed in outline mode)'),
+        content: z.string().optional().describe('Markdown body (collapsed in outline mode); absent for a dashboard'),
+        spec: z.any().optional().describe('Dashboard only: the block spec (outline mode: `blocks` with id/type/title instead)'),
+        url: z.string().optional().describe('Dashboard only: where a human can see it'),
         icon: z.string().nullable().optional(),
         properties: z.any().optional().describe('Database-row properties (rows only)'),
         databaseId: z.string().nullable().optional(),
@@ -189,6 +219,13 @@ export function registerReadTools(server: McpServer, ctx: TokenContext) {
     async ({ pageId, mode, includeComments }) => {
       try {
         const page = await getAnyPageById(ctx.workspaceId, pageId);
+        if (page.type === 'dashboard') {
+          // No comments panel on a dashboard, so includeComments has nothing to add.
+          const payload = shapeDashboardRead(page, mode ?? 'full', ctx);
+          const text = JSON.stringify(payload);
+          await logActivity(ctx, 'get_page', 'success', 'dashboard', pageId, text);
+          return { content: [{ type: 'text' as const, text }], structuredContent: payload };
+        }
         const body = page.content ?? '';
         const collapsed = mode === 'outline' && body.length > 0;
         const payload: Record<string, unknown> = collapsed
@@ -237,9 +274,11 @@ export function registerReadTools(server: McpServer, ctx: TokenContext) {
       try {
         const results = await getPagesByIds(ctx.workspaceId, pageIds);
         const shaped = results.map(r =>
-          r.ok && r.page && mode === 'outline' && r.page.content
-            ? { ...r, page: { ...r.page, content: buildContentOutline(r.page.content), mode: 'outline', fullContentChars: r.page.content.length } }
-            : r,
+          r.ok && r.page?.type === 'dashboard'
+            ? { ...r, page: shapeDashboardRead(r.page, mode ?? 'full', ctx) }
+            : r.ok && r.page && mode === 'outline' && r.page.content
+              ? { ...r, page: { ...r.page, content: buildContentOutline(r.page.content), mode: 'outline', fullContentChars: r.page.content.length } }
+              : r,
         );
         const text = JSON.stringify({ results: shaped });
         // Same reasoning as get_page: in outline mode the full-body answer is

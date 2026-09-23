@@ -283,8 +283,9 @@ export function handleMcpRequest(req: Request, endpoint: McpEndpoint = SHARED_EN
 }
 
 async function runMcpRequest(req: Request, endpoint: McpEndpoint): Promise<Response> {
-  const ctx = await authenticate(req, endpoint);
-  if (ctx instanceof Response) return ctx;
+  const authed = await authenticate(req, endpoint);
+  if (authed instanceof Response) return authed;
+  const ctx: TokenContext = { ...authed, appOrigin: new URL(req.url).origin };
 
   if (!checkRateLimit(ctx.tokenId)) return json({ error: 'Too many requests' }, 429);
 

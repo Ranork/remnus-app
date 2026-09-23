@@ -112,6 +112,8 @@ Tool definitions are a fixed per-session cost: they enter the model's context on
 
 Two changes did this. Descriptions and input schemas were trimmed to the sentences that actually change an agent's behaviour — the merge semantics of `update_page`, the `confirm: true` rule, the refusal contract of a cross-database move — and everything restating a field's own name was dropped. And a **read-scoped token no longer receives the 14 write tools at all**: they used to be advertised and refused at call time, which cost every read-only integration thousands of tokens for tools it could never use.
 
+The [dashboard](dashboards.md) tools, added 2026-09-23, put that rule to work: `create_dashboard` and `update_dashboard` add about 555 tokens to a write-scoped session (≈ 253 + 302) and nothing to a read-scoped one — the write-scoped total is now ~5,980 tokens. Their seven block shapes are not in the schemas at all; the catalog (~1,500 tokens) is the resource `remnus://dashboard/catalog`, paid only by a session that builds a dashboard.
+
 A tool result is sent twice on the wire — once as text, once as `structuredContent` — but each client forwards exactly one of those to the model (Claude Code keeps the structured half, Claude Desktop and Cursor keep the text), so the model-visible size is one copy. That is also what `agent_activity.response_bytes` records.
 
 ## See also
