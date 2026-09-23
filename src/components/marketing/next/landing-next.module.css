@@ -1,0 +1,150 @@
+/* Animations for the /landing-next draft. Every element is readable at rest:
+   motion only adds emphasis, it never hides content until an animation runs. */
+
+/* ── Hero: the agent activity feed scrolls endlessly ─────────────────────── */
+.tickerWindow {
+  position: relative;
+  overflow: hidden;
+  mask-image: linear-gradient(to bottom, transparent 0, #000 14%, #000 80%, transparent 100%);
+}
+
+.ticker {
+  display: flex;
+  flex-direction: column;
+  animation: ticker 22s linear infinite;
+}
+
+@keyframes ticker {
+  from { transform: translateY(0); }
+  to   { transform: translateY(-50%); }
+}
+
+/* ── Hero: the bridge between noise and picture ──────────────────────────── */
+.bridge {
+  position: relative;
+  overflow: hidden;
+}
+
+.bridgeDot {
+  position: absolute;
+  top: 50%;
+  left: -8px;
+  width: 6px;
+  height: 6px;
+  margin-top: -3px;
+  border-radius: 9999px;
+  background: var(--color-accent-strong);
+  box-shadow: 0 0 10px var(--color-accent-strong);
+  animation: bridge 2.4s linear infinite;
+}
+
+.bridgeDot:nth-child(2) { animation-delay: 0.8s; }
+.bridgeDot:nth-child(3) { animation-delay: 1.6s; }
+
+@keyframes bridge {
+  from { transform: translateX(0); opacity: 0; }
+  15%  { opacity: 1; }
+  85%  { opacity: 1; }
+  to   { transform: translateX(72px); opacity: 0; }
+}
+
+/* ── Hero: the "needs you" row breathes to draw the eye ──────────────────── */
+.needsYou {
+  animation: needsYou 3.2s ease-in-out infinite;
+}
+
+@keyframes needsYou {
+  0%, 100% { box-shadow: 0 0 0 0 color-mix(in oklab, var(--color-amber-400) 0%, transparent); }
+  50%      { box-shadow: 0 0 0 4px color-mix(in oklab, var(--color-amber-400) 22%, transparent); }
+}
+
+/* ── Hero: tiles count in once, from their final value's position ────────── */
+.tile {
+  animation: tileIn 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes tileIn {
+  from { transform: translateY(6px); }
+  to   { transform: none; }
+}
+
+/* ── Final say: the arrow between steps ──────────────────────────────────── */
+.flowArrow {
+  animation: flowArrow 1.8s ease-in-out infinite;
+}
+
+@keyframes flowArrow {
+  0%, 100% { transform: translateX(0); opacity: 0.5; }
+  50%      { transform: translateX(4px); opacity: 1; }
+}
+
+/* ── Terminal caret ──────────────────────────────────────────────────────── */
+.caret {
+  display: inline-block;
+  width: 7px;
+  height: 14px;
+  vertical-align: -2px;
+  background: currentColor;
+  animation: caret 1.1s steps(1) infinite;
+}
+
+@keyframes caret {
+  50% { opacity: 0; }
+}
+
+/* ── Project map tab panels ──────────────────────────────────────────────── */
+.panelIn {
+  animation: panelIn 0.28s ease-out;
+}
+
+@keyframes panelIn {
+  from { transform: translateY(4px); opacity: 0.4; }
+  to   { transform: none; opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ticker,
+  .bridgeDot,
+  .needsYou,
+  .tile,
+  .flowArrow,
+  .caret,
+  .panelIn {
+    animation: none;
+  }
+}
+
+/* Notification badge dot: a soft ping, like an unread indicator. */
+.ping {
+  animation: ping 1.8s cubic-bezier(0, 0, 0.2, 1) infinite;
+  opacity: 0.6;
+}
+
+@keyframes ping {
+  75%, 100% { transform: scale(2.4); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ping { animation: none; opacity: 0; }
+}
+
+/* Theme-aware logo (ThemedLogo): the light marketing theme is `catppuccin`. */
+.logoOnLight {
+  display: none;
+}
+
+:global([data-theme="catppuccin"]) .logoOnDark {
+  display: none;
+}
+
+:global([data-theme="catppuccin"]) .logoOnLight {
+  display: block;
+}
+
+/* Always-dark panels (the hero's agent feed). globals.css darkens the
+   monochrome Cursor mark for the light theme so it reads on white; inside a
+   dark panel that would make it vanish, so restore its light fill here. The
+   doubled class out-ranks the global rule regardless of stylesheet order. */
+:global([data-theme="catppuccin"]) .onDarkSurface.onDarkSurface svg[aria-label="cursor"] {
+  fill: #c8c8c8;
+}

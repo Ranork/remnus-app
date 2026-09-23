@@ -2099,5 +2099,309 @@
     "seriesPanelNoDate": "Add a date to this task before setting a repeat.",
     "actionError": "Something went wrong. Please try again.",
     "dismiss": "Dismiss"
+  },
+  "LandingNext": {
+    "nav": {
+      "how": "How it works",
+      "dashboards": "Dashboards",
+      "trust": "Trust"
+    },
+    "hero": {
+      "badge": "New · Your agent sets it up",
+      "titlePre": "Know your project",
+      "titleAccent": "again.",
+      "ctaPrimary": "Start free",
+      "agentLabel": "What your agents did",
+      "agentCaption": "63 commits · 214 files changed · this week",
+      "remnusLabel": "What you see in Remnus",
+      "week": "This week",
+      "shipped": "tasks shipped",
+      "decisions": "decisions",
+      "decisionsNote": "1 needs you",
+      "risks": "open risks",
+      "needsYouTag": "Needs you",
+      "needsYou": "Claude moved sessions to JWT",
+      "feed1": "Architecture map updated · auth, billing",
+      "feed2": "Risk flagged · webhook retries untested",
+      "feed3": "Backlog updated · 2 tasks moved to Done",
+      "promptLabel": "Paste this into your agent",
+      "promptCopy": "Copy prompt",
+      "promptCopied": "Copied",
+      "lede": "Your agents build it. Remnus turns their work into pages and dashboards you can actually read, so you stay in command.",
+      "quickTitle": "Start right in your agent",
+      "quickBody": "Paste this into Claude Code, Codex or Cursor.",
+      "copy": "Copy",
+      "step1": "Your agent installs it",
+      "step2": "You sign in once",
+      "step3": "Your project gets mapped"
+    },
+    "problem": {
+      "kicker": "The problem",
+      "titlePre": "400 commits in. Can you still explain",
+      "titleAccent": "how your project works?",
+      "body": "Agents now write code faster than anyone can read it. There is a name for the gap between the code that exists and the code anyone actually understands: comprehension debt. Every week of agent work makes it bigger.",
+      "stat": "52%",
+      "statLabel": "of new code is now written by AI",
+      "statSource": "DX · State of AI Impact, Q2 2026",
+      "sourceLabel": "Read: Comprehension debt, Addy Osmani",
+      "diffsTitle": "Reading diffs",
+      "diffsBody": "Shows every line that changed. Never shows what the project became.",
+      "diffsVerdict": "Lines, no picture",
+      "chatTitle": "Chats and hand-written docs",
+      "chatBody": "The agent explains itself, then the session closes. Docs go stale the week you write them.",
+      "chatVerdict": "Gone by Friday",
+      "remnusTitle": "Remnus",
+      "remnusBody": "The agents doing the work keep a readable picture of the project up to date. You read it, correct it, approve it.",
+      "remnusVerdict": "Current, and yours",
+      "closing": "Remnus closes that gap."
+    },
+    "dashboards": {
+      "kicker": "Dashboards",
+      "soon": "Coming soon",
+      "titlePre": "Monday morning. Two minutes.",
+      "titleAccent": "The whole week.",
+      "body": "Ask your agent where things stand. It builds a live dashboard in one call and keeps it up to date with every task. It writes no HTML, so it costs a fraction of the tokens.",
+      "project": "acme-api",
+      "title": "This week",
+      "updated": "Updated by Claude · 4 min ago",
+      "tileShipped": "Tasks shipped",
+      "tileDecisions": "Decisions",
+      "tileDecisionsNote": "1 waiting for you",
+      "tileRisks": "Open risks",
+      "tileAgents": "Agents active",
+      "chartTitle": "Agent activity",
+      "days": [
+        "Mon",
+        "Tue",
+        "Wed",
+        "Thu",
+        "Fri",
+        "Sat",
+        "Sun"
+      ],
+      "reviewTitle": "Waiting for you",
+      "review1": "Move sessions to JWT",
+      "review1Meta": "Claude · auth refactor · 4 files",
+      "review2": "Drop the legacy token table",
+      "review2Meta": "Codex · cleanup · migration 0041",
+      "changesTitle": "Architecture changes",
+      "change1": "Billing webhooks now retry through a queue",
+      "change2": "Organizations added between users and workspaces",
+      "risksTitle": "Open risks",
+      "risk1": "Webhook retries are untested",
+      "risk2": "One settings action skips the permission check",
+      "p1Title": "Built in one call",
+      "p1Body": "Your agent says what to show. Remnus draws it. No HTML, no design work.",
+      "p2Title": "Always up to date",
+      "p2Body": "It changes as your agents work, so you are never reading last Tuesday's report.",
+      "p3Title": "Easy to share",
+      "p3Body": "Your whole team looks at the same picture instead of five different summaries."
+    },
+    "map": {
+      "kicker": "The project map",
+      "titlePre": "A map of your project,",
+      "titleAccent": "written by the agents that build it.",
+      "body": "Your agent reads the codebase and explains it back to you. From then on, every task keeps the map current.",
+      "tabDecisions": "Decisions",
+      "tabArchitecture": "Architecture",
+      "tabBacklog": "Backlog",
+      "tabRisks": "Risks",
+      "colDecision": "Decision",
+      "colSource": "Written by",
+      "colStatus": "Status",
+      "statusReviewed": "Reviewed",
+      "statusNeedsReview": "Needs review",
+      "statusSuperseded": "Superseded",
+      "decisions": [
+        {
+          "title": "Keep server sessions; revocation must be instant",
+          "source": "You · edited Claude's proposal"
+        },
+        {
+          "title": "Billing webhooks retry through a queue",
+          "source": "Claude · billing refactor"
+        },
+        {
+          "title": "Move sessions to JWT",
+          "source": "Claude · auth refactor"
+        },
+        {
+          "title": "One workspace per project",
+          "source": "Codex · install flow"
+        }
+      ],
+      "archTitle": "Architecture overview",
+      "archIntro": "A Next.js app. Every write goes through server actions and a service layer; agents reach the same services over MCP.",
+      "archNodes": [
+        "Web app",
+        "Server actions",
+        "Services",
+        "Database",
+        "MCP endpoint"
+      ],
+      "archNote": "Updated by Claude after the billing refactor · 2 days ago",
+      "backlogCols": [
+        "Next",
+        "In progress",
+        "Done"
+      ],
+      "backlog": [
+        [
+          "Invite viewers to a project",
+          "Retry tests for webhooks"
+        ],
+        [
+          "Organizations model"
+        ],
+        [
+          "Queue-based webhook retries",
+          "Project install command"
+        ]
+      ],
+      "risks": [
+        {
+          "title": "Webhook retries are untested",
+          "meta": "Flagged by Codex · Tuesday"
+        },
+        {
+          "title": "One settings action skips the permission check",
+          "meta": "Flagged by Claude · Thursday"
+        },
+        {
+          "title": "Architecture page older than the auth code",
+          "meta": "Freshness warning · last reviewed 3 weeks ago"
+        }
+      ],
+      "footnote": "Every entry shows who wrote it, during which task, and which files it touched."
+    },
+    "finalSay": {
+      "kicker": "Human in the loop",
+      "titlePre": "Agents propose. You decide.",
+      "titleAccent": "They follow.",
+      "body": "Nothing an agent writes counts until you have looked at it. Approve it, fix it or push back, and the next session starts from your call.",
+      "s1Label": "Claude proposes",
+      "s1Title": "Move sessions to JWT",
+      "s1Meta": "auth refactor · 4 files",
+      "s1Status": "Needs review",
+      "s2Label": "You decide",
+      "s2Title": "Keep server sessions",
+      "s2Note": "Revocation has to be instant.",
+      "s2Status": "Reviewed by you",
+      "s3Label": "The next session follows",
+      "s3Line1": "Preparing context · 1,820 tokens",
+      "s3Line2": "✓ reviewed: keep server sessions",
+      "s3Line3": "Following your decision",
+      "f1": "Edit a page and its approval resets. A review always belongs to the exact version you read.",
+      "f2": "In Strict mode, agents can't write until they've read what you approved.",
+      "f3": "Every agent action is on the record: who, what and when.",
+      "tech": "Revision-bound reviews · context packs within a token budget · OAuth 2.1 · full audit log"
+    },
+    "how": {
+      "kicker": "Get started",
+      "titlePre": "Two minutes to",
+      "titleAccent": "see your project clearly.",
+      "s1Title": "Hand it to your agent",
+      "s1Body": "Paste one prompt into Claude Code, Codex or Cursor. Your agent runs the install and you sign in once in your browser. No token to copy, nothing of yours overwritten.",
+      "s2Title": "Let your agent explain it",
+      "s2Body": "Your agent reads the codebase and builds the first map: overview, decisions, architecture, backlog and risks.",
+      "s3Title": "Every task updates the picture",
+      "s3Body": "Each session opens the project's own workspace. Agents check the map before they act and write down what changed.",
+      "terminal": [
+        "Opening your browser to sign in…",
+        "✓ Workspace acme-api selected",
+        "✓ .mcp.json",
+        "✓ .remnus/credentials.json (git-ignored)",
+        "✓ AGENTS.md · CLAUDE.md"
+      ],
+      "termReading": "Reading the install guide…",
+      "termDone": "Workspace connected. Next, I'll map the project for you."
+    },
+    "demo": {
+      "kicker": "See it work",
+      "title": "90 seconds, one real project."
+    },
+    "agents": {
+      "titlePre": "Use whichever agents you like.",
+      "titleAccent": "You still get one picture.",
+      "body": "Claude Code, Codex, Cursor and anything that speaks MCP write into the same map, and you can see who did what."
+    },
+    "trust": {
+      "kicker": "Trust",
+      "titlePre": "Control you can",
+      "titleAccent": "verify.",
+      "tokenTitle": "No secrets in your repo",
+      "tokenBody": "The project token lives in a git-ignored file. The config you commit holds nothing sensitive.",
+      "isolationTitle": "One project, one connection",
+      "isolationBody": "Each project gets its own endpoint, so two repos never read each other's workspace.",
+      "windowTitle": "A window locked to the project",
+      "windowBody": "The workspace window can only touch that one project. It has no access to anything at account level.",
+      "auditTitle": "Everything on the record",
+      "auditBody": "Every agent read and write is logged with who, what and when.",
+      "openTitle": "Open source",
+      "openBody": "AGPL-3.0. See exactly what happens to your content, or host it yourself.",
+      "limit": "What Remnus doesn't do: it doesn't control your agent's local files or shell. It makes what the agent did visible.",
+      "verified": "Verified on MCP Registry · Smithery · Glama · MCP.so",
+      "openSource": "Open source · AGPL-3.0"
+    },
+    "audience": {
+      "kicker": "Who it's for",
+      "title": "For anyone whose code is mostly written by agents.",
+      "soloTitle": "Solo builders",
+      "soloBody": "Five projects, three agents. Know where each one stands without re-reading the code.",
+      "leadTitle": "Tech leads",
+      "leadBody": "See what your team and its agents changed this week, without opening every pull request.",
+      "agencyTitle": "Agencies",
+      "agencyBody": "Show clients where their project stands with a page they can read, not a tour of the code."
+    },
+    "story": {
+      "kicker": "Built this way",
+      "titlePre": "We build Remnus with agents",
+      "titleAccent": "and run it on Remnus.",
+      "body": "Most of Remnus is written by coding agents. Remnus is how we keep up with them: every decision, every open risk, every week in one place."
+    },
+    "pricing": {
+      "kicker": "Pricing",
+      "title": "Free to start. Flat pricing for teams.",
+      "body": "Priced per team, not per agent. Every plan includes full MCP access.",
+      "perMonth": "/ month",
+      "cta": "Compare plans"
+    },
+    "faq": {
+      "kicker": "FAQ",
+      "title": "Questions",
+      "items": [
+        {
+          "q": "Does Remnus read my code?",
+          "a": "Your own agent reads your code on your machine, the same way it already does. Remnus only gets what the agent writes into the workspace, like decisions, notes and status. It never receives your repository."
+        },
+        {
+          "q": "How do I know agents keep the map current?",
+          "a": "Every connected project tells its agents to prepare context before real work and to write down decisions, gotchas and state changes as they happen. Each update is in the audit log, so a quiet week is visible too."
+        },
+        {
+          "q": "What does npx remnus init change in my repo?",
+          "a": "It adds .mcp.json, a .remnus folder whose token file is git-ignored, and a short marked section in AGENTS.md or CLAUDE.md. Existing files are edited in place, never replaced."
+        },
+        {
+          "q": "Which agents does it work with?",
+          "a": "Claude Code, Codex, Cursor, Windsurf, Antigravity and any client that supports remote MCP."
+        },
+        {
+          "q": "Can my team or my client see it?",
+          "a": "Invite teammates into the project's workspace, or publish any page as a read-only link."
+        },
+        {
+          "q": "Can I self-host Remnus?",
+          "a": "Yes. Remnus is open source under AGPL-3.0. Point the CLI at your own server with --server."
+        }
+      ]
+    },
+    "closing": {
+      "titlePre": "Let your agents keep building.",
+      "titleAccent": "Stay in command.",
+      "sub": "Paste one prompt, sign in once, and your project is readable again.",
+      "ctaPrimary": "Start free",
+      "ctaSecondary": "Read the docs"
+    }
   }
 }
