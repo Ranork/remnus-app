@@ -36,6 +36,7 @@ Aklında bulunsun istediğin her şey için gidip internetten araştırma yapabi
 | P7  | Dashboard'ların MCP ile yönetimi                                    | 1                     | P6'nın şemasına doğrudan bağımlı, ondan önce başlanamaz.                                                                                      |
 | P8  | Calibrate v2 (Serena ve benzerlerinden öğrenme)                     | 5                     | Artık dashboard önerebilir, hızlı bulk kullanabilir, yerel haritayı yazabilir.                                                                |
 | P9  | Proje tipi playbook'ları                                            | 3                     | P8'in iskeletine takılan içerik katmanı.                                                                                                      |
+| P9.5 | Kalibrasyon saha testi + rehberin ham `.md` adresi + tasarruf kartı | P8/P9'dan ertelendi   | P10 gerçek etiketli veriyle ölçülmeli; P13 calibrate'in yazdığı `sources`'a dayanıyor. Hakan'ın katılımı gerekiyor (giriş + ikinci oturum).    |
 | P10 | Bulma temeli: harf katlama, `keywords`, tek turda corpus, FTS5      | 2026-09-23 araştırması | Jev'den önce bulma katmanı. Dış servis/paket yok, ölçülebilir; Türkçe görevlerde `prepare_context` bugün 0 sonuç dönüyor.                     |
 | P11 | Anlamsal bulma: embedding + Turso vektör + hibrit sıralama          | 2026-09-23 araştırması | P10'un FTS5'ine ve regresyon setine dayanır. İlk dış servis (embedding) → sağlayıcı kararı Hakan'ın.                                          |
 | P12 | Remnus Graph: bilgi haritası (Obsidian kopyası değil)               | 2026-09-23 isteği     | Bağımsız başlayabilir; P10'un harf katlaması bahsedilme katmanını iyileştirir.                                                                |
@@ -1871,6 +1872,78 @@ başlangıç (kanıtın varsa değiştir):
 
 ---
 
+# P9.5 — Kalibrasyon saha testi (+ rehberin ham markdown adresi, tasarruf kartı)
+
+> 2026-09-23'te P8/P9 oturumundan ertelendi (kullanım limiti). **P10'dan önce yap:**
+> P10 etiketli gerçek veriyle ölçülmeli, P13 de calibrate'in yazdığı `sources`'a
+> dayanıyor. Bu oturumda sen (Hakan) de bulunmalısın: tarayıcıda giriş ve ikinci bir
+> Claude Code oturumu açmak gerekiyor.
+
+```text
+Remnus projesinde çalışıyorsun. Önce `AI.md`, `docs/mcp/calibrate.md`,
+`docs/mcp/playbooks.md` ve `AGENTS.md` → "Project Install" §7'yi oku.
+`git status --short` ile başla. Amaç: P8'in calibrate rehberini gerçek, bağımsız bir
+ajanla denemek ve bulduğun her boşluğu rehberde kapatmak.
+
+## Adım 0 — Rehberin ham markdown adresi (önce bunu yap)
+
+2026-09-23 ölçümü: `/wiki/calibrate` sayfası 229 KB HTML (~57k token), rehberin
+kendisi 12 KB markdown (~3k token). Ajan sayfayı `curl` ile çekerse 19 kat öder;
+WebFetch ile çekerse küçük bir modelin ÖZETİNİ görür ve kurallar düşebilir.
+- Her wiki sayfasını ham markdown olarak da sun: `/wiki/<slug>.md` (text/markdown,
+  manifest'teki dosyanın kendisi). `/llms.txt`'deki rewrite + iki katmanlı public
+  allowlist desenini kullan (`next.config.ts` rewrite, `proxy.ts` matcher istisnası,
+  `auth.config.ts`). Gizli sayfalar da (calibrate, playbook'lar) bu adresten gelmeli.
+- `cli/src/commands/init.js` `calibrateUrl`'i, `calibrate.md`'deki playbook linkini
+  ve `playbooks.md`'deki linkleri bu adrese çevirmeyi değerlendir (GitHub'da da
+  çalışmaya devam etmeli). `project-install.md` ve AGENTS.md §7'yi güncelle.
+
+## Adım 1 — Test ortamı (asıl projeye dokunma)
+
+1. Dev server'ı yerel DB ile başlat (`.env.local` → `file:local.db`).
+2. Projeyi kopyala, asıl klasörü asla değiştirme:
+   `git clone D:\Workspace\GitHub\Skyblock-Quests <scratchpad>\sq-test`
+   (Hytale modu: Türkçe commit/arayüz + İngilizce kod → Türkçe+İngilizce etiket
+   testi için ideal; P8'de kuru çalıştırması yapıldı).
+3. Kopyada: `node D:\Workspace\GitHub\remnus-app\cli\bin\remnus.js init --server http://localhost:3000`
+   → Hakan tarayıcıda yerel hesabıyla girer, **yeni** bir workspace seçer.
+   Bu, `init` akışını ve yapıştırılacak cümleyi de test eder.
+
+## Adım 2 — Bağımsız ajanla kalibrasyon
+
+Kopya klasörde **yeni** bir Claude Code oturumu aç (MCP araçları ancak böyle yüklenir)
+ve yalnızca `init`'in yazdırdığı cümleyi ver. Müdahale etme; gözlemle:
+- Rehberi nasıl çekti, kaç token harcadı (Adım 0 sonrası `.md` adresini mi kullandı)?
+- Calibration Log'u her şeyden önce açtı mı, planı kurmadan önce yazdı mı?
+- Hangi playbook'u seçti (beklenen: Game, mod sinyaliyle)? Kanıtsız bir şey kurdu mu?
+- Satırları tek `bulk_create_pages` ile ve `knowledge` etiketleriyle mi yazdı?
+- Bitiş kontrolünü (Faz 4, 7 madde) gerçekten yaptı mı? `config.json`'a
+  `calibratedAt` + `calibrationGuide` yazdı mı?
+Bir kez de oturumu yarıda kesip yeni oturumda devam ettir: logdan devam ediyor mu?
+
+## Adım 3 — Ölç ve düzelt
+
+- `knowledge_metadata`'da etiket/kaynaklı satır sayısı (P10/P13 bu sayıya bakacak).
+- Ajanın takıldığı her yer rehberde bir boşluktur → `calibrate.md` / playbook'u
+  düzelt; davranış değiştiyse `Guide version`'ı artır ve "Running it again" 2. adımına
+  yaz. Rehber ~3k tokenı çok aşmasın.
+- **Tasarruf kartı (P5'ten kalan, Hakan Playwright'ı onayladı):** bu gerçek ajan
+  çağrılarından sonra AI Agents penceresindeki kartı (`AgentSavingsCard`) Playwright ile
+  aç; `savedBytes = 0` iken kartın hiç görünmemesi beklenen davranış.
+
+## Kapsam dışı
+
+Bu repo üzerinde kalibrasyon (kendini kalibre etmek dürüst bir test değil).
+
+## Bitirirken
+
+- Kullanıcıya görünen bir değişiklik olduysa (`.md` adresi) `src/lib/changelog.ts`, 8 locale.
+- `AGENTS.md` §7 + Serena memory, `scripts/ai/update-handoff.ps1`. Commit/push yok.
+- Test workspace'ini ve kopya klasörü sil (yerel), `.ai/CURRENT_TASK.md`'yi güncelle.
+```
+
+---
+
 # P10 — Bulma temeli: harf katlama, `keywords`, tek turda corpus, FTS5 arama
 
 > 2026-09-23 araştırmasından ("Jev MCP'yi hızlandırır mı?" → "önce bulma
@@ -2397,35 +2470,41 @@ anlamsal/Jev ilişki önerileri.
 # Deploy öncesi — biriken borç (unutma listesi)
 
 > P adımları tamamlandıkça buraya ekle. Buradaki her madde **deploy'u bloklar**.
-> Son güncelleme: 2026-09-22 (P5 sonrası).
+> Son güncelleme: 2026-09-23 (P7–P9 + borç temizliği sonrası). **Şu an deploy'u
+> bloklayan açık madde yok**; aşağıdaki sıra deploy gününün kontrol listesi.
 
-## 1. Turso'ya uygulanmamış migration'lar
+## 1. Veritabanı: Turso güncel (2026-09-23)
 
-Her ikisi de şu an **yalnızca `local.db`'de**. Kod bu kolonları/tabloyu okuduğu
-için deploy edilirse production patlar.
+`0048` (P2), `0049` (P5), `0050` (P6) ve `0051` (audit retention) Turso'ya
+**uygulandı**. `npm run db:drift` (salt-okuma) sonrası: "OK — all 39 declared
+tables, their columns and named indexes exist." Yerel `local.db` de eşitlendi
+(eksik çıkan 0030/0037/0040/0041 uygulandı).
 
-| Migration | Ne ekliyor | Geldiği adım |
-| --------- | ---------- | ------------ |
-| `0048_access_requests` | `workspace_access_requests` tablosu (`npx remnus join` akışı) | P2 |
-| `0049_agent_metrics` | `agent_activity.baseline_bytes` / `duration_ms` / `items_affected` (tasarruf kartı) | P5 |
+Yeni bir migration eklenince: script'i yerelde ve Turso'da çalıştır, sonra
+`npm run db:drift` ile ikisini de doğrula. Hangi migration'ın nerede uygulandığını
+not tutmaya güvenme — 2026-09-23'te notlar yerel DB için yanlış çıktı.
 
-```powershell
-# Turso = PRODUCTION. Bu iki komut prod'a yazar; çalıştırmadan önce hedefi doğrula.
-npx tsx src/db/apply-0048-access-requests.ts
-npx tsx src/db/apply-0049-agent-metrics.ts
-```
+## 2. Deploy günü sırası
 
-İkisi de idempotent (`CREATE TABLE IF NOT EXISTS` / `PRAGMA table_info` guard),
-yani yanlışlıkla iki kez çalıştırmak zararsız. `0049` ayrıca hedef veritabanını
-başlarken ekrana yazar.
+1. `npm run db:drift` → Turso için **OK** görmeden deploy etme.
+2. Web uygulamasını deploy et (Vercel). Kalibrasyon rehberi v2 ve playbook'lar
+   bu adımla canlıya çıkar (sunucudan canlı servis ediliyor).
+3. **Sonra** CLI'ı yayınla — `cli/package.json` zaten `0.1.9`:
+   ```powershell
+   cd cli
+   npm login      # bu makinede npm oturumu yok
+   npm publish
+   ```
+   Yeni `init` metni ve ajan talimatı (yarım kalan kalibrasyonu sürdür) ancak
+   bununla projelere ulaşır. Web'den önce yayınlamak zararsız ama anlamsız.
 
-## 2. Sıra kuralı: önce migration, sonra deploy
+## 3. Sıra kuralı: önce migration, sonra deploy
 
 `0042` bu sırayı ters yapıp **tüm workspace'lerde her database görünümünü boş
 bıraktı**; `0045` notunda da aynı uyarı var. Kural: migration Turso'ya uygulanır,
 doğrulanır, **sonra** kod deploy edilir. Tersi değil.
 
-## 3. `.env` / script tuzakları (her seferinde geçerli)
+## 4. `.env` / script tuzakları (her seferinde geçerli)
 
 - `.env` içindeki `DATABASE_URL` **production Turso**'dur; `.env.local` onu
   `file:local.db` ile ezer ama bunu yalnızca Next.js görür. Apply script'leri
@@ -2435,17 +2514,15 @@ doğrulanır, **sonra** kod deploy edilir. Tersi değil.
 - `@/db` import eden script'lerde `import 'dotenv/config'` **ilk import** olmalı;
   değilse sessizce `local.db`'ye düşer ve "Turso'ya uygulandı" yalanı üretir.
 
-## 4. Deploy'u bloklamayan ama biriken işler
+## 5. Kapananlar (2026-09-23)
 
-- **Serena senkronu:** P5'te Serena araçları oturumda sunulmadığı için
-  `mem:core` / `mem:conventions` güncellenemedi. `AGENTS.md`'deki **Agent
-  Savings Metrics** bölümü ile senkronlanmalı.
-- **Tasarruf kartının tarayıcı kontrolü:** P5'te görsel doğrulama yapılmadı.
-  Kart `savedBytes = 0` iken bilerek hiç render edilmiyor, yani boş görmek hata
-  değil — gerçek bir ajan çağrısından sonra bakılmalı.
-- **`auditDays` uygulanmıyor:** plan limitlerinde ilan ediliyor ama hiçbir şey
-  `agent_activity`'yi budamıyor. Budama eklendiği gün "kazanılan token" tüm
-  zamanlar toplamı olduğu için **geriye doğru küçülmeye başlar**; o noktada
-  pencereli toplama çevrilmeli (`src/lib/services/agentMetrics.ts`).
+- **Serena senkronu (P5):** Agent Savings Metrics `mem:conventions`'a işlendi.
+- **`auditDays`:** artık uygulanıyor — plan penceresi kadar görünürlük (upgrade
+  eski geçmişi hemen gösterir), 400 günden eski kayıtlar gece silinir; silmeden
+  önce tasarruf `agent_savings_rollup`'a aktarıldığı için sayaç küçülmez
+  (`src/lib/services/auditRetention.ts`, AGENTS.md → Billing & Plan Limits).
+- **`skills/remnus/SKILL.md`:** kolon tipleri güncellendi (13 tip).
+- **Tasarruf kartının tarayıcı kontrolü:** gerçek ajan çağrısı gerektirdiği için
+  **P9.5**'e taşındı (Playwright onaylı).
 
 ---
