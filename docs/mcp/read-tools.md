@@ -6,11 +6,12 @@ All 11 read tools are available to every token regardless of scope.
 
 ## prepare_context
 
-Build a task-specific context pack before multi-page product or coding work. Context Pack v2 runs BM25 retrieval across titles and bodies, combines native OKF-aligned metadata and the page link graph, prefers exact-revision human reviews, and penalizes stale/deprecated knowledge.
+Build a task-specific context pack before multi-page product or coding work. Context Pack v2 runs BM25 retrieval across titles and bodies, combines native OKF-aligned metadata and the page link graph, prefers exact-revision human reviews, and penalizes stale/deprecated knowledge. Matching is case- and accent-insensitive ("Çözüm" = "cozum") but lexical: pass `keywords` for synonyms and for a workspace written in another language than the task. See [Keywords](context-first.md#keywords-the-agent-expands-the-server-ranks).
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
 | `task` | string | ✓ | | Concrete task or question |
+| `keywords` | string[] | | | Extra search terms, up to 24 × 60 characters: synonyms, and the workspace's own language when the task is written in another (English terms for a Turkish task). Ranked at half the weight of the task's own words |
 | `maxTokens` | number | | `2000` | Approximate response budget (`1000`–`16000`) |
 | `maxConcepts` | number | | `6` | Maximum concepts (`1`–`16`) |
 | `trustPolicy` | string | | `prefer-human-reviewed` | `any`, `prefer-human-reviewed`, or `human-reviewed-only` |
@@ -30,11 +31,13 @@ The budget applies to the compact JSON text returned by the tool. If a page cann
 
 Search the workspace by title **and content**. Matches standalone pages, databases, and database rows (each row is a page) on their title or body text.
 
+Matching ignores case and accents in the Latin-script languages Remnus supports: `cozum` finds "Çözüm Notları", `istanbul` finds "İstanbul Ofisi", `espana` finds "España". Letters of other scripts (Cyrillic, CJK) match as typed. Results are not ranked by relevance — use [`prepare_context`](#prepare_context) for "what is relevant to this task".
+
 **Parameters**
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `query` | string | ✓ | | Text to match against item titles and content (case-insensitive substring) |
+| `query` | string | ✓ | | Text to match against item titles and content (case- and accent-insensitive substring) |
 | `limit` | number | | `10` | Maximum results |
 
 **Returns** — `{ results: [...] }`, where each result has:

@@ -188,8 +188,8 @@ export function renderInstructions(ctx: TokenContext, policy: Pick<ContextPolicy
   const lines = [
     'This is a Remnus workspace: pages and databases an AI agent can read and, with a write-scoped token, edit directly.',
     policy.mode === 'manual'
-      ? 'Context policy is manual. Use prepare_context(task, maxTokens?) when the task needs workspace knowledge; avoid pre-crawling the workspace.'
-      : `Context policy is ${policy.mode}. For concrete multi-page product or coding work, call prepare_context first with about ${policy.autoMaxTokens} tokens; reuse its contextRunId for related Remnus writes.`,
+      ? 'Context policy is manual. Use prepare_context(task, keywords?, maxTokens?) when the task needs workspace knowledge; avoid pre-crawling the workspace.'
+      : `Context policy is ${policy.mode}. For concrete multi-page product or coding work, call prepare_context (with keywords) first with about ${policy.autoMaxTokens} tokens; reuse its contextRunId for related Remnus writes.`,
     `To orient, read resource ${digestUri} once: a compact map (titles, ids, row counts, body sizes) that starts with a cursor. Afterwards call get_changes_since(cursor) for the delta instead of re-reading the map or crawling the tree. A project set up with \`remnus init\` keeps a cached copy at .remnus/workspace-map.md — read that first.`,
     'Cross-session memory prompts: recall-context(topic) before starting work, save-memory(content, memory_type) after a decision, preference, or gotcha worth keeping.',
   ];

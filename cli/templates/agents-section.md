@@ -17,8 +17,8 @@ that was interrupted: resume it with that guide rather than starting over.
 2. Before writing, or if it looks stale, `get_changes_since` with that cursor —
    never re-crawl. No map file? Call it once with no cursor.
 3. Read narrowly: `get_page` (`mode: "outline"` for long pages), `query_database`
-   with `fields`; `prepare_context` before non-trivial work, keeping its
-   `contextRunId` for related writes.
+   with `fields`; `prepare_context` (with `keywords`) before non-trivial work,
+   keeping its `contextRunId` for related writes.
 4. `search_workspace` last, not first.
 - Write down decisions, gotchas, and state changes as they happen — not just in conversation.
 - `update_page` merges (send only what changed); check `get_database_schema` before

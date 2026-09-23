@@ -30,7 +30,7 @@ Column types: `text` | `number` | `select` | `multi_select` | `status` | `user` 
 
 **Read (safe, always allowed):**
 - `prepare_context` — start meaningful multi-page product/coding work with Context Pack v2; returns a token-budgeted, reviewed/fresh pack and a short-lived `contextRunId`.
-- `search_workspace` — find pages/databases by text. The fallback when the workspace map has not already given you the id, not the first step.
+- `search_workspace` — find pages/databases by text (case- and accent-insensitive: `cozum` finds "Çözüm"). The fallback when the workspace map has not already given you the id, not the first step.
 - `list_workspace` — list items, optionally under a `parentId`. Paginated.
 - `get_page` — full content of a page or row by ID. Auto-detects type. A dashboard comes back as its block `spec` (`mode: "outline"` → just the block ids/types/titles).
 - `get_pages` — batch `get_page`: a specific known ID list (max 50), possibly across databases/types. One bad ID doesn't fail the rest — check each result's `ok`. For many rows in one database, prefer `query_database` instead.
@@ -91,7 +91,7 @@ These only *fetch and format* — the actual writing/analysis is yours. If a cli
 ### 1. Inspect before you act — cheapest source first
 Orient in this order: **local map (`.remnus/workspace-map.md`) → `get_changes_since(cursor)` → targeted read → `search_workspace`.** Grep the map instead of listing the tree; before writing, or when the map looks stale, take its cursor and pull the delta rather than re-crawling. With no map file, read the digest resource once and keep its cursor.
 
-For meaningful multi-page product or coding work, start with `prepare_context` (normally 2,000 tokens) and reuse its `contextRunId` on related writes. Do not call it for greetings, formatting-only work, or a single known page. If a write returns `CONTEXT_REQUIRED`, prepare the concrete task and retry once with the returned ID. Don't guess IDs or column names: run `get_database_schema` before `query_database` / before writing rows. You need real column IDs and exact `select` option strings.
+For meaningful multi-page product or coding work, start with `prepare_context` (normally 2,000 tokens) and reuse its `contextRunId` on related writes. Pass `keywords`: synonyms of the task's key terms and, when the task is in another language than the workspace, the workspace's own terms (English terms for a Turkish task) — retrieval is lexical, so the server cannot translate. Do not call it for greetings, formatting-only work, or a single known page. If a write returns `CONTEXT_REQUIRED`, prepare the concrete task and retry once with the returned ID. Don't guess IDs or column names: run `get_database_schema` before `query_database` / before writing rows. You need real column IDs and exact `select` option strings.
 
 ### 2. `update_page` MERGES properties — it never replaces
 Passing `properties: { status: "Done" }` changes only `status`; every other property is untouched. To *clear* a field, set it explicitly to `null`/`""`. Never re-send the whole property bag thinking you must preserve it — you don't, and doing so risks clobbering changes made since you read.
@@ -121,7 +121,7 @@ Creating several pages or rows? One `bulk_create_pages` call. Updating several r
 
 ## Common recipes
 
-**"Implement feature X using our product decisions"** → `prepare_context` with the concrete task and a suitable `maxTokens` budget → keep `contextRunId` → `get_page` only for related IDs whose full detail is still needed → pass `contextRunId` to Remnus writes.
+**"Implement feature X using our product decisions"** → `prepare_context` with the concrete task, `keywords` and a suitable `maxTokens` budget → keep `contextRunId` → `get_page` only for related IDs whose full detail is still needed → pass `contextRunId` to Remnus writes.
 
 **"Find X and show me"** → the workspace map if you have one, else `search_workspace` → `get_page` on the best hit.
 

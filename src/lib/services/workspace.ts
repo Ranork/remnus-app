@@ -21,13 +21,15 @@ import {
   pageLinks,
   pageComments,
 } from '@/db/schema';
-import { eq, ne, and, or, like, asc, desc, gte, lte, sql, inArray } from 'drizzle-orm';
+import { eq, ne, and, or, asc, desc, gte, lte, sql, inArray } from 'drizzle-orm';
+import type { SQLiteColumn } from 'drizzle-orm/sqlite-core';
 import { syncPageLinks, syncPageLinksBulk, removePageLinksFor, purgeReferencesTo } from './pageLinks';
 import { snapshotBeforeDelete, maybeSnapshotContentUpdate, type SnapshotActor } from './snapshots';
 import { recordGeneratedKnowledgeBulk, type KnowledgeMetadataInput } from './knowledge';
 import { activityAtOrAfter, auditVisibleSince } from './auditRetention';
 import { chunkRows } from './sqlChunk';
 import { computeChangeVersion } from './changeVersion';
+import { foldText, foldTextWithOffsets, foldingSearchPatterns } from './textFold';
 import { iconInputError } from '@/lib/icons';
 import type { StatusGroup } from '@/lib/types/properties';
 
@@ -228,12 +230,18 @@ export async function searchWorkspace(
   query: string,
   limit = 10,
 ) {
-  const pattern = `%${query}%`;
-  const q = query.toLowerCase();
+  // Case- AND accent-insensitive: "cozum" finds "Çözüm Notları", "istanbul"
+  // finds "İstanbul Ofisi" — see foldingSearchPatterns for the LIKE + GLOB pair.
+  const patterns = foldingSearchPatterns(query);
+  const matches = (column: SQLiteColumn) =>
+    sql`(${column} LIKE ${patterns.like} ESCAPE '\\' AND ${column} GLOB ${patterns.glob})`;
+  const q = foldText(query);
 
   const snippetFrom = (content: string | null | undefined): string => {
     if (!content) return '';
-    const idx = content.toLowerCase().indexOf(q);
+    const { folded, offsets } = foldTextWithOffsets(content);
+    const at = q ? folded.indexOf(q) : -1;
+    const idx = at >= 0 ? offsets[at] : -1;
     const slice = idx >= 0
       ? content.slice(Math.max(0, idx - 40), idx + 80)
       : content.slice(0, 100);
@@ -241,62 +249,63 @@ export async function searchWorkspace(
   };
 
   const matchedOn = (title: string | null, content: string | null): 'title' | 'content' =>
-    title && title.toLowerCase().includes(q) ? 'title' : 'content';
+    title && foldText(title).includes(q) ? 'title' : 'content';
 
-  // Sidebar items (standalone pages + databases): match on title OR page content.
-  const itemRows = await db
-    .select({
-      id: workspaceItems.id,
-      type: workspaceItems.type,
-      title: workspaceItems.title,
-      parentId: workspaceItems.parentId,
-      content: standalonePages.content,
-    })
-    .from(workspaceItems)
-    .leftJoin(standalonePages, eq(standalonePages.itemId, workspaceItems.id))
-    .where(
-      and(
-        eq(workspaceItems.workspaceId, workspaceId),
-        or(
-          like(workspaceItems.title, pattern),
-          like(standalonePages.content, pattern),
+  // The three reads are independent: one db.batch, one round-trip.
+  const [itemRows, dbRows, treeRows] = await db.batch([
+    // Sidebar items (standalone pages + databases): match on title OR page content.
+    db
+      .select({
+        id: workspaceItems.id,
+        type: workspaceItems.type,
+        title: workspaceItems.title,
+        parentId: workspaceItems.parentId,
+        content: standalonePages.content,
+      })
+      .from(workspaceItems)
+      .leftJoin(standalonePages, eq(standalonePages.itemId, workspaceItems.id))
+      .where(
+        and(
+          eq(workspaceItems.workspaceId, workspaceId),
+          or(
+            matches(workspaceItems.title),
+            matches(standalonePages.content),
+          ),
         ),
-      ),
-    )
-    .orderBy(asc(workspaceItems.sortOrder))
-    .limit(limit);
-
-  // Database rows (each row is a page): match on title OR content, scoped to the
-  // workspace via databases -> workspace_items. Without this, rows of a database
-  // (e.g. tasks in a tracker) are invisible to search.
-  const dbRows = await db
-    .select({
-      id: pages.id,
-      title: pages.title,
-      content: pages.content,
-      databaseId: databases.id,
-      dbItemId: workspaceItems.id,
-    })
-    .from(pages)
-    .innerJoin(databases, eq(pages.databaseId, databases.id))
-    .innerJoin(workspaceItems, eq(databases.itemId, workspaceItems.id))
-    .where(
-      and(
-        eq(workspaceItems.workspaceId, workspaceId),
-        or(
-          like(pages.title, pattern),
-          like(pages.content, pattern),
+      )
+      .orderBy(asc(workspaceItems.sortOrder))
+      .limit(limit),
+    // Database rows (each row is a page): match on title OR content, scoped to the
+    // workspace via databases -> workspace_items. Without this, rows of a database
+    // (e.g. tasks in a tracker) are invisible to search.
+    db
+      .select({
+        id: pages.id,
+        title: pages.title,
+        content: pages.content,
+        databaseId: databases.id,
+        dbItemId: workspaceItems.id,
+      })
+      .from(pages)
+      .innerJoin(databases, eq(pages.databaseId, databases.id))
+      .innerJoin(workspaceItems, eq(databases.itemId, workspaceItems.id))
+      .where(
+        and(
+          eq(workspaceItems.workspaceId, workspaceId),
+          or(
+            matches(pages.title),
+            matches(pages.content),
+          ),
         ),
-      ),
-    )
-    .limit(limit);
-
-  // Resolve a location breadcrumb (root -> ... -> parent) for any item by walking
-  // the parent_id chain over a lightweight in-memory map of the workspace tree.
-  const treeRows = await db
-    .select({ id: workspaceItems.id, parentId: workspaceItems.parentId, title: workspaceItems.title })
-    .from(workspaceItems)
-    .where(eq(workspaceItems.workspaceId, workspaceId));
+      )
+      .limit(limit),
+    // Resolve a location breadcrumb (root -> ... -> parent) for any item by walking
+    // the parent_id chain over a lightweight in-memory map of the workspace tree.
+    db
+      .select({ id: workspaceItems.id, parentId: workspaceItems.parentId, title: workspaceItems.title })
+      .from(workspaceItems)
+      .where(eq(workspaceItems.workspaceId, workspaceId)),
+  ]);
   const tree = new Map(treeRows.map((t) => [t.id, { parentId: t.parentId, title: t.title }]));
   const breadcrumbOf = (startId: string | null): string[] => {
     const path: string[] = [];

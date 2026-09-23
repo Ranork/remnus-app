@@ -75,8 +75,21 @@ export async function visibleWorkspaceIds(
  */
 export async function computeChangeVersion(ids: string[]): Promise<number> {
   if (ids.length === 0) return 0;
+  return changeVersionFromRows(await changeVersionQuery(ids));
+}
 
-  const rows = await unionAll(
+/** Fold the per-table maxima `changeVersionQuery` returns into one number. */
+export function changeVersionFromRows(rows: Array<{ m: unknown }>): number {
+  return rows.reduce<number>((max, row) => Math.max(max, toEpoch(row.m)), 0);
+}
+
+/**
+ * The unawaited statement behind `computeChangeVersion`, so a caller that needs
+ * the version next to other reads can ship both in one `db.batch` round-trip
+ * (the prepare_context corpus key does). `ids` must be non-empty.
+ */
+export function changeVersionQuery(ids: string[]) {
+  return unionAll(
     db
       .select({ m: epochMax(workspaceItems.updatedAt) })
       .from(workspaceItems)
@@ -113,8 +126,6 @@ export async function computeChangeVersion(ids: string[]): Promise<number> {
       .from(deletedItems)
       .where(inArray(deletedItems.workspaceId, ids)),
   );
-
-  return rows.reduce<number>((max, row) => Math.max(max, toEpoch(row.m)), 0);
 }
 
 /** Convenience wrapper: resolve the caller's visible workspaces, then version them. */

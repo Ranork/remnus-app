@@ -26,7 +26,7 @@ import {
   getChangesSince,
   getRelatedPages,
 } from '@/lib/services/workspace';
-import { prepareContextPack } from '@/lib/services/contextPack';
+import { MAX_CONTEXT_KEYWORD_CHARS, MAX_CONTEXT_KEYWORDS, prepareContextPack } from '@/lib/services/contextPack';
 import { listPageComments } from '@/lib/services/comments';
 import { appUrl, logActivity, type TokenContext } from '../context';
 
@@ -65,6 +65,8 @@ export function registerReadTools(server: McpServer, ctx: TokenContext) {
       description: 'Build a task-specific, token-budgeted context pack from the most relevant pages: lexical rank, human-reviewed knowledge preferred, stale/deprecated concepts penalized, plus the top hit\'s link neighbors. Use it before multi-page product or coding work instead of many search/get_page calls.',
       inputSchema: {
         task: z.string().min(3).max(2_000).describe('The concrete task or question'),
+        keywords: z.array(z.string().max(MAX_CONTEXT_KEYWORD_CHARS)).max(MAX_CONTEXT_KEYWORDS).optional()
+          .describe('Synonyms, and the workspace\'s language (e.g. English terms for a Turkish task)'),
         maxTokens: z.number().int().min(1_000).max(16_000).optional().default(2_000).describe('Budget for the returned JSON, approx. tokens'),
         maxConcepts: z.number().int().min(1).max(16).optional().default(6),
         trustPolicy: z.enum(['any', 'prefer-human-reviewed', 'human-reviewed-only']).optional().default('prefer-human-reviewed'),
@@ -93,9 +95,9 @@ export function registerReadTools(server: McpServer, ctx: TokenContext) {
       }),
       annotations: { title: 'Prepare agent context', readOnlyHint: true, openWorldHint: false },
     },
-    async ({ task, maxTokens, maxConcepts, trustPolicy, includeRelated }) => {
+    async ({ task, keywords, maxTokens, maxConcepts, trustPolicy, includeRelated }) => {
       try {
-        const pack = await prepareContextPack(ctx.workspaceId, { task, maxTokens, maxConcepts, trustPolicy, includeRelated }, undefined, ctx);
+        const pack = await prepareContextPack(ctx.workspaceId, { task, keywords, maxTokens, maxConcepts, trustPolicy, includeRelated }, undefined, ctx);
         const text = JSON.stringify(pack);
         await logActivity(ctx, 'prepare_context', 'success', undefined, undefined, text);
         return { content: [{ type: 'text' as const, text }], structuredContent: { ...pack } };
@@ -109,7 +111,7 @@ export function registerReadTools(server: McpServer, ctx: TokenContext) {
   server.registerTool(
     'search_workspace',
     {
-      description: 'Case-insensitive substring search over titles and bodies of pages, databases and rows. Use it to locate an item by text when the workspace map does not already give you its id.',
+      description: 'Case- and accent-insensitive substring search over titles and bodies of pages, databases and rows. Use it to locate an item by text when the workspace map does not already give you its id.',
       inputSchema: {
         query: z.string(),
         limit: z.number().optional().default(10),

@@ -20,7 +20,7 @@ Each page and database row has an optional **Knowledge context** panel. A person
 
 Context Pack v2 combines five signals:
 
-1. BM25 relevance across titles, descriptions, tags, and bodies.
+1. BM25 relevance across titles, descriptions, tags, and bodies — case- and accent-insensitive, so "Çözüm" and "cozum", "Invites" and "invites" are the same word.
 2. Native OKF-aligned metadata.
 3. Exact-revision trust signals.
 4. Freshness and lifecycle penalties for stale or deprecated knowledge.
@@ -41,12 +41,25 @@ Configure the mode under **Workspace Settings → Portability → Agent context 
 ## Recommended agent flow
 
 ```text
-1. prepare_context({ task, maxTokens: 2000, trustPolicy: "prefer-human-reviewed" })
+1. prepare_context({ task, keywords, maxTokens: 2000, trustPolicy: "prefer-human-reviewed" })
 2. Inspect profile, estimatedTokens, truncated, concepts, related and warnings.
 3. Fetch a full page only if a selected excerpt is insufficient.
 4. Reuse contextRunId on related Remnus mutation tools.
 5. Add optional knowledge metadata when creating a durable decision or specification.
 ```
+
+### Keywords: the agent expands, the server ranks
+
+Retrieval is lexical: a Turkish task ("Davetlere görüntüleyici rolü ekle") shares no words with an English workspace ("Workspace invitation roles"), and "mail" is not "email". The calling agent is a language model that already knows the synonyms and the translation, so it passes them as `keywords` — up to 24 terms, each at most 60 characters:
+
+```text
+prepare_context({
+  task: "Davetlere görüntüleyici rolü ekle",
+  keywords: ["invitation", "viewer", "role", "permissions"]
+})
+```
+
+Keywords are ranked together with the task's own words at half their weight, so a loose synonym cannot outvote what the task actually says. Without keywords a pack is still built from the task alone.
 
 The server stores task and selection hashes plus operational metrics in the context-run record, not the raw task text. The run belongs to the current workspace and PAT/OAuth actor, so another connection cannot borrow it.
 
@@ -99,6 +112,7 @@ Strict mode is primarily a governance feature, not a token-saving switch. It add
 Use Remnus prepare_context directly for this task:
 "Analyze the product and technical context for adding viewer-role invitations."
 
+keywords: invite, permissions, member roles
 maxTokens: 2000
 maxConcepts: 6
 trustPolicy: prefer-human-reviewed
@@ -117,6 +131,8 @@ After approval, the agent can carry the returned `contextRunId` into `create_pag
 | Native knowledge metadata and exact-revision reviews | Implemented |
 | OKF v0.2 import/export with preserved extensions | Implemented, experimental adapter |
 | BM25 + metadata + link-graph Context Pack v2 | Implemented |
+| Agent-side query expansion (`keywords`) | Implemented |
+| Semantic (embedding) retrieval across languages without keywords | Not yet |
 | Manual, Smart, and Strict workspace policies | Implemented |
 | Server-enforced preflight for Remnus MCP mutations | Implemented in Strict mode |
 | Universal enforcement over local files, shell, or Git | Not possible from an MCP server; use repository instructions/client hooks |

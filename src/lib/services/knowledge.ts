@@ -3,7 +3,7 @@
  * OKF is an interchange projection; these tables are the native source of truth.
  */
 import { createHash, randomUUID } from 'node:crypto';
-import { and, desc, eq, lt } from 'drizzle-orm';
+import { and, desc, eq, lt, sql } from 'drizzle-orm';
 import { db } from '@/db';
 import {
   contextRuns,
@@ -14,7 +14,9 @@ import {
   standalonePages,
   workspaceContextPolicies,
   workspaceItems,
+  workspaces,
 } from '@/db/schema';
+import { changeVersionFromRows, changeVersionQuery } from './changeVersion';
 import { chunkRows } from './sqlChunk';
 
 export type ContextActor = {
@@ -430,32 +432,42 @@ export async function reviewKnowledgeItem(workspaceId: string, itemId: string, r
   return getKnowledgeItem(workspaceId, itemId);
 }
 
+/**
+ * Every page, database and row of the workspace with its knowledge metadata —
+ * the corpus `prepare_context` ranks and the OKF snapshot exports.
+ *
+ * The four reads are independent, so they ship as ONE `db.batch` round-trip
+ * instead of four sequential awaits (Turso is remote: the turns, not the
+ * queries, are the cost — see AGENTS.md → Performance Rules).
+ */
 export async function listKnowledgeCorpus(workspaceId: string): Promise<KnowledgeCorpusItem[]> {
-  const nativeItems = await db
-    .select({
-      id: workspaceItems.id,
-      type: workspaceItems.type,
-      title: workspaceItems.title,
-      parentId: workspaceItems.parentId,
-      pageContent: standalonePages.content,
-      databaseId: databases.id,
-      databaseSchema: databases.schema,
-    })
-    .from(workspaceItems)
-    .leftJoin(standalonePages, eq(standalonePages.itemId, workspaceItems.id))
-    .leftJoin(databases, eq(databases.itemId, workspaceItems.id))
-    .where(eq(workspaceItems.workspaceId, workspaceId));
-  const rowItems = await db
-    .select({ id: pages.id, title: pages.title, content: pages.content, databaseId: pages.databaseId })
-    .from(pages)
-    .innerJoin(databases, eq(databases.id, pages.databaseId))
-    .innerJoin(workspaceItems, and(eq(workspaceItems.id, databases.itemId), eq(workspaceItems.workspaceId, workspaceId)));
-  const metadataRows = await db.select().from(knowledgeMetadata).where(eq(knowledgeMetadata.workspaceId, workspaceId));
-  const reviewRows = await db
-    .select({ review: knowledgeReviews, metadataId: knowledgeMetadata.id })
-    .from(knowledgeReviews)
-    .innerJoin(knowledgeMetadata, and(eq(knowledgeMetadata.id, knowledgeReviews.metadataId), eq(knowledgeMetadata.workspaceId, workspaceId)))
-    .orderBy(desc(knowledgeReviews.reviewedAt));
+  const [nativeItems, rowItems, metadataRows, reviewRows] = await db.batch([
+    db
+      .select({
+        id: workspaceItems.id,
+        type: workspaceItems.type,
+        title: workspaceItems.title,
+        parentId: workspaceItems.parentId,
+        pageContent: standalonePages.content,
+        databaseId: databases.id,
+        databaseSchema: databases.schema,
+      })
+      .from(workspaceItems)
+      .leftJoin(standalonePages, eq(standalonePages.itemId, workspaceItems.id))
+      .leftJoin(databases, eq(databases.itemId, workspaceItems.id))
+      .where(eq(workspaceItems.workspaceId, workspaceId)),
+    db
+      .select({ id: pages.id, title: pages.title, content: pages.content, databaseId: pages.databaseId })
+      .from(pages)
+      .innerJoin(databases, eq(databases.id, pages.databaseId))
+      .innerJoin(workspaceItems, and(eq(workspaceItems.id, databases.itemId), eq(workspaceItems.workspaceId, workspaceId))),
+    db.select().from(knowledgeMetadata).where(eq(knowledgeMetadata.workspaceId, workspaceId)),
+    db
+      .select({ review: knowledgeReviews, metadataId: knowledgeMetadata.id })
+      .from(knowledgeReviews)
+      .innerJoin(knowledgeMetadata, and(eq(knowledgeMetadata.id, knowledgeReviews.metadataId), eq(knowledgeMetadata.workspaceId, workspaceId)))
+      .orderBy(desc(knowledgeReviews.reviewedAt)),
+  ]);
 
   const metadataMap = new Map(metadataRows.map(row => [`${row.itemType}:${row.itemId}`, row]));
   const reviewsMap = new Map<string, Array<typeof knowledgeReviews.$inferSelect>>();
@@ -465,6 +477,7 @@ export async function listKnowledgeCorpus(workspaceId: string): Promise<Knowledg
     reviewsMap.set(row.metadataId, current);
   }
   const titleMap = new Map(nativeItems.map(item => [item.id, item.title]));
+  const databaseTitle = new Map(nativeItems.flatMap(item => item.databaseId ? [[item.databaseId, item.title] as const] : []));
   const now = new Date();
   const corpus: KnowledgeCorpusItem[] = [];
   for (const raw of nativeItems) {
@@ -489,9 +502,8 @@ export async function listKnowledgeCorpus(workspaceId: string): Promise<Knowledg
     const metadata = metadataMap.get(`database_row:${item.id}`);
     corpus.push({
       ...item,
-      breadcrumb: nativeItems.find(candidate => candidate.databaseId === raw.databaseId)?.title
-        ? [nativeItems.find(candidate => candidate.databaseId === raw.databaseId)!.title]
-        : [],
+      // A map, not a find() per row: that was rows × items on every call.
+      breadcrumb: databaseTitle.get(raw.databaseId) ? [databaseTitle.get(raw.databaseId)!] : [],
       metadata: toCorpusMetadata(metadata, item, metadata ? reviewsMap.get(metadata.id) ?? [] : [], now),
     });
   }
@@ -515,10 +527,67 @@ export async function setContextPolicy(workspaceId: string, policy: ContextPolic
   return normalized;
 }
 
+// Guards the aggregates below against legacy CURRENT_TIMESTAMP-as-TEXT values
+// (see changeVersion.ts): SQLite ranks TEXT above INTEGER in max().
+const epochMaxSql = (column: string) =>
+  `coalesce(max(case when typeof(${column}) = 'integer' then ${column} else 0 end), 0)`;
+
 export async function getKnowledgeRevision(workspaceId: string): Promise<string> {
-  const metadata = await db.select({ updatedAt: knowledgeMetadata.updatedAt }).from(knowledgeMetadata).where(eq(knowledgeMetadata.workspaceId, workspaceId));
-  const newest = metadata.reduce((max, row) => Math.max(max, row.updatedAt.getTime()), 0);
-  return createHash('sha256').update(`${workspaceId}:${metadata.length}:${newest}`).digest('hex').slice(0, 20);
+  // Aggregated in SQL: this runs on every prepare_context call, and it used to
+  // pull one row per metadata record just to take a count and a max.
+  const [row] = await db
+    .select({ count: sql<number>`count(*)`, newest: sql<number>`${sql.raw(epochMaxSql('updated_at'))}` })
+    .from(knowledgeMetadata)
+    .where(eq(knowledgeMetadata.workspaceId, workspaceId));
+  const newest = Number(row?.newest ?? 0) * 1000;
+  return createHash('sha256').update(`${workspaceId}:${Number(row?.count ?? 0)}:${newest}`).digest('hex').slice(0, 20);
+}
+
+// Timestamps are second-granular and written by many instances; a second this
+// close to "now" may still receive writes (same margin as the change cursor's
+// HOT_SECOND_MS in services/workspace.ts).
+const HOT_SECOND_MS = 2_000;
+
+/**
+ * Cache key for the prepare_context corpus index (`services/contextPack.ts`),
+ * or null when the corpus must not be cached yet because its newest change is
+ * still inside the hot second.
+ *
+ * It is the live-UI change version plus what that number cannot see: the
+ * knowledge tables (a review, a revocation or a metadata edit changes ranking
+ * and trust without touching any content timestamp) and the item/row counts (a
+ * delete path that writes no tombstone — recurrence pruning — would otherwise
+ * leave a removed row in the cache). The knowledge aggregates are kept out of
+ * `computeChangeVersion` on purpose: that runs on every 2.5s poll of every
+ * project window, and no screen needs to refresh when a review is recorded.
+ *
+ * One round-trip: the change-version UNION and the aggregates share a batch.
+ */
+export async function getKnowledgeCorpusVersion(workspaceId: string): Promise<string | null> {
+  const workspaceFilter = sql`workspace_id = ${workspaceId}`;
+  const [changeRows, statsRows] = await db.batch([
+    changeVersionQuery([workspaceId]),
+    db
+      .select({
+        items: sql<number>`(select count(*) from workspace_items where ${workspaceFilter})`,
+        rows: sql<number>`(select count(*) from pages join databases on databases.id = pages.database_id join workspace_items on workspace_items.id = databases.item_id where workspace_items.${workspaceFilter})`,
+        metaCount: sql<number>`(select count(*) from knowledge_metadata where ${workspaceFilter})`,
+        metaMax: sql<number>`(select ${sql.raw(epochMaxSql('updated_at'))} from knowledge_metadata where ${workspaceFilter})`,
+        reviewCount: sql<number>`(select count(*) from knowledge_reviews join knowledge_metadata on knowledge_metadata.id = knowledge_reviews.metadata_id where knowledge_metadata.${workspaceFilter})`,
+        reviewMax: sql<number>`(select ${sql.raw(epochMaxSql('knowledge_reviews.reviewed_at'))} from knowledge_reviews join knowledge_metadata on knowledge_metadata.id = knowledge_reviews.metadata_id where knowledge_metadata.${workspaceFilter})`,
+        revokedMax: sql<number>`(select ${sql.raw(epochMaxSql('knowledge_reviews.revoked_at'))} from knowledge_reviews join knowledge_metadata on knowledge_metadata.id = knowledge_reviews.metadata_id where knowledge_metadata.${workspaceFilter})`,
+      })
+      .from(workspaces)
+      .where(eq(workspaces.id, workspaceId)),
+  ]);
+  const stats = statsRows[0];
+  if (!stats) return null;
+  const change = changeVersionFromRows(changeRows);
+  const newest = Math.max(change, Number(stats.metaMax), Number(stats.reviewMax), Number(stats.revokedMax));
+  if (Date.now() - newest * 1000 < HOT_SECOND_MS) return null;
+  return [change, stats.items, stats.rows, stats.metaCount, stats.metaMax, stats.reviewCount, stats.reviewMax, stats.revokedMax]
+    .map(Number)
+    .join(':');
 }
 
 export async function createContextRun(
