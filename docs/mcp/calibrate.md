@@ -7,7 +7,7 @@ contains, and build that into the workspace. Treat it as real work — closer to
 the project's first design doc than to filling in a form. It is served live from this
 Remnus instance, never copied into the project, so what it says is always current.
 
-Guide version: **2**.
+Guide version: **3**.
 
 ## Before you start
 
@@ -59,11 +59,15 @@ how an interrupted run resumes and how the human watches the plan take shape. Ke
 - the sources you read (files, docs, history range);
 - **the plan, written before you build**: the tree, and for each concept page or database
   with its columns;
-- a checklist of build steps, ticked as each lands, with the ids it created;
+- a checklist of build steps, created all unticked (`- [ ]`). Tick each with
+  `update_page` as soon as it lands, before starting the next, adding the ids from the
+  tool result — never an id you have not been given;
 - what you skipped and why; open questions for the human.
 
-A log with unticked steps means you are resuming: continue from the first unticked step
-and don't redo ticked ones. Once the overview page exists, move the log under it.
+A log with unticked steps means you are resuming. Check each unticked step against the
+map first: an item that already exists was built but not ticked — tick it, don't
+rebuild it. Continue from the first step that is really missing. Once the overview page
+exists, move the log under it.
 
 ## Phase 1 — Understand the project
 
@@ -135,11 +139,13 @@ The human reads this in a sidebar, so the shape is part of the work.
   `parentId`, or `ref`/`parentRef` inside one `bulk_create_pages` call; `create_database`
   takes `parentId` too. Restructure an existing flat list with `bulk_move_items`.
 - **Icons on everything** — emoji or `lucide:Name` + `iconColor` (`blue`, `green`…),
-  consistent within a section, set at creation.
-- **Databases in one pass:** `create_database` with the designed schema, real select/status
-  options, and its `views` — Kanban on the status column, Calendar on the date column,
-  an extra Table only for a slice people look at on its own. Then **all its rows in one
-  `bulk_create_pages` call** (up to 100), each with a real body.
+  consistent within a section, set at creation. Lucide names come from a curated set (an
+  unknown one is refused with the list); emoji always work.
+- **Databases in one pass:** `create_database` with the designed schema, real options
+  (`["Open", "Blocked"]`; a status one as `{"value": "Open", "group": "todo"}`, groups
+  `todo` / `in_progress` / `complete`), and its `views` — Kanban on the status column,
+  Calendar on the date column, an extra Table only for a slice people look at on its own.
+  Then **all its rows in one `bulk_create_pages` call** (up to 100), each with a real body.
 - **Label concepts** so context packs find them: on every concept row, page and
   database pass `knowledge` with `conceptType`, `tags` — the words someone would search
   for, in the team's language *and* English — and `sources`, the repo files it rests on:
@@ -153,13 +159,17 @@ The human reads this in a sidebar, so the shape is part of the work.
 - Write in the team's language — the one its docs, commits and the human asking you use;
   code identifiers stay as they are. Titles are plain text (`Scene Flow & Bootstrap`,
   never `&amp;`). Cross-link where it explains something — the decision behind a system,
-  the gotcha behind a decision.
+  the gotcha behind a decision. A link is `<a data-page-link href="/page/<id>">Title</a>`
+  (`/db/<databaseId>` for a database, `/db/<databaseId>/<rowId>` for a row): that is what
+  `get_related_pages` and context packs follow. A dashboard takes a plain
+  `[Title](/dashboard/<id>)`. `[[Title]]` stays plain text here. A link
+  needs its target's id, so add links to earlier pages with `update_page` once it exists.
 
 ## Phase 4 — Check before you call it done
 
-Run `npx remnus sync` and read `.remnus/workspace-map.md` (or the digest resource) as the
-human would see the tree — it is also what the next session starts from. Fix until every
-line holds:
+Read `.remnus/workspace-map.md` (the `remnus` bridge rewrites it after every write;
+without one, the digest resource) as the human would see the tree — in sidebar order, and
+what the next session starts from. Fix until every line holds:
 
 1. The root has 4–9 items, overview first; every page, database and dashboard has an icon.
 2. Every database has at least 3 real rows (fewer: make it a page, or say why in the log),
@@ -173,7 +183,7 @@ line holds:
 
 ## Finish
 
-- Set `"calibrated": true`, `"calibratedAt": "<ISO time>"` and `"calibrationGuide": 2`
+- Set `"calibrated": true`, `"calibratedAt": "<ISO time>"` and `"calibrationGuide": 3`
   in `.remnus/config.json` — the only local file this touches.
 - Tell the human in a few sentences what you modeled, why, and where to look (the
   overview, the dashboard, the open questions in the log).
@@ -191,7 +201,9 @@ A calibrated workspace is extended, never rebuilt:
    No log means guide version 1: read the map instead and create the log now.
 2. Scope the pass to what changed — `git log <logged commit>..HEAD` for the project, and
    what this guide added since the logged version (version 2: the log itself, `knowledge`
-   labels, the status screen).
+   labels, the status screen; version 3: real page links where an earlier run left
+   `[[Title]]` text — swapping that text for its link is the one edit step 4 allows in a
+   body you didn't write).
 3. Add rows and pages for new material, and missing labels, views and icons. A concept
    that already has a database or page gets extended, never a second copy.
 4. Don't overwrite a body you didn't write in this run and never delete: `add_comment` on

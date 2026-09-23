@@ -30,6 +30,8 @@ Create a new standalone page or a database row.
 
 Pass either `parentId` (standalone page) or `databaseId` (database row), not both.
 
+**Linking to another item** — write `<a data-page-link href="/page/<id>">Title</a>` in the markdown (`/db/<databaseId>` for a database, `/db/<databaseId>/<rowId>` for a row). That is the form the editor produces, and the one `get_related_pages` and context packs follow; wiki-style `[[Title]]` is plain text. Dashboards stay out of the link graph by design — link one with a plain `[Title](/dashboard/<id>)`. The same applies to `update_page` and `bulk_create_pages` content.
+
 **Returns** — `{ id, type }`
 
 ---
@@ -214,6 +216,7 @@ Column types: `text`, `number`, `select`, `multi_select`, `status`, `user`, `mul
 
 - `status` — like `select`, but each option may include a `group`: `"todo"` | `"in_progress"` | `"complete"` (renders as a progress-ring glyph).
 - `user` / `multi_user` — store workspace member user ids (no `options` needed); resolved to member name + avatar in the UI.
+- An option is a plain string or an object whose text is `value` (`name` and `label` are read the same way, so Notion-shaped options work). An option with no text, or a `group` other than the three above (`"to do"`, `"in progress"` and `"done"` are accepted as aliases), is refused with an error naming the column — never stored as a placeholder.
 
 **Returns** — `{ id, databaseId, views? }`
 

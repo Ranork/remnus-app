@@ -18,7 +18,7 @@ Use the right one: resources to *pull context cheaply*, tools to *act*, prompts 
 
 Two kinds of things live in the workspace, side by side in one sidebar tree:
 
-- **Pages** — a title + markdown `content`. Can be nested under a parent (`parentId`).
+- **Pages** — a title + markdown `content`. Can be nested under a parent (`parentId`). Link to another item with `<a data-page-link href="/page/<id>">Title</a>` (`/db/<databaseId>` for a database) — the link graph follows only that form; `[[Title]]` is plain text.
 - **Databases** — a typed `schema` (columns) plus rows. **Each row is itself a page**: it has a `title`, markdown `content`, an icon, AND a `properties` object keyed by column.
 
 So "a page" can mean a standalone page *or* a database row. Most read tools auto-detect which, so you rarely need to care — but when you create or update, the distinction matters (see below).

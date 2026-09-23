@@ -45,6 +45,31 @@ const FIRST_VISIT_WINDOW_DAYS = 7;
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-09-23-calibration-links',
+    date: '2026-09-23',
+    category: 'improved',
+    title: {
+      en: 'A set-up workspace that links itself together',
+      tr: 'Kendi içinde bağlantılı kurulan workspace',
+      de: 'Ein eingerichteter Workspace, der sich selbst verlinkt',
+      es: 'Un espacio de trabajo configurado que se enlaza solo',
+      fr: 'Un espace de travail configuré qui se relie tout seul',
+      hi: 'सेटअप किया गया वर्कस्पेस जो खुद को आपस में जोड़ता है',
+      ru: 'Настроенное пространство, связанное внутри',
+      zh: '自动互相链接的工作区设置',
+    },
+    summary: {
+      en: 'When an agent sets up your workspace from your project, the pages it writes now link to each other for real, so you can click straight from a decision to the system it shaped.',
+      tr: 'Bir ajan workspace\'inizi projenizden kurduğunda yazdığı sayfalar artık birbirine gerçekten bağlanıyor; bir karardan doğrudan onun şekillendirdiği sisteme tıklayarak geçebilirsiniz.',
+      de: 'Wenn ein Agent Ihren Workspace aus Ihrem Projekt einrichtet, verlinken sich die geschriebenen Seiten jetzt wirklich untereinander, sodass Sie direkt von einer Entscheidung zu dem System klicken, das sie geprägt hat.',
+      es: 'Cuando un agente configura tu espacio de trabajo a partir de tu proyecto, las páginas que escribe ahora se enlazan de verdad entre sí, para que pases con un clic de una decisión al sistema que definió.',
+      fr: 'Quand un agent configure votre espace de travail à partir de votre projet, les pages qu\'il écrit sont désormais vraiment reliées entre elles, pour passer d\'un clic d\'une décision au système qu\'elle a façonné.',
+      hi: 'जब कोई एजेंट आपके प्रोजेक्ट से आपका वर्कस्पेस सेट करता है, तो उसके लिखे पेज अब सचमुच एक-दूसरे से जुड़ते हैं, ताकि आप किसी निर्णय से सीधे उस सिस्टम पर क्लिक कर सकें जिसे उसने आकार दिया।',
+      ru: 'Когда агент настраивает пространство по вашему проекту, написанные им страницы теперь по-настоящему ссылаются друг на друга, и от решения можно одним щелчком перейти к системе, которую оно определило.',
+      zh: '智能体根据你的项目设置工作区时，它写下的页面现在会真正互相链接，你可以从一项决策直接点到它所影响的系统。',
+    },
+  },
+  {
     id: '2026-09-23-agent-status-options',
     date: '2026-09-23',
     category: 'fixed',
