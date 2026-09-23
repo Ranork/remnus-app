@@ -24,7 +24,7 @@ import {
 import { eq, ne, and, or, like, asc, desc, gte, lte, sql, inArray } from 'drizzle-orm';
 import { syncPageLinks, syncPageLinksBulk, removePageLinksFor, purgeReferencesTo } from './pageLinks';
 import { snapshotBeforeDelete, maybeSnapshotContentUpdate, type SnapshotActor } from './snapshots';
-import { recordGeneratedKnowledgeBulk } from './knowledge';
+import { recordGeneratedKnowledgeBulk, type KnowledgeMetadataInput } from './knowledge';
 import { chunkRows } from './sqlChunk';
 import { computeChangeVersion } from './changeVersion';
 import { iconInputError } from '@/lib/icons';
@@ -1308,6 +1308,8 @@ export type BulkCreateEntry = {
   properties?: Record<string, any>;
   icon?: string;
   iconColor?: string;
+  /** Written with the provenance stamp, only when the caller stamps (`knowledge`). */
+  knowledge?: Pick<KnowledgeMetadataInput, 'conceptType' | 'tags' | 'sources'>;
 };
 
 export type BulkCreateResult = {
@@ -1638,7 +1640,11 @@ export async function createPagesInWorkspaceBulk(
     knowledge
       ? recordGeneratedKnowledgeBulk(
           workspaceId,
-          created.map(p => ({ itemId: p.id, itemType: (p.kind === 'row' ? 'database_row' : 'page') as 'page' | 'database_row' })),
+          created.map(p => ({
+            itemId: p.id,
+            itemType: (p.kind === 'row' ? 'database_row' : 'page') as 'page' | 'database_row',
+            metadata: p.entry.knowledge,
+          })),
           knowledge.generatedBy,
         ).catch(() => {})
       : Promise.resolve(),

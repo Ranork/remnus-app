@@ -58,6 +58,10 @@ const KNOWLEDGE_INPUT = z.object({
   status: z.enum(['draft', 'stable', 'deprecated']).optional(),
   staleAfter: z.string().max(40).optional(),
 }).optional().describe('OKF knowledge metadata; agent-authored entries stay draft until a human reviews that revision');
+// The same shape cut down to what labels a batch of rows (a calibration's decisions,
+// systems, gotchas) — the full object again inside every bulk entry would be paid by
+// every write session. Unknown keys are stripped, so a full object still validates.
+const BULK_KNOWLEDGE_INPUT = KNOWLEDGE_INPUT.unwrap().pick({ conceptType: true, tags: true, sources: true }).optional();
 
 // Icons the sidebar can draw: an emoji or a curated Lucide name. Names are checked in the
 // handlers (iconInputError) rather than listed here — tools/list is a fixed per-session
@@ -319,6 +323,7 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
           properties: z.record(z.string(), z.any()).optional().describe('Row properties'),
           icon: ICON_INPUT,
           iconColor: ICON_COLOR_INPUT,
+          knowledge: BULK_KNOWLEDGE_INPUT,
         })).min(1).max(100),
         contextRunId: CONTEXT_RUN_ID,
       },

@@ -305,16 +305,23 @@ export async function recordGeneratedKnowledge(
  *
  * The per-item version resolves each id back to its type with a query first;
  * the bulk write paths already know what they just created, so the caller
- * passes `itemType` and the resolution round-trips disappear entirely. No
- * metadata input: this is the "an agent authored this" stamp every bulk-created
- * item gets, not the curated-metadata path.
+ * passes `itemType` and the resolution round-trips disappear entirely. It is
+ * the "an agent authored this" stamp every bulk-created item gets; an item may
+ * also carry the concept type, tags and sources `bulk_create_pages` accepts per
+ * entry — that is how a calibration labels its rows without one call per row.
+ * On conflict (an item stamped before) only the provenance moves, as before:
+ * this path never overwrites curated metadata.
  *
  * Best-effort by contract — the caller swallows failures, because losing a
  * provenance stamp must not undo the content it describes.
  */
 export async function recordGeneratedKnowledgeBulk(
   workspaceId: string,
-  items: { itemId: string; itemType: KnowledgeItemType }[],
+  items: {
+    itemId: string;
+    itemType: KnowledgeItemType;
+    metadata?: Pick<KnowledgeMetadataInput, 'conceptType' | 'tags' | 'sources'>;
+  }[],
   generatedBy: string,
 ): Promise<void> {
   if (items.length === 0) return;
@@ -330,10 +337,10 @@ export async function recordGeneratedKnowledgeBulk(
       workspaceId,
       itemId: item.itemId,
       itemType: item.itemType,
-      conceptType: null,
+      conceptType: item.metadata?.conceptType?.trim() || null,
       description: null,
-      tags: [],
-      sources: [],
+      tags: cleanStrings(item.metadata?.tags, 30),
+      sources: cleanSources(item.metadata?.sources),
       status: 'draft' as const,
       staleAfter: null,
       generatedBy,

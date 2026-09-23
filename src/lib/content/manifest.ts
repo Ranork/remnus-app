@@ -36,6 +36,11 @@ import {
   Lock,
   UserPlus,
   LayoutDashboard,
+  BookMarked,
+  Globe,
+  Server,
+  Gamepad2,
+  FlaskConical,
 } from 'lucide-react';
 import { NotionMark, AppFlowyMark, AffineMark, ObsidianMark } from '@/components/docs/CompetitorMark';
 
@@ -67,6 +72,16 @@ export const WIKI_PAGES: WikiPage[] = [
   // it is the answer to "I cloned the repo and the Remnus tools aren't there".
   { slug: 'project-join',     file: 'project-join.md',     title: 'Join a Project',     icon: UserPlus,    order: 1.2 },
   { slug: 'calibrate',        file: 'calibrate.md',        title: 'Calibrate',          icon: Wrench,      order: 1.5, hidden: true },
+  // The index is visible: "what would Remnus set up for my kind of project?" is a
+  // question people ask before they connect anything. The playbooks themselves are
+  // terse instructions an agent fetches during calibration, like `calibrate` — so
+  // they stay out of the nav and sitemap and are reached from the index.
+  { slug: 'playbooks',        file: 'playbooks.md',        title: 'Playbooks',          icon: BookMarked,  order: 1.6 },
+  { slug: 'playbooks/web-app',     file: 'playbooks/web-app.md',     title: 'Playbook: Web App / SaaS',       icon: Globe,        order: 1.61, hidden: true },
+  { slug: 'playbooks/api-service', file: 'playbooks/api-service.md', title: 'Playbook: API / Backend Service', icon: Server,      order: 1.62, hidden: true },
+  { slug: 'playbooks/game',        file: 'playbooks/game.md',        title: 'Playbook: Game',                 icon: Gamepad2,     order: 1.63, hidden: true },
+  { slug: 'playbooks/data-ml',     file: 'playbooks/data-ml.md',     title: 'Playbook: Data / ML',            icon: FlaskConical, order: 1.64, hidden: true },
+  { slug: 'playbooks/library-sdk', file: 'playbooks/library-sdk.md', title: 'Playbook: Library / SDK',        icon: Package,      order: 1.65, hidden: true },
   { slug: 'getting-started',  file: 'getting-started.md',  title: 'Getting Started',    icon: Rocket,      order: 2 },
   { slug: 'connect-editors',  file: 'connect-editors.md',  title: 'Connect Your Editor', icon: Plug,       order: 3 },
   { slug: 'authentication',   file: 'authentication.md',   title: 'Authentication',     icon: KeyRound,    order: 4 },

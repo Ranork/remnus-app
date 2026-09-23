@@ -4,7 +4,7 @@ Write tools require a **write-scoped token**. Calling these with a read-scoped t
 
 Every write tool also accepts optional `contextRunId`. In a workspace using **Strict context**, actual mutations require a non-expired ID returned by this same agent's `prepare_context` call. Destructive confirmation and normal authorization remain separate requirements. In Manual/Smart mode the field is optional.
 
-`create_page`, `update_page`, and `create_database` additionally accept optional `knowledge` (`conceptType`, `description`, `tags`, `sources`, `status`, `staleAfter`). Agent-created or agent-updated items are recorded as machine-generated drafts; only a signed-in Remnus user can review the exact revision.
+`create_page`, `update_page`, and `create_database` additionally accept optional `knowledge` (`conceptType`, `description`, `tags`, `sources`, `status`, `staleAfter`); each `bulk_create_pages` entry accepts the labelling subset (`conceptType`, `tags`, `sources`). `sources` is a list of `{ resource, title? }` — typically repository-relative file paths. Agent-created or agent-updated items are recorded as machine-generated drafts; only a signed-in Remnus user can review the exact revision.
 
 `create_page`, `bulk_create_pages`, `update_page`, `bulk_update_pages`, `create_database`, `create_dashboard` and `update_dashboard` accept `icon` — an emoji (`"🗺️"`) or `"lucide:Name"` for one of the icons the sidebar can draw (for example `lucide:Map`, `lucide:Layers`, `lucide:Target`) — and `iconColor`: `default`, `red`, `orange`, `yellow`, `green`, `teal`, `blue`, `purple` or `pink` (applies to Lucide icons). An unknown Lucide name is refused with the list of valid ones, and image URLs can't be set over MCP. In updates, `null` clears.
 
@@ -92,6 +92,7 @@ Create up to 100 standalone pages and/or database rows in one call — the fast 
 | `ref` | string | A label later entries in the same call can point at |
 | `parentRef` | string | Nest a page under a page created earlier in this call |
 | `icon` / `iconColor` | string | See the icon note above |
+| `knowledge` | object | `conceptType`, `tags`, `sources` — labels `prepare_context` ranks on |
 
 `parentRef` can't be combined with `parentId` or `databaseId`, and only pages — not rows — can be a `parentRef` target.
 

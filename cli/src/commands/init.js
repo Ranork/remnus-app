@@ -122,6 +122,9 @@ export async function initCommand(options) {
     mcpUrl: result.mcpUrl,
     authMode,
     scope: result.scope ?? null,
+    // The calibrating agent flips this and adds `calibratedAt` + `calibrationGuide`
+    // (the guide version it followed) — see docs/mcp/calibrate.md. A reconnect is a
+    // different workspace, so none of the three carries over.
     calibrated: false,
     // Whether .remnus/workspace-map.md is committed; `remnus sync --track` flips it.
     // A re-connect keeps the team's earlier choice.
@@ -203,10 +206,13 @@ export async function initCommand(options) {
   say(dim('remnus, or start a new session — until then that session has no Remnus tools.'));
   say();
   step('This project is not marked as set up yet.');
-  say(dim(`A one-time setup guide lives at ${bold(calibrateUrl)} — it walks whichever`));
-  say(dim('agent works in this project through reading the project and filling the'));
-  say(dim('workspace in to match it. It is optional: point an agent at that page if you'));
-  say(dim('want that done, or use the workspace empty and skip it.'));
+  say(dim('To have an agent read the project and fill the workspace in to match it,'));
+  say(dim('tell it (after the reload above):'));
+  say();
+  say(`    Calibrate the Remnus workspace by following ${bold(calibrateUrl)}`);
+  say();
+  say(dim('It is optional — the workspace also works empty. An interrupted run picks up'));
+  say(dim('where it stopped: the guide keeps its progress in the workspace itself.'));
   say();
   say(dim(`In Claude Code, a new session opens this workspace automatically. Anywhere,`));
   say(dim(`run ${bold('npx remnus open')} to see it, or ${bold('npx remnus doctor')} to check the connection.`));

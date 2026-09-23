@@ -1,265 +1,199 @@
 # Calibrate
 
 `npx remnus init` connected a project to a Remnus workspace that has not been set up
-for it yet (`.remnus/config.json` in that project still says `"calibrated": false`).
-This page is a one-time process for whichever agent is working in that project — not
-a human document, and not a five-minute checklist either: treat it as a real piece of
-work, on the order of writing the project's first design doc, not filling out a form.
-It's served live from this Remnus instance rather than copied into the project, so it
-can't go stale: whatever's on this page is always what following it does, no local
-file to fall behind as the guide improves.
+for it yet (`.remnus/config.json` says `"calibrated": false`). This page is a one-time
+process for the agent working in that project: read the project, model what it actually
+contains, and build that into the workspace. Treat it as real work — closer to writing
+the project's first design doc than to filling in a form. It is served live from this
+Remnus instance, never copied into the project, so what it says is always current.
 
-## Where this writes, and how to check it
+Guide version: **2**.
 
-This step writes to the Remnus workspace the human connected in
-[Step 1 of Project Install](project-install.md#step-1-run-the-cli), over the MCP
-connection this project's `.mcp.json` grants for every other Remnus read/write,
-authenticated by the token their own browser sign-in produced during `init` — the
-same server and the same credential the rest of this session already uses.
+## Before you start
 
-Every write is logged with the tool name, timestamp, and outcome, visible to the
-human right away in the workspace's own UI, and readable in full afterward from the
-**AI Agents** panel or by calling `query_audit_log` directly. Remnus (server and
-this CLI) is AGPL-3.0, source at
-[github.com/Ranork/remnus-app](https://github.com/Ranork/remnus-app) — what happens
-to the content on arrival is exactly what's in that repository.
+- **No Remnus tools in your session?** Normal right after `init`: agents load MCP servers
+  when a session starts. Stop and ask the human to reload them (Claude Code: `/mcp`, then
+  reconnect `remnus`, or start a new session). Don't call the HTTP endpoint yourself.
+- **Has this run before?** If `.remnus/config.json` has `"calibrated": true`, or
+  `.remnus/workspace-map.md` (no map file: the `remnus://workspace/{id}/digest` resource)
+  lists a `Calibration Log` page, go to [Running it again](#running-it-again) instead.
+- **Workspace already has content but no log?** The project reused a workspace. Grep the
+  map, fill real gaps, and never recreate what is there.
+- **A write returns `CONTEXT_REQUIRED`?** The workspace is in Strict mode. Call
+  `prepare_context` once with the task "Calibrate this workspace to <project>" and pass its
+  `contextRunId` on every write.
 
-Before phase 1: skim the workspace first (`list_workspace`, `search_workspace`). If it
-already has real content — this project reused an existing workspace rather than a
-brand-new one — adapt rather than duplicate: fill genuine gaps, don't recreate what is
-already there.
+Everything you write goes over this project's own MCP connection (`.mcp.json`, with the
+token the human's sign-in produced), into the workspace they chose. Each write is logged
+with tool, time and outcome — visible live in the workspace and in full in the **AI
+Agents** panel or `query_audit_log`. Remnus and its CLI are AGPL-3.0:
+[github.com/Ranork/remnus-app](https://github.com/Ranork/remnus-app).
 
-If the Remnus MCP tools aren't available in your session yet — normal right after `init`,
-because agents load MCP servers when a session starts — stop and ask the human to reload
-them (in Claude Code: `/mcp`, then reconnect `remnus`, or start a new session). Don't
-work around it by calling the HTTP endpoint yourself.
+## Your role: incoming product manager, not filing clerk
 
-## Your role for this process: incoming product manager, not a filing clerk
+A filing clerk moves documents from one shelf to another, unchanged. A product manager's
+first two weeks look different: read everything, form a grounded opinion of what the
+product is, who it's for, what stage it's at and what is in motion — then build what they
+would want to manage it with: a decisions log filterable by area, a backlog sortable by
+priority, a map of how the systems fit. Every opinion traces to something you read or
+were told; what changes is what you *do* with it.
 
-A filing clerk moves existing documents from one shelf to another, unchanged. That is
-not the job. The job is closer to a product manager's first two weeks on a project:
-read everything, form an actual opinion about what this product is, who it's for,
-what stage it's at and what's actually in motion right now — then build the artifacts
-a PM would want to have (a decisions log they can filter by area, a backlog they can
-sort by priority, a map of how the systems fit together) because they reflect real
-understanding, not because a template said to.
+## Calibration fails if you
 
-Everything below still has to trace back to something you actually read or were told
-— a PM's opinions are grounded in the material, not invented. The shift is in what you
-*do* with what you read: not "here is a copy of what already exists," but "here is the
-structure a person managing this project would actually want."
+- **Fill a template** — create a database, column or row because projects "like this"
+  usually have one, not because you found evidence for it.
+- **Paste** — put a README or doc into one page and call it imported, or copy what one
+  grep of the repo answers (file lists, dependency lists, signatures) instead of what the
+  code can't say: why, status, trade-offs, what was rejected.
+- **Leave hollows** — an empty database, a "TBD" page, a row whose body restates its title.
+- **Invent** — a decision, date, owner or status you didn't read or get told.
+- **Sprawl** — a flat root of twenty siblings, or items without icons.
+- **Loop** — one `create_page` per row where one `bulk_create_pages` call would do.
 
-## Phase 1 — Understand the project deeply
+## Keep a Calibration Log
 
-Read enough to describe the project the way someone who'd need to explain it in a
-stakeholder meeting would, not just what its manifest declares:
+Before anything else, create a root page **Calibration Log** (`lucide:CheckSquare`). It is
+how an interrupted run resumes and how the human watches the plan take shape. Keep in it:
 
-- **What it is and who it's for.** Not "a Next.js app" — what does it actually do,
-  for whom, at what stage (prototype, active product, mature/maintenance)? Pull this
-  from the README, marketing copy, doc comments, even variable/module names that
-  reveal domain concepts — not from what a project "like this" usually is.
-- **Its shape and history.** Manifest (`package.json`, `pyproject.toml`, `Cargo.toml`,
-  a `.csproj`, whatever it uses), top-level structure and main modules, and
-  `git log` — not just the latest commit, read enough of the history to see the
-  *arc* of the work: what's been actively developed recently, what's stable and
-  untouched, whether there have been pivots or reverts worth knowing about.
-- **What a human already wrote down for agents.** `AGENTS.md`/`CLAUDE.md` above the
-  Remnus section, `docs/`, `.ai/` — read these as source material to build *from*,
-  not boxes to leave sealed (more on that in Phase 2).
-- **What you already know, not just the file tree.** If you (the calibrating agent)
-  have access to earlier conversation or session history for this project — prior
-  chats, commit messages, PR descriptions, design discussions — read that too.
-  Decisions, rejected approaches, and the *why* behind a piece of code often live only
-  in that history and nowhere in the current files. Surfacing exactly that kind of
-  knowledge before it disappears is the whole point of Remnus — treat this step as
-  seriously as reading the code.
+- date, guide version, and the project commit (`git rev-parse --short HEAD`);
+- the sources you read (files, docs, history range);
+- **the plan, written before you build**: the tree, and for each concept page or database
+  with its columns;
+- a checklist of build steps, ticked as each lands, with the ids it created;
+- what you skipped and why; open questions for the human.
 
-Do not guess. Everything you build in Phase 3 should trace back to something you
-actually read here.
+A log with unticked steps means you are resuming: continue from the first unticked step
+and don't redo ticked ones. Once the overview page exists, move the log under it.
 
-## Phase 2 — Model the concepts this project actually has
+## Phase 1 — Understand the project
 
-This is the phase a simple "copy the docs over" pass skips, and it's the one that
-matters most. Before creating anything, decide: *what are the recurring kinds of
-thing in this project's world* — not a fixed checklist, a real answer for this
-project. Do this in two passes; **neither is optional**, and the second is the one a
-lazy calibration skips entirely.
+Read for structure first, then depth where the concepts live — not every file:
 
-### 2a — Process concepts
+- **What it is and who it's for** — not "a Next.js app": what it does, for whom, at what
+  stage. From the README, marketing copy, doc comments, domain names in the code.
+- **Shape and history** — the manifest (`package.json`, `pyproject.toml`, `Cargo.toml`,
+  `*.csproj`…), top-level structure, entry points, and enough `git log` (`--stat` shows
+  where work concentrates) to see the arc: what is active, what is stable, any pivots or
+  reverts.
+- **What humans wrote for agents** — `AGENTS.md`/`CLAUDE.md` outside the Remnus section,
+  `docs/`, `.ai/`, `.serena/memories/`, `.cursor/rules/`, `.clinerules/`, and the paths
+  outside the project those files point to. Source material to build from, not boxes to
+  leave sealed.
+- **What you already know** — earlier conversations, commit messages, PR descriptions.
+  Decisions and rejected approaches often live only there; capturing them before they
+  disappear is the point of Remnus.
 
-The generic ones that recur across almost any software project. Use this as a prompt
-for your own thinking, not a mandatory list:
+**Then check the [playbooks](playbooks.md).** Compare their recognition signals with what
+you read, and read **at most two** whose signals are actually present. If none match, read
+none — "the closest one" is the wrong answer. A playbook is a list of things to look for,
+not a template: nothing from it gets built without evidence in this project.
 
-- **Decisions** — binding calls that shaped the product (architecture choices,
-  rejected alternatives, "why we don't do X").
-- **Backlog / open work** — what's actively planned, in progress, or blocked.
-- **Systems / architecture** — how the pieces fit together *right now*.
-- **Gotchas / known traps** — recurring failure modes, each with a real incident
-  behind it.
-- **Glossary** — terms this project's code and docs use that a newcomer wouldn't know
-  for free.
-- **Open questions / risks** — things nobody has decided yet, but that come up.
+## Phase 2 — Model the concepts
 
-Some of these won't apply — a project with no real decision history yet doesn't get
-an empty Decisions database for the sake of having one.
+Decide what the recurring kinds of thing in this project's world are. Two passes; neither
+is optional.
 
-### 2b — Domain concepts: what makes *this specific project* worth managing
+**2a — Process concepts**, common to most projects: decisions, backlog/open work,
+systems/architecture, gotchas (each with a real incident behind it — a fix commit
+counts), glossary, open questions/risks. Only the ones with material behind them.
 
-Process concepts are the same shape for almost any codebase. This pass is about the
-opposite: what would only ever come up for *this* project, because of what it
-actually is? Ask directly: **if a product manager or project owner were sitting
-where you are, what would they want tracked that has nothing to do with engineering
-process at all?** The answer depends entirely on the project's domain — that's the
-point, don't skip it because it doesn't fit a template:
+**2b — Domain concepts**, what only *this* project has. Ask: what would its product
+manager want tracked that has nothing to do with engineering process? A game's enemies,
+zones and balance data; a company's roadmap, pricing and positioning; an API's endpoint
+inventory and schema versions. Look for evidence (a data model, a design doc, a
+spreadsheet, a doc you were pointed at) and model what is there; if it already lives in
+another tool, link it rather than make a second copy.
 
-- A game project might have creatures/enemies, zones or levels, items, balance
-  parameters, narrative or lore — real design data a producer would track, not
-  engineering backlog.
-- A product/company's own workspace (this one, for instance) might have a roadmap of
-  future plans, marketing or growth status, competitive positioning, pricing —
-  business reality, not code.
-- A data or API project might have a source/endpoint inventory, schema versioning
-  history, data-quality issues.
+For each concept, choose deliberately:
 
-These are illustrations of the *kind* of thing to look for, not a checklist — the
-actual answer for a given project could be none of these and something else entirely.
-Ground it the same way as everything else: look for real evidence before modeling a
-domain concept (an Enemy/Creature data model in the code, a design doc, a balance
-spreadsheet, a marketing/roadmap doc or a source you're told about elsewhere) — don't
-invent a "Creatures" database for a game project just because it's a game, and don't
-skip modeling one if the evidence for it is sitting right there in the codebase or
-history. If domain data like this is already tracked somewhere you have access to
-(another doc, another connected tool, something mentioned in conversation history),
-that's real evidence too — reflect and link it rather than re-inventing a second copy.
+- **Database** when there are (or clearly will be) several comparable instances a person
+  would filter, sort or track by status. Three real decisions justify a Decisions database.
+- **Page** when it is singular: the architecture, the orientation, a short glossary.
+- Never one page with a list of comparable things pasted in — that is the filing clerk.
 
-**For each concept you decide is real, from either pass, choose page vs. database
-deliberately:**
+**Design each schema from what you found**, not a Title/Status/Priority reflex. A
+Decisions database wants `Date`, an `Area` select (filter by part of the product), a
+`Status` (`Active` / `Superseded`) — and each row's body is a decision record: situation,
+choice, *why*, what was rejected. "We use SQLite locally" is a title; "Chose SQLite over
+Postgres for local dev because X; revisit if Y" is a decision. A Backlog row says what
+the work is and why it matters; a Gotcha names the incident it came from.
 
-- It's a **database** if there are (or clearly will be) multiple genuinely distinct
-  instances of the same kind of thing, and a person managing this project would want
-  to filter, sort, or track status across them. Three real decisions already is
-  reason enough for a Decisions database — don't wait for ten.
-- It's a **page** if it's singular — there's one architecture, one orientation, one
-  glossary (though a glossary with many independent terms can also be a database,
-  one row per term, if that's more useful to browse).
-- Never default to "one page with everything pasted in" for something that is
-  structurally a list of comparable things. That is the single biggest way this
-  process degrades back into filing-clerk work.
+**Files already in the repo** (a decisions log, an architecture doc, a gotcha list) get
+converted into this structure, not skipped and not pasted whole. If you're unsure whether
+the file or Remnus should be the source of truth from now on, ask the human.
 
-**Design each database's schema on purpose**, from what you actually found — don't
-reuse a generic Title/Status/Priority template without thinking about whether it fits.
-For a Decisions database, for instance: a `Date` property, a `Category`/area
-property (so it's filterable by which part of the product it affects), a `Status`
-(`Active` / `Superseded`, with a way to point at what superseded it) — and critically,
-the row's **content** should read like an actual decision record: what the situation
-was, what was decided, *why*, and what was considered and rejected if you know it —
-not just the decision's title restated. "We use SQLite locally" is a title. "Chose
-SQLite over Postgres for local dev because X, revisit if Y happens" is a decision.
-
-The same discipline applies to every other concept you model: a Backlog row's content
-should say what the work actually is and why it matters, not just restate its title; a
-Gotcha's content should name the real incident it came from, not describe a generic
-category of bug.
-
-**If this material already exists as plain files in the repo** — a decisions log, an
-architecture doc, a gotcha list, checked into git — that is not a reason to skip it.
-A file only an agent with a terminal can read is not doing what Remnus is for: making
-this content visual, filterable, and reviewable by a human. Convert it *into the
-modeled structure above*, don't paste the file's prose into a single page and call it
-imported — a wall of text in one page is exactly the failure mode this phase exists to
-avoid, whether the source was your own synthesis or someone else's file.
-
-"Don't duplicate" (the workspace-reuse note above) means don't paste in a static
-snapshot that will keep silently drifting from a file someone is still editing
-directly — it does not mean leave the file untouched and skip importing it. Those are
-different failures; this step exists to fix the second one, not to excuse it. If,
-after importing, you're unsure whether the local file should stay authoritative going
-forward or Remnus should become the new source of truth, ask the human — that's a real
-decision, not yours to make silently.
-
-Scale with the project, not with a target count: a small or early-stage project (a
-fresh scaffold, little history) genuinely deserves little — one honest orientation
-page, maybe nothing else, if that's all the material supports. An established project
-with real history and real complexity deserves several well-modeled databases, each
-with real rows, not two pages and a token gesture at a backlog. Keep going while
-you're still finding real, grounded material; stop when you run out of substance, not
-when you hit some number.
+Scale with the material, not a target count: a fresh scaffold may deserve one honest
+overview page; an established project deserves several databases with real rows. Stop when
+you run out of substance. Write the result into the log as the plan.
 
 ## Phase 3 — Build it
 
-Use the Remnus MCP tools to construct what Phase 2 designed. The human will open this
-workspace in a sidebar, not read it through an API — so its *shape* is part of the work,
-not decoration.
+The human reads this in a sidebar, so the shape is part of the work.
 
-**Plan the tree before writing anything.** Decide the handful of top-level sections a
-person would expect to see (typically 4–9: an overview page, the main databases, one
-parent page per larger area) and what nests under each. A root that is a flat list of
-twenty sibling pages is the most common way a well-researched calibration still ends up
-hard to read.
+- **Tree:** 4–9 top-level items — an **overview page** first that orients a newcomer and
+  links onward, then the main databases and one parent page per larger area. Nest with
+  `parentId`, or `ref`/`parentRef` inside one `bulk_create_pages` call; `create_database`
+  takes `parentId` too. Restructure an existing flat list with `bulk_move_items`.
+- **Icons on everything** — emoji or `lucide:Name` + `iconColor` (`blue`, `green`…),
+  consistent within a section, set at creation.
+- **Databases in one pass:** `create_database` with the designed schema, real select/status
+  options, and its `views` — Kanban on the status column, Calendar on the date column,
+  an extra Table only for a slice people look at on its own. Then **all its rows in one
+  `bulk_create_pages` call** (up to 100), each with a real body.
+- **Label concepts** so context packs find them: on every concept row, page and
+  database pass `knowledge` with `conceptType`, `tags` — the words someone would search
+  for, in the team's language *and* English — and `sources`, the repo files it rests on:
+  `"knowledge": {"conceptType": "decision", "tags": ["davet", "invitation", "auth"], "sources": [{"resource": "src/auth.ts"}]}`.
+  `bulk_create_pages`, `create_page` and `create_database` all take it.
+- **A status screen** when a database has a lifecycle or dates worth watching: read
+  `remnus://dashboard/catalog`, then one `create_dashboard` with 3–6 blocks over the
+  databases you just filled — open items (metric), status mix (donut), next due (list
+  sorted by date), links to the overview and main databases. None when nothing has a
+  status or date: a dashboard of zeros is noise.
+- Write in the team's language — the one its docs, commits and the human asking you use;
+  code identifiers stay as they are. Titles are plain text (`Scene Flow & Bootstrap`,
+  never `&amp;`). Cross-link where it explains something — the decision behind a system,
+  the gotcha behind a decision.
 
-- Start with one **overview page** at the root that orients a newcomer and links to the
-  rest.
-- Group related pages under a parent: a dozen "System: …" pages belong under one
-  "Systems" page — or become rows of a Systems database if they're comparable enough to
-  filter — not beside everything else at the root.
-- Nest with `parentId` (an existing item) or, inside one `bulk_create_pages` call, with
-  `ref` / `parentRef`, so a parent and its children are created together.
-- Databases can be nested too (`create_database` takes `parentId`) when they belong to one
-  area rather than to the whole project.
-- If the workspace already holds a flat list from an earlier pass, restructure it with
-  `bulk_move_items` instead of recreating it.
+## Phase 4 — Check before you call it done
 
-**Give everything an icon.** Every page and database gets one — an emoji (`🗺️`) or a
-Lucide icon (`lucide:Map`, with an `iconColor` such as `blue` or `green`). Keep them
-consistent within a section so the sidebar can be scanned at a glance. Set them at
-creation (`icon`/`iconColor` on `create_page`, `bulk_create_pages`, `create_database`);
-fix existing items with `update_page` or `bulk_update_pages`.
+Run `npx remnus sync` and read `.remnus/workspace-map.md` (or the digest resource) as the
+human would see the tree — it is also what the next session starts from. Fix until every
+line holds:
 
-**Give every database the views a person would actually use.** A Table view always
-exists; add the others when you create the database (`create_database`'s `views`), or
-later with `create_database_view`:
+1. The root has 4–9 items, overview first; every page, database and dashboard has an icon.
+2. Every database has at least 3 real rows (fewer: make it a page, or say why in the log),
+   real select/status options, and the Kanban/Calendar view its columns call for.
+3. Sample three rows per database with `get_page`: each body says more than its title.
+4. You can name the source of every item you built. Delete what you can't, or move it
+   to the log as an open question.
+5. 2b is answered: domain databases exist, or the log says why none do.
+6. Concept items carry `knowledge` tags and sources.
+7. Every log step is ticked; open questions are listed.
 
-- a **Kanban** grouped by the status/state column for anything with a lifecycle — backlog,
-  open questions, decisions by status;
-- a **Calendar** on the date column for anything dated — decisions, releases, events;
-- an extra **Table** only when a slice is genuinely looked at on its own.
+## Finish
 
-Give select/status columns real options; they're colored automatically.
+- Set `"calibrated": true`, `"calibratedAt": "<ISO time>"` and `"calibrationGuide": 2`
+  in `.remnus/config.json` — the only local file this touches.
+- Tell the human in a few sentences what you modeled, why, and where to look (the
+  overview, the dashboard, the open questions in the log).
+- Then do what you were actually asked to do — this was a detour, not the task.
 
-**Build in batches.** `bulk_create_pages` creates up to 100 pages or rows per call — use it
-for every database's rows and for each section's pages. One `create_page` per row turns a
-ten-minute job into a forty-minute one.
+Ask the human only when sources contradict each other, when it is unclear whether a file
+or Remnus is the source of truth, or when restructuring would move content a person wrote.
+Don't ask for approval of the plan — it is in the log, where they can already see it.
 
-A few more mechanical notes:
+## Running it again
 
-- Create each database with the schema you designed, not an afterthought default.
-- Write real content into every row — see the decision-record example above. A row with
-  only a title and a status is a task list item, not the knowledge Remnus exists to hold.
-- Titles are plain text: write `Scene Flow & Bootstrap`, never `Scene Flow &amp; Bootstrap`.
-- Cross-reference where it's genuinely useful (a decision that shaped a system, a gotcha
-  that explains why a decision was made the way it was) rather than leaving every
-  collection floating on its own.
+A calibrated workspace is extended, never rebuilt:
 
-Depth over volume: every page/row should trace to something you actually read in Phase 1,
-never to what a project "like this" usually has. But for a project with real substance, a
-shallow skeleton is just as wrong as an invented one — this phase should feel like it took
-real work, because Phase 2's modeling was real work.
-
-## Phase 4 — Review and finish
-
-- Skim what you built as if you were the human opening it for the first time: does it
-  actually read like someone who understands this project put it together, or does it
-  read like a template got filled in? If the latter, go back — this is the check that
-  catches a lazy pass through Phase 2.
-- Look at the structure the way the human will: `list_workspace` at the root should read
-  as a short, meaningful set of sections; every page and database should have an icon;
-  every database with a status or date column should have the matching Kanban or Calendar
-  view. Fix what doesn't before finishing.
-- If Phase 2b produced no domain databases, say why in your summary — "nothing in the
-  material supported one" is a fine answer; silently skipping the pass is not.
-- Edit the project's local `.remnus/config.json` and set `"calibrated": true` — this
-  is the only local file this process touches.
-- Tell the human, in a few sentences, what concepts you modeled, why (briefly), and
-  where to look — not just "I set up a workspace."
-- Then continue with whatever you were actually asked to do — this process was a
-  detour, not the task.
+1. Read the Calibration Log: what was built, from which commit, with which guide version.
+   No log means guide version 1: read the map instead and create the log now.
+2. Scope the pass to what changed — `git log <logged commit>..HEAD` for the project, and
+   what this guide added since the logged version (version 2: the log itself, `knowledge`
+   labels, the status screen).
+3. Add rows and pages for new material, and missing labels, views and icons. A concept
+   that already has a database or page gets extended, never a second copy.
+4. Don't overwrite a body you didn't write in this run and never delete: `add_comment` on
+   what looks wrong and list it in the log for the human.
+5. Append a dated section to the log; update `calibratedAt` and `calibrationGuide`.

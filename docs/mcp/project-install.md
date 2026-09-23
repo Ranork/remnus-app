@@ -70,7 +70,7 @@ connect an existing one), then writes, without overwriting anything already ther
 | File | Committed? | What it is |
 | --- | --- | --- |
 | `.mcp.json` | yes | How agents in this project reach Remnus |
-| `.remnus/config.json` | yes | Which workspace this project belongs to |
+| `.remnus/config.json` | yes | Which workspace this project belongs to, and whether (`calibrated`), when (`calibratedAt`) and with which guide version (`calibrationGuide`) it was set up |
 | `.remnus/credentials.json` | no | This project's token — auto-added to `.gitignore` |
 | `.remnus/workspace-map.md` | no | Cached map of the workspace, so an agent starts with the ids in hand |
 | `AGENTS.md` / `CLAUDE.md` | yes | Tells any agent how to use the workspace |
@@ -112,11 +112,19 @@ appear in every diff. A team that would rather share one copy runs `npx remnus s
 ## Step 2 — Set the workspace up for this project
 
 `init` prints a URL — `<your Remnus instance>/wiki/calibrate`, [also readable on its
-own](calibrate.md) — for a one-time checklist for whichever agent is running in this
-project. It's served live rather than copied into the project, so it can't go stale.
-It says to read the project (manifest, README, structure, commit history) and use
-the Remnus MCP tools to build out pages and databases that actually reflect it,
-instead of leaving the workspace empty.
+own](calibrate.md) — and the sentence to hand an agent with it. It's a one-time guide
+for whichever agent is running in this project, served live rather than copied into
+the project, so it can't go stale. It has the agent read the project (manifest,
+README, structure, commit history), model what it actually contains, and build pages,
+databases and a status screen that reflect it — with a
+[playbook](playbooks.md) for the project's type when one fits.
+
+The agent keeps a **Calibration Log** page in the workspace as it goes: its plan,
+written before anything is built, and a checklist it ticks off. You can watch the plan
+take shape, and a run that gets interrupted resumes from the log instead of starting
+over. When it finishes, `.remnus/config.json` records `calibrated: true`,
+`calibratedAt` and `calibrationGuide`; running it again later only extends what is
+there.
 
 It's optional — the workspace works empty too. If you'd like it done: whoever just
 ran `init` (or is picking up a project someone else connected, with

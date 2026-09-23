@@ -39,6 +39,7 @@ New project instead? Skip straight to [Project Install](project-install.md).
 | | |
 |---|---|
 | [Project Install](project-install.md) | Connect a project in one command: `npx remnus init` |
+| [Playbooks](playbooks.md) | What calibration builds for a web app, API, game, data project or library |
 | [Getting Started](getting-started.md) | OAuth connect, PAT fallback, first call |
 | [Connect Your Editor](connect-editors.md) | Windsurf, Continue, Antigravity, Cline, Zed & more — ready configs + OAuth |
 | [Authentication](authentication.md) | Bearer tokens, scopes, rate limits |

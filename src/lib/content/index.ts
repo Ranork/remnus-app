@@ -31,10 +31,15 @@ function stripTags(html: string): string {
 
 // Rewrite links authored for the old shared-page URLs to the new routes:
 //  - relative wiki cross-refs:  (getting-started.md#x) → (/wiki/getting-started#x)
+//  - one folder down and back:  (playbooks/game.md) → (/wiki/playbooks/game),
+//                               (../calibrate.md) → (/wiki/calibrate) — the forms a
+//                               page under docs/mcp/playbooks/ uses, so the same file
+//                               also links correctly on GitHub. Such a page reaches a
+//                               sibling through its folder: (../playbooks/api.md).
 //  - absolute share links:      /share/docs/mcp/x → /wiki/x ; /share/blog/x → /docs/x
 function rewriteLinks(md: string): string {
   return md
-    .replace(/\]\(([a-z0-9-]+)\.md(#[^)]+)?\)/gi, '](/wiki/$1$2)')
+    .replace(/\]\((?:\.\.\/)?([a-z0-9-]+(?:\/[a-z0-9-]+)?)\.md(#[^)]+)?\)/gi, '](/wiki/$1$2)')
     .replace(/https?:\/\/(?:www\.)?remnus\.com\/share\/docs\/mcp/g, '/wiki')
     .replace(/\/share\/docs\/mcp/g, '/wiki')
     .replace(/https?:\/\/(?:www\.)?remnus\.com\/share\/blog/g, '/docs')

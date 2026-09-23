@@ -67,11 +67,14 @@ or start a new session.
 
 [Calibration](calibrate.md) is a one-time step that fills the workspace in to match
 the project. If `.remnus/config.json` says `"calibrated": true`, it has already been
-done — by a person or an agent who read this same project. Running it again would
-rebuild what is already there and duplicate pages your teammates wrote.
+done — by a person or an agent who read this same project, and its **Calibration Log**
+page says what was built and from which commit. Joining is not a reason to run it
+again; a later run exists only to bring the workspace up to date once the project has
+moved on, and even then it only extends what your teammates wrote.
 
-Read the workspace instead. `list_workspace` and `search_workspace` will show you what
-the project's shared memory already contains; that is the point of joining it.
+Read the workspace instead. `.remnus/workspace-map.md` (written when your first agent
+session starts) lists what the project's shared memory already contains; that is the
+point of joining it.
 
 ## If something is off
 
