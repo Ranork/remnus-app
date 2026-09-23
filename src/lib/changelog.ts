@@ -45,6 +45,31 @@ const FIRST_VISIT_WINDOW_DAYS = 7;
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-09-23-wiki-markdown',
+    date: '2026-09-23',
+    category: 'improved',
+    title: {
+      en: 'Wiki pages your agent can read whole',
+      tr: 'Ajanınızın eksiksiz okuyabildiği wiki sayfaları',
+      de: 'Wiki-Seiten, die Ihr Agent vollständig liest',
+      es: 'Páginas de la wiki que tu agente lee completas',
+      fr: 'Des pages wiki que votre agent lit en entier',
+      hi: 'विकी पेज जिन्हें आपका एजेंट पूरा पढ़ सकता है',
+      ru: 'Страницы вики, которые агент читает целиком',
+      zh: '智能体可完整读取的 Wiki 页面',
+    },
+    summary: {
+      en: 'Add .md to any wiki address to get the page as plain markdown, which is what npx remnus init now hands your agent, so it follows the setup guide in full for a fraction of the tokens.',
+      tr: 'Herhangi bir wiki adresinin sonuna .md eklediğinizde sayfayı düz markdown olarak alırsınız; npx remnus init artık ajanınıza bu adresi veriyor, böylece ajan kurulum rehberini çok daha az token harcayarak eksiksiz uyguluyor.',
+      de: 'Hängen Sie .md an eine Wiki-Adresse an, um die Seite als reines Markdown zu erhalten – genau das gibt npx remnus init Ihrem Agenten jetzt mit, sodass er die Einrichtungsanleitung vollständig und mit einem Bruchteil der Tokens befolgt.',
+      es: 'Añade .md a cualquier dirección de la wiki para obtener la página en markdown plano, que es lo que npx remnus init entrega ahora a tu agente, para que siga la guía de configuración completa con una fracción de los tokens.',
+      fr: 'Ajoutez .md à n\'importe quelle adresse du wiki pour obtenir la page en markdown brut, ce que npx remnus init donne désormais à votre agent, qui suit ainsi le guide de configuration en entier pour une fraction des tokens.',
+      hi: 'किसी भी विकी पते के अंत में .md जोड़ें और पेज सादे markdown में पाएँ — npx remnus init अब आपके एजेंट को यही पता देता है, ताकि वह बहुत कम टोकन में पूरी सेटअप गाइड का पालन करे।',
+      ru: 'Добавьте .md к адресу любой страницы вики, чтобы получить её в виде чистого markdown, — именно этот адрес теперь передаёт агенту npx remnus init, и он выполняет руководство по настройке целиком, тратя лишь малую долю токенов.',
+      zh: '在任意 Wiki 地址后加上 .md 即可获取页面的纯 markdown 版本，npx remnus init 现在就把这个地址交给你的智能体，让它以极少的 token 完整遵循设置指南。',
+    },
+  },
+  {
     id: '2026-09-23-audit-retention',
     date: '2026-09-23',
     category: 'improved',

@@ -42,7 +42,8 @@ export function wikiMetadata(slug: string): Metadata {
     metadataBase: new URL(METADATA_BASE_URL),
     title,
     description,
-    alternates: { canonical: url },
+    // The raw markdown (/wiki/<slug>.md) for an agent that landed on the HTML page.
+    alternates: { canonical: url, types: { 'text/markdown': `${url}.md` } },
     openGraph: {
       title: `${title} | ${SITE} Wiki`,
       description,

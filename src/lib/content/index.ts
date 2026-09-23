@@ -37,9 +37,11 @@ function stripTags(html: string): string {
 //                               also links correctly on GitHub. Such a page reaches a
 //                               sibling through its folder: (../playbooks/api.md).
 //  - absolute share links:      /share/docs/mcp/x → /wiki/x ; /share/blog/x → /docs/x
-function rewriteLinks(md: string): string {
+// `ext` is appended to rewritten wiki links: '' for the HTML pages, '.md' for the raw
+// markdown route, so a raw page links to its raw siblings.
+function rewriteLinks(md: string, ext = ''): string {
   return md
-    .replace(/\]\((?:\.\.\/)?([a-z0-9-]+(?:\/[a-z0-9-]+)?)\.md(#[^)]+)?\)/gi, '](/wiki/$1$2)')
+    .replace(/\]\((?:\.\.\/)?([a-z0-9-]+(?:\/[a-z0-9-]+)?)\.md(#[^)]+)?\)/gi, `](/wiki/$1${ext}$2)`)
     .replace(/https?:\/\/(?:www\.)?remnus\.com\/share\/docs\/mcp/g, '/wiki')
     .replace(/\/share\/docs\/mcp/g, '/wiki')
     .replace(/https?:\/\/(?:www\.)?remnus\.com\/share\/blog/g, '/docs')
@@ -152,6 +154,19 @@ export function getWikiPage(slug: string): {
   const { html, headings } = renderMarkdown(stripLeadingH1(raw));
   const lastModified = getFileLastModified('mcp', meta.file);
   return { meta, html, headings, description, lastModified };
+}
+
+/**
+ * The page's markdown file as written, for `/wiki/<slug>.md` (`/wiki.md` for the
+ * overview). Agents read the guide and playbooks from here: the HTML page is ~19×
+ * the tokens, and a fetch tool that summarizes HTML can drop rules. Relative `.md`
+ * links become root-relative raw links (`/wiki/playbooks/game.md`), so an agent that
+ * fetched the page with curl can follow them without resolving paths.
+ */
+export function getWikiMarkdown(slug: string): string | null {
+  const meta = wikiBySlug.get(slug);
+  if (!meta) return null;
+  return rewriteLinks(readContent('mcp', meta.file), '.md');
 }
 
 // ── Docs (blog) ─────────────────────────────────────────────────────────────────

@@ -53,6 +53,29 @@ function mcpEntryFor(config, { direct }) {
   };
 }
 
+/**
+ * The calibration guide as raw markdown (`/wiki/calibrate.md`) — what an agent should
+ * read: the HTML page is ~19× the tokens, and a fetch tool that summarizes HTML can
+ * drop rules. A self-hosted instance older than that route has only the HTML page, so
+ * probe once and fall back rather than hand the agent a URL that 404s.
+ */
+async function calibrateUrlFor(serverUrl) {
+  const raw = `${serverUrl}/wiki/calibrate.md`;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 5000);
+  try {
+    const res = await fetch(raw, { signal: controller.signal });
+    const isMarkdown = res.ok && (res.headers.get('content-type') ?? '').includes('markdown');
+    await res.text();
+    if (isMarkdown) return raw;
+  } catch {
+    // Unreachable right now — the HTML page is the address every version serves.
+  } finally {
+    clearTimeout(timer);
+  }
+  return `${serverUrl}/wiki/calibrate`;
+}
+
 function renderTemplate(name, values) {
   const raw = fs.readFileSync(path.join(TEMPLATE_DIR, name), 'utf8');
   return raw.replace(/\{\{(\w+)\}\}/g, (_match, key) => values[key] ?? '');
@@ -167,7 +190,11 @@ export async function initCommand(options) {
   // project: a local `.remnus/calibrate.md` would go stale as the guide improves,
   // and this way a self-hosted instance always serves the guide matching its own
   // deployed version instead of remnus.com's.
-  const calibrateUrl = `${serverUrl}/wiki/calibrate`;
+  const calibrateUrl = await calibrateUrlFor(serverUrl);
+  // A fetch tool that summarizes (Claude Code's WebFetch does) hands the agent a digest
+  // of the guide, and the rules are what gets dropped. Only said for the raw file: the
+  // HTML fallback is too large to read whole.
+  const readWhole = calibrateUrl.endsWith('.md') ? ' (read the whole file, e.g. with curl)' : '';
 
   const section = renderTemplate('agents-section.md', {
     WORKSPACE_NAME: config.workspaceName,
@@ -175,6 +202,7 @@ export async function initCommand(options) {
     MCP_URL: config.mcpUrl,
     SCOPE: config.scope ?? 'set when the agent connects',
     CALIBRATE_URL: calibrateUrl,
+    CALIBRATE_READ: readWhole,
   });
 
   for (const docName of detectAgentDocs(root)) {
@@ -209,7 +237,7 @@ export async function initCommand(options) {
   say(dim('To have an agent read the project and fill the workspace in to match it,'));
   say(dim('tell it (after the reload above):'));
   say();
-  say(`    Calibrate the Remnus workspace by following ${bold(calibrateUrl)}`);
+  say(`    Calibrate the Remnus workspace by following ${bold(calibrateUrl)}${readWhole}`);
   say();
   say(dim('It is optional — the workspace also works empty. An interrupted run picks up'));
   say(dim('where it stopped: the guide keeps its progress in the workspace itself.'));

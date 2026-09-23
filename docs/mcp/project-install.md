@@ -111,8 +111,10 @@ appear in every diff. A team that would rather share one copy runs `npx remnus s
 
 ## Step 2 — Set the workspace up for this project
 
-`init` prints a URL — `<your Remnus instance>/wiki/calibrate`, [also readable on its
-own](calibrate.md) — and the sentence to hand an agent with it. It's a one-time guide
+`init` prints a URL — `<your Remnus instance>/wiki/calibrate.md`, the guide as raw
+markdown ([also readable as a page](calibrate.md)) — and the sentence to hand an agent
+with it. Every wiki page has that `.md` twin, a fraction of the page's size, so an agent
+reads the guide and its playbooks whole instead of a summary. It's a one-time guide
 for whichever agent is running in this project, served live rather than copied into
 the project, so it can't go stale. It has the agent read the project (manifest,
 README, structure, commit history), model what it actually contains, and build pages,

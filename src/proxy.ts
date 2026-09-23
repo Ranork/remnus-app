@@ -25,8 +25,10 @@ export const config = {
     // check would bounce them to /login and break PWA install/offline. Same
     // reasoning for llms.txt — AI crawlers fetch it cookie-less, and it's
     // rewritten (afterFiles, i.e. after this middleware decision) to /api/llms.
+    // Same for the raw wiki markdown (/wiki/<slug>.md, /wiki.md → /api/wiki-md):
+    // the intl middleware would rewrite it to /<locale>/wiki/… and 404.
     // Vendored widget files are public static assets and must bypass
     // locale/auth rewrites so the script and license files resolve directly.
-    '/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|llms.txt|manifest.json|sw.js|workbox-.*|vendor/accessibility-preference-widget/.*|logo.*|.*\\.(?:png|ico|svg|jpg|jpeg|webp|woff2?)).*)',
+    '/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt|llms.txt|wiki(?:/[^?#]+)?\\.md$|manifest.json|sw.js|workbox-.*|vendor/accessibility-preference-widget/.*|logo.*|.*\\.(?:png|ico|svg|jpg|jpeg|webp|woff2?)).*)',
   ],
 };

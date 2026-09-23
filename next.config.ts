@@ -30,8 +30,13 @@ const nextConfig: NextConfig = {
   // Served by src/app/api/llms/route.ts; rewritten here so the public URL has
   // no /api prefix. Whitelisted (bypasses the intl/auth proxy) in proxy.ts's
   // matcher + auth.config.ts's isPublicAsset, same as robots.txt/sitemap.xml.
+  // /wiki/<slug>.md (and /wiki.md) — the same pages as raw markdown, for agents
+  // (src/app/api/wiki-md), allowlisted the same two ways.
   async rewrites() {
-    return [{ source: '/llms.txt', destination: '/api/llms' }];
+    return [
+      { source: '/llms.txt', destination: '/api/llms' },
+      { source: '/wiki/:slug*\\.md', destination: '/api/wiki-md/:slug*' },
+    ];
   },
 };
 

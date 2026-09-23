@@ -34,7 +34,10 @@ export const authConfig: NextAuthConfig = {
         // PWA files fetched cookie-less by the browser — must never redirect to /login.
         path === '/manifest.json' || path === '/sw.js' || path.startsWith('/workbox-') ||
         // llms.txt — fetched cookie-less by AI crawlers/agents (rewritten to /api/llms).
-        path === '/llms.txt';
+        path === '/llms.txt' ||
+        // Raw wiki markdown (/wiki/<slug>.md, /wiki.md) — agents fetch it cookie-less
+        // with curl (rewritten to /api/wiki-md).
+        /^\/wiki(\/[^?#]+)?\.md$/.test(path);
       const isRootRoute = cleanPath === '/' || cleanPath === '/share';
       const isPublicMarketingRoute = cleanPath.startsWith('/pricing') || cleanPath.startsWith('/contact') || cleanPath.startsWith('/download') || cleanPath.startsWith('/share/') || cleanPath.startsWith('/security') || cleanPath.startsWith('/brand') || cleanPath.startsWith('/wiki') || cleanPath.startsWith('/docs');
       const isMcpRoute = cleanPath.startsWith('/api/mcp');

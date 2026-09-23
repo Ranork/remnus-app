@@ -40,7 +40,7 @@ Remnus pairs a page-and-database editor (pages, databases, kanban/table/calendar
 
 ## Wiki
 
-MCP reference documentation — endpoint, authentication, tools, resources, and prompts.
+MCP reference documentation — endpoint, authentication, tools, resources, and prompts. Every wiki page is also served as raw markdown at its URL plus \`.md\` (for example ${METADATA_BASE_URL}/wiki/calibrate.md).
 
 ${wikiLines}
 

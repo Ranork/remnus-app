@@ -6,7 +6,7 @@ task state) meant to outlive a single session.
 
 `.remnus/config.json`'s `calibrated` field records whether this workspace has been
 populated for this project yet. If it's `false`, a one-time setup guide is available
-at {{CALIBRATE_URL}} — optional, for whichever agent wants to run it; the workspace
+at {{CALIBRATE_URL}}{{CALIBRATE_READ}} — optional, for whichever agent wants to run it; the workspace
 also works as-is without it. A `Calibration Log` page with unticked steps is a run
 that was interrupted: resume it with that guide rather than starting over.
 
