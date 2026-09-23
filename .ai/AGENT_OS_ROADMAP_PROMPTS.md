@@ -2191,6 +2191,97 @@ Embedding/vektör (P11), Jev veya başka dış model, web UI'a arama kutusu
 - `scripts/ai/update-handoff.ps1`. Commit/push yok.
 ````
 
+> **✅ P10 tamamlandı — 2026-09-23 (Claude). A, B, C, E yapıldı; D (FTS5) yapılmadı.**
+>
+> **Bulgular koddan doğrulandı.** 1–4 ve 6 aynen geçerliydi; yalnız satırlar kaymıştı
+> (`listKnowledgeCorpus` ~433, `searchWorkspace` ~226). Ek olarak: satırların
+> breadcrumb'ı satır × öğe `find()` ile kuruluyordu; `getKnowledgeRevision` her
+> `prepare_context`'te tüm metadata satırlarını çekiyordu.
+>
+> **Ne yapıldı**
+> - **A:** `foldText()` + `foldTextWithOffsets()` (`src/lib/services/textFold.ts`).
+>   `tokenize`, `STOP_WORDS` ve başlık bonusu bunu kullanıyor. `tr-TR` küçültme
+>   kaldırıldı. FTS5 probu: `unicode61 remove_diacritics 2` "ı"yı **katlamıyor**
+>   (ılık → ılık); FTS gelirse trigger'da `replace(…,'ı','i')` şart.
+> - **B:** `prepare_context.keywords` (≤24 × 60), `KEYWORD_WEIGHT = 0.5`. Distractor
+>   keyword'lü taramada MRR 0.3–0.6 aralığında 0.92, 0.8'de 0.83, 1.0'da 0.75 çıktı.
+>   Kural `renderInstructions`, CLI AGENTS bloğu, skill ve `context-first.md`'de aynı.
+> - **C:** `listKnowledgeCorpus` 4 sıralı sorgudan tek `db.batch`'e indi (OKF snapshot
+>   çıktısı aynı, `test:okf` geçti). Ters indeksli `buildCorpusIndex` kuruldu: sıralı
+>   vocabulary + önek aralığı. Süreç içi ~24 MB'lık LRU önbellekte tutuluyor. Anahtar
+>   `getKnowledgeCorpusVersion` (tek tur): change version + öğe/satır sayısı (recurrence
+>   pruning tombstone yazmıyor) + knowledge metadata/review/revoke maksimumları. Sıcak
+>   saniyede `null` döner ve önbelleğe alınmaz. `stale` her çağrıda yeniden hesaplanıyor.
+>   **Karar:** knowledge tabloları `computeChangeVersion`'a **eklenmedi**. Ölçüm: toplamlar
+>   ~2 ms, yani 2,5 sn'lik her UI poll'una ~%50 ek; bunu gerektiren bir ekran yok.
+>   `getKnowledgeRevision` artık SQL toplamı.
+> - **D yerine (Hakan'ın seçimi):** `search_workspace` şema değişikliği olmadan
+>   harf katlıyor. `foldingSearchPatterns()` → `LIKE iskelet ESCAPE '\' AND GLOB
+>   sınıfları`. GLOB sınıfları tek başına ~10× yavaştı; LIKE ön-filtresi bunu kapattı.
+>   Katlama tr/es/fr/de harflerini kapsıyor; diğer yazılar eskisi gibi birebir eşleşiyor.
+>   3 sorgu tek `db.batch`. Tool açıklaması: "Case- and accent-insensitive".
+> - **E:** `bench:context` v2. `mustHit` 11 vaka assert ediliyor, `tracked` 4 vaka
+>   raporlanıyor. Önbellek anahtarı davranışı da assert'li.
+>
+> **D neden yapılmadı:** Turso CLI yok ve dev/branch DB sağlanamadı. Hakan "D'yi bu
+> turda atla" dedi. Prod motoru **klasik libSQL** (Hakan). tursodb/MVCC engeli yok, ama
+> #1811 ve trigger'lı FTS Turso'da hâlâ doğrulanmadı. Tasarım hazır: `search_docs(id
+> INTEGER PK, item_id UNIQUE, …)` eşleme tablosu (rowid VACUUM'dan etkilenmez), FTS5
+> `rowid = search_docs.id`, trigger'lar (`workspace_items`/`standalone_pages`/`pages`,
+> `ı→i` replace), MATCH'e workspace token'ı kolonu (bm25 ağırlığı 0), 3 karakter altı
+> LIKE yolu. `0052` numarası boş.
+>
+> **Öncesi → sonrası** (yerel `file:local.db`; sentetik 1.000 sayfa + 4×500 satır,
+> 3,39M karakter, 3.000 knowledge satırı; ölçüm sonrası silindi):
+>
+> | ölçüm | öncesi | sonrası |
+> |---|---|---|
+> | `bench:context` mustHit top-1 | 5/11 | **11/11** |
+> | `bench:context` tracked (TR/eşanlamlı, keywords yok) | 0/4 | 0/4 (P11'e) |
+> | `prepare_context` round-trip (graph dahil) | 13 | 11 soğuk / **10** sıcak |
+> | ↳ corpus kısmı | 4 | 1 (+1 anahtar) |
+> | `prepare_context` ms (yerel CPU) | 500–650 | ~400 soğuk / **~20** sıcak |
+> | `listKnowledgeCorpus` (knowledge satırı yokken) | 4 RT, ~110–150 ms | 1 RT, ~70–130 ms |
+> | `search_workspace` round-trip | 3 | **1** |
+> | `search_workspace` "cozum" / "guven" | 0 sonuç | doğru sonuç |
+> | `search_workspace` ms (yerel, en kötü) | 12–20 | 20–90 (yoğun sentetik veri) |
+> | model-görünür şema (`bench:mcp-budget`) | 24.341 B | 24.531 B |
+> | instructions smart/write · AGENTS bloğu | 1.074 · 1.851 B | 1.090 · 1.869 B |
+>
+> Oturum başına ek yük ~224 B ≈ 56 token. 60 sınırının altında.
+>
+> **D.5 (FTS birinci aşama mı, C önbelleği mi):** FTS olmadığı için karşılaştırılamadı.
+> C sıcak çağrıyı çözüyor. Açık kalan soğuk örnek: büyük workspace'te her yeni
+> serverless instance ~3,4 MB çekip ~400 ms indeks kuruyor. FTS gelirse "top-N aday →
+> yalnız onların gövdesi" yolu tam bunun için.
+>
+> **Doğrulama:** `npx tsc --noEmit` temiz. Değişen dosyalarda eslint 0 hata; 4 uyarı
+> önceden vardı. `bench:context`, `test:okf` geçti. Pattern kenar durumları bellek-içi
+> DB'de 18/18 (`%`, `_`, `*`, `[`, `\`, Kiril, ß, İ/ı). **Gerçek MCP istemcisi** (SDK
+> Streamable HTTP, yerel dev server, geçici read PAT; sonra silindi) şunları gösterdi:
+> instructions'ta "with keywords" var. Şemada `keywords` var. "Davetlere görüntüleyici
+> rolü ekle" keywords olmadan 0 kavram, keywords ile "Workspace invitation roles"
+> döndü. "debug the integrations api" → "Integrations API". `search_workspace`
+> "cozum" / "ÇÖZÜM" / "çözüm notları" → "Çözüm Notları" [title]. "sikayet" →
+> [content]; snippet orijinal yazımla geliyor. Trigger doğrulaması (madde 4) D
+> olmadığı için yok.
+>
+> **Kapsam dışı ama ölçülen:** `prepare_context`'in kalan 9 round-trip'i en üst kavramın
+> `getRelatedPages` komşuluğundan geliyor (sıralı ~9 sorgu). Öneri: konu çözümü →
+> (parent ∥ children ∥ outgoing ∥ backlinks ∥ siblings) tek batch → `resolveMany` tek
+> batch, yani ~3 tur. Ayrı küçük bir iş; `get_related_pages` aracını da hızlandırır.
+> Web'de global arama kutusu hâlâ yok. Öneri: FTS ile birlikte ürün kararı olarak ele
+> alınsın. Bugünkü LIKE+GLOB tam tarama, her tuşa basışta çalışacak bir UI kutusu için
+> yeterince hızlı değil.
+>
+> **Değişen dosyalar:** `src/lib/services/{textFold (yeni),contextPack,knowledge,
+> changeVersion,workspace}.ts`, `src/app/api/mcp/{tools/read,handler}.ts`,
+> `src/scripts/benchmark-context-pack.ts`, `cli/templates/agents-section.md`,
+> `skills/remnus/SKILL.md`, `docs/mcp/{context-first,read-tools}.md`, `AGENTS.md`,
+> Serena `core`/`conventions` (dosya olarak; Serena araçları yok),
+> `src/lib/changelog.ts` (`2026-09-23-agent-context-languages` improved,
+> `2026-09-23-search-letters` fixed). Commit/push yok.
+
 ---
 
 # P11 — Anlamsal bulma: embedding + Turso vektör + hibrit sıralama
@@ -2541,7 +2632,7 @@ anlamsal/Jev ilişki önerileri.
 # Deploy öncesi — biriken borç (unutma listesi)
 
 > P adımları tamamlandıkça buraya ekle. Buradaki her madde **deploy'u bloklar**.
-> Son güncelleme: 2026-09-23 (P9.5 sonrası). **Şu an deploy'u bloklayan açık madde
+> Son güncelleme: 2026-09-23 (P10 sonrası). **Şu an deploy'u bloklayan açık madde
 > yok**; aşağıdaki sıra deploy gününün kontrol listesi.
 >
 > **Karar (Hakan, 2026-09-23):** deploy yol haritası bitince **toplu** yapılacak —
@@ -2562,6 +2653,10 @@ not tutmaya güvenme — 2026-09-23'te notlar yerel DB için yanlış çıktı.
 P9.5 migration **eklemedi** (status seçenek düzeltmesi, digest sırası, `.md` route'u
 yalnızca kod).
 
+P10 migration **eklemedi**: FTS5 (planlanan `0052`) Turso'da kanıtlanmadığı için
+ertelendi; harf katlama, `keywords`, corpus önbelleği ve `search_workspace`'in
+LIKE+GLOB katlaması yalnızca kod. `0052` numarası boş kaldı.
+
 ## 2. Deploy günü sırası
 
 1. `npm run db:drift` → Turso için **OK** görmeden deploy etme.
@@ -2569,7 +2664,10 @@ yalnızca kod).
    rehberi **v3** ve playbook'lar (sunucudan canlı servis ediliyor), ham markdown
    adresleri `/wiki/<slug>.md` + `/wiki.md` (P9.5), status/select seçenek düzeltmesi
    (`{name}` artık `"[object Object]"` olmuyor), map/digest'in kenar çubuğu sırası,
-   proje penceresindeki onboarding 500'ünün kalkması.
+   proje penceresindeki onboarding 500'ünün kalkması. **P10:** `prepare_context`
+   `keywords` + harf katlama + tek-tur corpus/önbellek, `search_workspace`'in
+   aksan/büyük harf katlaması ve tek round-trip'i, sunucu `instructions`'ındaki
+   "(with keywords)".
 3. **Sonra** CLI'ı yayınla — `cli/package.json` zaten `0.1.9` (npm'de şu an `0.1.8`):
    ```powershell
    cd cli
@@ -2577,8 +2675,9 @@ yalnızca kod).
    npm publish
    ```
    Yeni `init` metni, `.md` rehber adresi + "read the whole file" ipucu, `sync`
-   komutu ve ajan talimatı (yarım kalan kalibrasyonu sürdür) ancak bununla projelere
-   ulaşır. **Web'den sonra** olmalı: `init` `.md` adresini yokluyor, route yoksa
+   komutu, ajan talimatı (yarım kalan kalibrasyonu sürdür) ve P10'un AGENTS bloğundaki
+   "`prepare_context` (with `keywords`)" ancak bununla projelere ulaşır.
+   **Web'den sonra** olmalı: `init` `.md` adresini yokluyor, route yoksa
    HTML'e düşüyor — önce yayınlarsan ilk kurulumlar HTML adresini (57k token) basar.
    Not: 0.1.9 ile bağlanan projeler `.mcp.json`'da `remnus@0.1.9`'a sabitlenir;
    yayınlanmadan o sürümle `init` çalıştırılmamalı (bridge npm'den inemez).
@@ -2591,6 +2690,10 @@ yalnızca kod).
    curl.exe -s https://www.remnus.com/llms.txt | Select-String "raw markdown"
    ```
    `/wiki/*.md` 307/login'e düşerse `proxy.ts` matcher istisnası canlıda tutmamıştır.
+   **P10 (bağlı bir ajanla, salt okuma):** `tools/list`'te `prepare_context` şemasında
+   `keywords` var mı; Türkçe büyük harfli bir başlığı (ör. "Çözüm …") `search_workspace`
+   küçük harf ve Türkçe harfsiz ("cozum") buluyor mu; Türkçe bir görev + İngilizce
+   `keywords` ile `prepare_context` doğru sayfayı döndürüyor mu.
 5. **Canlı kalibrasyon testi (deploy + CLI yayınından sonra, ertelendi):** gerçek bir
    projede yayınlanmış CLI ile `npx remnus init` → yeni Claude Code oturumu → yalnızca
    `init`'in bastığı cümle. P9.5'in yerelde göremediği iki şeyi dener: yayınlanmış npm
