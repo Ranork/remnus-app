@@ -201,7 +201,7 @@ function LoginForm() {
           <button
             type="button"
             onClick={() => signIn('google', { callbackUrl })}
-            className="w-full flex items-center justify-center gap-3 bg-white hover:bg-neutral-100 text-neutral-900 font-medium text-sm py-2.5 px-4 rounded-lg transition-colors cursor-pointer"
+            className="w-full flex items-center justify-center gap-3 bg-white hover:bg-gray-100 text-gray-900 font-medium text-sm py-2.5 px-4 rounded-lg transition-colors cursor-pointer"
           >
             <GoogleIcon />
             {t('continueWithGoogle')}
@@ -238,7 +238,7 @@ function LoginForm() {
           {demoState?.error && (
             <p className="text-xs text-red-400 text-center mt-2">{demoState.error}</p>
           )}
-          <p className="text-center text-xs text-neutral-700 mt-2">
+          <p className="text-center text-xs text-neutral-500 mt-2">
             {t('demoHint')}
           </p>
         </div>
