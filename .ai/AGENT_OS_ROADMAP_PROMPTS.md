@@ -2229,7 +2229,10 @@ Embedding/vektör (P11), Jev veya başka dış model, web UI'a arama kutusu
 > INTEGER PK, item_id UNIQUE, …)` eşleme tablosu (rowid VACUUM'dan etkilenmez), FTS5
 > `rowid = search_docs.id`, trigger'lar (`workspace_items`/`standalone_pages`/`pages`,
 > `ı→i` replace), MATCH'e workspace token'ı kolonu (bm25 ağırlığı 0), 3 karakter altı
-> LIKE yolu. `0052` numarası boş.
+> LIKE yolu. `0052` numarası boş. **Kaldığı yer:** Hakan boş bir Turso dev DB açıp
+> bilgilerini repo kökündeki `.env.turso-dev` dosyasına `TURSO_DEV_DATABASE_URL` ve
+> `TURSO_DEV_AUTH_TOKEN` adlarıyla yazacak (gitignore'da). Sonra ilk iş FTS5 probu.
+> Aynı DB, P11'in Turso vektör kanıtında da kullanılır.
 >
 > **Öncesi → sonrası** (yerel `file:local.db`; sentetik 1.000 sayfa + 4×500 satır,
 > 3,39M karakter, 3.000 knowledge satırı; ölçüm sonrası silindi):
@@ -2267,9 +2270,14 @@ Embedding/vektör (P11), Jev veya başka dış model, web UI'a arama kutusu
 > olmadığı için yok.
 >
 > **Kapsam dışı ama ölçülen:** `prepare_context`'in kalan 9 round-trip'i en üst kavramın
-> `getRelatedPages` komşuluğundan geliyor (sıralı ~9 sorgu). Öneri: konu çözümü →
-> (parent ∥ children ∥ outgoing ∥ backlinks ∥ siblings) tek batch → `resolveMany` tek
-> batch, yani ~3 tur. Ayrı küçük bir iş; `get_related_pages` aracını da hızlandırır.
+> `getRelatedPages` komşuluğundan geliyordu. **Takip olarak yapıldı (2026-09-23):** konu,
+> iki parent adayı, children, outgoing, backlinks ve kardeşler artık tek `db.batch`;
+> bağlantı id'lerinin çözümü ikinci bir batch. Yerel DB'de eski kopyayla 383 vaka
+> karşılaştırıldı (6'sı bağlantılı fixture: üç id biçimi, yabancı workspace, kopuk link,
+> satır altındaki öğe). Hepsi birebir aynı ve aynı sırada. Round-trip çağrı başına
+> 7,1 → 1,0 (bağlantı varsa 2). `prepare_context` sıcak çağrısı artık 2–3 round-trip
+> (soğukta +1 corpus). MCP yolunda context-run kaydı için +2 sıralı sorgu kalıyor.
+> Müşterinin fark edeceği bir hız farkı olmadığı için changelog kaydı yok.
 > Web'de global arama kutusu hâlâ yok. Öneri: FTS ile birlikte ürün kararı olarak ele
 > alınsın. Bugünkü LIKE+GLOB tam tarama, her tuşa basışta çalışacak bir UI kutusu için
 > yeterince hızlı değil.
@@ -2694,7 +2702,27 @@ LIKE+GLOB katlaması yalnızca kod. `0052` numarası boş kaldı.
    `keywords` var mı; Türkçe büyük harfli bir başlığı (ör. "Çözüm …") `search_workspace`
    küçük harf ve Türkçe harfsiz ("cozum") buluyor mu; Türkçe bir görev + İngilizce
    `keywords` ile `prepare_context` doğru sayfayı döndürüyor mu.
-5. **Canlı kalibrasyon testi (deploy + CLI yayınından sonra, ertelendi):** gerçek bir
+5. **P10 — arama yavaşlamasını canlıda ölç (deploy'dan ~1 hafta sonra, salt okuma).**
+   `search_workspace` artık aksan katlıyor (LIKE ön-filtre + GLOB). Bunun maliyeti
+   yerelde en kötü ~16 → ~90 ms çıktı, ama o ölçüm yoğun sentetik veride yapıldı; gerçek
+   workspace boyutlarını bilmiyoruz. Her MCP çağrısının süresi zaten
+   `agent_activity.duration_ms`'te. Turso panelinin SQL konsolunda (salt okuma) şunu
+   çalıştır:
+   ```sql
+   SELECT tool, count(*) AS calls,
+          round(avg(duration_ms)) AS avg_ms, max(duration_ms) AS max_ms
+   FROM agent_activity
+   WHERE tool IN ('search_workspace', 'prepare_context')
+     AND duration_ms IS NOT NULL
+     AND created_at > unixepoch('now', '-7 days')
+   GROUP BY tool;
+   ```
+   Karar kuralı: `search_workspace` ortalaması ~150 ms'yi ya da en büyük değeri ~1 sn'yi
+   geçiyorsa FTS5'i (P10-D, `0052`) P11'den önce öne al. Altındaysa FTS5 P11 ile
+   birlikte gelsin. İkinci gerekçe maliyet: tam tarama her aramada workspace'in bütün
+   satırlarını okur ve Turso okunan satırı faturalar. Turso panelindeki "rows read"
+   grafiğinde arama kaynaklı bir sıçrama görülürse bu da FTS'i öne alma nedeni.
+6. **Canlı kalibrasyon testi (deploy + CLI yayınından sonra, ertelendi):** gerçek bir
    projede yayınlanmış CLI ile `npx remnus init` → yeni Claude Code oturumu → yalnızca
    `init`'in bastığı cümle. P9.5'in yerelde göremediği iki şeyi dener: yayınlanmış npm
    CLI'ı ve https üzerinde WebFetch (yerelde localhost'ta hata verdiği için ajan curl'e
