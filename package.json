@@ -17,6 +17,7 @@
     "sync:accessibility-widget": "node scripts/sync-accessibility-widget.mjs",
     "db:migrate": "npx tsx src/db/migrate.ts",
     "db:setup": "npx tsx src/db/setup.ts",
+    "db:drift": "npx tsx src/scripts/check-schema-drift.ts",
     "tauri": "tauri",
     "tauri:dev": "tauri dev",
     "tauri:build": "tauri build",

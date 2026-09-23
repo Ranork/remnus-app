@@ -23,8 +23,8 @@ Two kinds of things live in the workspace, side by side in one sidebar tree:
 
 So "a page" can mean a standalone page *or* a database row. Most read tools auto-detect which, so you rarely need to care — but when you create or update, the distinction matters (see below).
 
-Column types: `text` | `number` | `select` | `multi_select` | `date` | `datetime`.
-`multi_select` values are **arrays**; everything else is scalar.
+Column types: `text` | `number` | `select` | `multi_select` | `status` | `user` | `multi_user` | `date` | `datetime` | `checkbox` | `url` | `email` | `phone`.
+`multi_select` and `multi_user` values are **arrays**; `checkbox` is a boolean; `user`/`multi_user` hold workspace member ids (`list_members`); everything else is scalar. A `status` column's options can carry a `group` (`todo` | `in_progress` | `complete`).
 
 ## Tools at a glance
 

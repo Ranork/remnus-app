@@ -5,6 +5,7 @@ import { eq, and, isNull, desc, inArray, gte, sql } from 'drizzle-orm';
 import { getCurrentUser } from '@/lib/auth/session';
 import { getTranslations } from 'next-intl/server';
 import { checkCanAddAgent } from '@/lib/services/billing';
+import { activityVisibleIn, auditVisibleSinceMany } from '@/lib/services/auditRetention';
 import { captureServer, isCaptureAllowedFromRequest } from '@/lib/analytics/server';
 import { maybeSendAgentConnectedEmail } from '@/lib/email/lifecycle';
 import bcrypt from 'bcryptjs';
@@ -344,6 +345,15 @@ export async function getUserAgentTokens() {
 export async function getUserAgentActivity(count = 60) {
   const user = await getCurrentUser();
 
+  // Each workspace shows only its own plan's audit window (services/auditRetention.ts)
+  // — the user's workspaces can belong to different billing owners on different plans.
+  const memberOf = await db
+    .select({ workspaceId: workspaceMembers.workspaceId })
+    .from(workspaceMembers)
+    .where(eq(workspaceMembers.userId, user.id));
+  const visible = activityVisibleIn(await auditVisibleSinceMany(memberOf.map((m) => m.workspaceId)));
+  if (!visible) return [];
+
   // PAT rows join agent_tokens; OAuth rows (token_id null since migration 0034)
   // join oauth_access_tokens — coalesce so both kinds carry a label + brand id.
   return db
@@ -365,6 +375,7 @@ export async function getUserAgentActivity(count = 60) {
       eq(workspaceMembers.workspaceId, workspaces.id),
       eq(workspaceMembers.userId, user.id),
     ))
+    .where(visible)
     .orderBy(desc(agentActivity.createdAt))
     .limit(count);
 }

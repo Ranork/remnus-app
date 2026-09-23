@@ -3,6 +3,7 @@ import { agentActivity, agentTokens, databases, dashboards, oauthAccessTokens, p
 import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
 import type { DatabaseView } from '@/lib/types/views';
 import { applyFilters, applySorts, type FilterSpec, type SortSpec } from '@/lib/tableFilters';
+import { activityAtOrAfter, auditVisibleSince } from '@/lib/services/auditRetention';
 import {
   parseDashboardSpec,
   type ActivityBlock,
@@ -252,7 +253,8 @@ export async function resolveDashboard(workspaceId: string, rawSpec: unknown): P
       .from(agentActivity)
       .leftJoin(agentTokens, eq(agentActivity.tokenId, agentTokens.id))
       .leftJoin(oauthAccessTokens, eq(agentActivity.oauthTokenId, oauthAccessTokens.id))
-      .where(eq(agentActivity.workspaceId, workspaceId))
+      // Same audit window as the audit log itself (services/auditRetention.ts).
+      .where(and(eq(agentActivity.workspaceId, workspaceId), activityAtOrAfter(await auditVisibleSince(workspaceId))))
       .orderBy(desc(agentActivity.createdAt))
       .limit(activityLimit);
   }

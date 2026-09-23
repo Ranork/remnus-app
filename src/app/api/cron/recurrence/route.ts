@@ -25,6 +25,7 @@ import { recurrenceSeries } from '@/db/schema';
 import { defaultHorizon } from '@/lib/recurrence/rule';
 import { materializeSeries } from '@/lib/services/recurrence';
 import { purgeExpiredSnapshots, enforceWorkspaceSnapshotByteCaps } from '@/lib/services/snapshots';
+import { pruneAgentActivity } from '@/lib/services/auditRetention';
 
 /** Bounded so one run always finishes inside `maxDuration`. Series whose
  *  horizon is already far enough out are filtered in-process and cost nothing,
@@ -72,6 +73,10 @@ export async function GET(req: NextRequest) {
   // product-facing lifecycle jobs).
   const snapshotsPurged = await purgeExpiredSnapshots().catch(() => 0);
   const snapshotsEvictedByByteCap = await enforceWorkspaceSnapshotByteCaps().catch(() => 0);
+  // Audit-log hard limit (services/auditRetention.ts): the plan windows are enforced
+  // at read time; this only deletes what no plan can show any more, after carrying
+  // its savings into agent_savings_rollup. -1 = the prune failed (retried tomorrow).
+  const activityPruned = await pruneAgentActivity().then((r) => r.pruned).catch(() => -1);
 
   return NextResponse.json({
     ok: true,
@@ -82,5 +87,6 @@ export async function GET(req: NextRequest) {
     failed,
     snapshotsPurged,
     snapshotsEvictedByByteCap,
+    activityPruned,
   });
 }

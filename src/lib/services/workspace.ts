@@ -25,6 +25,7 @@ import { eq, ne, and, or, like, asc, desc, gte, lte, sql, inArray } from 'drizzl
 import { syncPageLinks, syncPageLinksBulk, removePageLinksFor, purgeReferencesTo } from './pageLinks';
 import { snapshotBeforeDelete, maybeSnapshotContentUpdate, type SnapshotActor } from './snapshots';
 import { recordGeneratedKnowledgeBulk, type KnowledgeMetadataInput } from './knowledge';
+import { activityAtOrAfter, auditVisibleSince } from './auditRetention';
 import { chunkRows } from './sqlChunk';
 import { computeChangeVersion } from './changeVersion';
 import { iconInputError } from '@/lib/icons';
@@ -134,7 +135,12 @@ export async function queryAuditLog(
   },
   limit = 50,
 ) {
-  const conditions = [eq(agentActivity.workspaceId, workspaceId)];
+  // The plan's audit window (services/auditRetention.ts); a `from` earlier than it
+  // simply finds nothing older.
+  const conditions = [
+    eq(agentActivity.workspaceId, workspaceId),
+    activityAtOrAfter(await auditVisibleSince(workspaceId)),
+  ];
 
   if (filters?.tool) conditions.push(eq(agentActivity.tool, filters.tool));
   if (filters?.status) conditions.push(eq(agentActivity.status, filters.status));

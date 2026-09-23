@@ -11,7 +11,7 @@
  */
 import { and, asc, eq, gte, inArray, isNotNull, sql, type SQL, type Column } from 'drizzle-orm';
 import { db } from '@/db';
-import { agentActivity, pages, workspaceItems } from '@/db/schema';
+import { agentActivity, agentSavingsRollup, pages, workspaceItems } from '@/db/schema';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -26,7 +26,7 @@ const DAY_MS = 24 * 60 * 60 * 1000;
  * oldest, most-worth-counting workspaces. `unixepoch()` reads the stored UTC
  * string, so this converts rather than guesses.
  */
-function asEpochSeconds(column: Column): SQL<number | null> {
+export function asEpochSeconds(column: Column): SQL<number | null> {
   return sql`(case when typeof(${column}) = 'integer' then ${column} else unixepoch(${column}) end)`;
 }
 
@@ -66,7 +66,7 @@ export async function getAgentMetrics(scope: AgentMetricsScope): Promise<AgentMe
   const since30 = new Date(Date.now() - 30 * DAY_MS);
   const since7 = new Date(Date.now() - 7 * DAY_MS);
 
-  const [savedRow, recalledRow, writeRow, recentRow, timedRow] = await Promise.all([
+  const [savedRow, recalledRow, writeRow, recentRow, timedRow, rolledUpRow] = await Promise.all([
     // Saved = baseline − what was actually sent, floored at zero: a call that
     // came out no cheaper contributes nothing, never a negative.
     db
@@ -123,6 +123,18 @@ export async function getAgentMetrics(scope: AgentMetricsScope): Promise<AgentMe
       .select({ n: sql<number>`cast(count(*) as int)` })
       .from(agentActivity)
       .where(and(where, gte(agentActivity.createdAt, since30), isNotNull(agentActivity.durationMs))),
+
+    // Savings of rows the retention prune already deleted (services/auditRetention.ts):
+    // without this the all-time counter would start shrinking once rows age out.
+    db
+      .select({
+        bytes: sql<number>`cast(coalesce(sum(${agentSavingsRollup.savedBytes}), 0) as int)`,
+        calls: sql<number>`cast(coalesce(sum(${agentSavingsRollup.savedCalls}), 0) as int)`,
+      })
+      .from(agentSavingsRollup)
+      .where('workspaceId' in scope
+        ? eq(agentSavingsRollup.workspaceId, scope.workspaceId)
+        : eq(agentSavingsRollup.ownerUserId, scope.ownerUserId)),
   ]);
 
   const timed = Number(timedRow[0]?.n ?? 0);
@@ -137,8 +149,8 @@ export async function getAgentMetrics(scope: AgentMetricsScope): Promise<AgentMe
     : null;
 
   return {
-    savedBytes: Number(savedRow[0]?.bytes ?? 0),
-    savedCalls: Number(savedRow[0]?.calls ?? 0),
+    savedBytes: Number(savedRow[0]?.bytes ?? 0) + Number(rolledUpRow[0]?.bytes ?? 0),
+    savedCalls: Number(savedRow[0]?.calls ?? 0) + Number(rolledUpRow[0]?.calls ?? 0),
     recalledItems: Number(recalledRow[0]?.n ?? 0),
     agentWrites: Number(writeRow[0]?.n ?? 0),
     p50Ms,

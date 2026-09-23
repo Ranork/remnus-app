@@ -7,6 +7,7 @@ import { logActivity, type TokenContext } from './context';
 import { analyzeKnowledgeHealth } from '@/lib/okf/health';
 import { getOkfWorkspaceSnapshot } from '@/lib/okf/workspaceSnapshot';
 import { renderDashboardCatalog } from '@/lib/dashboard/catalog';
+import { activityAtOrAfter, auditVisibleSince } from '@/lib/services/auditRetention';
 
 export function registerResources(server: McpServer, ctx: TokenContext) {
   const knowledgeHealthTemplate = new ResourceTemplate('remnus://workspace/{id}/knowledge-health', {
@@ -220,13 +221,17 @@ export function registerResources(server: McpServer, ctx: TokenContext) {
     'remnus://audit-log/recent',
     { mimeType: 'application/json', description: 'Get recent audit activity for the current MCP token' },
     async (uri) => {
-      // PAT and OAuth activity live in different FK columns (migration 0034).
+      // PAT and OAuth activity live in different FK columns (migration 0034). Rows
+      // older than the plan's audit window stay hidden (services/auditRetention.ts).
       const logs = await db
         .select()
         .from(agentActivity)
-        .where(ctx.tokenKind === 'pat'
-          ? eq(agentActivity.tokenId, ctx.tokenId)
-          : eq(agentActivity.oauthTokenId, ctx.tokenId))
+        .where(and(
+          ctx.tokenKind === 'pat'
+            ? eq(agentActivity.tokenId, ctx.tokenId)
+            : eq(agentActivity.oauthTokenId, ctx.tokenId),
+          activityAtOrAfter(await auditVisibleSince(ctx.workspaceId)),
+        ))
         .orderBy(desc(agentActivity.createdAt))
         .limit(50);
       return { contents: [{ uri: uri.href, mimeType: 'application/json', text: JSON.stringify(logs) }] };

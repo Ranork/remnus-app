@@ -129,7 +129,9 @@ The reference an agent reads before [`create_dashboard`](write-tools.md#create_d
 
 ## remnus://audit-log/recent
 
-Get the 50 most recent audit log entries for the current MCP token.
+Get the 50 most recent audit log entries for the current MCP token, within the
+workspace plan's audit retention window (the same one
+[`query_audit_log`](read-tools.md#query_audit_log) uses).
 
 **URI** — `remnus://audit-log/recent`
 

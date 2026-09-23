@@ -29,6 +29,7 @@ There is still no general unit/integration/e2e test runner or `test` script — 
 ```powershell
 npx drizzle-kit generate          # Generate migration SQL from schema changes
 npm run db:migrate                # Custom migration runner
+npm run db:drift                  # READ-ONLY: schema.ts vs target DB (tables/columns/indexes); plain = Turso (.env), DATABASE_URL="file:local.db" = local. Run before every deploy.
 npm run db:setup                  # Explicit database setup task
 ```
 

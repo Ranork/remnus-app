@@ -45,6 +45,31 @@ const FIRST_VISIT_WINDOW_DAYS = 7;
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-09-23-audit-retention',
+    date: '2026-09-23',
+    category: 'improved',
+    title: {
+      en: 'Activity history that follows your plan',
+      tr: 'Planınıza göre işleyen etkinlik geçmişi',
+      de: 'Aktivitätsverlauf passend zu Ihrem Tarif',
+      es: 'Historial de actividad según tu plan',
+      fr: 'Un historique d\'activité adapté à votre offre',
+      hi: 'आपके प्लान के अनुसार गतिविधि इतिहास',
+      ru: 'История активности по вашему тарифу',
+      zh: '按套餐保留的活动记录',
+    },
+    summary: {
+      en: 'Your agents\' activity log now keeps the history your plan includes, from 7 days on Free up to a full year on Enterprise, and upgrading shows your older history right away.',
+      tr: 'Ajanlarınızın etkinlik kaydı artık planınızın kapsadığı geçmişi tutuyor; Ücretsiz planda 7 günden Enterprise planda bir yıla kadar, ve planınızı yükselttiğinizde eski kayıtlarınız hemen görünür.',
+      de: 'Das Aktivitätsprotokoll Ihrer Agenten umfasst jetzt den Verlauf, den Ihr Tarif enthält, von 7 Tagen im Free-Tarif bis zu einem ganzen Jahr bei Enterprise, und nach einem Upgrade sehen Sie Ihren älteren Verlauf sofort.',
+      es: 'El registro de actividad de tus agentes ahora conserva el historial que incluye tu plan, desde 7 días en Free hasta un año completo en Enterprise, y al mejorar tu plan verás tu historial anterior al instante.',
+      fr: 'Le journal d\'activité de vos agents conserve désormais l\'historique inclus dans votre offre, de 7 jours en Free jusqu\'à un an en Enterprise, et votre historique plus ancien réapparaît dès que vous passez à une offre supérieure.',
+      hi: 'आपके एजेंटों का गतिविधि लॉग अब उतना इतिहास रखता है जितना आपके प्लान में शामिल है, Free पर 7 दिन से लेकर Enterprise पर पूरे एक साल तक, और प्लान अपग्रेड करते ही आपका पुराना इतिहास तुरंत दिखने लगता है।',
+      ru: 'Журнал активности ваших агентов теперь хранит историю, которую включает ваш тариф, от 7 дней на Free до целого года на Enterprise, а после перехода на более высокий тариф старые записи сразу снова видны.',
+      zh: '智能体的活动日志现在会保留你的套餐所包含的历史记录，从免费版的 7 天到企业版的整整一年，升级套餐后更早的记录会立即重新显示。',
+    },
+  },
+  {
     id: '2026-09-23-calibration-playbooks',
     date: '2026-09-23',
     category: 'new',

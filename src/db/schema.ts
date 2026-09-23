@@ -485,6 +485,24 @@ export const agentActivity = sqliteTable('agent_activity', {
   index('agent_activity_owner_created_idx').on(table.ownerUserId, table.createdAt),
 ]);
 
+// Savings carried over from `agent_activity` rows that retention deleted (older than
+// AUDIT_HARD_RETENTION_DAYS, services/auditRetention.ts). getAgentMetrics adds these to
+// the live rows, so the all-time "tokens saved" counter never shrinks when old rows go.
+// One row per (workspace, token owner), upserted by the nightly prune in the same batch
+// that deletes the rows it summarizes. `owner_user_id` is SET NULL with the user (GDPR,
+// like agent_activity's); a NULL owner still counts toward its workspace. Migration 0051.
+export const agentSavingsRollup = sqliteTable('agent_savings_rollup', {
+  id:          text('id').primaryKey().$defaultFn(() => crypto.randomUUID()),
+  workspaceId: text('workspace_id').notNull(),
+  ownerUserId: text('owner_user_id').references(() => users.id, { onDelete: 'set null' }),
+  savedBytes:  integer('saved_bytes').notNull(),
+  savedCalls:  integer('saved_calls').notNull(),
+  updatedAt:   integer('updated_at', { mode: 'timestamp' }).notNull(),
+}, (table) => [
+  uniqueIndex('agent_savings_rollup_ws_owner_idx').on(table.workspaceId, table.ownerUserId),
+  index('agent_savings_rollup_owner_idx').on(table.ownerUserId),
+]);
+
 // Subscription — bound to the paying user (billing owner), NOT a workspace.
 // Covers all workspaces where `workspaces.billing_owner_id = owner_user_id`.
 // No row = implicit Free plan. Migration 0027.

@@ -180,6 +180,10 @@ List all members of the workspace with their roles and join dates.
 
 Query the MCP agent activity audit log for the current workspace.
 
+The log reaches back as far as the workspace owner's plan keeps it — 7 days on Free,
+30 on Startup, 90 on Professional, 365 on Enterprise. An earlier `from` finds nothing
+older; upgrading the plan makes the older history visible again right away.
+
 **Parameters**
 
 | Parameter | Type | Required | Default | Description |
