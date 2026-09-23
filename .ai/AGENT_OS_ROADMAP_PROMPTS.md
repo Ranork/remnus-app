@@ -2,8 +2,9 @@
 
 Hazırlanma tarihi: 2026-09-21. Kaynak: Hakan'ın 10 maddelik geliştirme listesi.
 
-Bu dosya, geliştirme isteklerini **9 ayrı chat oturumuna** böler. Her `P#` bloğu
-kendi başına yeterlidir. Promptlar sıralıdır — bağımlılıklar aşağıdaki tabloda.
+Bu dosya, geliştirme isteklerini **13 ayrı chat oturumuna** böler (P10–P13,
+2026-09-23'teki Jev/graph araştırmasından sonra eklendi). Her `P#` bloğu kendi
+başına yeterlidir. Promptlar sıralıdır — bağımlılıklar aşağıdaki tabloda.
 
 **Nasıl çalıştırılır:** Yeni bir chat aç ve şunu yaz (yalnızca numarayı değiştir):
 
@@ -35,9 +36,14 @@ Aklında bulunsun istediğin her şey için gidip internetten araştırma yapabi
 | P7  | Dashboard'ların MCP ile yönetimi                                    | 1                     | P6'nın şemasına doğrudan bağımlı, ondan önce başlanamaz.                                                                                      |
 | P8  | Calibrate v2 (Serena ve benzerlerinden öğrenme)                     | 5                     | Artık dashboard önerebilir, hızlı bulk kullanabilir, yerel haritayı yazabilir.                                                                |
 | P9  | Proje tipi playbook'ları                                            | 3                     | P8'in iskeletine takılan içerik katmanı.                                                                                                      |
+| P10 | Bulma temeli: harf katlama, `keywords`, tek turda corpus, FTS5      | 2026-09-23 araştırması | Jev'den önce bulma katmanı. Dış servis/paket yok, ölçülebilir; Türkçe görevlerde `prepare_context` bugün 0 sonuç dönüyor.                     |
+| P11 | Anlamsal bulma: embedding + Turso vektör + hibrit sıralama          | 2026-09-23 araştırması | P10'un FTS5'ine ve regresyon setine dayanır. İlk dış servis (embedding) → sağlayıcı kararı Hakan'ın.                                          |
+| P12 | Remnus Graph: bilgi haritası (Obsidian kopyası değil)               | 2026-09-23 isteği     | Bağımsız başlayabilir; P10'un harf katlaması bahsedilme katmanını iyileştirir.                                                                |
+| P13 | Proje haritası: kod katmanı + graph'ın ajan tarafı                  | 2026-09-23 isteği     | P12'nin graph servisine bağımlı; P8'in calibrate'te yazdığı `knowledge.sources` bu işin yakıtı.                                               |
 
-Tek katı bağımlılık P6 → P7. Gerisi sırayı bozmadan gitmeli ama zorunluluk
-değil; bir adımı atlarsan sonraki adımın o adıma yaptığı atıflar boşa düşer.
+Katı bağımlılıklar: P6 → P7, P10 → P11, P12 → P13. Gerisi sırayı bozmadan
+gitmeli ama zorunluluk değil; bir adımı atlarsan sonraki adımın o adıma yaptığı
+atıflar boşa düşer.
 
 ---
 
@@ -1555,6 +1561,40 @@ ve doküman içeriği İngilizce kalır.
 - `scripts/ai/update-handoff.ps1`. Commit/push yok.
 ```
 
+> **✅ Tamamlandı — 2026-09-23 (Claude).** Commit yok; değişiklikler working tree'de.
+>
+> **Koddan doğrulanıp prompttan sapan iddialar:** `src/lib/mcp/deeplinks.ts` uygulama-içi URL
+> deseni içermiyor (yalnız editör bağlantı builder'ları) → deep link için `TokenContext.appOrigin`
+> + `appUrl()` eklendi (`src/app/api/mcp/context.ts`, origin `runMcpRequest`'te istekten). P1'deki
+> "doğru canlılık yolu" `workspace_items.updated_at` → `changeVersion`; `publish()` artık yok. P6'nın
+> dashboards.md taslağı `WIKI_PAGES` dışındaydı → yeniden yazılıp **görünür** sayfa olarak eklendi.
+> `schema.ts` **değiştirilmedi**.
+>
+> **Yapılanlar:** Tek yazma yolu `src/lib/services/dashboards.ts` (MCP + web aksiyonları): yalnız
+> dokunulan bloklar doğrulanır, öğretici hatalar (geçersiz tip → geçerli tipler; bilinmeyen alan →
+> tipin alanları; eksik alan → beklenen), isim→id normalizasyonu (kolon adı, select değeri harf
+> düzeltme, database item id, view adı), ham spec metni üzerinde compare-and-swap, yazımdan sonra
+> `resolveDashboard` ile `warnings`. MCP: `create_dashboard`, `update_dashboard` (add / update-merge /
+> remove / order + başlık/ikon, hep-ya-hiç), `remnus://dashboard/catalog` resource'u (alan imzaları
+> `z.toJSONSchema` ile zod'dan türetilir, 3 şablon: project-status, backlog-health, weekly-pulse).
+> `get_page` dashboard'u `spec` nesnesi + `url` olarak döndürür (ayrı okuma tool'u yok), outline =
+> blok listesi; `delete_page` değişmeden çalışıyor (önizleme/onay doğrulandı). İnsan tarafı: blok
+> ekle + blok ayarlarını düzenle çekmecesi (`DashboardBlockEditor`), 8 locale. Dokümanlar, sayılar
+> (27 tool / 7 resource), changelog, AGENTS.md, Serena `core`/`conventions` güncel.
+>
+> **Karar/sapmalar:** `create_dashboard`'da `parentRef` yok (ref'ler yalnız bulk çağrı içinde
+> çözülür; `parentId` bir sayfa olmalı). Olmayan/başka workspace'in database'i → ret (aynı mesaj);
+> kolon/değer sorunları ve boş sonuç → uyarı.
+>
+> **Doğrulama:** tsc + hedefli lint temiz. Gerçek HTTP MCP istemcisiyle (SDK Streamable HTTP, yerel
+> PAT) yarat → ekle → güncelle → sil adımlarının her biri tarayıcıda canlı yenilemeyle görüldü
+> (Playwright). Hata yolları: geçersiz tip, olmayan databaseId, başka workspace'in database'i,
+> read-scope token — hepsi reddedildi. 6 eşzamanlı yama kayıpsız. Token (bytes/4): tipik 6 bloklu
+> dashboard ≈ 1.086 B ≈ **272 token**; iki tool write-scope oturuma ≈ 555 token ekler, read-scope'a 0;
+> katalog ≈ 1.540 token ve yalnız dashboard kuran oturum okur. Claude Code `/mcp` ile canlı bağlantı
+> bu oturumda mümkün değildi (remnus MCP bağlı değil); yerine aynı SDK istemcisi gerçek HTTP'yle
+> kullanıldı. Yerel test verisi temizlendi. Turso'ya `0050` migration'ı hâlâ uygulanmadı (P6'dan).
+
 ---
 
 # P8 — Calibrate v2: başkalarının onboarding tasarımından öğrenmek
@@ -1636,6 +1676,15 @@ değiştirmeli):
    - Dashboard sayfa tipi → "proje için bir durum ekranı kur"; hangi projede
      hangi dashboard anlamlı, kısa ve somut anlat.
    - Yerel workspace haritası → calibrate bitince tazelensin.
+   - **Knowledge metadata (2026-09-23 eki).** Kavram sayfaları yaratılırken
+     write tool'larının `knowledge` alanı (`KNOWLEDGE_INPUT`,
+     `src/app/api/mcp/tools/write.ts`) doldurulsun: `tags` (workspace'in
+     dilinde **ve** İngilizce teknik karşılığı — ör. "davet", "invitation"),
+     `sources` (kavramın dayandığı depo-göreli dosya yolları — ör.
+     `src/auth.ts`), `conceptType`. Bugün yerel DB'de `knowledge_metadata`
+     **0 satır**. P10 (bulma — etiketler `prepare_context`'te 2.5× ağırlıklı),
+     P12 (graph etiket katmanı) ve P13 (sayfa ↔ kod dosyası) bu alanlardan
+     beslenir. Rehber maliyetini gözet: tek kısa kural + bir örnek yeter.
 5. **Rehberin kendi maliyeti.** Metni yazdıktan sonra token olarak ölç ve
    raporla. Mevcut rehber ~3000 token civarında; yeni hali bunu **çok**
    aşmamalı. Uzunluk kaliteyi garanti etmiyor; her paragrafın ajanın davranışını
@@ -1683,6 +1732,9 @@ playbook varsa onu da oku" adımı ve boş bir indeks yeri.
   `docs/mcp/project-install.md` tablosunu birlikte güncelle.
 - `scripts/ai/update-handoff.ps1`. Commit/push yok.
 ```
+
+> **✅ Tamamlandı — 2026-09-23** (P9 ile aynı oturumda). Ayrıntılı özet P9'un sonundaki
+> notta.
 
 ---
 
@@ -1780,6 +1832,565 @@ başlangıç (kanıtın varsa değiştir):
 - `AGENTS.md` + Serena memory: playbook sisteminin yeri ve genişletme kuralı.
 - `scripts/ai/update-handoff.ps1`. Commit/push yok.
 ```
+
+> **✅ P8 + P9 tamamlandı — 2026-09-23** (tek oturum, commit yok). Gerçekte yapılanlar:
+>
+> - **Araştırma:** Serena'nın gerçek prompt'ları yerel uv önbelleğinden okundu (0.1.4:
+>   onboarding + `think_about_*` öz-denetim + `prepare_for_new_conversation`; 1.3.1'de yalnız
+>   onboarding kalmış). Ayrıca yerel `claude-project-onboarding` skill'i, `skills/remnus/SKILL.md`;
+>   web'den Cline Memory Bank, Aider repo-map (`--map-tokens`, varsayılan 1k), Claude Code
+>   memory/`/init` dokümanı, agents.md, Cursor rules. Claude Code `/init`'in iç prompt metni
+>   doğrulanamadı; yalnız dokümandaki davranışı kullanıldı.
+> - **Rehber v2** (`docs/mcp/calibrate.md`, "Guide version: 2"): 16,2 KB ≈ 4.055 token →
+>   12,0 KB ≈ 3.000 token. Eklenenler: araç-yok durumu en başta, "şunu yaparsan başarısız"
+>   listesi, workspace'te **Calibration Log** (kurmadan önce plan, işaretli adım listesi =
+>   kesilince devam noktası), playbook kancası, `knowledge` etiket kuralı + örnek, dashboard
+>   kuralı, 7 maddelik ölçülebilir bitiş kontrolü, insana ne zaman sorulacağı, "Running it
+>   again" (yalnız genişlet; üzerine yazma/silme yok; log yoksa v1). Strict mod için
+>   `CONTEXT_REQUIRED` notu eklendi.
+> - **Kod doğrulaması sonucu küçük kod değişikliği:** `knowledge` alanı `bulk_create_pages`'te
+>   yoktu (rehber satırları bulk ile yazdırıyor, `prepare_context` etiketleri satır bazında
+>   puanlıyor). Bulk girdisine alt küme eklendi (`conceptType`/`tags`/`sources`); maliyet
+>   write oturumlarında ≈ +92 token. Ayrıca `rewriteLinks` alt klasör linklerini çözüyor.
+>   `search_workspace` etiketleri okumuyor — rehber buna göre yazıldı.
+> - **Akış:** `agents-section.md` yarım kalmış logu devam ettirir; `init` çıktısı ajana
+>   yapıştırılacak cümleyi veriyor; `.remnus/config.json`'a ajanın yazdığı `calibratedAt` +
+>   `calibrationGuide` (CLI şeması değişmedi, `sync` alanları koruyor); project-install /
+>   project-join güncellendi.
+> - **Playbook'lar:** indeks `/wiki/playbooks` (görünür, sitemap'te) + web-app, api-service,
+>   game (mod/sunucu eklentisi dahil), data-ml, library-sdk (`hidden`); her biri 707–896
+>   token. Mobil ilk turda bilinçli atlandı. Kolon tipleri `SchemaColumn`'dan, dashboard
+>   blokları katalogdan doğrulandı.
+> - **Rehberi uygulama testi:** `Skyblock-Quests` (Hytale modu) üzerinde salt-okuma kuru
+>   çalıştırma → 4 boşluk bulundu ve kapatıldı (agent dosyaları `.serena/.clinerules`,
+>   dil seçimi, fix commit = gotcha, mod'lar için oyun sinyalleri + Quests kavramı).
+> - Changelog 2 kayıt (8 locale), `AGENTS.md` Project Install §7, Serena `core`/`conventions`.
+>   Doğrulama: tsc temiz, eslint 0 hata, bench ölçümü, yerel DB'de MCP uçtan uca test
+>   (temizlendi), dev server'da tüm sayfalar/linkler. Açık kalan: yeni CLI sürümü yayınlanmadan
+>   `agents-section`/`init` metni projelere ulaşmaz.
+
+---
+
+# P10 — Bulma temeli: harf katlama, `keywords`, tek turda corpus, FTS5 arama
+
+> 2026-09-23 araştırmasından ("Jev MCP'yi hızlandırır mı?" → "önce bulma
+> katmanı"). Tahmini kapsam: orta-büyük, backend. Dış servis ve paket yok.
+> P8'in calibrate'e eklediği `knowledge` metadata'sı bu işin etkisini büyütür.
+
+````text
+Remnus projesinde çalışıyorsun. Önce `AI.md`'yi, `AGENTS.md` içindeki "Database
+Tables", "Performance Rules" ve "Critical conventions" bölümlerini, ayrıca
+`docs/mcp/context-first.md` ile `docs/mcp/read-tools.md` dosyalarını oku. Serena
+varsa `core` + `conventions` memory'lerini oku. `git status --short` ile başla.
+
+## Neden bu iş var
+
+2026-09-23'te "Jev gibi hızlı bir karar modeli (TypeSafe AI) MCP'yi hızlandırır
+mı?" sorusu araştırıldı. Sonuç: Jev yalnızca önüne konan adayları sıralar; bizim
+sorunumuz sıralama değil **bulma**. Karar: Jev şimdilik yok (bkz. dosyanın
+sonundaki "Ertelenen — Jev" notu); önce bu görev, sonra anlamsal bulma (P11).
+
+## Doğrulanmış bulgular (2026-09-23 — uygulamadan önce koddan tekrar doğrula)
+
+1. **`prepare_context` yalnız sözcük eşleşmesiyle çalışıyor.**
+   `src/lib/services/contextPack.ts` → `tokenize` + `rankCorpus`. `bench:context`
+   fixture'ının kopyasıyla denendi: İngilizce görev bulundu; "Davetlere
+   görüntüleyici rolü ekle", "Abonelik koltuk limitlerini uygula", "Kullanıcı
+   oturum açma güvenliğini düzelt" → **0 kavram**; "Stop sending mail to people
+   who opted out" → 0 ("mail" ile "email" `termFrequency`'nin önek kuralına
+   takılmıyor).
+2. **`tokenize` İngilizce büyük "I" harfini bozuyor.** `toLocaleLowerCase('tr-TR')`
+   "Invites" → "ınvites", "API" → "apı", "Integration" → "ıntegration" yapıyor
+   (noktasız ı). Görevde küçük harfle "invites"/"api" yazılırsa **eşleşmiyor** —
+   İngilizce bir workspace'te "I" harfi içeren her büyük harfli başlık bugün
+   kısmen kör.
+3. **`listKnowledgeCorpus` (`src/lib/services/knowledge.ts` ~426) her
+   `prepare_context` çağrısında workspace'in tüm sayfa + satır gövdelerini 4
+   sıralı sorguyla çekiyor**, sonra `rankCorpus` tüm corpus'u her seferinde
+   yeniden tokenize ediyor. Diğer çağıran: `src/lib/okf/workspaceSnapshot.ts`.
+   MCP fonksiyonu `vercel.json`'da 256 MB bellekle sınırlı.
+4. **`searchWorkspace` (`src/lib/services/workspace.ts` ~190) `LIKE '%q%'`
+   kullanıyor.** SQLite `LIKE` yalnız ASCII'de büyük/küçük harf katlıyor —
+   doğrulandı: "çözüm" → "Çözüm Notları"nı, "istanbul" → "İstanbul Ofisi"ni
+   **bulmuyor**. Sıralama yok (`sortOrder`), tam tarama. Kullanıcıları yalnız
+   MCP: `tools/read.ts` (`search_workspace`) ve `prompts.ts` (2 yer). Web
+   uygulamasında global arama yok.
+5. **FTS5 yerelde çalışıyor.** `@libsql/client` 0.17.3 / SQLite 3.45.1, bellek
+   içi DB: `tokenize="unicode61 remove_diacritics 2"` ile "çözüm"/"cozum"/
+   "ÇÖZÜM" ve "istanbul"/"İstanbul" eşleşti, önek (`guven*`) çalıştı,
+   parametreli `batch` insert ve trigger ile senkron çalıştı.
+   **Turso'da doğrulanmadı:** Turso dokümanı FTS5'in libSQL veritabanlarında
+   yerleşik olduğunu söylüyor, ama (a) `tursodatabase/libsql#1811` (açık): TS
+   istemcisi FTS5 tablosuna batch insert'te panic — uzak DB'de raporlanmış;
+   (b) yeni `tursodb` (MVCC) veritabanları FTS index modüllerini desteklemiyor.
+   Prod veritabanının hangi motor olduğunu Hakan'dan/Turso panelinden doğrula
+   (`.env`'yi okuma).
+6. **Change-version knowledge tablolarını izlemiyor.**
+   `src/lib/services/changeVersion.ts` item/sayfa/database/satır/tombstone
+   maksimumlarından hesaplanıyor; `knowledge_metadata` ve `knowledge_reviews`
+   dahil değil. Bir insanın "reviewed" işaretlemesi cursor'ı oynatmaz.
+
+## Kural: önce ölç
+
+Scratchpad'e (repo'ya değil) ölçüm yaz, **yalnız `file:local.db`** ile
+(`DATABASE_URL="file:local.db"`; `@/db` import eden script'te ilk import
+`dotenv/config`; hedefi ekrana yazdır):
+- Bulma kalitesi: `bench:context`'i genişlet (E) ve öncesi/sonrası isabet
+  tablosu üret.
+- Hız: 1.000 sayfa + 2.000 satırlık sentetik bir workspace'te `prepare_context`
+  ve `search_workspace` için round-trip sayısı ve ms. Sentetik veriyi yalnız
+  yerel DB'ye yaz, iş bitince sil.
+
+## Yapılacak iş
+
+### A. Harf katlamayı düzelt (en küçük, en yüksek getirili)
+
+Tek bir `foldText()` yardımcı fonksiyonu yaz ve **hem görev hem corpus** için
+kullan: dilden bağımsız küçük harf, NFKD + birleşik işaretleri at (`\p{M}`),
+`ı`→`i`. Böylece "Çözüm"≡"cozum", "Invites"≡"invites", "İstanbul"≡"istanbul".
+FTS5'in `remove_diacritics 2` katlamasıyla aynı sonucu hedefle ki iki katman
+aynı şeyi eşleştirsin. `STOP_WORDS`'ü de bu katlamadan geçir ("için"/"icin"
+ikilisi gereksizleşir).
+
+### B. Ajan tarafı sorgu genişletme (`keywords`)
+
+Çağıran ajan zaten güçlü bir LLM; eşanlamlıyı ve çeviriyi o üretsin, sunucu
+sıralasın.
+- `prepare_context` input'una opsiyonel `keywords: string[]` ekle (üst sınır
+  koy, ör. 24 × 60 karakter). Açıklama tek cümle, ör.: "Extra terms: synonyms
+  and the workspace's own language (e.g. English terms for a Turkish task)".
+- `rankCorpus`: terimler = görev ∪ keywords. Keyword'lere ayrı ağırlık verip
+  vermemeye ölçerek karar ver.
+- Ajan talimatı: sunucu `instructions` (`handler.ts` → `buildInstructions`),
+  `cli/templates/agents-section.md`, `skills/remnus/SKILL.md`,
+  `docs/mcp/context-first.md` aynı kısa kuralı söylesin. P4'ün token diyetine
+  uy: `npm run bench:mcp-budget` öncesi/sonrası; eklenen yük ~60 token'ı
+  geçmesin.
+
+### C. Corpus: tek round-trip + önbellek
+
+1. `listKnowledgeCorpus` içindeki 4 sıralı sorguyu `db.batch` ile tek ağ turuna
+   indir (P3 deseni; `AGENTS.md` → "Bulk write path").
+2. Corpus'u ve tokenize edilmiş halini süreç içi, boyutu sınırlı bir önbellekte
+   tut (LRU; 256 MB'lık fonksiyonun küçük bir kesri). Anahtar: `workspaceId` +
+   change cursor (`getChangeHeadCursor`) **+ knowledge tablolarının kendi
+   maksimumu** (bulgu 6). Alternatif: knowledge tablolarını
+   `computeChangeVersion`'a eklemek — canlı UI yoklamasına maliyetini ölçüp
+   karar ver, gerekçelendir. Serverless'ta önbellek best-effort'tur; doğruluk
+   anahtardan gelir.
+3. OKF snapshot yolunun davranışı değişmemeli.
+
+### D. `search_workspace` için FTS5
+
+1. **Önce Turso'da kanıtla, sonra tasarla.** Prod'a dokunmadan: Hakan'dan bir
+   dev/branch Turso veritabanı iste ve orada FTS5 tablosu + `db.batch` ile
+   parametreli insert + trigger + `MATCH` dene. #1811 tekrar ediyorsa trigger
+   yolunun (insert'i sunucu yapar) istemci batch'inden etkilenmediğini ayrıca
+   test et. Sonucu raporla. Turso'da çalışmıyorsa D'yi yapma; A–C ile bitir ve
+   nedenini yaz.
+2. Tasarım kararları (gerekçeleriyle raporla):
+   - **Senkron: trigger mı, uygulama kodu mu?** Trigger her yazma yolunu yakalar
+     (web action, MCP, bulk, seed, çöp kutusu/snapshot geri yükleme, import);
+     uygulama kodu `syncPageLinks` gibi bir yerde unutulabilir. Tercih trigger.
+   - **rowid tuzağı:** kaynak tablolar TEXT PK'li; örtük rowid `VACUUM` ile
+     değişebilir → kaynak rowid'ine bağlı external-content FTS kullanma.
+     `UNINDEXED item_id` kolonuyla silmek de FTS tablosunu tam tarar — ölçek
+     için kararlı bir INTEGER anahtar/eşleme tablosu düşün.
+   - Kapsam: standalone sayfa başlığı `workspace_items.title`'da, gövdesi
+     `standalone_pages.content`'te; satırlar `pages`'te; database adları da
+     aranabilir olmalı. `workspace_id` filtre kolonu.
+   - Tokenizer: `unicode61 remove_diacritics 2` + her terime önek `*` (alt-dize
+     davranışının çoğunu korur). Gerçek alt-dize gerekiyorsa `trigram`'ı
+     ölçerek değerlendir (daha büyük index).
+3. Sorgu: kullanıcı metninden güvenli FTS5 sorgusu kur (tırnak/operatör kaçışı);
+   FTS hatasında veya 3 karakterden kısa sorguda eski `LIKE` yoluna düş.
+   `bm25()` ile başlık ağırlıklı sırala, `snippet()` ile özet çıkar. Çıktı
+   şeması aynı kalsın; tool açıklamasındaki "substring" ifadesini gerçeğe göre
+   düzelt.
+4. Migration: sıradaki boş numara, `_journal.json` dışı apply script deseni
+   (`src/db/apply-00XX-*.ts`), idempotent, hedefi ekrana yazan; ayrıca
+   backfill. Önce yalnız yerele uygula.
+5. `prepare_context` için FTS'i birinci aşama yapmayı (top-N aday → yalnız
+   onların gövdesini oku → mevcut güven/tazelik skoru) C'deki önbellekle
+   **ölçerek** karşılaştır. Büyük workspace'te C yetmiyorsa bu yolu seç.
+
+### E. Regresyon seti
+
+`src/scripts/benchmark-context-pack.ts`'ye iki grup ekle: `mustHit` (assert
+edilir) ve `tracked` (isabet oranı raporlanır, assert edilmez). Türkçe görevler,
+eşanlamlı ("mail"/"email") ve büyük-I vakaları `tracked`'a; A+B ile çözülenleri
+`mustHit`'e taşı. Kalanları P11 taşıyacak.
+
+## Kapsam dışı
+
+Embedding/vektör (P11), Jev veya başka dış model, web UI'a arama kutusu
+(ayrı ürün kararı — değerli bulursan öneri olarak yaz).
+
+## Doğrulama
+
+1. `npm run lint -- <paths>`, `npx tsc --noEmit`, `npm run bench:context`.
+2. Öncesi/sonrası tablo: isabet, round-trip, ms, token (`bench:mcp-budget`).
+3. Gerçek MCP istemcisiyle uçtan uca: Türkçe bir görevle `prepare_context`
+   (keywords'lü ve keywords'süz); Türkçe büyük harfli bir başlığı ("Çözüm …")
+   `search_workspace` ile küçük harfle bul.
+4. Trigger'lar: web'de sayfa düzenle / sil / çöp kutusundan geri al → arama
+   sonucu doğru mu?
+
+## Bitirirken
+
+- Kullanıcı fark eder (ajanlar Türkçe görevlerde doğru sayfayı buluyor, arama
+  Türkçe harflerde çalışıyor) → `src/lib/changelog.ts` başına kayıt
+  (`improved`; harf hatası ayrı yazılacaksa `fixed`), tek cümle, 8 locale.
+- `AGENTS.md` (arama/bağlam, yeni migration, trigger invariant'ı) + Serena
+  `core`/`conventions`; `docs/mcp/read-tools.md`, `docs/mcp/context-first.md`.
+- Yeni migration'ı bu dosyanın sonundaki "Deploy öncesi" tablosuna ekle.
+- `scripts/ai/update-handoff.ps1`. Commit/push yok.
+````
+
+---
+
+# P11 — Anlamsal bulma: embedding + Turso vektör + hibrit sıralama
+
+> 2026-09-23 araştırmasının 2. adımı. P10'a bağımlı (FTS5 + regresyon seti).
+> Kullanıcı içeriğini üçüncü tarafa gönderen ilk özellik → sağlayıcı kararı Hakan'ın.
+
+````text
+Remnus projesinde çalışıyorsun. Önce `AI.md`, `AGENTS.md` (P10'da yazılan
+arama/bağlam bölümü dahil), `docs/mcp/context-first.md` ve bu dosyadaki P10
+bölümünün **"Tamamlandı" notunu** oku (P10 promptunun kendisini değil). Serena
+varsa `core` + `conventions`. `git status --short` ile başla.
+
+## Amaç
+
+P10 sonrası kalan açık: aynı kelimeyi paylaşmayan ama aynı şeyi anlatan görev
+ve sayfalar (Türkçe görev ↔ İngilizce sayfa; "kullanıcıyı her yerden çıkar" ↔
+"session revoke"). Hedef: P10'un `tracked` vakalarının tamamı `mustHit`'e
+geçsin; mevcut `mustHit`'lerde gerileme olmasın.
+
+## Önce karar: sağlayıcı (kod yazmadan Hakan'a sor)
+
+Seçenekleri fiyat / gizlilik / kalite ile özetle ve **Hakan'a sor**; onaysız
+uygulama:
+- Vercel AI Gateway üzerinden (uygulama zaten Vercel'de; tek anahtar,
+  sağlayıcı değiştirmek kolay): `voyage-4-lite` (~$0.02/1M token), `voyage-4`
+  (~$0.06/1M), `text-embedding-3-small` (~$0.02/1M). Bunlar 2026-09-23
+  fiyatları — güncelini doğrula.
+- Doğrudan sağlayıcı API'si.
+- Self-host (BGE-M3 vb.) — serverless'ta pratik değil; Docker self-host için
+  not düş.
+Paket kurma: `fetch` ile REST yeterli. Anahtarı yalnız env değişken adıyla an.
+Anahtar yoksa özellik **kapalı** ve her şey P10 davranışına düşer — self-host
+kurulumlar bozulmamalı. Gizlilik: gizlilik sayfasındaki üçüncü taraf işleyici
+metnini bul ve güncelle (8 locale). Workspace bazında kapatma seçeneği gerekip
+gerekmediğini de Hakan'a sor.
+
+## Tasarım (ölç, karar ver, gerekçelendir)
+
+1. **Depolama:** yeni tablo (ör. `content_embeddings`: öğe id + tür +
+   `workspace_id` + `content_hash` + model + `F32_BLOB(dim)` + `updatedAt`).
+   Boyut kolon tipine gömülü → model değişimi migration demek; model id'yi
+   sakla. Yerelde doğrulandı: `vector32`, `F32_BLOB`, `libsql_vector_idx`,
+   `vector_top_k`, `vector_distance_cos` çalışıyor (@libsql/client 0.17.3).
+   Turso'da P10'daki dev veritabanıyla tekrar doğrula.
+2. **Çok kiracılık tuzağı:** `vector_top_k` ANN index'i **tüm veritabanı**
+   üzerinde global. Küçük bir workspace'in öğeleri global top-k'ya hiç
+   girmeyebilir → filtre sonrası boş sonuç. Workspace'ler birkaç bin öğe
+   mertebesinde olduğundan önce **workspace içi tam tarama**yı ölç
+   (`WHERE workspace_id = ? ORDER BY vector_distance_cos(...) LIMIT 50`);
+   ANN'i yalnız ölçüm gerektiriyorsa ekle.
+3. **Ne gömülür:** v1'de öğe başına tek vektör (başlık + description + tags +
+   outline + gövdenin başı). Parça (chunk) seviyesi yalnız eval gerektiriyorsa.
+4. **Ne zaman gömülür:** yazma yoluna senkron embedding çağrısı **ekleme**
+   (P3'ün kazandığı hızı geri verir). Hash uyuşmazlığı = kirli. Kirlileri
+   yazmadan sonra `after()` ile best-effort göm (Next 16 davranışını
+   `node_modules/next/dist/docs/` altından oku); güvenlik ağı olarak cron veya
+   sorgu anında küçük bir kota. `vercel.json` cron'ları günlük — tazelik için
+   tek başına yetmez.
+5. **Sorgu:** görev + keywords için tek embedding çağrısı (metin hash'iyle
+   önbellekle). Aday = FTS5 top-N ∪ vektör top-N, **Reciprocal Rank Fusion**
+   ile birleştir, sonra mevcut güven/tazelik skoru ve bütçe. Embedding çağrısı
+   hata verir veya zaman aşımına uğrarsa (ör. 800 ms) sessizce P10 yoluna düş,
+   `warnings`'e yaz.
+6. `search_workspace`'e anlamsal mod eklemeye ölçerek karar ver (şema büyütmek
+   token demek — P4 kuralı).
+7. Backfill script'i: önce yerel; maliyet tahmini (token × fiyat) raporda.
+   Prod backfill'ini Hakan çalıştırır.
+
+## Kapsam dışı
+
+Jev veya başka reranker. Yalnız şunu bırak: son sıralama tek bir fonksiyonda
+toplansın ki ileride bir reranker (bkz. "Ertelenen — Jev") tek yerden
+takılabilsin. Jev kodu yazma.
+
+## Doğrulama
+
+1. lint, `npx tsc --noEmit`, `npm run bench:context` (mustHit/tracked tablosu).
+2. Gecikme: `prepare_context` p50/p95, embedding açık/kapalı.
+3. Anahtar yokken tüm akışlar P10 davranışında mı?
+4. Gerçek MCP istemcisiyle Türkçe bir görev uçtan uca.
+5. Maliyet: tipik bir workspace için backfill + aylık tahmin.
+
+## Bitirirken
+
+- Changelog (`improved`), 8 locale; gizlilik metni.
+- `AGENTS.md` + Serena; `docs/mcp/context-first.md`; self-host dokümanında yeni
+  env değişkeni (yalnız adı).
+- Migration → "Deploy öncesi" tablosu; yeni env değişkeni → aynı listeye not.
+- `scripts/ai/update-handoff.ps1`. Commit/push yok.
+````
+
+---
+
+# P12 — Remnus Graph: bilgi haritası (Obsidian kopyası değil)
+
+> 2026-09-23. Hakan: "Obsidian gibi olmayalım ama graph iyi bir özellik;
+> kendimize göre entegre edelim." Tahmini kapsam: büyük, ağırlıkla UI. P10
+> önerilir (bahsedilme katmanı onun `foldText`'ini kullanır), zorunlu değil.
+
+````text
+Remnus projesinde çalışıyorsun. Önce `AI.md`, `AGENTS.md` (sidebar, page links,
+proje penceresi kilidi, UI kuralları) ve `docs/WHAT_IS_REMNUS.md`'yi oku. Serena
+varsa `core` + `conventions`. `git status --short` ile başla. Yeni route ve
+`next/dynamic` kullanacağın için önce `node_modules/next/dist/docs/` altındaki
+ilgili rehberi oku. UI işi olduğu için `frontend-design` skill'i varsa kullan.
+
+## Ürün fikri — neden Obsidian kopyası değil
+
+Obsidian'ın graph'ı dolu, çünkü kullanıcılar her yere `[[link]]` yazıyor.
+Remnus'ta açık link seyrek: 2026-09-23'te yerel DB'de **331 öğe (40 sidebar +
+291 satır), 8 `page_links` satırı, 0 `knowledge_metadata`**. Birebir kopya,
+birbirinden kopuk noktalar ekranı olur. Remnus'un farkı insan + ajanın birlikte
+tuttuğu bilgi; graph bunu göstermeli:
+- **Bilgi nasıl bağlı** (hiyerarşi, database, link, bahsedilme),
+- **Neye güvenilir** (human-reviewed / taslak / eskimiş / deprecated),
+- **Ajan nereye dokundu** (son N günde okunan/yazılan yerler),
+- **Neresi bakım istiyor** (öksüz, eskimiş, incelenmemiş merkezler).
+Hedef güzel bir "yıldız haritası" değil, bir **bakım ve yön bulma aracı**.
+
+## Kenar katmanları (v1)
+
+| Katman | Kaynak | Not |
+|---|---|---|
+| Hiyerarşi | `workspace_items.parentId` | her zaman var |
+| Database üyeliği | `pages.databaseId` | satırlar varsayılan **katlı**: database düğümü + sayı rozeti; tıklayınca açılır |
+| Açık link | `page_links` (`page_link`, `child_block`) | `getRelatedPages`'teki database id çözümlemesini yeniden kullan |
+| Bağlantısız bahsedilme | gövdede başka bir öğenin başlığı geçiyor | ucuz ama gürültülü; aşağıya bak |
+| Ortak etiket | `knowledge_metadata.tags` | etiket düğümü mü, doğrudan kenar mı — yoğunluğa göre karar ver |
+
+Bahsedilme algoritması: başlıkları P10'daki `foldText` ile katla, sözcük
+dizisi olarak bir hash kümesine koy (en fazla L sözcük), her gövdeyi sözcük
+penceresiyle tara — O(toplam sözcük × L). Başlık × gövde `includes` döngüsü
+kullanma. Tek sözcüklü genel başlıkları ("Notes", "Todo", "Backlog") ve çok sık
+geçen başlıkları dışla; eşiği ölç. Sonuç change cursor ile önbelleklenir.
+Bahsedilme kenarı kesikli çizilir (v1'de yalnız gösterilir; "bağlantıya çevir"
+kapsam dışı).
+
+## Görünümler
+
+1. **Workspace haritası** — yeni route (ör. `src/app/[locale]/(app)/graph/`),
+   girişi `WorkspaceSidebar.tsx`'te; proje penceresinde de görünsün (P1'in
+   sidebar sadeleştirmesiyle çelişmediğini kontrol et). İsteğe bağlı:
+   `(app)/app/page.tsx`'teki `resolveLastPath` bu route'u tanısın.
+   - İki yerleşim, **tek renderer**: *Ağ* (ForceAtlas2, worker'da) ve *Ağaç*
+     (radyal ağaç — `d3-hierarchy` ile x/y hesapla, aynı sigma'ya ver).
+   - Renk modu: tür · güven/tazelik · ajan aktivitesi. Boyut: derece.
+   - Katman aç/kapa, arama/odak (düğüm + komşuları vurgulanır); tıklayınca
+     öğeye git (`/page/[itemId]`, `/db/[id]`, `/db/[id]/[pageId]`,
+     `/dashboard/[itemId]`).
+   - Yan panel **"Dikkat isteyenler"**: öksüzler (hiyerarşi dışında kenarı
+     olmayan), eskimiş/deprecated, çok bağlantılı ama incelenmemiş olanlar.
+     Remnus'u Obsidian'dan ayıran kısım bu.
+   - Küme (Louvain) renklendirmesi yalnız yeterli kenar varsa anlamlı; yoksa
+     seçeneği gizle.
+2. **Yerel graph paneli** — sayfada 1–2 adım komşuluk. `PageBacklinksPanel`,
+   `PageEditor.tsx` (~878, peek'te gizli) ve `StandalonePageEditor.tsx` (~357)
+   içinde; onun yanında ya da içinde bir sekme olarak, **kapalı başlasın** (her
+   sayfa açılışında WebGL ve ağır bundle yüklenmesin).
+
+## Veri katmanı
+
+- Servis: `src/lib/services/graph.ts` (cookie'siz — P13'teki MCP tarafı aynı
+  servisi kullanacak). Action: `src/lib/actions/` altında. Proje penceresi
+  kilidi: `getCurrentUserAllowingWorkspaceLock()` + `assertWorkspaceLockAllows()`
+  (admin kısayolundan önce), sonra `assertWorkspaceAccess`.
+- Tek `db.batch` (P3 deseni). Kompakt yük: düğümler dizi, kenarlar
+  `[kaynakIdx, hedefIdx, türKodu]`. Satırlar katlı gelir; database açılınca
+  ayrı çağrı. 5.000 düğümlük sentetik workspace'te yük boyutunu ve süreyi ölç.
+- Ajan aktivitesi: `agent_activity.targetId` (son N gün) + öğelerdeki
+  `agentEditedAt`. `agent_activity`'de `(workspace_id, target_id)` indeksi yok;
+  sorguyu ölç, gerekirse indeks migration'ı ekle.
+- Canlılık: P1'in `changeVersion` yolu (P7 notunda doğrulandı) ile harita
+  yenilensin. Yeniden yerleşim kullanıcının gördüğü düzeni bozmasın: mevcut
+  düğüm konumlarını koru, yeni düğümü komşusunun yanına koy.
+
+## Teknoloji (npm'de 2026-09-23'te doğrulandı)
+
+`sigma` 3.0.3 · `graphology` 0.26.0 · `@react-sigma/core` 5.0.6 (peer: React
+^18||^19, sigma ^3.0.2, graphology ^0.26) · `graphology-layout-forceatlas2`
+0.10.1 (worker) · `graphology-communities-louvain` 2.0.2 · `d3-hierarchy` 3.1.2.
+Gerekçe: MIT, WebGL, graph algoritmaları hazır; graphology Node'da da çalıştığı
+için P13'te sunucu aynı modeli kullanabilir. Sigma v4 beta — kullanma.
+Değerlendirilip elenenler: react-force-graph (hızlı MVP ama algoritma yok),
+cosmos.gl (bu ölçekte gereksiz), Cytoscape (ölçekte yavaş), Reagraph (büyük
+graph'ta bilinen performans sorunu).
+- **Paket kurulumu AI.md gereği onaya tabi:** listeyi ve kurulum komutunu
+  Hakan'a göster, onay al, sonra kur. Sürümleri tekrar doğrula.
+- Kütüphane yalnız graph route'u/paneli açılınca yüklensin (`next/dynamic`,
+  `ssr: false`); diğer sayfaların bundle'ı büyümemeli.
+- WebGL renkleri CSS token'larından okunsun; açık/koyu tema; düz, çerçevesiz,
+  neutral palet (AGENTS.md UI kuralları). Dokunmatik ve dar ekran
+  (Capacitor/PWA) çalışsın.
+
+## Kapsam dışı
+
+Kod dosyası katmanı ve MCP tarafı (P13), anlamsal/Jev ilişki kenarları,
+graph'tan düzenleme (sürükleyip taşıma), public paylaşım sayfalarında graph.
+
+## Doğrulama
+
+1. lint, `npx tsc --noEmit`.
+2. Dev server + görsel kontrol: boş, küçük ve 5.000 düğümlük sentetik
+   workspace (yalnız yerel DB, sonra sil). Etkileşim akıcılığı, yük boyutu.
+   Playwright gerekiyorsa önce Hakan'a sor (tercihi: son çare).
+3. Proje penceresinde kilitli oturumla aç: başka workspace'in graph'ı
+   reddedilmeli.
+4. Koyu/açık tema, dar ekran.
+5. İş sonunda `next build`: graph kütüphanelerinin yalnız graph chunk'ında
+   kaldığını gör.
+
+## Bitirirken
+
+- Changelog (`new`), tek cümle, 8 locale. Tüm UI metni next-intl, 8 locale
+  (yeni namespace açarsan `AI.md`'deki namespace sayısını güncelle).
+- `AGENTS.md` (graph servisi, katmanlar, invariant'lar) + Serena.
+- `scripts/ai/update-handoff.ps1`. Commit/push yok.
+````
+
+---
+
+# P13 — Proje haritası: kod katmanı + graph'ın ajan tarafı
+
+> 2026-09-23. P12'ye bağımlı (graph servisi). P8'in calibrate'te
+> `knowledge.sources` doldurması bu işin yakıtı.
+
+````text
+Remnus projesinde çalışıyorsun. Önce `AI.md`, `AGENTS.md` (Project Install ve
+P12'de yazılan graph bölümü), `docs/mcp/project-install.md`,
+`docs/mcp/read-tools.md` dosyalarını oku; bu dosyadaki P8, P10, P12
+bölümlerinin "Tamamlandı" notlarına bak. Serena varsa `core` + `conventions`.
+`git status --short` ile başla.
+
+## Amaç
+
+"Tüm proje" = Remnus'taki bilgi + o bilginin dayandığı kod. Remnus zaten
+projelere kuruluyor (`npx remnus init`); bir sayfanın hangi dosyalara dayandığı
+`knowledge_metadata.sources[].resource` alanına yazılabiliyor
+(`KNOWLEDGE_INPUT`, `src/app/api/mcp/tools/write.ts`). Bu görev (1) graph'a kod
+katmanını ekler, (2) graph'ı **ajan için** de faydalı kılar.
+
+## Önce ölç
+
+Calibrate edilmiş gerçek bir workspace'in yerel kopyasında `sources` doluluk
+oranını çıkar. P8'den sonra hâlâ boşsa A'nın değeri düşüktür — önce
+calibrate'in `sources` yazmasını düzeltmeyi öner ve raporla.
+
+## A. Kod düğümleri — `sources`'tan türet (CLI değişikliği yok)
+
+- `resource` depo-göreli bir yol gibi görünüyorsa (şema yok; `/` içeriyor ya
+  da bilinen bir uzantısı var) dosya düğümü olur; yol parçalarından klasör
+  hiyerarşisi kurulur. URL'ler ayrı "harici kaynak" düğümü mü olacak, hiç mi
+  gösterilmeyecek — karar ver.
+- Kenar: sayfa → dosya ("dayanıyor"). P12'nin katman anahtarlarına eklenir;
+  varsayılan kapalı olabilir.
+
+## B. İsteğe bağlı: CLI'dan dosya ağacı + import kenarları
+
+Yalnız A'dan sonra ve değeri ölçülürse. Kısıtlar:
+- `cli/` sıfır bağımlılık, ESM. `git ls-files` + JS/TS/Python için regex import
+  taraması yeter; tree-sitter vb. yok.
+- Sunucuya **yalnız yollar ve kenarlar** gider, kod içeriği asla. Boyut sınırı
+  koy.
+- Bu CLI'a özel bir yükleme: **MCP `tools/list`'e yeni tool ekleme** (her
+  oturuma şema maliyeti — P4 kuralı). Mevcut kimlik bilgisiyle ayrı bir HTTP
+  yolu ya da `remnus sync` içine gömülü bir çağrı kullan; `proxy.ts` +
+  `auth.config.ts` istisnalarını birlikte güncelle.
+- Depolama: workspace başına tek JSON satırı yeterli olabilir; ölç.
+
+## C. Ajan tarafı
+
+1. **Dosyadan bilgiye:** ajan bir dosyayı düzenlemeden önce "bu dosyaya hangi
+   Remnus sayfaları dayanıyor?" diye sorabilmeli. Yeni tool açmadan mevcut bir
+   tool'a parametre ekle (ör. `get_related_pages`'e `resource`); şema artışını
+   `npm run bench:mcp-budget` ile ölç.
+2. **`prepare_context` graph genişletmesi:** bugün yalnız en üstteki kavramın
+   komşuları ekleniyor (`contextPack.ts`). P12 servisinin graph'ı üzerinden ilk
+   k kavramdan kişiselleştirilmiş PageRank ya da bütçeli 1–2 adım genişletme
+   dene; `bench:context`'te isabet ve token etkisini ölç. Kazanç yoksa yapma,
+   nedenini yaz.
+3. **Harita/digest'e merkezler:** `getWorkspaceDigest` ve
+   `.remnus/workspace-map.md`'ye "en bağlı N öğe" satırı ajanın yön bulmasını
+   hızlandırır mı? Token maliyetini ölç; davranış değiştirmiyorsa ekleme.
+4. İsteğe bağlı: dashboard kataloğuna (P6/P7) "Bilgi sağlığı" bloğu (öksüz /
+   eskimiş / incelenmemiş sayıları) — P12'nin "Dikkat isteyenler" hesabını
+   yeniden kullan.
+
+## Kapsam dışı
+
+Kod içeriğini indekslemek, sembol seviyesinde graph (Serena'nın işi),
+anlamsal/Jev ilişki önerileri.
+
+## Doğrulama
+
+1. lint, `npx tsc --noEmit`; CLI'a dokunduysan `npx remnus doctor` ve köprünün
+   stdout'u saf mı (P4'teki kural).
+2. Gerçek MCP istemcisiyle: bir dosya yolu ver → ilgili sayfalar geliyor mu.
+3. Graph'ta kod katmanı: dev server'da görsel kontrol.
+4. `bench:context` öncesi/sonrası.
+
+## Bitirirken
+
+- Changelog (`new`/`improved`), 8 locale.
+- `AGENTS.md` + Serena; `docs/mcp/read-tools.md`, `docs/mcp/project-install.md`;
+  CLI değiştiyse sürüm notu (yayınlamak Hakan'ın işi).
+- `scripts/ai/update-handoff.ps1`. Commit/push yok.
+````
+
+---
+
+# Ertelenen — Jev (TypeSafe AI "System One") deneyi
+
+> Bir P bloğu değil; 2026-09-23 araştırmasının kaybolmaması için referans.
+> Ele alma zamanı: P11'den sonra, `bench:context`'te hâlâ **sıralama** hatası
+> (doğru aday bulunmuş ama yanlış sırada) görülüyorsa.
+
+- **Ne:** Metin üretmeyen karar modeli. `state` + soru sözlüğü alır; `choice`,
+  `score` ya da `noul` (evet/hayır olasılığı) ve kalibre edilmiş güven döner.
+  70–500 ms, $0.042 / 1M girdi token'ı (çıktı ücretsiz), 64k bağlam. İngilizce
+  birincil, diğer diller "eşit iyi değil". Müşteri verisiyle eğitim yok; ZDR
+  yalnız enterprise. Erişim: `api.typesafe.ai/v1/systemone` (bekleme listesi),
+  Vercel AI Gateway (`typesafe-ai/jev`), OpenRouter. Paket gerekmez, `fetch`
+  yeter.
+- **MCP'yi doğrudan hızlandırmaz** (+1 ağ adımı). Dolaylı kazanç: daha isabetli
+  bağlam → ajanın "ara → yanlış sayfa → tekrar ara" turları azalır.
+- **Aday kullanımlar (öncelik sırasıyla):**
+  1. `prepare_context`'te ilk ~30 aday için yeniden sıralama + bütçe dağıtımı
+     ("göreve yarar mı?" `noul`; "tam / outline / yalnız başlık" `choice`).
+     Jev-Mem makalesinin geri getirme deseni. Çağrı başına ≈ $0.0008.
+  2. Yazma yolu hijyeni (calibrate / bulk): kopya tespiti, `conceptType`/tag
+     sınıflandırması, ilişki önerileri (destekler / çelişir / bağımlı) →
+     P12'ye kesikli "önerilen" kenar katmanı.
+  3. Eskime: X değişince backlink'lerde "çelişiyor mu?" → insan incelemesine
+     düşer. Jev asla "human-reviewed" damgası basmaz.
+  4. Ajanın yazdığı / içe aktarılan içerikte prompt-injection taraması —
+     güvenlik sınırı değil, filtre.
+  5. Silme kapısı: düşük öncelik (`confirm: true` + Strict mod zaten var).
+- **Koşullar:** opt-in, best-effort, hata/zaman aşımında Jev'siz yola düşer;
+  gizlilik metni + workspace bazında kapatma; Türkçe eval seti ile ölç; tarih
+  karşılaştırma ve sayma kodda kalır (Jev'in bilinen zayıf yanları). P11'in
+  bıraktığı tek sıralama fonksiyonuna takılır.
+- **Kaynaklar:** https://www.firecrawl.dev/blog/what-is-jev ·
+  https://docs.typesafe.ai/models · https://arxiv.org/html/2609.23986v1 ·
+  https://github.com/codaaiteam/jev-mcp
 
 ---
 
