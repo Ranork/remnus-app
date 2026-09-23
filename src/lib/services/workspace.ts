@@ -29,6 +29,7 @@ import { activityAtOrAfter, auditVisibleSince } from './auditRetention';
 import { chunkRows } from './sqlChunk';
 import { computeChangeVersion } from './changeVersion';
 import { iconInputError } from '@/lib/icons';
+import type { StatusGroup } from '@/lib/types/properties';
 
 export type { SnapshotActor } from './snapshots';
 
@@ -61,12 +62,41 @@ function isValidDate(d: unknown): d is Date {
 
 const COLOR_CYCLE = ['red', 'orange', 'yellow', 'green', 'teal', 'blue', 'purple', 'pink'] as const;
 
-function autoColorOptions(options: any[]): { value: string; color: string; group?: string }[] {
+// Agents copy option shapes from other tools — Notion's `{ name, color }` above all —
+// so `name`/`label` count as the value. Before this, `{ name }` was stored as the
+// literal text "[object Object]" (found in the P9.5 calibration field test).
+const OPTION_TEXT_KEYS = ['value', 'name', 'label'] as const;
+
+const STATUS_GROUP_ALIASES: Record<string, StatusGroup> = {
+  todo: 'todo', 'to do': 'todo', to_do: 'todo', not_started: 'todo', 'not started': 'todo',
+  in_progress: 'in_progress', 'in progress': 'in_progress', doing: 'in_progress',
+  complete: 'complete', completed: 'complete', done: 'complete',
+};
+
+function autoColorOptions(options: any[], columnName: string): { value: string; color: string; group?: string }[] {
   return options.map((opt, i) => {
-    const value = typeof opt === 'string' ? opt : opt.value ?? String(opt);
-    const color = typeof opt === 'object' && opt.color ? opt.color : COLOR_CYCLE[i % COLOR_CYCLE.length];
+    const isObject = typeof opt === 'object' && opt !== null;
+    const value = typeof opt === 'string'
+      ? opt
+      : isObject ? OPTION_TEXT_KEYS.map((k) => opt[k]).find((v) => typeof v === 'string' && v.trim()) : undefined;
+    if (typeof value !== 'string' || !value.trim()) {
+      throw new Error(
+        `Option ${i + 1} of column "${columnName}" has no text. ` +
+        `Pass a string, or { value: "Name", group: "todo" | "in_progress" | "complete" } for a status option.`,
+      );
+    }
+    const color = isObject && opt.color ? opt.color : COLOR_CYCLE[i % COLOR_CYCLE.length];
     // Preserve the status group when present (status columns).
-    const group = typeof opt === 'object' && opt.group ? opt.group : undefined;
+    let group: StatusGroup | undefined;
+    if (isObject && opt.group) {
+      group = STATUS_GROUP_ALIASES[String(opt.group).trim().toLowerCase()];
+      if (!group) {
+        throw new Error(
+          `Option "${value}" of column "${columnName}" has an unknown group "${opt.group}". ` +
+          `Use "todo", "in_progress" or "complete".`,
+        );
+      }
+    }
     return group ? { value, color, group } : { value, color };
   });
 }
@@ -77,7 +107,7 @@ function normalizeSchemaColumns(
   return cols.map(col => ({
     ...col,
     ...(col.options && (col.type === 'select' || col.type === 'multi_select' || col.type === 'status')
-      ? { options: autoColorOptions(col.options) }
+      ? { options: autoColorOptions(col.options, col.name) }
       : {}),
   }));
 }
@@ -693,7 +723,10 @@ export async function getWorkspaceDigest(workspaceId: string): Promise<{ text: s
       .leftJoin(databases, eq(databases.itemId, workspaceItems.id))
       .leftJoin(standalonePages, eq(standalonePages.itemId, workspaceItems.id))
       .where(eq(workspaceItems.workspaceId, workspaceId))
-      .orderBy(asc(workspaceItems.sortOrder), asc(workspaceItems.id)),
+      // Same order as the sidebar (actions/workspace.ts): new items all get sortOrder 0,
+      // so the tie-break decides what comes first. Ordering by id instead showed agents a
+      // shuffled tree, and calibration's "overview first" check could not be trusted.
+      .orderBy(asc(workspaceItems.sortOrder), asc(workspaceItems.createdAt), asc(workspaceItems.id)),
     db
       .select({
         databaseId: pages.databaseId,

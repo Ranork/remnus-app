@@ -1627,8 +1627,10 @@ export default function WorkspaceSidebar({
 
       {/* New-user onboarding: welcome modal + getting-started checklist.
           Only the always-mounted desktop sidebar renders it (showOnboarding),
-          so it never doubles up with the mobile drawer's sidebar instance. */}
-      {showOnboarding && (
+          so it never doubles up with the mobile drawer's sidebar instance. Not in a
+          project window: it is account-level, and getOnboardingProgress calls
+          getCurrentUser(), which throws for a locked session (a 500 per page load). */}
+      {showOnboarding && !isProjectWindow && (
         <div className="shrink-0">
           <OnboardingGuide userRole={currentUser.role} />
           <AgentDetectGuide userRole={currentUser.role} />

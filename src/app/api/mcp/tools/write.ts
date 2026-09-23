@@ -73,7 +73,7 @@ const ICON_COLOR_PATCH_INPUT = z.enum(ICON_COLOR_KEYS).nullable().optional().des
 const COLUMN_INPUT = z.object({
   name: z.string(),
   type: z.string().describe('text | number | select | multi_select | status | user | multi_user | date | datetime | checkbox | url | email | phone'),
-  options: z.array(z.any()).optional().describe('For select/multi_select/status; a status option may carry group: "todo" | "in_progress" | "complete". user/multi_user need none.'),
+  options: z.array(z.any()).optional().describe('For select/multi_select/status: strings, or { value, group } where a status group is "todo" | "in_progress" | "complete". user/multi_user need none.'),
 });
 const VIEW_INPUT = z.object({
   name: z.string().max(80),

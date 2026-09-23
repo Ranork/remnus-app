@@ -45,6 +45,31 @@ const FIRST_VISIT_WINDOW_DAYS = 7;
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-09-23-agent-status-options',
+    date: '2026-09-23',
+    category: 'fixed',
+    title: {
+      en: 'Agent-made status columns keep their names',
+      tr: 'Ajanın oluşturduğu durum kolonları adlarını koruyor',
+      de: 'Statusspalten von Agenten behalten ihre Namen',
+      es: 'Las columnas de estado de los agentes conservan sus nombres',
+      fr: 'Les colonnes de statut créées par un agent gardent leurs noms',
+      hi: 'एजेंट के बनाए स्टेटस कॉलम अपने नाम बनाए रखते हैं',
+      ru: 'Столбцы статуса от агента сохраняют названия',
+      zh: '智能体创建的状态列会保留选项名称',
+    },
+    summary: {
+      en: 'Status and select columns an AI agent creates now keep their option names even when the agent describes them the way Notion does, instead of showing "[object Object]".',
+      tr: 'Bir yapay zekâ ajanının oluşturduğu durum ve seçim kolonları, ajan seçenekleri Notion\'daki gibi tarif etse bile artık "[object Object]" yerine seçenek adlarını koruyor.',
+      de: 'Status- und Auswahlspalten, die ein KI-Agent anlegt, behalten jetzt ihre Optionsnamen, auch wenn der Agent sie wie in Notion beschreibt, statt „[object Object]“ anzuzeigen.',
+      es: 'Las columnas de estado y selección que crea un agente de IA ahora conservan los nombres de sus opciones aunque el agente las describa como en Notion, en lugar de mostrar "[object Object]".',
+      fr: 'Les colonnes de statut et de sélection créées par un agent IA gardent désormais le nom de leurs options, même décrites à la manière de Notion, au lieu d\'afficher « [object Object] ».',
+      hi: 'किसी AI एजेंट के बनाए स्टेटस और सेलेक्ट कॉलम अब अपने विकल्पों के नाम बनाए रखते हैं, भले ही एजेंट उन्हें Notion की तरह बताए, "[object Object]" दिखाने के बजाय।',
+      ru: 'Столбцы статуса и выбора, созданные ИИ-агентом, теперь сохраняют названия вариантов, даже если агент описывает их как в Notion, вместо «[object Object]».',
+      zh: 'AI 智能体创建的状态列和选择列现在会保留选项名称，即使它按 Notion 的方式描述选项，也不再显示 "[object Object]"。',
+    },
+  },
+  {
     id: '2026-09-23-wiki-markdown',
     date: '2026-09-23',
     category: 'improved',
