@@ -1942,6 +1942,77 @@ Bu repo üzerinde kalibrasyon (kendini kalibre etmek dürüst bir test değil).
 - Test workspace'ini ve kopya klasörü sil (yerel), `.ai/CURRENT_TASK.md`'yi güncelle.
 ```
 
+> **✅ Tamamlandı — 2026-09-23 (Claude).** Commit yok; değişiklikler working tree'de.
+>
+> **Adım 0 — ham markdown.** Her wiki sayfası `/wiki/<slug>.md` (ve `/wiki.md`) olarak da
+> sunuluyor: `src/app/api/wiki-md/[[...slug]]/route.ts` (`getWikiMarkdown`), `next.config.ts`
+> rewrite, `proxy.ts` matcher istisnası (**zorunlu** — yoksa intl middleware `/<locale>/wiki/x.md`
+> yapıp 404 veriyor; `/wiki` zaten `auth.config.ts`'te public), `auth.config.ts` allowlist.
+> Göreli `.md` linkler ham çıktıda `/wiki/x.md` oluyor, kaynak dosyalar değişmedi (GitHub'da
+> çalışıyor). HTML sayfa `<link rel="alternate" type="text/markdown">` veriyor, `/llms.txt` bir
+> cümleyle söylüyor, ham yanıtta `Link: rel=canonical`. `init` artık `.md` adresini basıyor
+> (`calibrateUrlFor` yoklayıp eski sunucuda `/wiki/calibrate`'e düşüyor) + "(read the whole
+> file, e.g. with curl)". Ölçüm: calibrate 229.825 B HTML → 12.096 B md; ajanın çektiği üç
+> sayfa (calibrate + playbooks + game) ≈ 18,5 KB ≈ 4,6k tok (HTML ≈ 640 KB ≈ 160k tok olurdu).
+>
+> **Adım 1–2 — saha testi.** Skyblock-Quests scratchpad'e clone'landı, yerel CLI ile `init`
+> (Hakan tarayıcıdan yeni workspace "Speed-Test" açtı). npm'de 0.1.9 yok (0.1.8), bu yüzden
+> kopyada `.mcp.json` + hook yerel CLI'a yönlendirildi. Ajan = bağımsız headless `claude -p`
+> (Opus 5, dar allowlist, `--strict-mcp-config`), yalnızca init cümlesiyle. 3 oturum:
+> (1) tam kalibrasyon, Faz 4'te PID ile kesildi; (2) yeni oturum, aynı cümle → devam
+> ($1,43, 29 tur); (3) rehber v3 sonrası "Running it again" doğrulaması ($4,41, 50 tur).
+> Gözlemler: rehberi `curl` ile `.md`'den çekti (3. oturum önce WebFetch denedi — https'de özet
+> görecekti → cümleye "read whole" eklendi); log'u Faz 1'den sonra açtı, plan build'den önce
+> yazıldı ✓; Game playbook'unu mod sinyaliyle seçti, diğerlerini okumadı ✓; düşman/bölge/denge
+> gibi kanıtsız kavramları log'da gerekçeyle atladı ✓; satırlar 4 `bulk_create_pages` ile,
+> `knowledge` etiketli ✓; dashboard 10 blok ✓; `calibratedAt` + `calibrationGuide` yazıldı ✓.
+> Devam testi: log "yalnızca adım 1" derken map her şeyi gösteriyordu; ajan yeniden kurmadı,
+> doğruladı — ama bu modelin sağduyusu, v2 rehberi tersini söylüyordu.
+>
+> **Adım 3 — bulunan boşluklar ve düzeltmeler.**
+> - İlk log bütün adımlar `[x]` + **uydurma id'lerle** yazıldı, sonra düzeltildi; build boyunca
+>   hiç işaretlenmedi → rehber: işaretsiz oluştur, her adımı inince işaretle, id yalnızca tool
+>   sonucundan; devam ederken işaretsiz adımı önce map'le karşılaştır. (v3 re-run'da log
+>   işaretsiz açıldı, id'ler gerçek; ama adımlar yine en sonda topluca işaretlendi — kalan davranış.)
+> - **Sunucu hatası:** status seçenekleri `{name, group}` gelince `"[object Object]"` olarak
+>   kaydediliyordu; ajan kolonları `confirm: true` ile silip yeniden kurdu. `autoColorOptions`
+>   artık `value|name|label` okuyor, grup alias'ları (`to do`/`in progress`/`done`) kabul ediyor,
+>   metinsiz seçenek / bilinmeyen grupta kolonu adlandıran hata fırlatıyor (MCP ile doğrulandı).
+> - **29 `[[Başlık]]` sahte link, 13 gövdede; `page_links` = 0** (P13'ün grafiği boş kalırdı) →
+>   rehber, `write-tools.md` ve skill artık `<a data-page-link href="/page/<id>">` biçimini veriyor;
+>   pano için düz `[Başlık](/dashboard/<id>)`. v3 re-run: 29 → 29 gerçek link, `page_links` 0 → 23.
+> - `lucide:BookOpen` küratörlü değil → rehber: küratörlü set, emoji her zaman geçer.
+> - `npx remnus sync` yayındaki 0.1.8'de yok → Faz 4 artık köprünün her yazımdan sonra yenilediği
+>   map'i okuyor. Ajan ayrıca map'in `trackMap: false` yüzünden tazelenmediğini sandı (yanlış).
+> - **Digest/map sırası id'ye göreydi** (her öğe `sortOrder: 0`), kenar çubuğu `createdAt`'e göre →
+>   map'te Genel Bakış ilk değildi, "overview first" kontrolü güvenilmezdi. Digest artık
+>   `sortOrder, createdAt, id` (kenar çubuğuyla aynı).
+> - Proje penceresinde `OnboardingGuide` → `getOnboardingProgress` → `getCurrentUser()` her sayfa
+>   yüklemesinde 500 veriyordu → pencerede JSX'ten çıkarıldı (§4 listesine eklendi).
+> - Rehber `Guide version: 3`; "Running it again" 2. adım v3'ü (`[[…]]` → link, gövdede izin
+>   verilen tek düzenleme) anlatıyor. 13.162 B ≈ 3.290 tok (v2: 12.090 B ≈ 3.020).
+>
+> **Etiket sayısı (P10/P13 için).** Silmeden önce test workspace'inde: `knowledge_metadata`
+> 47 satır, 46'sı `conceptType` + `tags` (TR+EN) + `sources` taşıyor (39/39 satır, 4/4 DB,
+> 3/4 sayfa — etiketsiz olan Calibration Log). Kavramlar: action-type 14, decision 11, gotcha 9,
+> backlog 9, overview/architecture/data-format 1'er. Bu workspace talimat gereği **silindi**;
+> P10 gerçek etiketli veri isterse aynı düzen ~15 dk'da yeniden kurulur: clone → yerel CLI `init`
+> → kopyada `.mcp.json`/hook'u yerel CLI'a çevir → `claude -p "<init cümlesi>" --mcp-config
+> .mcp.json --strict-mcp-config --permission-mode acceptEdits --allowedTools …`.
+>
+> **Tasarruf kartı.** Pencere bileti (proje PAT'i) ile Playwright'ta proje penceresi açıldı:
+> kart görünüyor — "311,5 B token tasarrufu · 76 yazıldı · 25 ms" (≈1,25 MB digest tasarrufu /4).
+> `savedBytes = 0` iken gizlenmesi koddaki `savedBytes <= 0 → null` ile tutarlı.
+>
+> **Doğrulama.** `npx tsc --noEmit` temiz; değişen kaynaklarda eslint 0 hata; `node --check`
+> init.js; dev server'da `.md` route'ları 200/404, HTML sayfalar ve korumalı rotalar değişmedi;
+> `bench:mcp-budget` model-görünür 24.301 → 24.341 B. Changelog: `wiki-markdown`,
+> `agent-status-options` (fixed), `calibration-links`, 8 locale. Temizlik: test workspace (+token,
+> audit satırları), kopya klasör, pencere profili ve Playwright artıkları silindi; asıl
+> Skyblock-Quests klasörü hiç değişmedi.
+>
+> **Deploy notu:** CLI 0.1.9 web deploy'undan sonra yayınlanmalı (`.md` route'u ve `sync` onda).
+
 ---
 
 # P10 — Bulma temeli: harf katlama, `keywords`, tek turda corpus, FTS5 arama
@@ -2470,8 +2541,12 @@ anlamsal/Jev ilişki önerileri.
 # Deploy öncesi — biriken borç (unutma listesi)
 
 > P adımları tamamlandıkça buraya ekle. Buradaki her madde **deploy'u bloklar**.
-> Son güncelleme: 2026-09-23 (P7–P9 + borç temizliği sonrası). **Şu an deploy'u
-> bloklayan açık madde yok**; aşağıdaki sıra deploy gününün kontrol listesi.
+> Son güncelleme: 2026-09-23 (P9.5 sonrası). **Şu an deploy'u bloklayan açık madde
+> yok**; aşağıdaki sıra deploy gününün kontrol listesi.
+>
+> **Karar (Hakan, 2026-09-23):** deploy yol haritası bitince **toplu** yapılacak —
+> P10–P13 ara deploy olmadan bu listeye eklenerek ilerler. Her P adımı bitince kendi
+> migration'ını, deploy sırasını ve canlı kontrolünü buraya yazar.
 
 ## 1. Veritabanı: Turso güncel (2026-09-23)
 
@@ -2484,19 +2559,47 @@ Yeni bir migration eklenince: script'i yerelde ve Turso'da çalıştır, sonra
 `npm run db:drift` ile ikisini de doğrula. Hangi migration'ın nerede uygulandığını
 not tutmaya güvenme — 2026-09-23'te notlar yerel DB için yanlış çıktı.
 
+P9.5 migration **eklemedi** (status seçenek düzeltmesi, digest sırası, `.md` route'u
+yalnızca kod).
+
 ## 2. Deploy günü sırası
 
 1. `npm run db:drift` → Turso için **OK** görmeden deploy etme.
-2. Web uygulamasını deploy et (Vercel). Kalibrasyon rehberi v2 ve playbook'lar
-   bu adımla canlıya çıkar (sunucudan canlı servis ediliyor).
-3. **Sonra** CLI'ı yayınla — `cli/package.json` zaten `0.1.9`:
+2. Web uygulamasını deploy et (Vercel). Bu adımla canlıya çıkanlar: kalibrasyon
+   rehberi **v3** ve playbook'lar (sunucudan canlı servis ediliyor), ham markdown
+   adresleri `/wiki/<slug>.md` + `/wiki.md` (P9.5), status/select seçenek düzeltmesi
+   (`{name}` artık `"[object Object]"` olmuyor), map/digest'in kenar çubuğu sırası,
+   proje penceresindeki onboarding 500'ünün kalkması.
+3. **Sonra** CLI'ı yayınla — `cli/package.json` zaten `0.1.9` (npm'de şu an `0.1.8`):
    ```powershell
    cd cli
    npm login      # bu makinede npm oturumu yok
    npm publish
    ```
-   Yeni `init` metni ve ajan talimatı (yarım kalan kalibrasyonu sürdür) ancak
-   bununla projelere ulaşır. Web'den önce yayınlamak zararsız ama anlamsız.
+   Yeni `init` metni, `.md` rehber adresi + "read the whole file" ipucu, `sync`
+   komutu ve ajan talimatı (yarım kalan kalibrasyonu sürdür) ancak bununla projelere
+   ulaşır. **Web'den sonra** olmalı: `init` `.md` adresini yokluyor, route yoksa
+   HTML'e düşüyor — önce yayınlarsan ilk kurulumlar HTML adresini (57k token) basar.
+   Not: 0.1.9 ile bağlanan projeler `.mcp.json`'da `remnus@0.1.9`'a sabitlenir;
+   yayınlanmadan o sürümle `init` çalıştırılmamalı (bridge npm'den inemez).
+4. **Deploy sonrası duman testi** (salt okuma, bir dakika):
+   ```powershell
+   curl.exe -sI https://www.remnus.com/wiki/calibrate.md          # 200, text/markdown, Link: rel=canonical
+   curl.exe -s -o NUL -w "%{http_code}" https://www.remnus.com/wiki/playbooks/game.md   # 200
+   curl.exe -s -o NUL -w "%{http_code}" https://www.remnus.com/wiki/yok.md             # 404
+   curl.exe -s -o NUL -w "%{http_code}" https://www.remnus.com/wiki/calibrate          # 200 (HTML değişmedi)
+   curl.exe -s https://www.remnus.com/llms.txt | Select-String "raw markdown"
+   ```
+   `/wiki/*.md` 307/login'e düşerse `proxy.ts` matcher istisnası canlıda tutmamıştır.
+5. **Canlı kalibrasyon testi (deploy + CLI yayınından sonra, ertelendi):** gerçek bir
+   projede yayınlanmış CLI ile `npx remnus init` → yeni Claude Code oturumu → yalnızca
+   `init`'in bastığı cümle. P9.5'in yerelde göremediği iki şeyi dener: yayınlanmış npm
+   CLI'ı ve https üzerinde WebFetch (yerelde localhost'ta hata verdiği için ajan curl'e
+   düşmüştü; canlıda özet döndürebilir). Bak: rehberi curl ile mi çekti; log her adımda
+   mı işaretlendi (P9.5'te hâlâ sonda toplu işaretleniyordu); gövdelerde
+   `data-page-link` var mı, `[[…]]` kaldı mı; `get_related_pages` bağlantı döndürüyor mu;
+   `config.json`'da `calibrationGuide: 3`. Bu, P10/P11'in ölçümleri için canlıda gerçek
+   etiketli veri de bırakır.
 
 ## 3. Sıra kuralı: önce migration, sonra deploy
 
@@ -2523,6 +2626,7 @@ doğrulanır, **sonra** kod deploy edilir. Tersi değil.
   (`src/lib/services/auditRetention.ts`, AGENTS.md → Billing & Plan Limits).
 - **`skills/remnus/SKILL.md`:** kolon tipleri güncellendi (13 tip).
 - **Tasarruf kartının tarayıcı kontrolü:** gerçek ajan çağrısı gerektirdiği için
-  **P9.5**'e taşındı (Playwright onaylı).
+  **P9.5**'e taşındı (Playwright onaylı) — **P9.5'te yapıldı**: proje penceresinde
+  kart görünüyor ("311,5 B token tasarrufu · 76 yazıldı · 25 ms").
 
 ---
