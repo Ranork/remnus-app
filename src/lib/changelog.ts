@@ -45,6 +45,31 @@ const FIRST_VISIT_WINDOW_DAYS = 7;
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-09-24-search-ranking',
+    date: '2026-09-24',
+    category: 'improved',
+    title: {
+      en: 'Agent search puts the best match first',
+      tr: 'Ajan aramasında en iyi sonuç en üstte',
+      de: 'Die Agentensuche zeigt den besten Treffer zuerst',
+      es: 'La búsqueda de los agentes muestra primero el mejor resultado',
+      fr: 'La recherche des agents affiche d\'abord le meilleur résultat',
+      hi: 'एजेंट की खोज में सबसे अच्छा नतीजा सबसे ऊपर',
+      ru: 'Поиск агентов показывает лучшее совпадение первым',
+      zh: '智能体搜索会把最佳结果排在最前',
+    },
+    summary: {
+      en: 'When your agents search the workspace, pages whose title matches now come ahead of pages that only mention the words, so they open the right page sooner.',
+      tr: 'Ajanlarınız workspace\'te arama yaptığında, başlığı eşleşen sayfalar artık kelimeleri yalnızca içinde geçiren sayfaların önüne geliyor; böylece doğru sayfayı daha çabuk açıyorlar.',
+      de: 'Wenn Ihre Agenten den Workspace durchsuchen, stehen Seiten mit passendem Titel jetzt vor Seiten, die die Wörter nur erwähnen, sodass sie schneller die richtige Seite öffnen.',
+      es: 'Cuando tus agentes buscan en el espacio de trabajo, las páginas cuyo título coincide aparecen ahora antes que las que solo mencionan las palabras, así que abren antes la página correcta.',
+      fr: 'Quand vos agents cherchent dans l\'espace de travail, les pages dont le titre correspond passent désormais devant celles qui ne font que mentionner les mots, pour ouvrir plus vite la bonne page.',
+      hi: 'जब आपके एजेंट वर्कस्पेस में खोजते हैं, तो जिन पेजों का शीर्षक मेल खाता है वे अब उन पेजों से पहले आते हैं जिनमें शब्द सिर्फ़ ज़िक्र में हैं, इसलिए वे सही पेज जल्दी खोलते हैं।',
+      ru: 'Когда ваши агенты ищут в пространстве, страницы с совпадающим заголовком теперь идут раньше страниц, где слова лишь упоминаются, поэтому нужная страница открывается быстрее.',
+      zh: '智能体在工作区中搜索时，标题匹配的页面现在会排在只提到这些词的页面之前，因此它们能更快打开正确的页面。',
+    },
+  },
+  {
     id: '2026-09-23-agent-context-languages',
     date: '2026-09-23',
     category: 'improved',

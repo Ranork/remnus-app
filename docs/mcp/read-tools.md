@@ -31,13 +31,13 @@ The budget applies to the compact JSON text returned by the tool. If a page cann
 
 Search the workspace by title **and content**. Matches standalone pages, databases, and database rows (each row is a page) on their title or body text.
 
-Matching ignores case and accents in the Latin-script languages Remnus supports: `cozum` finds "Çözüm Notları", `istanbul` finds "İstanbul Ofisi", `espana` finds "España". Letters of other scripts (Cyrillic, CJK) match as typed. Results are not ranked by relevance — use [`prepare_context`](#prepare_context) for "what is relevant to this task".
+Results come **best match first**: a full-text index ranks title matches above body matches, and each word matches by prefix (`invit` finds "invitation"; several words must all appear, in any order). Matching ignores case and accents: `cozum` finds "Çözüm Notları", `istanbul` finds "İstanbul Ofisi", `espana` finds "España". When the index finds nothing, or the query is shorter than three letters or written in a script without spaces (Chinese, Japanese, Thai), the search falls back to a plain substring match, so a fragment from the middle of a word is still found. For "what is relevant to this task", use [`prepare_context`](#prepare_context) instead.
 
 **Parameters**
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `query` | string | ✓ | | Text to match against item titles and content (case- and accent-insensitive substring) |
+| `query` | string | ✓ | | Words to find in item titles and content (case- and accent-insensitive) |
 | `limit` | number | | `10` | Maximum results |
 
 **Returns** — `{ results: [...] }`, where each result has:
@@ -48,7 +48,7 @@ Matching ignores case and accents in the Latin-script languages Remnus supports:
 | `type` | string | `page` \| `database` \| `database_row` |
 | `title` | string | Item title |
 | `breadcrumb` | string[] | Location path from the workspace root to the item (for a `database_row`, ends with its parent database name) |
-| `matchedOn` | string | Where the query matched: `title` \| `content` |
+| `matchedOn` | string | Where the query matched: `title` (every word is in the title) \| `content` |
 | `snippet` | string | Matching content snippet (empty when the match was on the title) |
 | `databaseId` | string? | Parent database ID, present for `database_row` results (pass to `query_database`) |
 | `parentId` | string? | Parent item ID for nested sidebar items |

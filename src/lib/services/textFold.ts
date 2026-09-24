@@ -7,10 +7,10 @@
  * `toLocaleLowerCase('tr-TR')` for matching: it turns an English capital "I"
  * into a dotless "ı", so "Invites"/"API" stopped matching a lowercase task.
  *
- * Also matches what an FTS5 `unicode61 remove_diacritics 2` tokenizer does
- * (verified 2026-09-23 on SQLite 3.45.1), with one deliberate difference: that
- * tokenizer keeps the dotless "ı" as its own letter, so an FTS index would
- * have to `replace(…, 'ı', 'i')` before indexing to agree with this function.
+ * Also matches what the FTS5 `unicode61 remove_diacritics 2` tokenizer behind
+ * `search_workspace` does (migration 0052), with one difference: that tokenizer
+ * keeps the dotless "ı" as its own letter, which is why the 0052 triggers index
+ * `replace(…, 'ı', 'i')`. Change the two together or the layers disagree.
  */
 export function foldText(value: string): string {
   return value

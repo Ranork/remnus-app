@@ -702,6 +702,22 @@ export const pageLinks = sqliteTable('page_links', {
   uniqueIndex('page_links_from_to_kind_idx').on(table.fromId, table.toId, table.linkKind),
 ]);
 
+// Full-text search index behind `search_workspace` (migration 0052). One row per
+// searchable sidebar item (page, database, dashboard) or database row; `id` is the
+// rowid of that document in the contentless FTS5 table `search_fts`, which Drizzle
+// cannot declare (see src/db/apply-0052-search-index.ts). An explicit INTEGER
+// PRIMARY KEY is used because the implicit rowid of the TEXT-keyed source tables
+// may change on VACUUM. Written ONLY by the 0052 triggers — never from app code.
+export const searchDocs = sqliteTable('search_docs', {
+  id:          integer('id').primaryKey(),
+  itemId:      text('item_id').notNull(),
+  workspaceId: text('workspace_id').notNull(),
+  kind:        text('kind', { enum: ['item', 'row'] }).notNull(),
+}, (table) => [
+  uniqueIndex('search_docs_item_id_idx').on(table.itemId),
+  index('search_docs_workspace_idx').on(table.workspaceId),
+]);
+
 // Canonical, storage-independent knowledge metadata for every Remnus page,
 // database, and database row. OKF frontmatter is an import/export projection of
 // this model; raw imported assertions remain external until a Remnus user

@@ -151,6 +151,7 @@ Repository monorepo değildir. Ana npm uygulamasına ek olarak dağıtım için 
 - Content write/delete yollarında `syncPageLinks`, `purgeReferencesTo`, `removePageLinksFor` ve tombstone yan etkilerini koru; `seed.ts` doğrudan DB yazdığı için ayrıca kontrol edilmelidir.
 - Tekrarlayan takvim kartlarında iki değişmez korunmalı: geçmiş occurrence'lar asla yeniden yazılmaz (kural değişimi seriyi böler, mutasyon yapmaz) ve içi doldurulmuş occurrence silinmez, seriden koparılıp yerinde bırakılır. Ayrıntı: `AGENTS.md` → **Recurring Calendar Cards**.
 - MCP write tool'ları write scope doğrulaması yapmalı; audit logging ana cevabı bozmayan best-effort kalmalıdır.
+- `search_docs`/`search_fts` (arama indeksi, migration `0052`) yalnızca `search_*` trigger'larıyla yazılır; uygulama kodu bu tablolara yazmaz. `workspace_items`, `standalone_pages`, `pages`, `databases` veya `workspaces` tablosunu yeniden kuran bir migration trigger'larını düşürür: sonrasında `apply-0052-search-index.ts` yeniden çalıştırılmalı (`npm run db:drift` eksik trigger'ı raporlar).
 - Public/cookie-less asset ve API istisnaları `proxy.ts` ile `auth.config.ts` içinde birlikte korunmalıdır.
 - Proje kurulumu workspace-pinned MCP adresine (`/api/mcp/w/<workspaceId>`) dayanır: paylaşılan `/api/mcp` davranışı dondurulmuştur, workspace uyuşmazlığı 401 değil **403** döner ve RFC 9728 metadata hem bare hem path-scoped adresten servis edilmelidir. Ayrıntı: `AGENTS.md` → **Project Install**.
 

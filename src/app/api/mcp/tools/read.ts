@@ -111,7 +111,7 @@ export function registerReadTools(server: McpServer, ctx: TokenContext) {
   server.registerTool(
     'search_workspace',
     {
-      description: 'Case- and accent-insensitive substring search over titles and bodies of pages, databases and rows. Use it to locate an item by text when the workspace map does not already give you its id.',
+      description: 'Case- and accent-insensitive search over titles and bodies of pages, databases and rows, best matches first. Use it to locate an item by text when the workspace map does not already give you its id.',
       inputSchema: {
         query: z.string(),
         limit: z.number().optional().default(10),

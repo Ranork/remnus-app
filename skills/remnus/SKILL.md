@@ -30,7 +30,7 @@ Column types: `text` | `number` | `select` | `multi_select` | `status` | `user` 
 
 **Read (safe, always allowed):**
 - `prepare_context` — start meaningful multi-page product/coding work with Context Pack v2; returns a token-budgeted, reviewed/fresh pack and a short-lived `contextRunId`.
-- `search_workspace` — find pages/databases by text (case- and accent-insensitive: `cozum` finds "Çözüm"). The fallback when the workspace map has not already given you the id, not the first step.
+- `search_workspace` — find pages/databases by text, best match first (case- and accent-insensitive: `cozum` finds "Çözüm"). The fallback when the workspace map has not already given you the id, not the first step.
 - `list_workspace` — list items, optionally under a `parentId`. Paginated.
 - `get_page` — full content of a page or row by ID. Auto-detects type. A dashboard comes back as its block `spec` (`mode: "outline"` → just the block ids/types/titles).
 - `get_pages` — batch `get_page`: a specific known ID list (max 50), possibly across databases/types. One bad ID doesn't fail the rest — check each result's `ok`. For many rows in one database, prefer `query_database` instead.

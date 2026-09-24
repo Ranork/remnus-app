@@ -30,6 +30,7 @@ import { activityAtOrAfter, auditVisibleSince } from './auditRetention';
 import { chunkRows } from './sqlChunk';
 import { computeChangeVersion } from './changeVersion';
 import { foldText, foldTextWithOffsets, foldingSearchPatterns } from './textFold';
+import { searchMatchExpression, searchTerms } from './searchIndex';
 import { iconInputError } from '@/lib/icons';
 import type { StatusGroup } from '@/lib/types/properties';
 
@@ -225,31 +226,191 @@ export async function listWorkspaceMembers(workspaceId: string) {
   }));
 }
 
+export type WorkspaceSearchResult = {
+  id: string;
+  type: 'page' | 'database' | 'dashboard' | 'database_row';
+  title: string;
+  parentId?: string;
+  databaseId?: string;
+  breadcrumb: string[];
+  matchedOn: 'title' | 'content';
+  snippet: string;
+};
+
+/**
+ * `search_workspace`. Ranked full-text search through the migration-0052 index —
+ * title hits first, words matched by prefix, case and accents folded — with the
+ * substring scan as the answer whenever the index cannot give one: a query too
+ * short or in a script written without spaces, an index that is not there yet
+ * (migration not applied), or no indexed hit at all (a fragment from the middle
+ * of a word is only found by the scan). The output shape is the same either way.
+ */
 export async function searchWorkspace(
   workspaceId: string,
   query: string,
   limit = 10,
-) {
+): Promise<WorkspaceSearchResult[]> {
+  const size = Number.isFinite(limit) && limit > 0 ? Math.floor(limit) : 10;
+  const match = searchMatchExpression(workspaceId, query);
+  if (match) {
+    try {
+      const results = await searchWorkspaceIndexed(workspaceId, query, match, size);
+      if (results.length > 0) return results;
+    } catch (err) {
+      warnSearchIndexOnce(err);
+    }
+  }
+  return searchWorkspaceScan(workspaceId, query, size);
+}
+
+let searchIndexWarned = false;
+function warnSearchIndexOnce(err: unknown) {
+  if (searchIndexWarned) return;
+  searchIndexWarned = true;
+  console.warn('[search] full-text index unavailable, using the substring scan (is migration 0052 applied?):', String(err));
+}
+
+/** Where the first of `needles` (folded) sits in `content`, as a one-line excerpt in the original spelling. */
+function searchSnippet(content: string | null | undefined, needles: string[]): string {
+  if (!content) return '';
+  // Folding is almost always length-preserving, and then positions line up for
+  // free; only text where it is not (ligatures, stray marks) pays for the map.
+  let folded = foldText(content);
+  let offsets: number[] | null = null;
+  if (folded.length !== content.length) ({ folded, offsets } = foldTextWithOffsets(content));
+  let at = -1;
+  for (const needle of needles) {
+    if (needle && (at = folded.indexOf(needle)) >= 0) break;
+  }
+  const idx = at >= 0 ? (offsets ? offsets[at] : at) : -1;
+  const slice = idx >= 0
+    ? content.slice(Math.max(0, idx - 40), idx + 80)
+    : content.slice(0, 100);
+  return slice.replace(/\n/g, ' ').trim();
+}
+
+function searchMatchedOn(title: string | null | undefined, needles: string[]): 'title' | 'content' {
+  if (!title || needles.length === 0) return 'content';
+  const folded = foldText(title);
+  return needles.every(needle => folded.includes(needle)) ? 'title' : 'content';
+}
+
+/** Location breadcrumb (root → … → parent) by walking parent_id over the workspace tree. */
+function treeBreadcrumbs(treeRows: Array<{ id: string; parentId: string | null; title: string }>) {
+  const tree = new Map(treeRows.map((t) => [t.id, { parentId: t.parentId, title: t.title }]));
+  return (startId: string | null): string[] => {
+    const path: string[] = [];
+    let cur = startId;
+    for (let guard = 0; cur && guard < 25; guard++) {
+      const node = tree.get(cur);
+      if (!node) break;
+      path.unshift(node.title);
+      cur = node.parentId;
+    }
+    return path;
+  };
+}
+
+const workspaceTreeQuery = (workspaceId: string) => db
+  .select({ id: workspaceItems.id, parentId: workspaceItems.parentId, title: workspaceItems.title })
+  .from(workspaceItems)
+  .where(eq(workspaceItems.workspaceId, workspaceId));
+
+type IndexedSearchHit = {
+  id: string;
+  kind: 'item' | 'row';
+  itemType: 'page' | 'database' | 'dashboard' | null;
+  itemTitle: string | null;
+  parentId: string | null;
+  itemContent: string | null;
+  rowTitle: string | null;
+  rowContent: string | null;
+  databaseId: string | null;
+  dbItemId: string | null;
+};
+
+// Documents whose source row vanished (or moved out of the workspace) are dropped
+// after ranking, so a few extra are fetched to still fill the page.
+const SEARCH_OVERFETCH = 10;
+
+async function searchWorkspaceIndexed(
+  workspaceId: string,
+  query: string,
+  match: string,
+  limit: number,
+): Promise<WorkspaceSearchResult[]> {
+  // Rank first, join after: the inner query picks the top documents from the
+  // index alone, so bodies are read for those few rows only (the rank-then-join
+  // shape read 2× fewer rows on a common term, measured on Turso). Column weights:
+  // ws 0 (filter only), title 10, body 1.
+  const [hits, treeRows] = await db.batch([
+    db.all<IndexedSearchHit>(sql`
+      SELECT d.item_id AS id, d.kind AS kind,
+             wi.type AS itemType, wi.title AS itemTitle, wi.parent_id AS parentId,
+             (SELECT sp.content FROM standalone_pages sp WHERE sp.item_id = wi.id LIMIT 1) AS itemContent,
+             p.title AS rowTitle, p.content AS rowContent, p.database_id AS databaseId, dwi.id AS dbItemId
+      FROM (
+        SELECT rowid AS docid, bm25(search_fts, 0.0, 10.0, 1.0) AS rank
+        FROM search_fts
+        WHERE search_fts MATCH ${match}
+        ORDER BY rank
+        LIMIT ${limit + SEARCH_OVERFETCH}
+      ) hits
+      JOIN search_docs d ON d.id = hits.docid
+      LEFT JOIN workspace_items wi ON d.kind = 'item' AND wi.id = d.item_id AND wi.workspace_id = ${workspaceId}
+      LEFT JOIN pages p ON d.kind = 'row' AND p.id = d.item_id
+      LEFT JOIN databases dbs ON dbs.id = p.database_id
+      LEFT JOIN workspace_items dwi ON dwi.id = dbs.item_id AND dwi.workspace_id = ${workspaceId}
+      ORDER BY hits.rank
+    `),
+    workspaceTreeQuery(workspaceId),
+  ]);
+
+  const needles = searchTerms(query);
+  const breadcrumbOf = treeBreadcrumbs(treeRows);
+  const results: WorkspaceSearchResult[] = [];
+  for (const hit of hits) {
+    if (hit.kind === 'item') {
+      if (!hit.itemType || hit.itemTitle == null) continue;
+      results.push({
+        id: hit.id,
+        type: hit.itemType,
+        title: hit.itemTitle,
+        parentId: hit.parentId ?? undefined,
+        breadcrumb: breadcrumbOf(hit.parentId),
+        matchedOn: searchMatchedOn(hit.itemTitle, needles),
+        snippet: hit.itemType === 'page' ? searchSnippet(hit.itemContent, needles) : '',
+      });
+    } else {
+      if (!hit.dbItemId || hit.rowTitle == null) continue;
+      // A row lives inside its database, so its breadcrumb is the path to that database.
+      results.push({
+        id: hit.id,
+        type: 'database_row',
+        title: hit.rowTitle,
+        databaseId: hit.databaseId ?? undefined,
+        breadcrumb: breadcrumbOf(hit.dbItemId),
+        matchedOn: searchMatchedOn(hit.rowTitle, needles),
+        snippet: searchSnippet(hit.rowContent, needles),
+      });
+    }
+    if (results.length >= limit) break;
+  }
+  return results;
+}
+
+/** The pre-index search: an unranked substring scan, case- and accent-insensitive. */
+async function searchWorkspaceScan(
+  workspaceId: string,
+  query: string,
+  limit: number,
+): Promise<WorkspaceSearchResult[]> {
   // Case- AND accent-insensitive: "cozum" finds "Çözüm Notları", "istanbul"
   // finds "İstanbul Ofisi" — see foldingSearchPatterns for the LIKE + GLOB pair.
   const patterns = foldingSearchPatterns(query);
   const matches = (column: SQLiteColumn) =>
     sql`(${column} LIKE ${patterns.like} ESCAPE '\\' AND ${column} GLOB ${patterns.glob})`;
-  const q = foldText(query);
-
-  const snippetFrom = (content: string | null | undefined): string => {
-    if (!content) return '';
-    const { folded, offsets } = foldTextWithOffsets(content);
-    const at = q ? folded.indexOf(q) : -1;
-    const idx = at >= 0 ? offsets[at] : -1;
-    const slice = idx >= 0
-      ? content.slice(Math.max(0, idx - 40), idx + 80)
-      : content.slice(0, 100);
-    return slice.replace(/\n/g, ' ').trim();
-  };
-
-  const matchedOn = (title: string | null, content: string | null): 'title' | 'content' =>
-    title && foldText(title).includes(q) ? 'title' : 'content';
+  const needles = [foldText(query)];
 
   // The three reads are independent: one db.batch, one round-trip.
   const [itemRows, dbRows, treeRows] = await db.batch([
@@ -299,46 +460,30 @@ export async function searchWorkspace(
         ),
       )
       .limit(limit),
-    // Resolve a location breadcrumb (root -> ... -> parent) for any item by walking
-    // the parent_id chain over a lightweight in-memory map of the workspace tree.
-    db
-      .select({ id: workspaceItems.id, parentId: workspaceItems.parentId, title: workspaceItems.title })
-      .from(workspaceItems)
-      .where(eq(workspaceItems.workspaceId, workspaceId)),
+    workspaceTreeQuery(workspaceId),
   ]);
-  const tree = new Map(treeRows.map((t) => [t.id, { parentId: t.parentId, title: t.title }]));
-  const breadcrumbOf = (startId: string | null): string[] => {
-    const path: string[] = [];
-    let cur = startId;
-    for (let guard = 0; cur && guard < 25; guard++) {
-      const node = tree.get(cur);
-      if (!node) break;
-      path.unshift(node.title);
-      cur = node.parentId;
-    }
-    return path;
-  };
+  const breadcrumbOf = treeBreadcrumbs(treeRows);
 
-  const items = itemRows.map((item) => ({
+  const items: WorkspaceSearchResult[] = itemRows.map((item) => ({
     id: item.id,
     type: item.type,
     title: item.title,
     parentId: item.parentId ?? undefined,
     breadcrumb: breadcrumbOf(item.parentId),
-    matchedOn: matchedOn(item.title, item.content),
-    snippet: item.type === 'page' ? snippetFrom(item.content) : '',
+    matchedOn: searchMatchedOn(item.title, needles),
+    snippet: item.type === 'page' ? searchSnippet(item.content, needles) : '',
   }));
 
   // A row lives inside its database, so its breadcrumb is the path to that database
   // (ancestors + database name).
-  const rows = dbRows.map((r) => ({
+  const rows: WorkspaceSearchResult[] = dbRows.map((r) => ({
     id: r.id,
     type: 'database_row' as const,
     title: r.title,
     databaseId: r.databaseId,
     breadcrumb: breadcrumbOf(r.dbItemId),
-    matchedOn: matchedOn(r.title, r.content),
-    snippet: snippetFrom(r.content),
+    matchedOn: searchMatchedOn(r.title, needles),
+    snippet: searchSnippet(r.content, needles),
   }));
 
   return [...items, ...rows].slice(0, limit);

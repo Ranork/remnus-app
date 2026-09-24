@@ -63,15 +63,33 @@ async function main() {
     }
   }
 
+  // Objects Drizzle cannot declare: the FTS5 index behind search_workspace and the
+  // triggers that keep it current (migration 0052). A missing trigger fails silently —
+  // the index just stops following edits — so it is checked here rather than trusted.
+  // Keep this list in step with TRIGGERS in src/db/apply-0052-search-index.ts.
+  const searchObjects = [
+    'search_fts',
+    'search_items_ai', 'search_items_au', 'search_items_ad',
+    'search_body_ai', 'search_body_au', 'search_body_ad',
+    'search_rows_ai', 'search_rows_au', 'search_rows_ad',
+    'search_databases_au', 'search_workspaces_ad',
+  ];
+  const present = await client.execute(`select name from sqlite_master where name like 'search%'`);
+  const presentNames = new Set(present.rows.map((r) => String(r.name)));
+  for (const name of searchObjects) {
+    if (!presentNames.has(name)) problems.push(`missing search index object: ${name} (apply-0052-search-index.ts)`);
+  }
+
   for (const table of actualTables) {
-    if (!declared.has(table) && !table.startsWith('sqlite_') && !table.startsWith('__') && !table.startsWith('_')) {
+    // search_fts* are the FTS5 table and its shadow tables, checked above.
+    if (!declared.has(table) && !table.startsWith('sqlite_') && !table.startsWith('__') && !table.startsWith('_') && !table.startsWith('search_fts')) {
       notes.push(`extra table (not in schema.ts): ${table}`);
     }
   }
 
   for (const n of notes) console.log(`  · ${n}`);
   if (problems.length === 0) {
-    console.log(`OK — all ${declared.size} declared tables, their columns and named indexes exist.`);
+    console.log(`OK — all ${declared.size} declared tables, their columns and named indexes exist, and the search index is in place.`);
     return;
   }
   for (const p of problems) console.log(`  ✗ ${p}`);
