@@ -20,6 +20,7 @@ import {
   deletedItems,
   pageLinks,
   pageComments,
+  knowledgeMetadata,
 } from '@/db/schema';
 import { eq, ne, and, or, asc, desc, gte, lte, sql, inArray } from 'drizzle-orm';
 import type { SQLiteColumn } from 'drizzle-orm/sqlite-core';
@@ -1175,9 +1176,11 @@ export type RelatedPageRef = {
 
 /**
  * One-call neighborhood view of a page: parent, children, outgoing links,
- * backlinks (from the page_links graph), and — for database rows — sibling
- * rows in the same database. All referenced ids are usable with get_page /
- * query_database, so an agent can walk the graph without re-reading bodies.
+ * backlinks (from the page_links graph), — for database rows — sibling rows
+ * in the same database, and the repo files its knowledge sources name. All
+ * referenced ids are usable with get_page / query_database, so an agent can
+ * walk the graph without re-reading bodies. The reverse question (file →
+ * pages) is `getPagesForResource` in services/codeSources.ts.
  */
 export async function getRelatedPages(workspaceId: string, pageId: string) {
   // Everything that depends only on `pageId` ships in ONE batch — the subject
@@ -1192,7 +1195,7 @@ export async function getRelatedPages(workspaceId: string, pageId: string) {
   // /db/<dbId> href, workspace item id from a childBlock) — match both.
   const databaseIdOfItem = db.select({ id: databases.id }).from(databases).where(eq(databases.itemId, pageId));
 
-  const [itemRows, rowRows, parentItemRows, parentRowRows, childRows, outgoingRows, backlinkRows, siblingCountRows, siblingRows] = await db.batch([
+  const [itemRows, rowRows, parentItemRows, parentRowRows, childRows, outgoingRows, backlinkRows, siblingCountRows, siblingRows, sourceRows] = await db.batch([
     db
       .select({
         id: workspaceItems.id,
@@ -1265,6 +1268,13 @@ export async function getRelatedPages(workspaceId: string, pageId: string) {
       .where(and(inArray(pages.databaseId, rowDatabaseIdOf), ne(pages.id, pageId)))
       .orderBy(asc(pages.sortOrder), asc(pages.id))
       .limit(10),
+    // The repo files the subject rests on (P13): the project-map neighbours an
+    // agent opens next. Ids are uuids, so the item type is not needed to find it.
+    db
+      .select({ sources: knowledgeMetadata.sources })
+      .from(knowledgeMetadata)
+      .where(and(eq(knowledgeMetadata.itemId, pageId), eq(knowledgeMetadata.workspaceId, workspaceId)))
+      .limit(1),
   ]);
 
   let subject: { id: string; title: string; type: 'page' | 'database' | 'database_row' | 'dashboard' };
@@ -1359,6 +1369,10 @@ export async function getRelatedPages(workspaceId: string, pageId: string) {
     ? { total: Math.max(0, Number(siblingCountRows[0]?.n ?? 1) - 1), items: siblingRows }
     : null;
 
+  const sources = (sourceRows[0]?.sources ?? [])
+    .map((source) => (typeof source?.resource === 'string' ? source.resource : ''))
+    .filter(Boolean);
+
   return {
     page: { id: subject.id, title: subject.title, type: subject.type },
     parent,
@@ -1366,6 +1380,8 @@ export async function getRelatedPages(workspaceId: string, pageId: string) {
     outgoingLinks,
     backlinks,
     siblings,
+    // Absent rather than empty: most pages carry none, and the field is paid per call.
+    ...(sources.length > 0 ? { sources } : {}),
   };
 }
 

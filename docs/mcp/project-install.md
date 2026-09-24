@@ -128,6 +128,13 @@ over. When it finishes, `.remnus/config.json` records `calibrated: true`,
 `calibratedAt` and `calibrationGuide`; running it again later only extends what is
 there.
 
+Calibration also records which repository files each concept rests on (its knowledge
+`sources`). That is what ties the workspace to the code: an agent about to change a file
+asks [`get_related_pages`](read-tools.md#by-file-resource) with that path and gets the
+decisions and gotchas written against it, and the knowledge map's **Code files** layer
+draws those files, folder by folder, next to the pages. Only paths travel — no code is
+read or sent.
+
 It's optional — the workspace works empty too. If you'd like it done: whoever just
 ran `init` (or is picking up a project someone else connected, with
 `.remnus/config.json` still saying `"calibrated": false`) can fetch that URL and

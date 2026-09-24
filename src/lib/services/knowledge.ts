@@ -168,7 +168,9 @@ async function resolveKnowledgeItem(workspaceId: string, itemId: string): Promis
   };
 }
 
-function trustFor(
+// Exported for the knowledge graph (services/graph.ts), which colours nodes by
+// the same verdict instead of keeping a second copy of the rule.
+export function trustFor(
   row: typeof knowledgeMetadata.$inferSelect | undefined,
   contentHash: string,
   reviews: Array<typeof knowledgeReviews.$inferSelect>,

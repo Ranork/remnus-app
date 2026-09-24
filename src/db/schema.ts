@@ -480,7 +480,10 @@ export const agentActivity = sqliteTable('agent_activity', {
   itemsAffected: integer('items_affected'),
   createdAt:    integer('created_at', { mode: 'timestamp' }).notNull(),
 }, (table) => [
-  index('agent_activity_workspace_id_idx').on(table.workspaceId),
+  // Migration 0053: replaced the single-column workspace_id index. Every
+  // workspace-scoped query still uses it (leftmost column), and time windows over
+  // one workspace — the graph's agent activity, the audit log — become a range scan.
+  index('agent_activity_workspace_created_idx').on(table.workspaceId, table.createdAt),
   index('agent_activity_token_id_idx').on(table.tokenId),
   index('agent_activity_owner_created_idx').on(table.ownerUserId, table.createdAt),
 ]);

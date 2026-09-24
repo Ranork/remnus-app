@@ -273,6 +273,9 @@ function rankCorpus(index: CorpusIndex, terms: QueryTerm[], policy: ContextTrust
   const candidates = new Set<number>();
   for (const query of matched) for (const doc of query.docs) candidates.add(doc);
   const taskTerms = terms.filter(query => query.fromTask).map(query => query.term);
+  // Terms no document contains, under the same prefix rule: the input to the
+  // vocabulary-miss warning in prepareContextPack.
+  const absentTerms = new Set(matched.filter(query => query.docs.size === 0).map(query => query.term));
 
   const ranked = [];
   for (const docIndex of candidates) {
@@ -308,7 +311,7 @@ function rankCorpus(index: CorpusIndex, terms: QueryTerm[], policy: ContextTrust
       },
     });
   }
-  return ranked;
+  return { ranked, absentTerms };
 }
 
 /** Task words first (up to 16), then the agent's keywords (up to 24 more terms). */
@@ -322,6 +325,86 @@ function queryTerms(task: string, keywords: string[] | undefined): QueryTerm[] {
     .filter(term => !seen.has(term) && (seen.add(term), true))
     .slice(0, MAX_CONTEXT_KEYWORDS);
   return [...terms, ...extra.map(term => ({ term, weight: KEYWORD_WEIGHT, fromTask: false }))];
+}
+
+// ── Vocabulary miss ──────────────────────────────────────────────────────────
+//
+// Retrieval is lexical, and Remnus deliberately sends no workspace content to
+// an embedding provider (P11, 2026-09-24): the calling agent is the one that
+// can translate and knows the synonyms. What the server can see is a task
+// written in words the workspace does not use at all — a Turkish task over
+// English pages, "mail" where the pages say "email" — and it names those words
+// so the agent retries with `keywords`. A strict majority of the task's terms
+// must be absent from every document and no keyword may have matched: one
+// unknown word in an otherwise matching task ("debug the integrations api")
+// must not cost the agent a second call.
+
+const MISSING_TERMS_SHOWN = 8;
+
+// ── Related refs (link-graph neighbours) ─────────────────────────────────────
+//
+// Measured in P13 (2026-09-24, `context-graph-expansion.ts` in bench:context:
+// the repo's docs/, 46 real pages, 148 links, 12 tasks with relevance sets
+// written before the run). Refs used to come from the TOP concept only and
+// were added after the bodies had filled the budget, so at the default 2,000
+// tokens a pack carried 0.9 refs on average: relevant pages reachable from
+// the pack (body or ref) 0.69. Neighbours of the top THREE concepts, ranked by
+// the scores of the concepts that point at them, cut to 6 and given their
+// room before the bodies are sized: 0.92, for ~140 tokens (7 % of the
+// default pack) taken from the bodies — no concept was dropped. The control
+// without a graph (the next six lexical hits as refs) reached 0.78. Folding a
+// personalized PageRank into the BODY ranking was rejected: +0.11 body recall,
+// but an index page took a body slot in half the tasks — the overview page a
+// calibration links everything from would do the same.
+
+/** Concepts whose neighbourhoods seed the refs. */
+const RELATED_SEEDS = 3;
+const MAX_RELATED = 6;
+/** The most of the budget the refs may take from the bodies. */
+const RELATED_BUDGET_SHARE = 0.08;
+
+type RelatedRef = ContextPack['related'][number];
+
+async function relatedCandidates(
+  workspaceId: string,
+  seeds: Array<{ id: string; score: number }>,
+  dependencies: ContextPackDependencies,
+): Promise<{ refs: RelatedRef[]; failed: boolean }> {
+  const settled = await Promise.allSettled(seeds.map(seed => dependencies.getRelatedPages(workspaceId, seed.id)));
+  const conceptIds = new Set(seeds.map(seed => seed.id));
+  const votes = new Map<string, { ref: RelatedRef; score: number }>();
+  settled.forEach((result, i) => {
+    if (result.status !== 'fulfilled') return;
+    const related = result.value;
+    // Explicit links before the tree: on equal votes the sort keeps this order.
+    const refs = [
+      ...related.outgoingLinks.map(item => ({ ...item, relation: 'outgoing' })),
+      ...related.backlinks.map(item => ({ ...item, relation: 'backlink' })),
+      ...(related.parent ? [{ ...related.parent, relation: 'parent' }] : []),
+      ...related.children.map(item => ({ ...item, relation: 'child' })),
+    ];
+    for (const ref of refs) {
+      if (conceptIds.has(ref.id)) continue;
+      const vote = votes.get(ref.id);
+      // A page two top concepts point at outranks one only the first does.
+      if (vote) vote.score += Math.max(seeds[i].score, 0.001);
+      else votes.set(ref.id, { ref: { id: ref.id, type: ref.type, title: ref.title, relation: ref.relation }, score: Math.max(seeds[i].score, 0.001) });
+    }
+  });
+  const refs = [...votes.values()].sort((a, b) => b.score - a.score).map(vote => vote.ref);
+  return { refs, failed: settled.some(result => result.status === 'rejected') };
+}
+
+/** Numbers only: the MCP layer forwards these to analytics, so never text. */
+export interface ContextPackStats {
+  /** Keywords the caller passed, after the cap. */
+  keywordCount: number;
+  /** Distinct task terms that were searched. */
+  taskTerms: number;
+  /** Task terms no document in the workspace contains. */
+  missingTaskTerms: number;
+  /** The retry-with-keywords warning was added. */
+  vocabularyMiss: boolean;
 }
 
 // ── Corpus cache ─────────────────────────────────────────────────────────────
@@ -382,6 +465,15 @@ export async function prepareContextPack(
   dependencies: ContextPackDependencies = DEFAULT_DEPENDENCIES,
   actor?: TokenContext,
 ): Promise<ContextPack> {
+  return (await prepareContextPackWithStats(workspaceId, input, dependencies, actor)).pack;
+}
+
+export async function prepareContextPackWithStats(
+  workspaceId: string,
+  input: PrepareContextInput,
+  dependencies: ContextPackDependencies = DEFAULT_DEPENDENCIES,
+  actor?: TokenContext,
+): Promise<{ pack: ContextPack; stats: ContextPackStats }> {
   const task = input.task.trim();
   if (!task) throw new Error('task is required');
   const budgetTokens = boundedInt(input.maxTokens, 2_000, 1_000, 16_000);
@@ -392,16 +484,26 @@ export async function prepareContextPack(
   const effectiveCharBudget = charBudget - (actor ? 320 : 0);
   const terms = queryTerms(task, input.keywords);
   const index = await loadCorpusIndex(workspaceId, dependencies);
-  const allRanked = rankCorpus(index, terms, trustPolicy, Date.now())
+  const { ranked: scored, absentTerms } = rankCorpus(index, terms, trustPolicy, Date.now());
+  const allRanked = scored
     .filter(entry => trustPolicy !== 'human-reviewed-only' || entry.item.metadata.trust === 'human-reviewed')
     .sort((a, b) => b.score - a.score || a.item.title.localeCompare(b.item.title));
   const ranked = allRanked.slice(0, maxConcepts);
+
+  const taskTerms = terms.filter(query => query.fromTask);
+  const missingTaskTerms = taskTerms.filter(query => absentTerms.has(query.term)).map(query => query.term);
+  const keywordMatched = terms.some(query => !query.fromTask && !absentTerms.has(query.term));
+  const vocabularyMiss = missingTaskTerms.length * 2 > taskTerms.length && !keywordMatched;
 
   const warnings: string[] = [];
   if (ranked.some(item => item.item.metadata.stale)) warnings.push('Some selected concepts are stale; verify them before acting.');
   if (ranked.some(item => item.item.metadata.status === 'deprecated')) warnings.push('Deprecated concepts are included only when retrieval found no stronger replacement.');
   if (trustPolicy === 'human-reviewed-only' && ranked.length === 0) warnings.push('No locally human-reviewed concepts matched this task.');
-  if (ranked.length === 0) warnings.push('No workspace concepts matched the task. Try a more specific product or technical term.');
+  if (vocabularyMiss) {
+    warnings.push(`Task words not found in this workspace: ${missingTaskTerms.slice(0, MISSING_TERMS_SHOWN).join(', ')}. If the concepts miss the task, call prepare_context again with keywords: synonyms and the workspace's own language.`);
+  } else if (ranked.length === 0) {
+    warnings.push('No workspace concepts matched the task. Try a more specific product or technical term.');
+  }
 
   const pack: ContextPack = {
     profile: 'remnus-context-pack-v2',
@@ -420,9 +522,27 @@ export async function prepareContextPack(
     warnings,
   };
 
+  // Neighbours are read before the bodies are sized, so their room is reserved
+  // up front (and only as much as they need) instead of what the bodies left.
+  let relatedRefs: RelatedRef[] = [];
+  if (input.includeRelated !== false && ranked.length > 0) {
+    const { refs, failed } = await relatedCandidates(
+      workspaceId,
+      ranked.slice(0, RELATED_SEEDS).map(entry => ({ id: entry.item.id, score: entry.score })),
+      dependencies,
+    );
+    const rankedIds = new Set(ranked.map(entry => entry.item.id));
+    relatedRefs = refs.filter(ref => !rankedIds.has(ref.id)).slice(0, MAX_RELATED);
+    if (failed) warnings.push('The link-graph neighborhood could not be loaded.');
+  }
+  const relatedReserve = relatedRefs.length === 0
+    ? 0
+    : Math.min(Math.floor(effectiveCharBudget * RELATED_BUDGET_SHARE), JSON.stringify(relatedRefs).length);
+  const bodyBudget = effectiveCharBudget - relatedReserve;
+
   for (const entry of ranked) {
     const remainingConcepts = Math.max(1, ranked.length - pack.concepts.length);
-    const available = Math.max(300, effectiveCharBudget - serializedChars(pack) - 700);
+    const available = Math.max(300, bodyBudget - serializedChars(pack) - 700);
     const perConcept = Math.max(300, Math.min(10_000, Math.floor(available / remainingConcepts)));
     const body = compactBody(entry.item.content, perConcept);
     const concept: ContextPackConcept = {
@@ -437,37 +557,23 @@ export async function prepareContextPack(
       selectionReason: entry.selectionReason,
     };
     pack.concepts.push(concept);
-    while (serializedChars(pack) > effectiveCharBudget && concept.content.length > 200) {
+    while (serializedChars(pack) > bodyBudget && concept.content.length > 200) {
       concept.content = concept.content.slice(0, Math.max(200, concept.content.length - 400));
       concept.contentTruncated = true;
       pack.truncated = true;
     }
-    if (serializedChars(pack) > effectiveCharBudget) {
+    if (serializedChars(pack) > bodyBudget) {
       pack.concepts.pop();
       pack.truncated = true;
       break;
     }
   }
 
-  if (input.includeRelated !== false && pack.concepts[0]) {
-    try {
-      const related = await dependencies.getRelatedPages(workspaceId, pack.concepts[0].id);
-      const refs = [
-        ...(related.parent ? [{ ...related.parent, relation: 'parent' }] : []),
-        ...related.children.map(item => ({ ...item, relation: 'child' })),
-        ...related.outgoingLinks.map(item => ({ ...item, relation: 'outgoing' })),
-        ...related.backlinks.map(item => ({ ...item, relation: 'backlink' })),
-      ];
-      const seen = new Set(pack.concepts.map(concept => concept.id));
-      for (const ref of refs) {
-        if (seen.has(ref.id)) continue;
-        seen.add(ref.id);
-        pack.related.push({ id: ref.id, type: ref.type, title: ref.title, relation: ref.relation });
-        if (pack.related.length >= 12 || serializedChars(pack) > effectiveCharBudget) break;
-      }
-      while (serializedChars(pack) > effectiveCharBudget && pack.related.length) pack.related.pop();
-    } catch {
-      warnings.push('The link-graph neighborhood could not be loaded.');
+  for (const ref of relatedRefs) {
+    pack.related.push(ref);
+    if (serializedChars(pack) > effectiveCharBudget) {
+      pack.related.pop();
+      break;
     }
   }
 
@@ -484,5 +590,13 @@ export async function prepareContextPack(
     pack.expiresAt = run.expiresAt;
     pack.estimatedTokens = Math.ceil(serializedChars(pack) / 4);
   }
-  return pack;
+  return {
+    pack,
+    stats: {
+      keywordCount: Math.min(input.keywords?.length ?? 0, MAX_CONTEXT_KEYWORDS),
+      taskTerms: taskTerms.length,
+      missingTaskTerms: missingTaskTerms.length,
+      vocabularyMiss,
+    },
+  };
 }

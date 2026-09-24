@@ -14,13 +14,20 @@ npm run test:okf         # Targeted OKF/context-pack check (pure, no DB)
 npm run test:recurrence  # Recurrence rule engine — 26 pure-function assertions, no DB
 npm run test:access      # Workspace access requests (npx remnus join) — writes+cleans up rows, LOCAL DB ONLY:
 #                           DATABASE_URL="file:local.db" npm run test:access
-npm run bench:context    # Synthetic Context Pack ranking/token regression
+npm run bench:context    # Synthetic Context Pack ranking/token regression + (P13) docs/ graph-expansion report (related refs vs controls)
+npm run test:code-paths  # P13: knowledge sources read as repo paths + file matching (pure, no DB)
+npm run test:workspace-deletion  # deleteWorkspaceData leaves nothing behind (DATABASE_URL="file:local.db"; refuses remote)
+npx tsx src/db/cleanup-orphaned-workspace-data.ts [--apply]  # leftovers of deleted workspaces; dry run by default; plain run = PROD (.env)
+npm run bench:graph      # Knowledge map: mention thresholds on docs/ + synthetic 5k workspace (DATABASE_URL="file:local.db" — refuses remote; --keep/--member/--cleanup)
 npm run bench:tokens     # Read-shaping savings (digest vs crawl, fields, outline) — needs a DB:
 #                           DATABASE_URL="file:local.db" npm run bench:tokens
 npm run bench:mcp-budget # Per-session MCP context cost: tools/list per tool + per scope,
 #                           model-visible (description+inputSchema) vs wire-only, prompts,
 #                           resources, instructions, AGENTS.md block, and a modelled session.
 #                           DATABASE_URL="file:local.db" npm run bench:mcp-budget [-- <workspaceId>] [--dump=tools.json]
+#                           Locally it dies on `Cannot find module 'server-only'` (analytics/server.ts imports it; the
+#                           package is not installed — Next bundles its own). Don't install it: point NODE_PATH at a
+#                           scratch dir holding server-only/{package.json,index.js (empty)} for the run (P13, 2026-09-24).
 ```
 
 There is still no general unit/integration/e2e test runner or `test` script — do not invent one. The three commands above are targeted, self-contained checks, not a suite. Run `npm run build` only when build behavior changed, before release, or when explicitly requested.

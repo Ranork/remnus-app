@@ -18,6 +18,7 @@ import ShareModal from '@/components/share/ShareModal';
 import { PageMarkdownDialog } from './PageMarkdownDialog';
 import { PageHistoryModal } from './PageHistoryModal';
 import PageBacklinksPanel from './PageBacklinksPanel';
+import LocalGraphPanel from './graph/LocalGraphPanel';
 import KnowledgeContextPanel from './KnowledgeContextPanel';
 import PageCommentsPanel from './PageCommentsPanel';
 import SeriesPanel from './recurrence/SeriesPanel';
@@ -876,6 +877,7 @@ const PageEditor = forwardRef<PageEditorHandle, PageEditorProps>(function PageEd
 
       {!isPeek && <KnowledgeContextPanel workspaceId={database.workspaceId} pageId={initialPage.id} />}
       {!isPeek && <PageBacklinksPanel workspaceId={database.workspaceId} pageId={initialPage.id} />}
+      {!isPeek && <LocalGraphPanel workspaceId={database.workspaceId} pageId={initialPage.id} />}
 
       {showShareModal && (
         <ShareModal

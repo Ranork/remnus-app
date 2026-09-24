@@ -6,9 +6,9 @@ import { LAST_PATH_COOKIE } from '@/lib/constants/cookies';
 
 const MAX_AGE = 60 * 60 * 24 * 365; // 1 year
 
-// Only content routes are worth restoring when the user relaunches the app.
+// Only content routes (and the knowledge map) are worth restoring when the user relaunches the app.
 function isRestorable(path: string): boolean {
-  return path.startsWith('/page/') || path.startsWith('/db/');
+  return path.startsWith('/page/') || path.startsWith('/db/') || path.startsWith('/graph/');
 }
 
 /**

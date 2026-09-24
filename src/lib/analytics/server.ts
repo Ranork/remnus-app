@@ -202,12 +202,15 @@ export async function captureAnonymous(
 
 /**
  * Fire-and-forget `agent_call` capture for the MCP hot path. Resolves the
- * owner's consent + role, then captures. Never awaited by callers.
+ * owner's consent + role, then captures. Never awaited by callers. `extra`
+ * carries a tool's content-free counters (prepare_context: keyword use and
+ * vocabulary misses — see AGENTS.md → Performance Rules).
  */
 export async function captureAgentCall(
   ownerUserId: string,
   tool: string,
   workspaceId: string,
+  extra?: Record<string, number | boolean>,
 ): Promise<void> {
   const { allowed, role } = await isCaptureAllowedForUser(ownerUserId);
   await captureServer({
@@ -215,6 +218,6 @@ export async function captureAgentCall(
     userId: ownerUserId,
     allowed,
     role,
-    properties: { tool, workspaceId },
+    properties: { ...extra, tool, workspaceId },
   });
 }

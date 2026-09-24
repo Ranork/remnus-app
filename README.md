@@ -142,7 +142,7 @@ Swap `--client` for `cursor`, `vscode`, `codex`, `windsurf`, etc. Either way, th
 | `list_members` | read | List workspace members with roles |
 | `query_audit_log` | read | Filtered agent activity log |
 | `get_changes_since` | read | Compact, chronological feed of what changed since a timestamp or cursor |
-| `get_related_pages` | read | A page's parent, children, outgoing links, backlinks, and database siblings |
+| `get_related_pages` | read | A page's parent, children, outgoing links, backlinks, database siblings and source files — or, given a file path, the pages that rest on it |
 | `create_page` | write | Create a standalone page or database row, with an icon |
 | `bulk_create_pages` | write | Create up to 50 pages or rows in one call, nesting pages via `ref`/`parentRef` |
 | `update_page` | write | Update title, content, or properties |

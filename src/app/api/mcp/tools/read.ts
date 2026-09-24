@@ -26,8 +26,9 @@ import {
   getChangesSince,
   getRelatedPages,
 } from '@/lib/services/workspace';
-import { MAX_CONTEXT_KEYWORD_CHARS, MAX_CONTEXT_KEYWORDS, prepareContextPack } from '@/lib/services/contextPack';
+import { MAX_CONTEXT_KEYWORD_CHARS, MAX_CONTEXT_KEYWORDS, prepareContextPackWithStats } from '@/lib/services/contextPack';
 import { listPageComments } from '@/lib/services/comments';
+import { getPagesForResource } from '@/lib/services/codeSources';
 import { appUrl, logActivity, type TokenContext } from '../context';
 
 type PageRead = Awaited<ReturnType<typeof getAnyPageById>>;
@@ -62,7 +63,7 @@ export function registerReadTools(server: McpServer, ctx: TokenContext) {
   server.registerTool(
     'prepare_context',
     {
-      description: 'Build a task-specific, token-budgeted context pack from the most relevant pages: lexical rank, human-reviewed knowledge preferred, stale/deprecated concepts penalized, plus the top hit\'s link neighbors. Use it before multi-page product or coding work instead of many search/get_page calls.',
+      description: 'Build a task-specific, token-budgeted context pack from the most relevant pages: lexical rank, human-reviewed knowledge preferred, stale/deprecated concepts penalized, plus the top hits\' link neighbors. Use it before multi-page product or coding work instead of many search/get_page calls.',
       inputSchema: {
         task: z.string().min(3).max(2_000).describe('The concrete task or question'),
         keywords: z.array(z.string().max(MAX_CONTEXT_KEYWORD_CHARS)).max(MAX_CONTEXT_KEYWORDS).optional()
@@ -70,7 +71,7 @@ export function registerReadTools(server: McpServer, ctx: TokenContext) {
         maxTokens: z.number().int().min(1_000).max(16_000).optional().default(2_000).describe('Budget for the returned JSON, approx. tokens'),
         maxConcepts: z.number().int().min(1).max(16).optional().default(6),
         trustPolicy: z.enum(['any', 'prefer-human-reviewed', 'human-reviewed-only']).optional().default('prefer-human-reviewed'),
-        includeRelated: z.boolean().optional().default(true).describe('Add title/id refs from the top concept\'s link neighborhood'),
+        includeRelated: z.boolean().optional().default(true).describe('Add title/id refs from the top concepts\' link neighborhoods'),
       },
       outputSchema: z.object({
         profile: z.literal('remnus-context-pack-v2'),
@@ -97,9 +98,11 @@ export function registerReadTools(server: McpServer, ctx: TokenContext) {
     },
     async ({ task, keywords, maxTokens, maxConcepts, trustPolicy, includeRelated }) => {
       try {
-        const pack = await prepareContextPack(ctx.workspaceId, { task, keywords, maxTokens, maxConcepts, trustPolicy, includeRelated }, undefined, ctx);
+        const { pack, stats } = await prepareContextPackWithStats(ctx.workspaceId, { task, keywords, maxTokens, maxConcepts, trustPolicy, includeRelated }, undefined, ctx);
         const text = JSON.stringify(pack);
-        await logActivity(ctx, 'prepare_context', 'success', undefined, undefined, text);
+        await logActivity(ctx, 'prepare_context', 'success', undefined, undefined, text, {
+          analytics: { ...stats, conceptCount: pack.concepts.length },
+        });
         return { content: [{ type: 'text' as const, text }], structuredContent: { ...pack } };
       } catch (err) {
         await logActivity(ctx, 'prepare_context', 'error');
@@ -469,31 +472,62 @@ export function registerReadTools(server: McpServer, ctx: TokenContext) {
     linkKind: z.string().optional().describe('page_link | child_block'),
   }).passthrough();
 
+  // Two questions, one tool (P13): a page's neighbourhood by `pageId`, or "which
+  // pages rest on this repo file?" by `resource`. A second tool would put its
+  // whole schema into every session's tools/list (bench:mcp-budget).
   server.registerTool(
     'get_related_pages',
     {
-      description: 'A page\'s link-graph neighborhood, titles and ids only: parent, children, outgoing links (@-links and child blocks), backlinks, and for rows the same-database siblings. Read the neighbors that matter with get_page.',
+      description: 'A page\'s neighborhood, titles and ids only: parent, children, outgoing links (@-links and child blocks), backlinks, row siblings, and the repo files it rests on. With resource (a file path) instead: the pages resting on that file — read them before changing it.',
       inputSchema: {
-        pageId: z.string().describe('Page, database or row id'),
+        pageId: z.string().optional().describe('Page, database or row id'),
+        resource: z.string().max(1_000).optional().describe('Instead of pageId: a repo file or folder path'),
       },
       outputSchema: z.object({
         page: z.object({
           id: z.string(),
           title: z.string(),
           type: z.string().describe('page | database | database_row'),
-        }).passthrough().describe('The subject page'),
-        parent: relatedRefSchema.nullable().describe('Sidebar parent (for a row, its database); null at root'),
-        children: z.array(relatedRefSchema).describe('Nested under this page'),
-        outgoingLinks: z.array(relatedRefSchema).describe('Pages this page\'s body references (children excluded)'),
-        backlinks: z.array(relatedRefSchema).describe('Pages referencing this page (parent excluded)'),
+        }).passthrough().optional().describe('The subject page (pageId mode)'),
+        parent: relatedRefSchema.nullable().optional().describe('Sidebar parent (for a row, its database); null at root'),
+        children: z.array(relatedRefSchema).optional().describe('Nested under this page'),
+        outgoingLinks: z.array(relatedRefSchema).optional().describe('Pages this page\'s body references (children excluded)'),
+        backlinks: z.array(relatedRefSchema).optional().describe('Pages referencing this page (parent excluded)'),
         siblings: z.object({
           total: z.number(),
           items: z.array(z.object({ id: z.string(), title: z.string() })).describe('Up to 10'),
-        }).nullable().describe('Same-database rows — database_row subjects only, null otherwise'),
+        }).nullable().optional().describe('Same-database rows — database_row subjects only, null otherwise'),
+        sources: z.array(z.string()).optional().describe('pageId mode: repo files (or URLs) its knowledge sources name; absent when none'),
+        resource: z.string().optional().describe('resource mode: the path as matched'),
+        pages: z.array(z.object({
+          id: z.string(),
+          title: z.string(),
+          type: z.string().describe('page | database | database_row'),
+          databaseId: z.string().optional().describe('Databases and rows — pass to query_database'),
+          match: z.string().describe('exact | folder (rests on a folder containing it) | inside (rests on a file inside the asked folder)'),
+          source: z.string().describe('The source as the page records it'),
+        }).passthrough()).optional().describe('resource mode: pages resting on it, closest match first (up to 25)'),
+        total: z.number().optional().describe('resource mode: matches before the limit'),
+        note: z.string().optional().describe('resource mode: set when no page in the workspace records sources at all'),
       }),
       annotations: { title: 'Get related pages', readOnlyHint: true, openWorldHint: false },
     },
-    async ({ pageId }) => {
+    async ({ pageId, resource }) => {
+      if (resource?.trim()) {
+        try {
+          const result = await getPagesForResource(ctx.workspaceId, resource);
+          const text = JSON.stringify(result);
+          // The path is not a workspace id: nothing to point the audit row's target at.
+          await logActivity(ctx, 'get_related_pages', 'success', 'resource', undefined, text);
+          return { content: [{ type: 'text' as const, text }], structuredContent: result };
+        } catch (err) {
+          await logActivity(ctx, 'get_related_pages', 'error', 'resource');
+          return { content: [{ type: 'text' as const, text: `Error: ${String(err)}` }], isError: true };
+        }
+      }
+      if (!pageId) {
+        return { content: [{ type: 'text' as const, text: 'Error: pass pageId, or resource (a repo file path).' }], isError: true };
+      }
       try {
         const result = await getRelatedPages(ctx.workspaceId, pageId);
         const text = JSON.stringify(result);

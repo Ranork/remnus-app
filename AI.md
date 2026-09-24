@@ -140,7 +140,7 @@ Repository monorepo değildir. Ana npm uygulamasına ek olarak dağıtım için 
 
 ## Critical conventions
 
-- Kullanıcıya görünen tüm uygulama metni next-intl üzerinden gelir. Yeni key'i 8 dosyaya (`en`, `tr`, `hi`, `es`, `fr`, `de`, `zh`, `ru`) ekle; 37 namespace vardır.
+- Kullanıcıya görünen tüm uygulama metni next-intl üzerinden gelir. Yeni key'i 8 dosyaya (`en`, `tr`, `hi`, `es`, `fr`, `de`, `zh`, `ru`) ekle; 38 namespace vardır.
 - Client'ta `useTranslations`, server component/action'da `getTranslations`; tarih locale'ini hardcode etme.
 - Server action/component'ta doğrudan `auth()` çağırma; `src/lib/auth/session.ts` içindeki `getCurrentUser()` kullan.
 - Proje pencereleri workspace'e kilitli oturum kullanır ve kilit **varsayılan-ret**tir: `auth()` kilitli oturumu çıkış yapmış sayar, `getCurrentUser()` hata fırlatır. Bir action yalnızca workspace içeriğiyse `getCurrentUserAllowingWorkspaceLock()` kullanıp çözdüğü workspace için `assertWorkspaceLockAllows()` çağırmalıdır (admin kısayolundan önce). Ayrıntı: `AGENTS.md` → **Project Install** §4.
@@ -149,6 +149,7 @@ Repository monorepo değildir. Ana npm uygulamasına ek olarak dağıtım için 
 - Yapısal sidebar mutasyonları dışında content editlerinde `revalidatePath('/')` kullanma; optimistic client akışını koru.
 - `workspace_items`, `standalone_pages`, `databases`, `pages` insertlerinde `createdAt`/`updatedAt` değerlerini açıkça `new Date()` ile yaz.
 - Content write/delete yollarında `syncPageLinks`, `purgeReferencesTo`, `removePageLinksFor` ve tombstone yan etkilerini koru; `seed.ts` doğrudan DB yazdığı için ayrıca kontrol edilmelidir.
+- Bütün bir workspace yalnızca `deleteWorkspaceData` (`src/lib/services/workspaceDeletion.ts`) ile silinir; çıplak `db.delete(workspaces)` database'leri, satırları ve yorumları geride bırakır (`databases.item_id` SET NULL). Ayrıntı: `AGENTS.md` → **Deleting a whole workspace**.
 - Tekrarlayan takvim kartlarında iki değişmez korunmalı: geçmiş occurrence'lar asla yeniden yazılmaz (kural değişimi seriyi böler, mutasyon yapmaz) ve içi doldurulmuş occurrence silinmez, seriden koparılıp yerinde bırakılır. Ayrıntı: `AGENTS.md` → **Recurring Calendar Cards**.
 - MCP write tool'ları write scope doğrulaması yapmalı; audit logging ana cevabı bozmayan best-effort kalmalıdır.
 - `search_docs`/`search_fts` (arama indeksi, migration `0052`) yalnızca `search_*` trigger'larıyla yazılır; uygulama kodu bu tablolara yazmaz. `workspace_items`, `standalone_pages`, `pages`, `databases` veya `workspaces` tablosunu yeniden kuran bir migration trigger'larını düşürür: sonrasında `apply-0052-search-index.ts` yeniden çalıştırılmalı (`npm run db:drift` eksik trigger'ı raporlar).

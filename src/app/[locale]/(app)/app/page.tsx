@@ -26,6 +26,13 @@ function resolveLastPath(lastPath: string | undefined, items: WorkspaceItemRow[]
     return items.some((i) => i.databaseId === dbMatch[1]) ? lastPath : null;
   }
 
+  // The knowledge map: resumable while the workspace is still one of the user's
+  // (an empty workspace has no items to vouch for it and falls through to the default).
+  const graphMatch = lastPath.match(/^\/graph\/([^/?#]+)/);
+  if (graphMatch) {
+    return items.some((i) => i.workspaceId === graphMatch[1]) ? lastPath : null;
+  }
+
   return null;
 }
 

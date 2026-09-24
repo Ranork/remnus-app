@@ -57,7 +57,7 @@ Strict does not replace write scope, authorization, or destructive confirmation,
 | Tool | Scope | What it does (for agents) |
 |---|---|---|
 | `prepare_context` | read | Build Context Pack v2 and a short-lived preflight ID within an explicit token budget |
-| `search_workspace` | read | Semantic/full-text search across pages and databases |
+| `search_workspace` | read | Full-text search across pages and databases |
 | `list_workspace` | read | Navigate the entire workspace hierarchy |
 | `get_page` | read | Fetch a page/row by ID (`mode: "outline"` to save tokens) |
 | `get_pages` | read | Fetch multiple pages/rows by ID in one call — a known, possibly cross-database ID list |

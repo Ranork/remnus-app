@@ -13,6 +13,7 @@ Primary sources: `package.json`, `package-lock.json`, `next.config.ts`, `tsconfi
 - **State/Cache:** TanStack Query v5 (staleTime 60s, gcTime 5min, no window-focus refetch)
 - **Analytics/telemetry:** PostHog (client + server, EU host) and `@vercel/analytics` v2
 - **Migration:** `drizzle-kit generate` → `npx tsx src/db/migrate.ts` (custom runner)
+- **Knowledge map (P12, 2026-09-24):** `sigma` ^3.0.3 (WebGL renderer), `graphology` ^0.26 (+ dev `graphology-types`), `graphology-layout-forceatlas2` ^0.10.1 (web-worker layout), `graphology-communities-louvain` ^2.0.2, `d3-hierarchy` ^3.1.2 (+ dev `@types/d3-hierarchy`). Loaded only through `next/dynamic` from `src/components/features/graph/`. Not used: `@react-sigma/core` (thin own wrapper), sigma v4 beta. No charting dependency elsewhere (dashboards draw inline SVG).
 
 ## Version Pins That Matter
 - `next-auth` is **beta** — API differs from stable v4

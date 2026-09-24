@@ -39,7 +39,7 @@ Column types: `text` | `number` | `select` | `multi_select` | `status` | `user` 
 - `list_members` — workspace members and roles.
 - `query_audit_log` — history of MCP tool calls (yours and other agents').
 - `get_changes_since` — the delta since a cursor (from the digest/map header or a previous call). The normal way to catch up; always returns a `nextCursor` to keep.
-- `get_related_pages` — parent, children, outgoing links, backlinks, and row siblings without bodies.
+- `get_related_pages` — parent, children, outgoing links, backlinks, row siblings and source files, without bodies. With `resource` (a file path) instead of `pageId`: the pages written against that file — ask it before changing the file.
 
 **Write (needs a write-scoped token):**
 - `create_page` — new standalone page OR database row (see decision below).

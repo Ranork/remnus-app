@@ -57,7 +57,7 @@ Strict; write scope, yetkilendirme veya yıkıcı işlem onayının yerini almaz
 | Tool | Scope | Ne Yapar (Ajanlar İçin) |
 |---|---|---|
 | `prepare_context` | read | Açık token bütçesi içinde Context Pack v2 ve kısa ömürlü ön-kontrol kimliği hazırlar |
-| `search_workspace` | read | Sayfalar ve database'ler üzerinde semantik/full-text arama |
+| `search_workspace` | read | Sayfalar ve database'ler üzerinde full-text arama |
 | `list_workspace` | read | Tüm workspace hiyerarşisinde gezinme |
 | `get_page` | read | ID ile sayfa/satır çekme (`mode: "outline"` ile token tasarrufu) |
 | `get_pages` | read | Bilinen, veritabanları arası olabilen bir ID listesini tek çağrıda çekme |

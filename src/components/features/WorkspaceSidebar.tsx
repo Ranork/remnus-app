@@ -34,6 +34,7 @@ import {
   Link2,
   PanelLeftClose,
   PanelLeft,
+  Waypoints,
 } from 'lucide-react';
 import PageIcon from './PageIcon';
 import { useContextMenu, type MenuItem } from './ContextMenu';
@@ -136,6 +137,7 @@ export default function WorkspaceSidebar({
   const tLayout = useTranslations('Layout');
   const tSharing = useTranslations('Sharing');
   const tBilling = useTranslations('Billing');
+  const tGraph = useTranslations('Graph');
   const router = useRouter();
   const pathname = usePathname();
   const [isPending, startTransition] = useTransition();
@@ -369,6 +371,10 @@ export default function WorkspaceSidebar({
       const matchingItem = localItems.find(i => i.id === itemId);
       if (matchingItem) return matchingItem.workspaceId;
     }
+
+    // The knowledge map names its workspace directly: /graph/[workspaceId]
+    const graphMatch = pathname.match(/^\/graph\/([^\/]+)/);
+    if (graphMatch && localWorkspaces.some(w => w.id === graphMatch[1])) return graphMatch[1];
 
     return activeWorkspace.id;
   })();
@@ -1672,6 +1678,24 @@ export default function WorkspaceSidebar({
           ) : null}
         </button>
       </div>
+      )}
+
+      {/* Knowledge map (P12) — the active workspace as a graph. Workspace content,
+          so a project window keeps it (AGENTS.md → Project Install §4). */}
+      {activeWorkspaceIdFromPath && (
+        <div className="shrink-0 px-2">
+          <Link
+            href={`/graph/${activeWorkspaceIdFromPath}`}
+            className={`w-full flex items-center gap-1.5 min-w-0 px-2 py-1.5 rounded-md text-sm transition-all duration-200 ${
+              pathname.startsWith('/graph/')
+                ? 'bg-neutral-850 text-neutral-50 font-medium'
+                : 'text-neutral-300 hover:bg-neutral-800 hover:text-neutral-50'
+            }`}
+          >
+            <Waypoints size={14} className="shrink-0 text-neutral-500" />
+            <span className="truncate">{tGraph('title')}</span>
+          </Link>
+        </div>
       )}
 
       {/* Trash button — same "common ground" placement as AI Agents, not

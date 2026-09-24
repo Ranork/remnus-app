@@ -74,7 +74,7 @@ Only when you have no map at all does the full bootstrap (omit both `since` and 
 
 ## 6. Walk the graph before reading bodies
 
-After a search or a change feed surfaces a page, call [get_related_pages](read-tools.md#get_related_pages) before pulling bodies. It returns the page's parent, children, outgoing links, backlinks, and same-database siblings — titles and ids only — so you can see the context around a page and `get_page` only the neighbors you actually need.
+After a search or a change feed surfaces a page, call [get_related_pages](read-tools.md#get_related_pages) before pulling bodies. It returns the page's parent, children, outgoing links, backlinks, and same-database siblings — titles and ids only — so you can see the context around a page and `get_page` only the neighbors you actually need. Working in code, go the other way round: `get_related_pages` with `resource` set to the file you are about to change lists the pages written against it, one call instead of a search.
 
 ## 7. Batch a known ID list with get_pages
 

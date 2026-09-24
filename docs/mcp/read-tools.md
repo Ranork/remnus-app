@@ -15,9 +15,9 @@ Build a task-specific context pack before multi-page product or coding work. Con
 | `maxTokens` | number | | `2000` | Approximate response budget (`1000`–`16000`) |
 | `maxConcepts` | number | | `6` | Maximum concepts (`1`–`16`) |
 | `trustPolicy` | string | | `prefer-human-reviewed` | `any`, `prefer-human-reviewed`, or `human-reviewed-only` |
-| `includeRelated` | boolean | | `true` | Include title/ID graph neighbors for targeted follow-up |
+| `includeRelated` | boolean | | `true` | Include title/ID graph neighbors of the top concepts for targeted follow-up |
 
-**Returns** — a `remnus-context-pack-v2` JSON object with selected concept bodies, OKF-aligned type/status/trust/freshness metadata, per-concept `selectionReason`, truncation and token estimates, link-neighbor references, warnings, plus a short-lived `contextRunId`. Concept content is explicitly labeled untrusted reference data and cannot override user/system instructions.
+**Returns** — a `remnus-context-pack-v2` JSON object with selected concept bodies, OKF-aligned type/status/trust/freshness metadata, per-concept `selectionReason`, truncation and token estimates, link-neighbor references, warnings, plus a short-lived `contextRunId`. The link-neighbor references (`related`, up to 6, titles and IDs only) come from the three best concepts' links, backlinks, parents and children — a page two of them point at comes first — and their room is set aside before the bodies are sized, so they fit inside `maxTokens` instead of being dropped when the bodies fill it. When most of the task's words appear nowhere in the workspace and no keyword matched, a warning names those words so the agent can call again with `keywords`. Concept content is explicitly labeled untrusted reference data and cannot override user/system instructions.
 
 `human-reviewed` means an authenticated Remnus user reviewed the exact current title/body hash. An imported OKF `human:*` assertion is labeled `external-human-asserted`; it is never promoted to a local review merely because the file says so.
 
@@ -246,17 +246,20 @@ Get a compact, chronological list of everything that changed in the workspace si
 
 ## get_related_pages
 
-Get a page's knowledge-graph neighborhood in one compact call: its parent, child pages, outgoing links (pages its body references), backlinks (pages whose bodies reference it), and — for database rows — sibling rows in the same database. Titles and IDs only, no page bodies, so orienting around a page costs a fraction of re-reading it and its neighbors; follow up with `get_page` on the ones that matter.
+Get a page's knowledge-graph neighborhood in one compact call: its parent, child pages, outgoing links (pages its body references), backlinks (pages whose bodies reference it), — for database rows — sibling rows in the same database, and the repository files it rests on. Titles and IDs only, no page bodies, so orienting around a page costs a fraction of re-reading it and its neighbors; follow up with `get_page` on the ones that matter.
+
+It also answers the reverse question for code: pass `resource` (a file or folder path) instead of `pageId` to get the pages whose knowledge sources cite that file — the decisions, gotchas and systems written against it. Ask it **before changing a file**. See [By file](#by-file-resource).
 
 The link graph is derived from page content: inline `@`-mention links and child blocks (both embedded sub-pages and "Link to page" references) are extracted on every save, so the graph is always current — no separate indexing step.
 
-**Parameters**
+**Parameters** — pass exactly one of them.
 
 | Parameter | Type | Required | Default | Description |
 |---|---|---|---|---|
-| `pageId` | string | ✓ | | Page ID — a standalone page, database, or database row (same IDs `get_page` accepts) |
+| `pageId` | string | | | Page ID — a standalone page, database, or database row (same IDs `get_page` accepts) |
+| `resource` | string | | | A repository file or folder path (`src/auth.ts`, `src/lib/`, or the absolute path your editor uses) — see [By file](#by-file-resource) |
 
-**Returns** — `{ page, parent, children, outgoingLinks, backlinks, siblings }`:
+**Returns** (with `pageId`) — `{ page, parent, children, outgoingLinks, backlinks, siblings, sources? }`:
 
 | Field | Type | Description |
 |---|---|---|
@@ -266,6 +269,7 @@ The link graph is derived from page content: inline `@`-mention links and child 
 | `outgoingLinks` | array | Pages this page's body references (children already listed above are excluded) |
 | `backlinks` | array | Pages whose bodies reference this page (the parent is excluded) |
 | `siblings` | object? | `{ total, items: [{ id, title }] }` — other rows in the same database (first 10); only for database rows, `null` otherwise |
+| `sources` | string[]? | The files (or URLs) the page's knowledge metadata cites, as written — present only when there are any |
 
 Every entry in `parent`/`children`/`outgoingLinks`/`backlinks` is `{ id, title, type, databaseId?, linkKind? }` — `type` is `page` \| `database` \| `database_row`, `databaseId` is present on database entries (pass it to `query_database` / `get_database_schema`), and `linkKind` says how the reference was made (`page_link` = inline `@`-mention, `child_block` = embedded or linked block).
 
@@ -281,3 +285,27 @@ Every entry in `parent`/`children`/`outgoingLinks`/`backlinks` is `{ id, title, 
 ```
 
 **Typical use** — after `search_workspace` or `get_changes_since` surfaces a page, call `get_related_pages` before reading bodies: it tells you what context exists around the page (specs it links to, tasks that reference it, its place in the tree) so you only `get_page` the neighbors you actually need.
+
+### By file (`resource`)
+
+`{ "resource": "src/lib/auth/session.ts" }` returns the pages, databases and rows whose knowledge `sources` cite that path — the ones [calibration](calibrate.md) labels with the repo files a concept rests on (`knowledge.sources[].resource` on `create_page`, `bulk_create_pages`, `create_database`, `update_page`):
+
+```json
+{
+  "resource": "src/lib/auth/session.ts",
+  "pages": [
+    { "id": "…", "title": "Auth decisions", "type": "page", "match": "exact", "source": "src/lib/auth/session.ts#L10-L40" },
+    { "id": "…", "title": "Session gotchas", "type": "database_row", "databaseId": "…", "match": "exact", "source": "src/lib/auth/session.ts" },
+    { "id": "…", "title": "Auth system", "type": "page", "match": "folder", "source": "src/lib/auth/" }
+  ],
+  "total": 3
+}
+```
+
+| `match` | Means |
+|---|---|
+| `exact` | The page cites this file (or folder). Line anchors (`#L10-L40`, `:42`), `./` and backslashes are ignored, and an absolute path matches by its repo-relative end — so the path your editor uses works as is |
+| `folder` | The page cites a folder the file is in |
+| `inside` | You asked about a folder, and the page cites something inside it |
+
+Closest match first, then pages before databases before rows, up to 25 (`total` counts all). Matching ignores case. A URL source matches only the same URL. An empty `pages` means no page cites the file; a `note` says so when **no** page in the workspace records sources at all — then the answer is "unknown", not "nothing written about it".

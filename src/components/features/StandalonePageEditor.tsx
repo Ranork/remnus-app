@@ -14,6 +14,7 @@ import ShareModal from '@/components/share/ShareModal';
 import { PageMarkdownDialog } from './PageMarkdownDialog';
 import { PageHistoryModal } from './PageHistoryModal';
 import PageBacklinksPanel from './PageBacklinksPanel';
+import LocalGraphPanel from './graph/LocalGraphPanel';
 import KnowledgeContextPanel from './KnowledgeContextPanel';
 import PageCommentsPanel from './PageCommentsPanel';
 import { useTabNav } from '@/components/providers/TabsContext';
@@ -355,6 +356,7 @@ export default function StandalonePageEditor({
 
       <KnowledgeContextPanel workspaceId={item.workspaceId} pageId={item.id} />
       <PageBacklinksPanel workspaceId={item.workspaceId} pageId={item.id} />
+      <LocalGraphPanel workspaceId={item.workspaceId} pageId={item.id} />
     </div>
   );
 }

@@ -41,6 +41,12 @@ export type ActivityMetrics = {
   baselineBytes?: number;
   /** Pages/rows this call created or updated, for bulk tools. */
   itemsAffected?: number;
+  /**
+   * Extra properties on this call's `agent_call` analytics event. Counts and
+   * flags only — never task text, titles or ids — since the event leaves
+   * Remnus (PostHog).
+   */
+  analytics?: Record<string, number | boolean>;
 };
 
 export async function logActivity(
@@ -75,6 +81,6 @@ export async function logActivity(
   // Funnel: 'agent_call' (final activation step). Successful calls only, so a
   // failed/unauthorized probe doesn't count as activation. Fire-and-forget.
   if (status === 'success' && ctx.ownerUserId) {
-    void captureAgentCall(ctx.ownerUserId, tool, ctx.workspaceId);
+    void captureAgentCall(ctx.ownerUserId, tool, ctx.workspaceId, metrics?.analytics);
   }
 }

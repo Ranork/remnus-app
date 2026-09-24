@@ -61,6 +61,19 @@ prepare_context({
 
 Keywords are ranked together with the task's own words at half their weight, so a loose synonym cannot outvote what the task actually says. Without keywords a pack is still built from the task alone.
 
+When the task is written in words the workspace does not use at all — most of its terms appear on no page, and no keyword matched — the pack says so in `warnings` and names those words:
+
+```text
+Task words not found in this workspace: davetlere, goruntuleyici, rolu. If the concepts
+miss the task, call prepare_context again with keywords: synonyms and the workspace's own language.
+```
+
+The agent then retries with its own translation or synonyms. One unfamiliar word in an otherwise matching task does not trigger the warning, so a pack that already fits does not cost a second call. In a workspace that mixes languages the warning can stay silent — a page written in the task's language genuinely matches — so agents should pass keywords up front there.
+
+### Why there is no embedding search
+
+Semantic (embedding) search would find a Turkish task's English page without keywords, but only by sending every page of the workspace to a third-party embedding model and keeping vectors of it. Remnus does not do that: workspace content leaves Remnus only through the agent you connected yourself. That agent is already a language model that can translate and expand the query, so Remnus asks it to — through `keywords`, and through the warning above when it forgot.
+
 The server stores task and selection hashes plus operational metrics in the context-run record, not the raw task text. The run belongs to the current workspace and PAT/OAuth actor, so another connection cannot borrow it.
 
 ## Response fields
@@ -71,7 +84,7 @@ The server stores task and selection hashes plus operational metrics in the cont
 | `estimatedTokens` / `budgetTokens` | Shows the approximate pack size and caller-supplied ceiling |
 | `truncated` | Signals that lower-priority content was shortened or omitted |
 | `concepts` | Ranked excerpts with knowledge metadata and `selectionReason` |
-| `related` | IDs and titles from the strongest concept's graph neighborhood |
+| `related` | Up to 6 IDs and titles from the three strongest concepts' graph neighborhoods — pages several of them point at first; their room is reserved inside the budget |
 | `warnings` | Empty trust filters, stale material, truncation, or other retrieval caveats |
 | `contextRunId` / `expiresAt` | Actor-bound preflight proof for related Strict-mode writes |
 
@@ -132,7 +145,8 @@ After approval, the agent can carry the returned `contextRunId` into `create_pag
 | OKF v0.2 import/export with preserved extensions | Implemented, experimental adapter |
 | BM25 + metadata + link-graph Context Pack v2 | Implemented |
 | Agent-side query expansion (`keywords`) | Implemented |
-| Semantic (embedding) retrieval across languages without keywords | Not yet |
+| Warning that names task words the workspace does not contain | Implemented |
+| Semantic (embedding) retrieval across languages without keywords | Not planned: no workspace content is sent to an embedding provider ([why](#why-there-is-no-embedding-search)) |
 | Manual, Smart, and Strict workspace policies | Implemented |
 | Server-enforced preflight for Remnus MCP mutations | Implemented in Strict mode |
 | Universal enforcement over local files, shell, or Git | Not possible from an MCP server; use repository instructions/client hooks |

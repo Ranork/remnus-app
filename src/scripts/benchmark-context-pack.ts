@@ -3,17 +3,21 @@
  * This fixture is a regression guard, not a claim about customer workspaces.
  *
  * Two groups of cases:
- * - `mustHit` — asserted: the expected concept must rank first. A case moves
- *   here only once the retrieval layer reliably solves it.
- * - `tracked` — reported, never asserted: known retrieval gaps (a Turkish task
- *   against an English workspace with no `keywords`, a synonym the text never
- *   uses). Their hit rate is the number the next retrieval step (P11,
- *   embeddings) has to move.
+ * - `mustHit` — asserted: the expected concept must rank first, with no
+ *   vocabulary-miss warning (a false alarm costs the agent a second call). A
+ *   case moves here only once the retrieval layer reliably solves it.
+ * - `tracked` — a Turkish task against an English workspace with no
+ *   `keywords`, a synonym the text never uses. The first-call rank is only
+ *   reported: retrieval is lexical and stays so (P11, 2026-09-24: no workspace
+ *   content goes to an embedding provider). What IS asserted is the recovery —
+ *   the pack names the missing task words, and a second call with the
+ *   `retryKeywords` an agent would add ranks the concept first.
  */
 import assert from 'node:assert/strict';
 import { performance } from 'node:perf_hooks';
-import { prepareContextPack, type ContextPackDependencies } from '@/lib/services/contextPack';
+import { prepareContextPack, prepareContextPackWithStats, type ContextPackDependencies } from '@/lib/services/contextPack';
 import type { KnowledgeCorpusItem } from '@/lib/services/knowledge';
+import { graphExpansionReport } from './context-graph-expansion';
 
 const paragraph = (topic: string) => `${topic}. ${'Implementation notes, decisions, constraints, and examples. '.repeat(120)}`;
 const corpus: KnowledgeCorpusItem[] = [
@@ -34,7 +38,7 @@ const corpus: KnowledgeCorpusItem[] = [
   metadata: { tags: tags as string[], sources: [], stale: false, trust: id === 'mcp' ? 'human-reviewed' as const : 'unverified' as const, status: 'stable' as const },
 }));
 
-type Case = { task: string; keywords?: string[]; expected: string; note?: string };
+type Case = { task: string; keywords?: string[]; expected: string; note?: string; retryKeywords?: string[] };
 
 const mustHit: Case[] = [
   { task: 'Implement strict MCP context write gate', expected: 'mcp' },
@@ -53,10 +57,10 @@ const mustHit: Case[] = [
 ];
 
 const tracked: Case[] = [
-  { task: 'Davetlere görüntüleyici rolü ekle', expected: 'invites', note: 'TR task, no keywords' },
-  { task: 'Abonelik koltuk limitlerini uygula', expected: 'billing', note: 'TR task, no keywords' },
-  { task: 'Kullanıcı oturum açma güvenliğini düzelt', expected: 'auth', note: 'TR task, no keywords' },
-  { task: 'Stop sending mail to people who opted out', expected: 'mail', note: 'synonym, no keywords' },
+  { task: 'Davetlere görüntüleyici rolü ekle', expected: 'invites', note: 'TR task, no keywords', retryKeywords: ['invitation', 'viewer', 'role'] },
+  { task: 'Abonelik koltuk limitlerini uygula', expected: 'billing', note: 'TR task, no keywords', retryKeywords: ['subscription', 'seats', 'plan limits'] },
+  { task: 'Kullanıcı oturum açma güvenliğini düzelt', expected: 'auth', note: 'TR task, no keywords', retryKeywords: ['login', 'session', 'security', 'authentication'] },
+  { task: 'Stop sending mail to people who opted out', expected: 'mail', note: 'synonym, no keywords', retryKeywords: ['email', 'unsubscribe', 'suppression'] },
 ];
 
 const dependencies: ContextPackDependencies = {
@@ -66,15 +70,17 @@ const dependencies: ContextPackDependencies = {
   }),
 };
 
-async function rankOf(testCase: Case) {
-  const pack = await prepareContextPack('benchmark', {
+async function rankOf(testCase: Case, keywords = testCase.keywords) {
+  const { pack, stats } = await prepareContextPackWithStats('benchmark', {
     task: testCase.task,
     maxTokens: 1_000,
     maxConcepts: 3,
-    ...(testCase.keywords ? { keywords: testCase.keywords } : {}),
+    ...(keywords ? { keywords } : {}),
   }, dependencies);
   assert.ok(pack.estimatedTokens <= 1_000, 'Pack exceeded its requested budget');
-  return { rank: pack.concepts.findIndex(concept => concept.id === testCase.expected) + 1, tokens: pack.estimatedTokens };
+  const hint = pack.warnings.find(warning => warning.startsWith('Task words not found'));
+  assert.equal(!!hint, stats.vocabularyMiss, 'The warning and the stats flag must agree');
+  return { rank: pack.concepts.findIndex(concept => concept.id === testCase.expected) + 1, tokens: pack.estimatedTokens, hint };
 }
 
 /** The corpus cache must follow its version key, never serve a stale corpus. */
@@ -114,23 +120,31 @@ async function main() {
   let topOne = 0;
   let returnedTokens = 0;
   const started = performance.now();
-  const table: Array<{ group: string; task: string; keywords: string; expected: string; rank: number | '-' }> = [];
+  const table: Array<{ group: string; task: string; keywords: string; expected: string; rank: number | '-'; hint: string; retryRank: number | '-' | '' }> = [];
   const missed: string[] = [];
 
   for (const testCase of mustHit) {
-    const { rank, tokens } = await rankOf(testCase);
+    const { rank, tokens, hint } = await rankOf(testCase);
     if (rank === 1) topOne++;
     else missed.push(`${testCase.task} (${testCase.note ?? testCase.expected}) → rank ${rank || '-'}`);
+    if (hint) missed.push(`${testCase.task} → false vocabulary-miss warning`);
     if (rank > 0) reciprocalRank += 1 / rank;
     returnedTokens += tokens;
-    table.push({ group: 'mustHit', task: testCase.task, keywords: (testCase.keywords ?? []).join(', '), expected: testCase.expected, rank: rank || '-' });
+    table.push({ group: 'mustHit', task: testCase.task, keywords: (testCase.keywords ?? []).join(', '), expected: testCase.expected, rank: rank || '-', hint: hint ? 'yes' : '', retryRank: '' });
   }
 
   let trackedHits = 0;
+  let trackedHinted = 0;
+  let trackedRecovered = 0;
   for (const testCase of tracked) {
-    const { rank } = await rankOf(testCase);
+    const { rank, hint } = await rankOf(testCase);
     if (rank === 1) trackedHits++;
-    table.push({ group: 'tracked', task: testCase.task, keywords: '', expected: testCase.expected, rank: rank || '-' });
+    // An agent retries only when told to, and only with its own terms.
+    const retry = hint ? await rankOf(testCase, testCase.retryKeywords) : undefined;
+    if (hint) trackedHinted++;
+    if (retry?.rank === 1) trackedRecovered++;
+    if (rank !== 1 && retry?.rank !== 1) missed.push(`${testCase.task} (${testCase.note}) → no hint or no recovery`);
+    table.push({ group: 'tracked', task: testCase.task, keywords: (testCase.retryKeywords ?? []).join(', '), expected: testCase.expected, rank: rank || '-', hint: hint ? 'yes' : '', retryRank: retry ? retry.rank || '-' : '' });
   }
 
   const result = {
@@ -140,6 +154,8 @@ async function main() {
     meanReciprocalRank: reciprocalRank / mustHit.length,
     trackedCases: tracked.length,
     trackedTop1: trackedHits / tracked.length,
+    trackedVocabularyMissWarned: trackedHinted / tracked.length,
+    trackedTop1AfterRetry: trackedRecovered / tracked.length,
     naiveTokensPerTask: naiveTokens,
     contextTokensPerTask: Math.round(returnedTokens / mustHit.length),
     tokenReduction: 1 - (returnedTokens / mustHit.length) / naiveTokens,
@@ -148,7 +164,15 @@ async function main() {
   console.table(table);
   console.log(JSON.stringify(result, null, 2));
   console.log('Note: synthetic regression data; do not use these percentages as a customer claim.');
-  assert.deepEqual(missed, [], 'A mustHit task no longer ranks its canonical concept first');
+  assert.deepEqual(missed, [], 'A mustHit task lost its first rank or warned falsely, or a tracked task no longer recovers');
+
+  // P13: related refs over a real linked corpus (docs/). Recall is reported; the
+  // one assertion is that the shipped variant keeps beating the no-graph control.
+  const expansion = await graphExpansionReport();
+  const product = expansion['product (P13)'];
+  const control = expansion['C  lexical cut to 6'];
+  assert.ok(product.any > control.any, 'Graph refs no longer beat the same number of lexical refs on docs/');
+  assert.ok(product.packTokens / 12 <= 2_000, 'The docs/ packs exceeded their budget');
 }
 
 void main();

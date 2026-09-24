@@ -113,11 +113,12 @@ function normalizePath(p: string): string {
  * they just get a real tab so opening one doesn't leave the previously-active
  * tab visually "stuck" highlighted in the strip while unrelated content shows
  * underneath it. A dashboard is server-rendered end to end, so there is no
- * client pane for `TabPane` to mount — hence tabbable but not kept alive.
+ * client pane for `TabPane` to mount — hence tabbable but not kept alive. The
+ * knowledge map (`/graph/*`) is the same kind of tab.
  */
 function isTabbable(norm: string): boolean {
   return (
-    /^\/(page|db|dashboard)\//.test(norm) || norm === "/admin" || norm.startsWith("/admin/")
+    /^\/(page|db|dashboard|graph)\//.test(norm) || norm === "/admin" || norm.startsWith("/admin/")
   );
 }
 
@@ -258,6 +259,7 @@ export function TabsProvider({
   const pathname = usePathname();
   const storageKey = TABS_STORAGE_KEY;
   const tAdminLabel = useTranslations("Workspace")("adminLink");
+  const tGraphLabel = useTranslations("Graph")("title");
 
   // Diagnostic: track provider mount/unmount cycles to catch unexpected remounts.
   useEffect(() => {
@@ -298,6 +300,10 @@ export function TabsProvider({
       if (parts[0] === "admin") {
         return { title: tAdminLabel, icon: "lucide:Shield", iconColor: "blue" };
       }
+      // The knowledge map (/graph/<workspaceId>) — a system tab like /admin.
+      if (parts[0] === "graph") {
+        return { title: tGraphLabel, icon: "lucide:Map", iconColor: null };
+      }
       if ((parts[0] === "page" || parts[0] === "dashboard") && parts[1]) {
         const item = items.find((i) => i.id === parts[1]);
         if (item)
@@ -318,7 +324,7 @@ export function TabsProvider({
       // DB row pages (/db/x/y) have no workspace item — caller falls back to the tab snapshot.
       return null;
     },
-    [items, tAdminLabel],
+    [items, tAdminLabel, tGraphLabel],
   );
 
   // Effective active id: the explicit state when it still points at a live tab,
