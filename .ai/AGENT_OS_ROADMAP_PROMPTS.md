@@ -2191,7 +2191,8 @@ Embedding/vektör (P11), Jev veya başka dış model, web UI'a arama kutusu
 - `scripts/ai/update-handoff.ps1`. Commit/push yok.
 ````
 
-> **✅ P10 tamamlandı — 2026-09-23 (Claude). A, B, C, E yapıldı; D (FTS5) yapılmadı.**
+> **✅ P10 tamamlandı — 2026-09-23 (Claude). A, B, C, E yapıldı; D (FTS5) ilk turda
+> ertelendi, 2026-09-24'te Turso dev kanıtıyla yapıldı (aşağıda "D — 2026-09-24").**
 >
 > **Bulgular koddan doğrulandı.** 1–4 ve 6 aynen geçerliydi; yalnız satırlar kaymıştı
 > (`listKnowledgeCorpus` ~433, `searchWorkspace` ~226). Ek olarak: satırların
@@ -2223,16 +2224,54 @@ Embedding/vektör (P11), Jev veya başka dış model, web UI'a arama kutusu
 > - **E:** `bench:context` v2. `mustHit` 11 vaka assert ediliyor, `tracked` 4 vaka
 >   raporlanıyor. Önbellek anahtarı davranışı da assert'li.
 >
-> **D neden yapılmadı:** Turso CLI yok ve dev/branch DB sağlanamadı. Hakan "D'yi bu
-> turda atla" dedi. Prod motoru **klasik libSQL** (Hakan). tursodb/MVCC engeli yok, ama
-> #1811 ve trigger'lı FTS Turso'da hâlâ doğrulanmadı. Tasarım hazır: `search_docs(id
-> INTEGER PK, item_id UNIQUE, …)` eşleme tablosu (rowid VACUUM'dan etkilenmez), FTS5
-> `rowid = search_docs.id`, trigger'lar (`workspace_items`/`standalone_pages`/`pages`,
-> `ı→i` replace), MATCH'e workspace token'ı kolonu (bm25 ağırlığı 0), 3 karakter altı
-> LIKE yolu. `0052` numarası boş. **Kaldığı yer:** Hakan boş bir Turso dev DB açıp
-> bilgilerini repo kökündeki `.env.turso-dev` dosyasına `TURSO_DEV_DATABASE_URL` ve
-> `TURSO_DEV_AUTH_TOKEN` adlarıyla yazacak (gitignore'da). Sonra ilk iş FTS5 probu.
-> Aynı DB, P11'in Turso vektör kanıtında da kullanılır.
+> **D neden ilk turda yapılmadı:** Turso CLI yoktu ve dev/branch DB yoktu; Hakan "D'yi
+> bu turda atla" dedi. Prod motoru **klasik libSQL** (Hakan).
+>
+> **D — 2026-09-24 (yapıldı).** Hakan boş bir dev DB açtı (`remnus-dev-…`,
+> `aws-eu-west-1`, bilgileri gitignore'daki `.env.turso-dev`'de). Tüm betikler prod
+> URL/token'ıyla eşleşirse ya da DB boş değilse çalışmayı reddetti, sonunda da her şeyi
+> sildi.
+> - **Kanıt (Turso dev, SQLite 3.47.0):** FTS5 + `unicode61 remove_diacritics 2`
+>   çalışıyor. **#1811 tekrarlamadı:** parametreli `client.batch` doğrudan FTS5'e yazdı.
+>   Foreign key'ler açık; FK cascade silmeleri trigger'ları tetikliyor.
+>   `contentless_delete=1` destekleniyor. Contentless tabloda kolonların yalnız bir
+>   kısmını UPDATE etmek yasak; bu yüzden her değişiklik rowid ile sil + üç kolonu
+>   birden yaz. Gerçek `apply-0052` betiği dev'de iki kez sorunsuz çalıştı ve
+>   uygulamanın `searchWorkspace`'i dev'e karşı 9/9 kontrolü geçti.
+> - **Maliyet ölçümü** (aynı 3.000 doküman, Hrana `rows_read`/`rows_written`):
+>   - Okunan satır, belirli terimlerde: 5,4–7k → 1,0–1,6k. Bunun ~1k'sı breadcrumb
+>     ağacı okuması.
+>   - Dokümanların yarısında geçen bir terimde: eşit (6,0k).
+>   - Yazılan satır, bir düzenlemede: 1 → 3.
+>   - Depolama: contentless +%28; içeriği de saklayan varyant +%120.
+>   - Gecikme her iki yolda da ağ baskın (~95 ms RTT); sunucu farkı 0–25 ms.
+>   - Hız değil, okunan satır ve alaka sıralaması kazanç.
+> - **Kararlar:**
+>   - Contentless FTS: snippet zaten kaynak satırdan kesiliyor.
+>   - Önce sırala, sonra join: tersi yaygın bir terimde 2× satır okudu.
+>   - bm25 ağırlıkları ws 0 / title 10 / body 1.
+>   - Her kelime tırnaklı önek ifadesi; ws token'ı `ws : "w<id>"`.
+>   - Sorguda combining mark silinmiyor, çünkü Hintçe ünlü işaretleri unicode61'de
+>     ayraç sayılıyor.
+>   - CJK/Thai (boşluksuz yazılar) ve < 3 harf doğrudan taramaya gidiyor. İndeks
+>     yoksa (bir kez uyarı loglanır) ya da sıfır sonuç dönerse de taramaya düşülüyor;
+>     kelime ortasındaki parçalar böylece yine bulunuyor.
+>   - 11 trigger, yeniden kurulum tek transaction'da. Upsert ve silip-yeniden-yazma
+>     kullanılıyor, böylece indeks bakımı kullanıcının kendi yazma işlemini asla
+>     düşürmüyor.
+>   - `db:drift` artık FTS tablosunu ve trigger'ları da denetliyor.
+> - **Doğrulama:**
+>   - `local.db`'ye uygulandı (iki kez, idempotent; 266 doküman). 104 yetim satır,
+>     eskisi gibi aranamıyor.
+>   - Gerçek servis yollarıyla 18/18 kontrol geçti: tekli/toplu oluşturma, başlık/gövde
+>     düzenleme, sürüm geri yükleme, satırı başka DB'ye taşıma, sayfa ve database
+>     silme, çöp kutusundan geri alma, workspace izolasyonu ve silme, kelime parçası
+>     taraması, `search_docs` = canlı öğe+satır.
+>   - Contentless kenar durumları: olmayan rowid'i sil + ekle, 5× yeniden yaz,
+>     `delete-all`.
+>   - Web arayüzünden elle test yapılmadı; trigger'lar DB düzeyinde ve web aynı
+>     tablolara yazıyor. Playwright gerekirse ayrıca yapılabilir.
+>   - **Turso prod'a uygulanmadı:** bu adım deploy günü, Hakan'ın onayıyla yapılacak.
 >
 > **Öncesi → sonrası** (yerel `file:local.db`; sentetik 1.000 sayfa + 4×500 satır,
 > 3,39M karakter, 3.000 knowledge satırı; ölçüm sonrası silindi):
@@ -2640,8 +2679,9 @@ anlamsal/Jev ilişki önerileri.
 # Deploy öncesi — biriken borç (unutma listesi)
 
 > P adımları tamamlandıkça buraya ekle. Buradaki her madde **deploy'u bloklar**.
-> Son güncelleme: 2026-09-23 (P10 sonrası). **Şu an deploy'u bloklayan açık madde
-> yok**; aşağıdaki sıra deploy gününün kontrol listesi.
+> Son güncelleme: 2026-09-24 (P10-D sonrası). Deploy günü yapılacak tek ek iş:
+> `0052`'yi Turso prod'a uygulamak (§2 madde 1). Aşağıdaki sıra deploy gününün
+> kontrol listesi.
 >
 > **Karar (Hakan, 2026-09-23):** deploy yol haritası bitince **toplu** yapılacak —
 > P10–P13 ara deploy olmadan bu listeye eklenerek ilerler. Her P adımı bitince kendi
@@ -2661,20 +2701,28 @@ not tutmaya güvenme — 2026-09-23'te notlar yerel DB için yanlış çıktı.
 P9.5 migration **eklemedi** (status seçenek düzeltmesi, digest sırası, `.md` route'u
 yalnızca kod).
 
-P10 migration **eklemedi**: FTS5 (planlanan `0052`) Turso'da kanıtlanmadığı için
-ertelendi; harf katlama, `keywords`, corpus önbelleği ve `search_workspace`'in
-LIKE+GLOB katlaması yalnızca kod. `0052` numarası boş kaldı.
+**P10 → `0052_search_index` (deploy'u bloklar):** `search_workspace`'in FTS5 indeksi.
+Yerelde **uygulandı**, Turso dev'de kanıtlandı, **Turso prod'a henüz uygulanmadı**.
+Deploy günü prod'a uygulanacak. Betik idempotent ve her çalıştırmada indeksi
+baştan kurar, yani aynı zamanda onarım komutu. Kod indeks yokken eski taramaya
+düştüğü için deploy'la sırası kritik değil, ama sıralı arama ancak bu migration'la
+canlıya çıkar. `db:drift` artık FTS tablosunu ve 11 trigger'ı da denetliyor.
 
 ## 2. Deploy günü sırası
 
-1. `npm run db:drift` → Turso için **OK** görmeden deploy etme.
+1. `0052`'yi Turso prod'a uygula: `npx tsx src/db/apply-0052-search-index.ts`. Düz
+   çalıştırma `.env`'i okuduğu için prod'a gider; betik hedef host'u yazar, doğru
+   olduğunu gör. Çıktıda "Index rebuilt: N documents" satırı olmalı. Sonra
+   `npm run db:drift` → Turso için **OK** görmeden deploy etme (artık
+   `search_fts` + trigger'ları da denetliyor).
 2. Web uygulamasını deploy et (Vercel). Bu adımla canlıya çıkanlar: kalibrasyon
    rehberi **v3** ve playbook'lar (sunucudan canlı servis ediliyor), ham markdown
    adresleri `/wiki/<slug>.md` + `/wiki.md` (P9.5), status/select seçenek düzeltmesi
    (`{name}` artık `"[object Object]"` olmuyor), map/digest'in kenar çubuğu sırası,
    proje penceresindeki onboarding 500'ünün kalkması. **P10:** `prepare_context`
    `keywords` + harf katlama + tek-tur corpus/önbellek, `search_workspace`'in
-   aksan/büyük harf katlaması ve tek round-trip'i, sunucu `instructions`'ındaki
+   sıralı FTS araması (eski taramayı yedek olarak tutarak) ve aksan/büyük harf
+   katlaması, `getRelatedPages`'in 2 batch'i, sunucu `instructions`'ındaki
    "(with keywords)".
 3. **Sonra** CLI'ı yayınla — `cli/package.json` zaten `0.1.9` (npm'de şu an `0.1.8`):
    ```powershell
@@ -2700,12 +2748,14 @@ LIKE+GLOB katlaması yalnızca kod. `0052` numarası boş kaldı.
    `/wiki/*.md` 307/login'e düşerse `proxy.ts` matcher istisnası canlıda tutmamıştır.
    **P10 (bağlı bir ajanla, salt okuma):** `tools/list`'te `prepare_context` şemasında
    `keywords` var mı; Türkçe büyük harfli bir başlığı (ör. "Çözüm …") `search_workspace`
-   küçük harf ve Türkçe harfsiz ("cozum") buluyor mu; Türkçe bir görev + İngilizce
+   küçük harf ve Türkçe harfsiz ("cozum") buluyor mu; başlığı eşleşen sayfa, kelimeyi
+   yalnız gövdesinde geçirenlerin önünde mi; Türkçe bir görev + İngilizce
    `keywords` ile `prepare_context` doğru sayfayı döndürüyor mu.
-5. **P10 — arama yavaşlamasını canlıda ölç (deploy'dan ~1 hafta sonra, salt okuma).**
-   `search_workspace` artık aksan katlıyor (LIKE ön-filtre + GLOB). Bunun maliyeti
-   yerelde en kötü ~16 → ~90 ms çıktı, ama o ölçüm yoğun sentetik veride yapıldı; gerçek
-   workspace boyutlarını bilmiyoruz. Her MCP çağrısının süresi zaten
+5. **P10 — aramayı canlıda ölç (deploy'dan ~1 hafta sonra, salt okuma).**
+   `search_workspace` artık önce FTS indeksini, gerekirse aksan katlayan taramayı
+   (LIKE ön-filtre + GLOB) kullanıyor. Taramanın maliyeti yerelde en kötü ~16 →
+   ~90 ms çıktı, ama o ölçüm yoğun sentetik veride yapıldı; gerçek workspace
+   boyutlarını bilmiyoruz. Her MCP çağrısının süresi zaten
    `agent_activity.duration_ms`'te. Turso panelinin SQL konsolunda (salt okuma) şunu
    çalıştır:
    ```sql
@@ -2717,11 +2767,14 @@ LIKE+GLOB katlaması yalnızca kod. `0052` numarası boş kaldı.
      AND created_at > unixepoch('now', '-7 days')
    GROUP BY tool;
    ```
-   Karar kuralı: `search_workspace` ortalaması ~150 ms'yi ya da en büyük değeri ~1 sn'yi
-   geçiyorsa FTS5'i (P10-D, `0052`) P11'den önce öne al. Altındaysa FTS5 P11 ile
-   birlikte gelsin. İkinci gerekçe maliyet: tam tarama her aramada workspace'in bütün
-   satırlarını okur ve Turso okunan satırı faturalar. Turso panelindeki "rows read"
-   grafiğinde arama kaynaklı bir sıçrama görülürse bu da FTS'i öne alma nedeni.
+   Bakılacaklar:
+   - Vercel loglarında `[search] full-text index unavailable` uyarısı var mı?
+     Varsa `0052` prod'da eksik ya da bozuk demektir; betiği yeniden çalıştır.
+   - `search_workspace` ortalaması ~150 ms'yi ya da en büyük değeri ~1 sn'yi
+     geçiyor mu? Geçiyorsa hangi sorguların taramaya düştüğüne bak (CJK, çok kısa
+     sorgu, sıfır sonuç).
+   - Turso panelindeki "rows read" grafiği arama kaynaklı düşmeli. Belirli
+     terimlerde dev'de ~5× azaldı.
 6. **Canlı kalibrasyon testi (deploy + CLI yayınından sonra, ertelendi):** gerçek bir
    projede yayınlanmış CLI ile `npx remnus init` → yeni Claude Code oturumu → yalnızca
    `init`'in bastığı cümle. P9.5'in yerelde göremediği iki şeyi dener: yayınlanmış npm
