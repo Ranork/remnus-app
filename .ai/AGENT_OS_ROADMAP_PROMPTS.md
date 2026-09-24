@@ -2421,6 +2421,111 @@ takılabilsin. Jev kodu yazma.
 - `scripts/ai/update-handoff.ps1`. Commit/push yok.
 ````
 
+> **P10'dan devreden (2026-09-24) — P11'i başlatan oturum bunu da okusun.** Bu bölüm
+> P10'dan önce yazıldı; aradan değişenler:
+> - **Mevcut bulma katmanı (yeniden yazma, üstüne kur):**
+>   - `prepare_context` isteğe bağlı `keywords` alıyor (ajan tarafı genişletme,
+>     ağırlık 0.5).
+>   - Harf katlama `foldText` fonksiyonuyla yapılıyor (`services/textFold.ts`).
+>   - Corpus tek `db.batch`'le okunuyor. Ters indeks süreç içinde önbellekte;
+>     anahtarı `getKnowledgeCorpusVersion`.
+>   - `search_workspace` sıralı FTS5 kullanıyor (migration `0052`, contentless
+>     `search_fts`; indeksin tek yazıcısı trigger'lar).
+>   - Hibrit sıralamanın BM25 tarafı için bunları kullan. Ayrıntılar AGENTS.md →
+>     Performance Rules → "Context & search read path" bölümünde.
+> - **Başarı ölçütü:** `npm run bench:context` çıktısındaki `tracked` grubu (keywords
+>   olmadan Türkçe görev ve eşanlamlı, 4 vaka) şu an **0/4**. P11 bu sayıyı yükseltmeli;
+>   çözülen vakaları `mustHit`'e taşı.
+> - **P10-D.5 kararı sana kaldı:** `prepare_context`'te FTS'i birinci aşama yapmak (ilk
+>   N aday → yalnız onların gövdesi okunur). C'deki önbellek sıcak çağrıyı çözdü
+>   (~20 ms). Açık kalan, soğuk serverless instance: büyük bir workspace'te ~3,4 MB
+>   okuma ve ~400 ms indeks kurma. P11 aday üretimini (BM25 + vektör) zaten yeniden
+>   tasarlayacağı için karar burada verilmeli. Dikkat: `search_fts` yalnız
+>   title/body'yi indeksliyor, knowledge metadata'yı (açıklama, tag) indekslemiyor.
+> - **Turso dev DB hazır:** repo kökünde `.env.turso-dev` (`TURSO_DEV_DATABASE_URL`,
+>   `TURSO_DEV_AUTH_TOKEN`; gitignore'da; DB boş). Vektör desteğini prod'a dokunmadan
+>   önce orada kanıtla. P10'daki koruma desenini kullan: URL/token prod ile eşleşirse ya
+>   da DB boş değilse çalışmayı reddet, yalnız host'u yaz, sonunda her şeyi sil. Token
+>   7 günlük açıldıysa süresi dolmuş olabilir; Hakan yeniler.
+
+> **P11 — Tamamlandı (2026-09-24), hafif sürüm: embedding YOK (Hakan'ın kararı).**
+>
+> **Karar.** Sağlayıcı seçenekleri sunuldu (fiyatlar 2026-09-24'te AI Gateway'den
+> doğrulandı: `qwen3-embedding-8b` $0.01/1M, `voyage-4-lite` / `text-embedding-3-small`
+> $0.02/1M, `gemini-embedding-001` $0.15/1M; 3.000 öğelik bir workspace'in backfill'i
+> ≈1,5M token, yani sentler. Gateway'in ZDR listesinde DeepInfra/Nebius (Qwen) ve Vertex
+> (Gemini) var; Voyage ve OpenAI yok). Fiyat belirleyici değildi. Hakan'ın endişesi:
+> kullanıcının haberi olmadan bütün içeriğini üçüncü bir tarafa göndermek. Kapattığı açık da
+> dar: yalnız ajanın `keywords` göndermediği durum. Seçilen: **A — dışarı veri çıkarmayan
+> hafif P11**. Remnus'un kendi söylemi de "vektör deposu değil, okunabilir sayfalar".
+> Gizlilik metni bu yüzden değişmedi (yeni işleyici yok). Migration ve yeni env yok.
+>
+> **Yapılan:**
+> - `contextPack.ts`: `rankCorpus` hiçbir belgede geçmeyen terimleri de döndürüyor. Görev
+>   terimlerinin **çoğunluğu** (yarısından fazlası) workspace'te yoksa ve hiçbir keyword
+>   eşleşmediyse `warnings`'e şu ekleniyor: "Task words not found in this workspace: … call
+>   prepare_context again with keywords". En fazla 8 kelime; generic "No workspace concepts
+>   matched" satırının yerini alıyor. Yeni `prepareContextPackWithStats` yalnız sayı
+>   döndürüyor (`keywordCount`, `taskTerms`, `missingTaskTerms`, `vocabularyMiss`).
+>   `prepareContextPack` imzası aynı.
+> - Ölçüm: `logActivity(..., { analytics })` → `captureAgentCall(..., extra)`.
+>   `prepare_context` bu sayıları `conceptCount` ile birlikte mevcut `agent_call` PostHog
+>   olayına ekliyor. Metin, terim, başlık ya da id gönderilmiyor. Soru şu: ajanlar ne sıklıkla
+>   `keywords`'süz çağırıyor ve bu uyarıya düşüyor?
+> - `bench:context`: `mustHit` 11/11, hiçbirinde yanlış uyarı yok (assert). `tracked`
+>   ilk çağrıda 0/4 kalıyor (tasarım gereği lexical), ama uyarı 4/4 çıkıyor ve
+>   `retryKeywords` ile ikinci çağrı 4/4 ilk sırada (assert).
+> - Dokümanlar: `docs/mcp/context-first.md` (uyarı örneği, "Why there is no embedding
+>   search", durum tablosu), `read-tools.md`. `WHAT_IS_REMNUS.md`/`REMNUS_NEDIR.md` içinde
+>   `search_workspace` "Semantic/full-text" diye geçiyordu → "Full-text" yapıldı (yanlıştı).
+>   `AGENTS.md` (Context & search read path'e 3 madde, Activation Funnel'a sayaçlar),
+>   Serena `core`/`conventions` (dosya olarak; araç yoktu). Changelog
+>   `2026-09-24-context-retry-hint` (improved, 8 locale).
+>
+> **Eşik ölçümü (kullanıcı verisi yok; repo'nun `docs/` klasörü, 46 sayfa, korpus olarak):**
+> 3–13 terimlik 24 İngilizce görevde 0 yanlış alarm. Yalnız İngilizce korpusta 7
+> Türkçe/İspanyolca görevden 5'i yakalandı. Tek Türkçe sayfa içeren karışık korpusta 1/7
+> yakalandı: o sayfa Türkçe göreve gerçekten eşleşiyor, yani karışık dilli workspace'lerde
+> keywords baştan gerekli. "En iyi sonuç görev terimlerinin yarısından azını kapsıyor"
+> ikinci tetikleyicisi ölçüldü ve reddedildi: İngilizce görevlerde kapsama %57'ye kadar
+> iniyor, güvenli marj yok. Türkçe kelimeler kısa İngilizce token'lara önek kuralıyla
+> sahte eşleşiyor ("getir" → "get"); bilinen sınır, dokunulmadı.
+>
+> **P10-D.5 kararı (FTS'i `prepare_context`'in birinci aşaması yapmak): şimdilik hayır.**
+> Sıcak çağrı zaten ~20 ms. Soğuk maliyet yalnız büyük workspace'in soğuk instance'ında
+> oluşuyor. `search_fts` knowledge açıklama/tag'lerini indekslemiyor (burada ağırlık 2.5).
+> unicode61 önek sorgusu iki yönlü önek kuralını karşılamıyor ("limitlerini" → "limit").
+> Birinci aşama `mustHit` sıralamasını değiştirir ve gerçek yolu bellek-içi bench'in
+> dışına taşır. Ne zaman yeniden bakılır: deploy sonrası `agent_activity.duration_ms`
+> ölçümünde büyük workspace'lerde `prepare_context` p95'i yüksekse. Reranker için tek nokta
+> zaten var: `rankCorpus` → güven filtresi → sort (`prepareContextPackWithStats`). Jev kodu
+> yazılmadı.
+>
+> **Doğrulama:** `npx tsc --noEmit` temiz. Değişen dosyalarda eslint 0 hata (read.ts:241'de
+> önceden var olan 2 uyarı). `npm run test:okf` geçti. `bench:context` yukarıdaki gibi.
+> Gerçek MCP istemcisi (SDK → yerel `next dev`, local.db'de geçici admin kullanıcı +
+> İngilizce 5 sayfalı workspace + read PAT; admin olduğu için PostHog'a olay gitmedi;
+> sonra hepsi silindi, kalan satır 0): "Davetlere görüntüleyici rolü ekle" → boş paket +
+> uyarı (davetlere, goruntuleyici, rolu); keywords ile → "Workspace invitation roles".
+> "Kullanıcıyı her yerden çıkar" → uyarı; `sign out, session, revoke` ile →
+> "Authentication architecture". İngilizce görev → uyarısız doğru sonuç. 54–127 ms.
+> `bench:mcp-budget` gerekmedi: tool açıklaması ve şeması değişmedi.
+>
+> **Hazırlanıp uygulanmayan tasarım (ileride açılırsa; yeni karar gerektirir):**
+> `content_embeddings` (öğe id, `workspace_id`, `content_hash`, model, `F32_BLOB(dim)`).
+> Workspace içinde tam tarama (`vector_top_k` global ANN'i çok kiracılıkta boş sonuç
+> verir). Öğe başına tek vektör. Yazma yoluna senkron çağrı yok: `prepare_context`'in
+> `after()`'ında kirlileri göm, cron güvenlik ağı olsun. Sorgu embedding'i 800 ms
+> kesmeli, hata olursa lexical'e düş. RRF ile BM25 ∪ vektör birleşsin. Gerekenler:
+> workspace ayarında kapatma anahtarı (Hakan: varsayılan açık), gizlilik metninde yeni
+> işleyici, sağlayıcı olarak ZDR'li Qwen3. **Açma ölçütü:** PostHog'da
+> `prepare_context` çağrılarının anlamlı bir kısmı `keywordCount = 0` ve
+> `vocabularyMiss = true` ise, ve ajanlar uyarıdan sonra tekrar denemiyorsa.
+>
+> **Deploy sonrası (~1 hafta, salt okuma):** PostHog `agent_call`, `tool =
+> prepare_context`: `keywordCount > 0` oranı, `vocabularyMiss` oranı ve uyarının
+> ardından aynı kullanıcının tekrar çağırıp çağırmadığı. Commit/push yapılmadı.
+
 ---
 
 # P12 — Remnus Graph: bilgi haritası (Obsidian kopyası değil)
@@ -2548,6 +2653,75 @@ graph'tan düzenleme (sürükleyip taşıma), public paylaşım sayfalarında gr
 - `scripts/ai/update-handoff.ps1`. Commit/push yok.
 ````
 
+### P12 — tamamlandı (2026-09-24, Claude; commit yok, çalışma ağacında)
+
+**Yapılan.** `/graph/<workspaceId>` rotası (+ `/graph` → aktif workspace), sidebar'da
+"Bilgi haritası" satırı (proje penceresinde de), sayfaların altında kapalı başlayan
+"Yerel harita" paneli. Tek renderer (sigma 3 + graphology), iki yerleşim: Ağ
+(ForceAtlas2 worker'da, radyal ağaçtan tohumlanır) ve Ağaç (d3-hierarchy radyal).
+Renk: tür · güven · ajan etkinliği · kümeler (Louvain; yeterli kenar yoksa gizli).
+Katmanlar: hiyerarşi, database satırları (varsayılan katlı + sayı rozeti, "N satırı
+göster" ayrı çağrı), link, bağlantısız bahsedilme (kesikli, özel WebGL programı),
+ortak etiket (etiket DÜĞÜMÜ — çiftler k² büyürdü). Sağda "Dikkat isteyenler":
+öksüzler, eskimiş/deprecated, çok bağlantılı ama incelenmemiş — tüm model üzerinden,
+katlı satırlar dahil. Canlılık: değişim sinyalinde yeniden çeker, eski düğümler
+yerinde kalır (yeni düğüm komşu merkezine + eski düğümler `fixed` kısa FA2).
+
+**Dosyalar.** `src/lib/services/graph.ts`, `src/lib/actions/graph.ts`,
+`src/lib/graph/types.ts`, `src/components/features/graph/*` (GraphScreen,
+GraphCanvas, GraphRouteClient, LocalGraphPanel/View, dashedEdgeProgram,
+graphTheme), `src/app/[locale]/(app)/graph/**`, sidebar/TabsContext/LastPathTracker/
+`/app` resolveLastPath, iki editör, `knowledge.ts` (`trustFor` export),
+`Graph` i18n namespace (8 locale, toplam 38), changelog `2026-09-24-knowledge-map`,
+migration `0053` (`src/db/apply-0053-…`, schema), `src/scripts/bench-graph.ts`
+(`npm run bench:graph`), AGENTS.md → "Knowledge Map", AI.md, Serena core/
+conventions/tech_stack/suggested_commands.
+
+**Paketler (Hakan onayladı).** sigma 3.0.3, graphology 0.26.0,
+graphology-layout-forceatlas2 0.10.1, graphology-communities-louvain 2.0.2,
+d3-hierarchy 3.1.2 (+ dev graphology-types, @types/d3-hierarchy).
+`@react-sigma/core` kullanılmadı (ince kendi sarmalayıcımız).
+
+**Kararlar / ölçümler.**
+- Bahsedilme eşiği: df > max(8, gövdelerin %10'u). `docs/` (46 sayfa) üzerinde 7
+  "kelime dağarcığı" başlığını keser (Authentication 20 … Read Tools 11), gerçek
+  çapraz referansları (df 8) tutar. Link anchor metni taramadan çıkarıldı (sık
+  linklenen sayfayı yanlışlıkla "çok sık" yapıyordu).
+- Ajan etkinliği denetim kaydıdır → planın audit penceresine kırpılır (Free 7 gün).
+- `agent_activity`'de önerilen `(workspace_id, target_id)` değil
+  `(workspace_id, created_at)` indeksi: sorgu bir workspace üzerinde zaman
+  penceresi. 30k satırda 7 günlük pencere 30.000 → 1.770 satır okuma. Eski
+  tek sütunlu indeks bunun ön eki olduğu için düşürüldü. **Yalnız yerelde uygulandı.**
+- Tıklama = seç (kart: güven, link/bahsedilme, ajan, Aç, satırları göster);
+  çift tıklama = aç. Yerel panelde tek tık açar.
+- 5k sentetik workspace (yerel): model soğuk ~290–430 ms, sıcak ~40–60 ms; katlı
+  874 düğüm/3.233 kenar = 97 KB (gzip 37 KB); hepsi açık 5.060/11.094 = 508 KB
+  (190 KB). Tarayıcıda (dev) ~100 fps; 1.500 satır açıkken ~95 fps.
+- `next build`: grafik kütüphaneleri tek chunk'ta (210 KB), hiçbir rotanın ilk
+  yükünde değil (`route-bundle-stats.json`).
+
+**Doğrulama.** `tsc` temiz; yeni dosyalarda lint 0. Playwright (Hakan onayladı,
+dev + local.db; boş workspace ayrıca `next start` ile prod build'de): boş/küçük/5k
+workspace, açık+koyu tema (canlı değişim),
+390 px (yatay kaydırma yok, alt çekmece), yerel panel, canlı ekleme (eski düğümler 0
+kayma), proje penceresi kilidi (kendi haritası açılır; demo kullanıcısının SAHİBİ
+olduğu başka workspace'in haritası "bulunamadı"). Sentetik workspace ve geçici
+test token'ı silindi.
+
+**Doğrulamada bulunup düzeltilen hatalar.** Sigma yarı saydam açık renkleri açık
+temada hiç çizmiyordu (renkler artık tuvalle CPU'da karıştırılıp opak veriliyor);
+ekran dinamik yüklendiği için ilk değişim yayını kaçırılıp aradaki yazma "taban"
+sayılıyordu (taban artık yükün `generatedAt`'i); küçük haritada sabit kenar
+boşluğu yerel paneli eziyordu; 7 günlük istekte iki saat okuması yüzünden yanlış
+"plan sınırı" notu.
+
+**Açık kalanlar / deploy.** Deploy günü: `apply-0053` → Turso prod (0052 ile
+birlikte; sıra fark etmez, yalnız indeks), sonra `db:drift`. Önceden var olan ve
+bu işte fark edilen: demo temizliği (`cleanupStaleDemoUsers`) workspace'i silince
+`databases.item_id` SET NULL olduğu için database + satırlar yetim kalıyor (yerel
+DB'de 14 tane). Katlı database satırları haritadaki aramada yok (bilinçli, v1).
+P13: kod katmanı + MCP tarafı aynı `services/graph.ts`'i kullanacak.
+
 ---
 
 # P13 — Proje haritası: kod katmanı + graph'ın ajan tarafı
@@ -2637,6 +2811,68 @@ anlamsal/Jev ilişki önerileri.
 - `scripts/ai/update-handoff.ps1`. Commit/push yok.
 ````
 
+### P13 — Tamamlandı (2026-09-24, Claude)
+
+Commit edilmedi; P11/P12'nin commit'lenmemiş çalışma ağacının üstünde. Migration yok,
+yeni env yok, CLI değişmedi, yeni MCP tool'u yok. Ayrıntı: `AGENTS.md` → Knowledge Map →
+**Code layer and the agent side (P13)** ve Performance Rules → *Related refs*.
+
+**Kod iddiaları doğrulandı:** `KNOWLEDGE_INPUT` / `BULK_KNOWLEDGE_INPUT`
+(`tools/write.ts`), `knowledge_metadata.sources`, `getRelatedPages`, `contextPack.ts`'in
+yalnız ilk kavramın komşularını eklemesi, `services/graph.ts` — hepsi yerindeydi.
+`bench:mcp-budget` yerelde `server-only` paketi yüzünden çalışmıyordu; paket kurmadan
+`NODE_PATH` shim'i ile çalıştırıldı (Serena `suggested_commands`'a yazıldı).
+
+**Önce ölç:** yerelde calibrate edilmiş workspace kalmamış (`local.db`'de 0 `knowledge_metadata`
+satırı, Turso dev DB şemasız). **Düzeltme (aynı gün, roadmap'in tamamı okununca):** ölçüm P9.5
+saha testinde zaten yapılmıştı — guide v3 ile kalibre edilen workspace'te 47 metadata satırının
+**46'sı `sources` taşıyordu (%98;** 39/39 satır, 4/4 DB, 3/4 sayfa; etiketsiz olan Calibration Log).
+Yani A'nın yakıtı var, calibrate'in `sources` yazmasını düzeltmeye gerek yok. B yine de yapılmadı:
+CLI sürümü + yeni HTTP yolu + depolama ister ve deploy'u geciktirirdi; canlıda kod katmanının
+kullanımı görüldükten sonra ele alınmalı. Prod sorgusu (§2 4b) yalnız teyit için.
+
+**Yapılanlar:**
+- **A — kod katmanı:** `src/lib/graph/codePaths.ts` (saf; `npm run test:code-paths`, 44 kontrol):
+  kaynak → repo yolu (anchor/glob/`./`/ters bölü normalize; URL ve sürücü yolu düğüm **olmaz** —
+  karar), eşleşme `exact`/`folder`/`inside`. `services/graph.ts`: `file`/`folder` düğümleri
+  (`code:<path>`), `source` + `folder` kenar türleri, tek çocuklu klasör zincirleri çöker; yalnız
+  `code: true` ile gönderilir, payload her zaman `codePaths` sayar. UI: "Kod dosyaları (N)"
+  katmanı (varsayılan kapalı, açınca yeniden çeker), sabit pembe renk, dosya kartı (yol +
+  "N öğe buna dayanıyor"), yerel panelde her zaman açık. 5 yeni `Graph` anahtarı × 8 locale.
+- **C1 — dosyadan bilgiye:** `get_related_pages`'e `resource` (yeni tool değil);
+  `services/codeSources.ts` tek batch + bellekte eşleşme; `pageId` modunda `sources` alanı.
+  Model-visible şema +136 B ≈ **+34 tok/oturum** (read 5.692 → 5.828 B).
+- **C2 — `prepare_context`:** ilk 3 kavramın komşuları, skorla oylanmış, en çok 6 ref, yeri
+  gövdelerden **önce** ayrılıyor (≤ %8). `docs/` üzerinde (46 sayfa, 12 görev, ilgililik önceden
+  yazıldı; `src/scripts/context-graph-expansion.ts`, `bench:context` içinde): pakette erişilebilir
+  ilgili sayfa 0,69 → **0,92**, grafiksiz kontrol (6 lexical ref) 0,78, ~140 tok, bütçe içinde,
+  gövde/top-1 değişmedi. Eskiden 2.000 tok'ta `related` fiilen boştu (paket başına 0,9 ref).
+  **Reddedilen:** PageRank'i gövde sıralamasına katmak (+0,11 ama bir index sayfası 12 görevin
+  6'sında gövdeye girdi), PageRank ref'leri (0,89, oylamadan iyi değil).
+- **C3 — harita/digest'e "en bağlı N":** ölçüldü, **eklenmedi** — küçük workspace'lerde +32–82 tok
+  (+%18–34), hub'lar zaten 10–21 satırlık haritada; 5k'da bilgi katar ama bridge'in her yazmadan
+  sonra yenilediği yola ~500 ms soğuk model kurulumu ekler; davranış kanıtı yok.
+- **C4 (isteğe bağlı) ve B:** yapılmadı (gerekçe AGENTS'ta).
+- Changelog: `2026-09-24-code-files-on-map` (new), `…-agents-check-notes-for-a-file` (new),
+  `…-context-linked-pages` (improved). Docs: `read-tools.md` (By file bölümü), `project-install.md`,
+  `context-first.md`, `token-efficient-usage.md`, README, skill, `mcpb/manifest.json` açıklamaları;
+  AGENTS + Serena `core`/`conventions`/`suggested_commands`.
+
+**Doğrulama:** `npx tsc --noEmit` temiz; değişen dosyalarda eslint 0 hata (3 eski uyarı).
+`test:code-paths` 44/44. `bench:context` mustHit aynı (top-1 1,0, 913 tok) + yeni docs raporu
+geçiyor. `bench:graph`: 286 yol → 274 dosya + 17 klasör, katman açıkken folded payload 104 → 140 KB
+(41 → 47 KB gzip). Gerçek MCP istemcisi (SDK, Streamable HTTP, `npm run dev`, `/api/mcp/w/<id>`):
+göreli/mutlak Windows yolu/klasör/URL sorguları, `sources` alanı, argümansız çağrı hatası, audit
+satırı (`targetType 'resource'`, hedef id yok). Playwright (onaylı): katman menüsü, açık+koyu tema,
+ağ/ağaç düzeni, dosya kartı, yerel panel, 5k haritada ~100 fps (katmanlı/katmansız aynı).
+Görsel kontrolde bulunup düzeltilen iki hata: kod düğümlerinin klasör kenarlarını sayfa ağacı
+döngüsü ele geçiriyordu; aynı sayfanın iki dosyası ağaç tohumunda üst üste düşüyordu.
+Test workspace'leri ve demo üyelikleri local.db'den silindi; dev server durduruldu.
+
+**Açık kalan:** B (CLI dosya ağacı + import kenarları) deploy sonrasına — P9.5'te `sources`
+%98 doluydu, prod sorgusu (§2 4b) teyit eder; `mcpb` paketi açıklaması
+değişti, sürüm/yayın Hakan'da.
+
 ---
 
 # Ertelenen — Jev (TypeSafe AI "System One") deneyi
@@ -2679,9 +2915,10 @@ anlamsal/Jev ilişki önerileri.
 # Deploy öncesi — biriken borç (unutma listesi)
 
 > P adımları tamamlandıkça buraya ekle. Buradaki her madde **deploy'u bloklar**.
-> Son güncelleme: 2026-09-24 (P10-D sonrası). Deploy günü yapılacak tek ek iş:
-> `0052`'yi Turso prod'a uygulamak (§2 madde 1). Aşağıdaki sıra deploy gününün
-> kontrol listesi.
+> Son güncelleme: 2026-09-24 (P12 + workspace silme düzeltmesi + P13 sonrası). Deploy
+> günü yapılacak ek işler: `0052` ve `0053`'ü Turso prod'a uygulamak (§2 madde 1)
+> ve silinmiş workspace'lerin kalıntılarını prod'dan temizlemek (§2 madde 2a).
+> Aşağıdaki sıra deploy gününün kontrol listesi.
 >
 > **Karar (Hakan, 2026-09-23):** deploy yol haritası bitince **toplu** yapılacak —
 > P10–P13 ara deploy olmadan bu listeye eklenerek ilerler. Her P adımı bitince kendi
@@ -2708,13 +2945,30 @@ baştan kurar, yani aynı zamanda onarım komutu. Kod indeks yokken eski taramay
 düştüğü için deploy'la sırası kritik değil, ama sıralı arama ancak bu migration'la
 canlıya çıkar. `db:drift` artık FTS tablosunu ve 11 trigger'ı da denetliyor.
 
+P11 migration **eklemedi** (yeni env de yok).
+
+**P12 → `0053_agent_activity_workspace_created` (deploy'u bloklar — `db:drift`
+yüzünden):** `agent_activity`'nin tek sütunlu `workspace_id` indeksini
+`(workspace_id, created_at)` bileşik indeksiyle değiştirir (bilgi haritasının ajan
+etkinliği penceresi; 30k satırlık ölçümde 7 günlük pencere 30.000 → 1.770 satır
+okuma). Yalnız indeks: kod doğruluk için ona bağlı değil, deploy'la sırası kritik
+değil. Ama `schema.ts` artık yeni indeks adını bildiriyor; uygulanmadan
+`db:drift` Turso için "missing index" der. Betik idempotent ve sorgu planını
+yazdırır (`SEARCH … (workspace_id=? AND created_at>?)` görülmeli). Yerelde
+**uygulandı**, Turso prod'a **henüz uygulanmadı**.
+
+P13 migration **eklemedi** (yeni env yok, CLI değişmedi).
+
 ## 2. Deploy günü sırası
 
 1. `0052`'yi Turso prod'a uygula: `npx tsx src/db/apply-0052-search-index.ts`. Düz
    çalıştırma `.env`'i okuduğu için prod'a gider; betik hedef host'u yazar, doğru
-   olduğunu gör. Çıktıda "Index rebuilt: N documents" satırı olmalı. Sonra
-   `npm run db:drift` → Turso için **OK** görmeden deploy etme (artık
-   `search_fts` + trigger'ları da denetliyor).
+   olduğunu gör. Çıktıda "Index rebuilt: N documents" satırı olmalı. Ardından
+   `0053`: `npx tsx src/db/apply-0053-agent-activity-workspace-created.ts` — yine
+   hedef host'u yazar; çıktıdaki `Plan:` satırında
+   `agent_activity_workspace_created_idx` görülmeli. Sonra `npm run db:drift` →
+   Turso için **OK** görmeden deploy etme (artık `search_fts` + trigger'ları ve
+   `0053`'ün indeks adını da denetliyor).
 2. Web uygulamasını deploy et (Vercel). Bu adımla canlıya çıkanlar: kalibrasyon
    rehberi **v3** ve playbook'lar (sunucudan canlı servis ediliyor), ham markdown
    adresleri `/wiki/<slug>.md` + `/wiki.md` (P9.5), status/select seçenek düzeltmesi
@@ -2723,7 +2977,28 @@ canlıya çıkar. `db:drift` artık FTS tablosunu ve 11 trigger'ı da denetliyor
    `keywords` + harf katlama + tek-tur corpus/önbellek, `search_workspace`'in
    sıralı FTS araması (eski taramayı yedek olarak tutarak) ve aksan/büyük harf
    katlaması, `getRelatedPages`'in 2 batch'i, sunucu `instructions`'ındaki
-   "(with keywords)".
+   "(with keywords)". **P11:** `prepare_context`'in kelime-eksikliği uyarısı ve
+   `agent_call` sayaçları. **P12:** bilgi haritası (`/graph/<id>`, sidebar
+   "Knowledge map" satırı, sayfaların altında "Local map"), yeni paketler (sigma,
+   graphology, forceatlas2, louvain, d3-hierarchy — yalnız harita açılınca
+   yüklenir), `Graph` i18n namespace'i. **Workspace silme düzeltmesi:** beş
+   silme yolu (kullanıcı, admin, GDPR hesap silme, demo temizliği, OKF geri
+   alma) artık `deleteWorkspaceData` ile database + satır + yorumları da siliyor.
+   **P13:** haritada "Kod dosyaları" katmanı, `get_related_pages`'in `resource`
+   parametresi + `sources` alanı (tools/list +34 tok/oturum), `prepare_context`'in ilk 3
+   kavramdan gelen ve yeri önceden ayrılan `related` ref'leri.
+2a. **Kod canlıdayken (2. adımdan SONRA — önce değil, yoksa temizlikle deploy
+   arasında yeni kalıntı oluşabilir):** eski silmelerin bıraktığı içeriği prod'dan
+   temizle. Önce kuru çalıştırma (yalnız sayar, içerik basmaz):
+   ```powershell
+   npx tsx src/db/cleanup-orphaned-workspace-data.ts
+   ```
+   Hedef host'un prod olduğunu gör, sayıları (database / satır / gövde karakteri /
+   tekrar serisi / yorum) not et. Makulse aynı komutu `--apply` ile çalıştır — tek
+   batch, geri alınamaz; "After:" satırı sıfır olmalı. Sonra `npm run db:drift`
+   artık "left behind by deleted workspaces" notu vermemeli. Neden önemli: GDPR
+   hesap silmelerinin geride bıraktığı satır içerikleri ancak bu adımla gerçekten
+   silinir. Yerelde 2026-09-24'te uygulandı (14 database, 120 satır, ~84k karakter).
 3. **Sonra** CLI'ı yayınla — `cli/package.json` zaten `0.1.9` (npm'de şu an `0.1.8`):
    ```powershell
    cd cli
@@ -2751,6 +3026,35 @@ canlıya çıkar. `db:drift` artık FTS tablosunu ve 11 trigger'ı da denetliyor
    küçük harf ve Türkçe harfsiz ("cozum") buluyor mu; başlığı eşleşen sayfa, kelimeyi
    yalnız gövdesinde geçirenlerin önünde mi; Türkçe bir görev + İngilizce
    `keywords` ile `prepare_context` doğru sayfayı döndürüyor mu.
+   **P10 arama indeksi, web'den elle (2 dakika):** web'de bir sayfanın başlığını
+   değiştir → ajanın `search_workspace`'i yeni başlığı buluyor, eskisini bulmuyor mu;
+   sayfayı sil → sonuçlardan çıkıyor mu; çöp kutusundan geri al → yine çıkıyor mu.
+   Aynı şey yerelde servis düzeyinde 18/18 doğrulandı; bu adım canlı web yolunun
+   kendisini görmek için.
+   **P12 bilgi haritası, web'den elle (2 dakika):** sidebar'dan "Knowledge map"i
+   aç → harita çiziliyor, sağda "Needs attention" dolu; bir database'e tıkla →
+   "Show N rows" satırları getiriyor; açık ve koyu temada kenarlar görünüyor
+   (açık temada hiyerarşi çizgileri eksikse renk karıştırma düzeltmesi canlıda
+   yok demektir); bir sayfanın altında "Local map"i aç. Tarayıcının ağ
+   sekmesinde sayfa ilk açılışta sigma/graphology chunk'ı **inmemeli**; yalnız
+   harita ya da yerel panel açılınca inmeli. Proje penceresinde harita açılıyor mu.
+   **P13 (bağlı bir ajanla + web'den, 2 dakika):** calibrate edilmiş bir workspace'te
+   `get_related_pages {"resource": "<kaynaklarda geçen bir dosya>"}` sayfaları `match: exact`
+   ile döndürüyor mu; aynı çağrı dosyanın mutlak yoluyla da çalışıyor mu. Haritada
+   Katmanlar → "Kod dosyaları (N)" görünüyor mu, açınca dosya/klasör düğümleri geliyor mu.
+4b. **P13 — `sources` doluluğunu ölç (deploy'dan bağımsız, salt okuma, Turso SQL konsolu).**
+   P9.5 saha testinde %98 (46/47) ölçülmüştü; bu, canlıdaki gerçek kalibrasyonlar için teyit.
+   Yalnız sayılar döner, içerik basılmaz:
+   ```sql
+   SELECT count(*) AS labelled,
+          sum(json_array_length(sources) > 0) AS with_sources,
+          round(100.0 * sum(json_array_length(sources) > 0) / count(*), 1) AS pct,
+          count(DISTINCT workspace_id) AS workspaces
+   FROM knowledge_metadata
+   WHERE generated_by IS NOT NULL;
+   ```
+   `pct` düşükse önce calibrate rehberinin `sources` adımını güçlendir; yüksekse B'yi
+   (dosya ağacı + import kenarları) yeniden değerlendir.
 5. **P10 — aramayı canlıda ölç (deploy'dan ~1 hafta sonra, salt okuma).**
    `search_workspace` artık önce FTS indeksini, gerekirse aksan katlayan taramayı
    (LIKE ön-filtre + GLOB) kullanıyor. Taramanın maliyeti yerelde en kötü ~16 →
@@ -2812,5 +3116,27 @@ doğrulanır, **sonra** kod deploy edilir. Tersi değil.
 - **Tasarruf kartının tarayıcı kontrolü:** gerçek ajan çağrısı gerektirdiği için
   **P9.5**'e taşındı (Playwright onaylı) — **P9.5'te yapıldı**: proje penceresinde
   kart görünüyor ("311,5 B token tasarrufu · 76 yazıldı · 25 ms").
+
+---
+
+# Opsiyonel — P10'dan kalan küçük iyileştirmeler
+
+> Hiçbiri deploy'u bloklamaz. Her maddede ne zaman ele alınacağı yazıyor; zamanı
+> gelince tek başına küçük bir iş olarak yapılabilir.
+
+1. **`search_workspace` breadcrumb okuması.** Her arama, breadcrumb kurmak için
+   workspace'in tüm öğelerini okuyor (3.000 dokümanlık testte ~1.000 satır; FTS'ten
+   sonra kalan okumanın büyük kısmı bu). Çözüm: yalnız sonuçların atalarını
+   recursive CTE ile okumak. **Ne zaman:** deploy sonrası ölçümde (Deploy öncesi
+   §2.5) arama kaynaklı "rows read" hâlâ yüksek görünürse.
+2. **`prepare_context`'in context-run kaydı.** MCP yolunda `getKnowledgeRevision` +
+   insert, iki sıralı sorgu olarak kaldı. Önbellek anahtarı sorgusuyla birleştirilip
+   tek tura indirilebilir. **Ne zaman:** istenirse; ~30 dakikalık bir iş.
+3. **Web'de global arama kutusu (ürün kararı).** Web uygulamasında global arama
+   yok; FTS indeksi artık bunu mümkün kılıyor. Açık soru: her tuşa basışta sorgu için
+   yeterince hızlı mı? **Ne zaman:** deploy sonrası ölçümden sonra, Hakan karar
+   verirse.
+4. **`prepare_context`'te FTS birinci aşaması (P10-D.5).** P11'e devredildi; P11
+   bölümünün sonundaki "P10'dan devreden" notunda.
 
 ---
