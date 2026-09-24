@@ -39,7 +39,7 @@ export const authConfig: NextAuthConfig = {
         // with curl (rewritten to /api/wiki-md).
         /^\/wiki(\/[^?#]+)?\.md$/.test(path);
       const isRootRoute = cleanPath === '/' || cleanPath === '/share';
-      const isPublicMarketingRoute = cleanPath.startsWith('/pricing') || cleanPath.startsWith('/contact') || cleanPath.startsWith('/download') || cleanPath.startsWith('/share/') || cleanPath.startsWith('/security') || cleanPath.startsWith('/brand') || cleanPath.startsWith('/wiki') || cleanPath.startsWith('/docs');
+      const isPublicMarketingRoute = cleanPath.startsWith('/pricing') || cleanPath.startsWith('/contact') || cleanPath.startsWith('/download') || cleanPath.startsWith('/share/') || cleanPath.startsWith('/security') || cleanPath.startsWith('/brand') || cleanPath.startsWith('/wiki') || cleanPath.startsWith('/docs') || cleanPath.startsWith('/landing-next');
       const isMcpRoute = cleanPath.startsWith('/api/mcp');
       const isTauriEntry = cleanPath.startsWith('/tauri-app');
       const isClientActivate = cleanPath.startsWith('/api/auth/client-activate');

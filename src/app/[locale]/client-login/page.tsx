@@ -31,7 +31,7 @@ function ClientLoginForm() {
             alt="Remnus"
             className="w-14 h-14 object-contain rounded-xl mb-4 shadow-lg"
           />
-          <h1 className="text-2xl font-bold text-white tracking-tight">Remnus</h1>
+          <h1 className="text-2xl font-bold text-neutral-50 tracking-tight">Remnus</h1>
           <p className="text-neutral-400 text-sm mt-1 text-center max-w-xs">
             {t('clientLoginSubtitle')}
           </p>
@@ -42,7 +42,7 @@ function ClientLoginForm() {
           <button
             type="button"
             onClick={() => signIn('google', { callbackUrl: bridgeUrl })}
-            className="w-full flex items-center justify-center gap-3 bg-white hover:bg-neutral-100 text-neutral-900 font-medium text-sm py-2.5 px-4 rounded-lg transition-colors cursor-pointer"
+            className="w-full flex items-center justify-center gap-3 bg-white hover:bg-gray-100 text-gray-900 font-medium text-sm py-2.5 px-4 rounded-lg transition-colors cursor-pointer"
           >
             <GoogleIcon />
             {t('continueWithGoogle')}

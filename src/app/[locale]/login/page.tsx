@@ -110,7 +110,7 @@ function LoginForm() {
           alt="Remnus"
           className="w-16 h-16 object-contain rounded-2xl mb-5"
         />
-        <h1 className="text-xl font-semibold text-white mb-10 tracking-tight">Remnus</h1>
+        <h1 className="text-xl font-semibold text-neutral-50 mb-10 tracking-tight">Remnus</h1>
 
         {tauriState === 'idle' && (
           <button
@@ -190,7 +190,7 @@ function LoginForm() {
               alt="Remnus"
               className="w-14 h-14 object-contain rounded-xl mb-4 shadow-lg"
             />
-            <h1 className="text-2xl font-bold text-white tracking-tight">Remnus</h1>
+            <h1 className="text-2xl font-bold text-neutral-50 tracking-tight">Remnus</h1>
           </Link>
           <p className="text-neutral-400 text-sm mt-1">{t('signInSubtitle')}</p>
         </div>
@@ -201,7 +201,7 @@ function LoginForm() {
           <button
             type="button"
             onClick={() => signIn('google', { callbackUrl })}
-            className="w-full flex items-center justify-center gap-3 bg-white hover:bg-neutral-100 text-neutral-900 font-medium text-sm py-2.5 px-4 rounded-lg transition-colors cursor-pointer"
+            className="w-full flex items-center justify-center gap-3 bg-white hover:bg-gray-100 text-gray-900 font-medium text-sm py-2.5 px-4 rounded-lg transition-colors cursor-pointer"
           >
             <GoogleIcon />
             {t('continueWithGoogle')}
@@ -238,7 +238,7 @@ function LoginForm() {
           {demoState?.error && (
             <p className="text-xs text-red-400 text-center mt-2">{demoState.error}</p>
           )}
-          <p className="text-center text-xs text-neutral-700 mt-2">
+          <p className="text-center text-xs text-neutral-500 mt-2">
             {t('demoHint')}
           </p>
         </div>

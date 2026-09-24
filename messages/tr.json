@@ -2326,5 +2326,309 @@
     "localTruncated": "En yakın {count} öğe gösteriliyor",
     "localOpenFull": "Tüm haritayı aç",
     "localEmpty": "Bu sayfaya henüz hiçbir şey bağlı değil."
+  },
+  "LandingNext": {
+    "nav": {
+      "how": "Nasıl çalışır",
+      "dashboards": "Dashboard'lar",
+      "trust": "Güven"
+    },
+    "hero": {
+      "badge": "Yeni · Kurulumu ajanınız yapar",
+      "titlePre": "Projenize",
+      "titleAccent": "yeniden hakim olun.",
+      "ctaPrimary": "Ücretsiz başla",
+      "agentLabel": "Ajanlarınızın yaptığı",
+      "agentCaption": "63 commit · 214 dosya değişti · bu hafta",
+      "remnusLabel": "Remnus'ta gördüğünüz",
+      "week": "Bu hafta",
+      "shipped": "iş tamamlandı",
+      "decisions": "karar",
+      "decisionsNote": "1'i sizi bekliyor",
+      "risks": "açık risk",
+      "needsYouTag": "Sizi bekliyor",
+      "needsYou": "Claude oturumları JWT'ye taşıdı",
+      "feed1": "Mimari haritası güncellendi · auth, billing",
+      "feed2": "Risk işaretlendi · webhook tekrar denemeleri test edilmemiş",
+      "feed3": "Backlog güncellendi · 2 iş Bitti'ye taşındı",
+      "promptLabel": "Bunu ajanınıza yapıştırın",
+      "promptCopy": "Prompt'u kopyala",
+      "promptCopied": "Kopyalandı",
+      "lede": "Ajanlar geliştirir. Remnus onların işini gerçekten okuyabileceğiniz sayfalara ve dashboard'lara çevirir, hakimiyet de sizde kalır.",
+      "quickTitle": "Ajanınızla hemen başlayın",
+      "quickBody": "Bunu Claude Code, Codex ya da Cursor'a yapıştırın.",
+      "copy": "Kopyala",
+      "step1": "Kurulumu ajanınız yapar",
+      "step2": "Bir kez giriş yaparsınız",
+      "step3": "Projeniz haritalanır"
+    },
+    "problem": {
+      "kicker": "Sorun",
+      "titlePre": "400 commit sonra, projenizin",
+      "titleAccent": "nasıl çalıştığını hâlâ anlatabiliyor musunuz?",
+      "body": "Ajanlar artık kodu herkesin okuyabileceğinden hızlı yazıyor. Var olan kod ile bir insanın gerçekten anladığı kod arasındaki açığın bir adı var: comprehension debt, yani anlama borcu. Ajanlarla geçen her hafta bu borcu büyütüyor.",
+      "stat": "%52",
+      "statLabel": "yeni kodun artık AI tarafından yazılan payı",
+      "statSource": "DX · State of AI Impact, 2026 2. çeyrek",
+      "sourceLabel": "Okuyun: Comprehension debt, Addy Osmani",
+      "diffsTitle": "Diff okumak",
+      "diffsBody": "Değişen her satırı gösterir. Projenin neye dönüştüğünü asla göstermez.",
+      "diffsVerdict": "Satırlar var, resim yok",
+      "chatTitle": "Sohbetler ve elle yazılan dokümanlar",
+      "chatBody": "Ajan ne yaptığını anlatır, sonra oturum kapanır. Doküman yazıldığı hafta eskir.",
+      "chatVerdict": "Cumaya kaybolmuş",
+      "remnusTitle": "Remnus",
+      "remnusBody": "İşi yapan ajanlar projenin okunabilir resmini güncel tutar. Siz okur, düzeltir, onaylarsınız.",
+      "remnusVerdict": "Güncel ve sizin",
+      "closing": "Remnus bu açığı kapatır."
+    },
+    "dashboards": {
+      "kicker": "Dashboard'lar",
+      "soon": "Yakında",
+      "titlePre": "Pazartesi sabahı. İki dakika.",
+      "titleAccent": "Bütün hafta.",
+      "body": "Ajanınıza durumun ne olduğunu sorun. Tek çağrıda canlı bir dashboard kurar ve her işte güncel tutar. HTML üretmez, token'ın küçük bir kısmını harcar.",
+      "project": "acme-api",
+      "title": "Bu hafta",
+      "updated": "Claude güncelledi · 4 dk önce",
+      "tileShipped": "Tamamlanan iş",
+      "tileDecisions": "Karar",
+      "tileDecisionsNote": "1'i sizi bekliyor",
+      "tileRisks": "Açık risk",
+      "tileAgents": "Aktif ajan",
+      "chartTitle": "Ajan aktivitesi",
+      "days": [
+        "Pzt",
+        "Sal",
+        "Çar",
+        "Per",
+        "Cum",
+        "Cmt",
+        "Paz"
+      ],
+      "reviewTitle": "Sizi bekleyenler",
+      "review1": "Oturumları JWT'ye taşı",
+      "review1Meta": "Claude · auth refactor · 4 dosya",
+      "review2": "Eski token tablosunu kaldır",
+      "review2Meta": "Codex · temizlik · migration 0041",
+      "changesTitle": "Mimari değişiklikler",
+      "change1": "Billing webhook'ları artık bir kuyruk üzerinden tekrar deneniyor",
+      "change2": "Kullanıcılar ile workspace'ler arasına organizasyon katmanı eklendi",
+      "risksTitle": "Açık riskler",
+      "risk1": "Webhook tekrar denemeleri test edilmemiş",
+      "risk2": "Ayarlardaki bir işlem yetki kontrolünü atlıyor",
+      "p1Title": "Tek çağrıda kurulur",
+      "p1Body": "Ajanınız neyin gösterileceğini söyler, Remnus çizer. HTML yok, tasarım işi yok.",
+      "p2Title": "Her zaman güncel",
+      "p2Body": "Ajanlar çalıştıkça değişir, geçen salının raporuna bakmak zorunda kalmazsınız.",
+      "p3Title": "Kolayca paylaşılır",
+      "p3Body": "Bütün ekip beş ayrı özet yerine aynı resme bakar."
+    },
+    "map": {
+      "kicker": "Proje haritası",
+      "titlePre": "Projenizin haritası,",
+      "titleAccent": "onu geliştiren ajanların kaleminden.",
+      "body": "Ajanınız kod tabanını okur ve projeyi size anlatır. O andan itibaren her iş haritayı güncel tutar.",
+      "tabDecisions": "Kararlar",
+      "tabArchitecture": "Mimari",
+      "tabBacklog": "Backlog",
+      "tabRisks": "Riskler",
+      "colDecision": "Karar",
+      "colSource": "Yazan",
+      "colStatus": "Durum",
+      "statusReviewed": "Onaylandı",
+      "statusNeedsReview": "İnceleme bekliyor",
+      "statusSuperseded": "Geçersiz",
+      "decisions": [
+        {
+          "title": "Sunucu oturumları kalsın; iptal anında gerçekleşmeli",
+          "source": "Siz · Claude'un önerisini düzelttiniz"
+        },
+        {
+          "title": "Billing webhook'ları bir kuyrukla tekrar denenir",
+          "source": "Claude · billing refactor"
+        },
+        {
+          "title": "Oturumları JWT'ye taşı",
+          "source": "Claude · auth refactor"
+        },
+        {
+          "title": "Her proje için bir workspace",
+          "source": "Codex · kurulum akışı"
+        }
+      ],
+      "archTitle": "Mimari genel bakış",
+      "archIntro": "Bir Next.js uygulaması. Her yazma işlemi server action'lar ve bir servis katmanı üzerinden geçer; ajanlar aynı servislere MCP ile ulaşır.",
+      "archNodes": [
+        "Web uygulaması",
+        "Server action'lar",
+        "Servisler",
+        "Veritabanı",
+        "MCP endpoint"
+      ],
+      "archNote": "Claude, billing refactor'dan sonra güncelledi · 2 gün önce",
+      "backlogCols": [
+        "Sıradaki",
+        "Devam ediyor",
+        "Bitti"
+      ],
+      "backlog": [
+        [
+          "Projeye izleyici davet etme",
+          "Webhook tekrar deneme testleri"
+        ],
+        [
+          "Organizasyon modeli"
+        ],
+        [
+          "Kuyruk tabanlı webhook tekrarları",
+          "Proje kurulum komutu"
+        ]
+      ],
+      "risks": [
+        {
+          "title": "Webhook tekrar denemeleri test edilmemiş",
+          "meta": "Codex işaretledi · Salı"
+        },
+        {
+          "title": "Ayarlardaki bir işlem yetki kontrolünü atlıyor",
+          "meta": "Claude işaretledi · Perşembe"
+        },
+        {
+          "title": "Mimari sayfası auth kodundan daha eski",
+          "meta": "Güncellik uyarısı · son onay 3 hafta önce"
+        }
+      ],
+      "footnote": "Her kayıt kimin yazdığını, hangi iş sırasında yazıldığını ve hangi dosyalara dokunduğunu gösterir."
+    },
+    "finalSay": {
+      "kicker": "Son söz insanda",
+      "titlePre": "Ajan önerir. Siz karar verirsiniz.",
+      "titleAccent": "Ajan uyar.",
+      "body": "Bir ajanın yazdığı hiçbir şey siz onaylamadan gerçek sayılmaz. Düzeltin, onaylayın ya da reddedin. Bir sonraki oturum sizin kararınızdan başlar.",
+      "s1Label": "Claude önerir",
+      "s1Title": "Oturumları JWT'ye taşı",
+      "s1Meta": "auth refactor · 4 dosya",
+      "s1Status": "İnceleme bekliyor",
+      "s2Label": "Siz karar verirsiniz",
+      "s2Title": "Sunucu oturumları kalsın",
+      "s2Note": "İptal anında gerçekleşmeli.",
+      "s2Status": "Sizin onayınızla",
+      "s3Label": "Sonraki oturum uyar",
+      "s3Line1": "Bağlam hazırlanıyor · 1.820 token",
+      "s3Line2": "✓ onaylı: sunucu oturumları kalsın",
+      "s3Line3": "Kararınıza göre çalışıyor",
+      "f1": "Bir sayfayı düzenlerseniz onayı sıfırlanır. Onay her zaman okuduğunuz sürüme aittir.",
+      "f2": "Strict modda ajanlar, onayladığınız bağlamı okumadan yazamaz.",
+      "f3": "Her ajan eylemi kayıt altındadır: kim, ne, ne zaman.",
+      "tech": "Sürüme bağlı onaylar · token bütçesi içinde bağlam paketleri · OAuth 2.1 · tam denetim kaydı"
+    },
+    "how": {
+      "kicker": "Başlarken",
+      "titlePre": "Projenizi net görmeye",
+      "titleAccent": "iki dakika.",
+      "s1Title": "Ajanınıza verin",
+      "s1Body": "Tek bir prompt'u Claude Code, Codex ya da Cursor'a yapıştırın. Kurulumu ajanınız yapar, siz tarayıcıda bir kez giriş yaparsınız. Kopyalanacak token yok, hiçbir dosyanızın üzerine yazılmaz.",
+      "s2Title": "Ajanınız size anlatsın",
+      "s2Body": "Ajanınız kod tabanını okur ve ilk haritayı kurar: genel bakış, kararlar, mimari, backlog ve riskler.",
+      "s3Title": "Her iş resmi günceller",
+      "s3Body": "Her oturum projenin kendi çalışma alanını açar. Ajanlar işe başlamadan haritaya bakar, bitirince neyin değiştiğini yazar.",
+      "terminal": [
+        "Giriş için tarayıcınız açılıyor…",
+        "✓ Workspace acme-api seçildi",
+        "✓ .mcp.json",
+        "✓ .remnus/credentials.json (git'e girmez)",
+        "✓ AGENTS.md · CLAUDE.md"
+      ],
+      "termReading": "Kurulum rehberini okuyorum…",
+      "termDone": "Workspace bağlandı. Şimdi projenin haritasını sizin için çıkarıyorum."
+    },
+    "demo": {
+      "kicker": "Çalışırken görün",
+      "title": "90 saniye, gerçek bir proje."
+    },
+    "agents": {
+      "titlePre": "İstediğiniz ajanı kullanın,",
+      "titleAccent": "resim yine tek.",
+      "body": "Claude Code, Codex, Cursor ve MCP konuşan her istemci aynı haritaya yazar. Kimin ne yaptığını görürsünüz."
+    },
+    "trust": {
+      "kicker": "Güven",
+      "titlePre": "Doğrulayabileceğiniz",
+      "titleAccent": "kontrol.",
+      "tokenTitle": "Reponuzda sır yok",
+      "tokenBody": "Projenin token'ı git'e girmeyen bir dosyada durur. Commit ettiğiniz ayarlarda hassas hiçbir şey yoktur.",
+      "isolationTitle": "Bir proje, bir bağlantı",
+      "isolationBody": "Her projenin kendi bağlantı adresi vardır. İki repo birbirinin çalışma alanını asla okuyamaz.",
+      "windowTitle": "Projeye kilitli pencere",
+      "windowBody": "Çalışma alanı penceresi yalnızca o projeye dokunabilir, hesap düzeyinde hiçbir şeye erişemez.",
+      "auditTitle": "Her şey kayıt altında",
+      "auditBody": "Her ajan okuması ve yazması kim, ne, ne zaman bilgisiyle kaydedilir.",
+      "openTitle": "Açık kaynak",
+      "openBody": "AGPL-3.0. İçeriğinize ne olduğunu görün ya da kendiniz barındırın.",
+      "limit": "Remnus'un yapmadığı: ajanınızın yerel dosyalarını veya terminalini kontrol etmez. Ajanın yaptığını görünür kılar.",
+      "verified": "MCP Registry · Smithery · Glama · MCP.so'da doğrulandı",
+      "openSource": "Açık kaynak · AGPL-3.0"
+    },
+    "audience": {
+      "kicker": "Kimler için",
+      "title": "Kodunu çoğunlukla ajanlara yazdıran herkes için.",
+      "soloTitle": "Solo geliştiriciler",
+      "soloBody": "Beş proje, üç ajan. Kodu yeniden okumadan her birinin nerede olduğunu bilin.",
+      "leadTitle": "Teknik liderler",
+      "leadBody": "Ekibinizin ve ajanlarının bu hafta neyi değiştirdiğini her pull request'i açmadan görün.",
+      "agencyTitle": "Ajanslar",
+      "agencyBody": "Müşterinize projesinin durumunu kod turu yerine okuyabileceği bir sayfayla gösterin."
+    },
+    "story": {
+      "kicker": "Biz de böyle çalışıyoruz",
+      "titlePre": "Remnus'u ajanlarla geliştiriyoruz,",
+      "titleAccent": "Remnus'la yönetiyoruz.",
+      "body": "Remnus'un büyük kısmını kodlama ajanları yazıyor. Onlara yetişmemizi sağlayan da Remnus: her karar, her açık risk, her hafta tek bir yerde."
+    },
+    "pricing": {
+      "kicker": "Fiyatlandırma",
+      "title": "Başlamak ücretsiz. Ekipler için sabit fiyat.",
+      "body": "Ajan başına değil, ekip başına. Her plan tam MCP erişimi içerir.",
+      "perMonth": "/ ay",
+      "cta": "Planları karşılaştır"
+    },
+    "faq": {
+      "kicker": "SSS",
+      "title": "Sorular",
+      "items": [
+        {
+          "q": "Remnus kodumu okuyor mu?",
+          "a": "Kodunuzu zaten okuyan kendi ajanınız, kendi makinenizde okumaya devam eder. Remnus'a yalnızca ajanın çalışma alanına yazdıkları gelir: kararlar, notlar ve durum. Reponuz asla gelmez."
+        },
+        {
+          "q": "Ajanların haritayı güncel tuttuğunu nasıl bilirim?",
+          "a": "Bağlanan her proje, ajanlarına önemli işten önce bağlam hazırlamasını ve kararları, tuzakları ve durum değişikliklerini oluştukları anda yazmasını söyler. Her güncelleme denetim kaydında görünür, yani sessiz geçen bir hafta da görünür."
+        },
+        {
+          "q": "npx remnus init repomda neyi değiştirir?",
+          "a": ".mcp.json, token dosyası git'e girmeyen bir .remnus klasörü ve AGENTS.md ya da CLAUDE.md içinde işaretli kısa bir bölüm ekler. Var olan dosyalar yerinde düzenlenir, asla değiştirilmez."
+        },
+        {
+          "q": "Hangi ajanlarla çalışır?",
+          "a": "Claude Code, Codex, Cursor, Windsurf, Antigravity ve uzak MCP destekleyen her istemci."
+        },
+        {
+          "q": "Ekibim veya müşterim görebilir mi?",
+          "a": "Ekip arkadaşlarınızı projenin çalışma alanına davet edin ya da herhangi bir sayfayı salt okunur bir linkle yayınlayın."
+        },
+        {
+          "q": "Remnus'u kendim barındırabilir miyim?",
+          "a": "Evet. Remnus AGPL-3.0 lisanslı açık kaynaktır. CLI'ı --server ile kendi sunucunuza yönlendirin."
+        }
+      ]
+    },
+    "closing": {
+      "titlePre": "Ajanlar geliştirmeye devam etsin.",
+      "titleAccent": "Hakimiyet sizde kalsın.",
+      "sub": "Bir prompt yapıştırıp bir kez giriş yapmanız yeterli. Projeniz yeniden okunabilir hale gelir.",
+      "ctaPrimary": "Ücretsiz başla",
+      "ctaSecondary": "Dokümanları oku"
+    }
   }
 }

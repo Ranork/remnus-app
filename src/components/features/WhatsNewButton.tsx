@@ -75,15 +75,20 @@ export default function WhatsNewButton() {
     [locale],
   );
 
-  // Entries grouped by ship date, newest first — CHANGELOG is already ordered.
+  // Entries grouped by ship date. CHANGELOG order is the "seen" order (everything
+  // above the last-seen id is new), so an entry that shipped from another branch
+  // can sit below newer-dated ones; grouping by date — not by adjacency — still
+  // shows it under its own day, and a date is never two groups (it is the key).
   const groups = useMemo(() => {
-    const out: { date: string; entries: ChangelogEntry[] }[] = [];
+    const byDate = new Map<string, ChangelogEntry[]>();
     for (const entry of CHANGELOG) {
-      const last = out[out.length - 1];
-      if (last && last.date === entry.date) last.entries.push(entry);
-      else out.push({ date: entry.date, entries: [entry] });
+      const list = byDate.get(entry.date);
+      if (list) list.push(entry);
+      else byDate.set(entry.date, [entry]);
     }
-    return out;
+    return [...byDate]
+      .map(([date, entries]) => ({ date, entries }))
+      .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
   }, []);
 
   const handleOpen = () => {
