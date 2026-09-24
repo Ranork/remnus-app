@@ -1,5 +1,9 @@
 # Remnus → "Agent OS" Yol Haritası — Chat Promptları
 
+> **Durum (2026-09-24): P1–P13 tamamlandı, hiçbiri henüz canlıda değil.** Canlıya alma
+> sırası, senin adımların, elle testler ve açık kalanlar tek yerde: dosyanın sonlarındaki
+> **"✅ Canlıya alma — TEK LİSTE"** bölümü.
+
 Hazırlanma tarihi: 2026-09-21. Kaynak: Hakan'ın 10 maddelik geliştirme listesi.
 
 Bu dosya, geliştirme isteklerini **13 ayrı chat oturumuna** böler (P10–P13,
@@ -2912,7 +2916,126 @@ değişti, sürüm/yayın Hakan'da.
 
 ---
 
-# Deploy öncesi — biriken borç (unutma listesi)
+# ✅ Canlıya alma — TEK LİSTE (güncel: 2026-09-24, P13 + birleştirme sonrası)
+
+> Yol haritasının (P1–P13) canlıya alma ve test için bilinmesi gereken her şeyi burada.
+> Komutların gerekçesi ve ayrıntısı aşağıdaki "Deploy ayrıntıları" bölümünde; **sıra
+> için bu liste esastır.** Kural: önce prod migration, sonra kod (bkz. ayrıntılar §3).
+
+## A. Durum — hepsi bitti, hiçbiri canlıda değil
+
+Canlıdaki kod = `origin/master` (Emir'in 3 commit'i: landing-next, açık tema metinleri).
+Yol haritasının hiçbir adımı henüz canlıda değil (2026-09-24 kontrolü: `/landing-next` 200,
+`/wiki/calibrate.md` ve `/graph` 404). Yerel `master` her şeyi içeriyor ve Emir'in
+commit'leriyle **birleştirildi** (`0fe1c0d`, çatışma yok); push bekliyor.
+
+| Adım | Ne | Yerelde | Prod DB | Canlıda |
+|---|---|---|---|---|
+| P1 | Proje penceresi: canlı yenileme, sade UI, bildirim | ✅ commit | — | ❌ |
+| P2 | `npx remnus join` + erişim isteği | ✅ commit | 0048 ✅ | ❌ |
+| P3 | Bulk yazma tek round-trip | ✅ commit | — | ❌ |
+| P4 | Token diyeti + `.remnus/workspace-map.md` | ✅ commit | — | ❌ (+ CLI) |
+| P5 | Tasarruf kartı / metrikler | ✅ commit | 0049 ✅ | ❌ |
+| P6–P7 | Dashboard'lar + MCP ile yönetim | ✅ commit | 0050 ✅ | ❌ |
+| P8–P9 | Calibrate v2 + playbook'lar | ✅ commit | — | ❌ (+ CLI) |
+| P9.5 | Saha testi, rehber v3, `/wiki/*.md` | ✅ commit | — | ❌ (+ CLI) |
+| — | Audit saklama (`auditDays`) | ✅ commit | 0051 ✅ | ❌ |
+| P10 | Harf katlama, `keywords`, FTS5 arama | ✅ commit | **0052 ❌** | ❌ |
+| P11 | Kelime eksikliği uyarısı (embedding yok) | ✅ commit | — | ❌ |
+| P12 | Bilgi haritası | ✅ commit | **0053 ❌** | ❌ |
+| — | Workspace silme düzeltmesi | ✅ commit | temizlik ❌ | ❌ |
+| P13 | Kod katmanı + dosya → sayfa + bağlam ref'leri | ✅ commit | — | ❌ |
+
+Prod şema kontrolü (`npm run db:drift`, salt okuma, 2026-09-24): **yalnız 14 eksik** =
+`0052`'nin 13 nesnesi + `0053`'ün 1 indeksi. Başka sapma yok. Ayrıca silinmiş
+workspace'lerden kalan **1.155 database + 1 yorum** var (deploy sonrası temizlik, B5).
+
+Canlı öncesi doğrulama (birleşik kod, 2026-09-24): `tsc` temiz · tüm repo eslint **0 hata**
+(302 eski uyarı) · `test:code-paths` 44/44 · `test:recurrence` 26/26 · `test:okf` ·
+`test:access` 28/28 · `test:workspace-deletion` 13/13 · `bench:context` · **`npx next build`
+başarılı**, graf kütüphaneleri hiçbir rotanın ilk yükünde yok · prod build'de `/wiki/*.md`,
+404, `/landing-next`, `/llms.txt` · gerçek MCP istemcisi (FTS "cozum" → "Çözüm Notları",
+Türkçe görev + keywords, dosya → sayfa) · Playwright: demo giriş, Yenilikler (tarih grupları),
+proje penceresi (kilitli oturum, sade kenar çubuğu), pencerede bilgi haritası + kod katmanı.
+8 dilde çeviri anahtarları eşit (Emir'in `LandingNext`'i hariç, bkz. D).
+
+## B. Senin adımların — sırayla (deploy günü)
+
+1. **Push'tan önce** uzakta yeni commit var mı bak: `git fetch; git status -sb`. `behind`
+   görürsen önce `git pull` (merge), sonra devam.
+2. **Prod migration'ları** (hedef host'u çıktıda gör):
+   ```powershell
+   npx tsx src/db/apply-0052-search-index.ts                    # "Index rebuilt: N documents"
+   npx tsx src/db/apply-0053-agent-activity-workspace-created.ts # Plan: …_workspace_created_idx
+   npm run db:drift                                              # Turso için OK görmeden devam etme
+   ```
+3. **Web deploy:** `git push origin master` → Vercel otomatik deploy eder. Bitmesini bekle.
+4. **Duman testi** (salt okuma, ~5 dk): ayrıntılar §2 madde 4 — `/wiki/calibrate.md` 200
+   `text/markdown`, `/wiki/yok.md` 404, `/llms.txt`; bağlı bir ajanla `prepare_context`
+   (`keywords`), `search_workspace "cozum"`, `get_related_pages {"resource": "…"}`; web'de
+   bilgi haritası + "Kod dosyaları" katmanı + bir sayfanın "Yerel harita"sı.
+5. **Prod kalıntı temizliği** (web canlıyken, önce değil): kuru çalıştırma → sayılar
+   (≈1.155 database) makulse `--apply`. Ayrıntı §2 madde 2a.
+   ```powershell
+   npx tsx src/db/cleanup-orphaned-workspace-data.ts          # yalnız sayar
+   npx tsx src/db/cleanup-orphaned-workspace-data.ts --apply  # geri alınamaz
+   npm run db:drift                                            # "left behind" notu kalkmalı
+   ```
+6. **CLI yayını** (web'den SONRA; npm'de 0.1.8, repo 0.1.9):
+   `cd cli; npm login; npm publish`. Ayrıntı §2 madde 3.
+7. **Masaüstü sürümü:** `v0.1.18` etiketi yerelde hazır (sürüm commit'i:
+   `chore(release): v0.1.18`). `git push origin v0.1.18` → GitHub Actions "Tauri Release"
+   4 platformu sırayla derler (~uzun sürer), release'i ve güncelleyicinin `latest.json`'ını
+   yayınlar; `/download` sabit adlı dosyalara bakar. Not: masaüstü kabuğunda (`src-tauri/`)
+   `v0.1.17`'den beri değişiklik **yok** — içerik zaten web'den geliyor; bu sürüm kurulu
+   uygulamaların güncelleyiciyi görmesi ve sürüm numarasının web'le hizalanması için.
+   Web deploy'undan sonra it (uygulama canlı web'i açar).
+8. **Deploy'dan ~1 hafta sonra** (salt okuma): arama/`prepare_context` süreleri (§2 madde 5,
+   SQL hazır), PostHog `agent_call` → `prepare_context` sayaçları (P11: `keywordCount`,
+   `vocabularyMiss`), `sources` doluluğu (§2 madde 4b, SQL hazır).
+9. **Canlı kalibrasyon testi** (CLI yayınından sonra): §2 madde 6.
+
+## C. Tarayıcıda elle test etmen gerekenler (ajanların yapamadığı)
+
+- **P2 katılma akışı, iki gerçek hesapla** — hiç tarayıcıda denenmedi (giriş yalnız
+  Google/GitHub OAuth). Hesap A projeyi `init` eder; hesap B repo klonunda `npx remnus join`
+  → üye değilse istek → A `MembersTab`'da onaylar → B tekrar `join` → bağlanır. Ret ve 7 günlük
+  bekleme; `viewer` rolünün yazma isteyince net hata alması.
+- **P1 canlı yenileme, prod'da** — yerelde P7/P12/P13'te görüldü; canlıda bir ajan yazarken
+  proje penceresinin 2–3 sn içinde güncellendiğini gözle doğrula.
+- **Masaüstü uygulama** — `v0.1.18` yayınlandıktan sonra kurulu uygulamanın güncellemeyi
+  bulduğunu, girişin ve sekmelerin (bilgi haritası sekme olarak) çalıştığını gör.
+- Bilgi: yerel `next start` ile demo girişi yapılamıyor (`demo.ts` prod'da `__Secure-` çerez
+  yazıyor, http'de okunmuyor) — canlıda https olduğu için sorun değil.
+
+## D. Açık kalanlar — deploy'u BLOKLAMAYAN
+
+- **Emir'in `LandingNext` çevirileri** yalnız `en`/`tr`'de; diğer 6 dilde 224 anahtar
+  İngilizceye düşer. `/landing-next` taslak sayfa olduğu için bloklamaz; Emir'e not.
+- **P2:** ajan kotası kişi değil token başına (fatura kararı); iki ajanın aynı sayfayı eşzamanlı
+  yazması (sürüm/ETag yok, sonra yazan kazanır); aynı projeye katılan iki kişinin ajan rozeti
+  aynı etiketi gösteriyor.
+- **P10 opsiyonelleri** (aşağıdaki "Opsiyonel" bölümü): arama breadcrumb okuması,
+  context-run kaydının tek tura inmesi, web'de global arama kutusu (ürün kararı).
+- **P11:** embedding tasarımı hazır ama kapalı; açma ölçütü PostHog verisi (P11 notu).
+- **P13:** B (CLI dosya ağacı + import kenarları) ve C4 (dashboard "bilgi sağlığı" bloğu)
+  ertelendi; gerekçe AGENTS.md → Knowledge Map → P13.
+- **Jev deneyi** ertelendi (aşağıdaki bölüm).
+- **`mcpb/manifest.json`** araç açıklamaları güncellendi; Claude Desktop paketini yeniden
+  yayınlamak istersen `npm run mcpb:build` + sürüm (şu an 1.0.1) — isteğe bağlı.
+- Yerel temizlik: `.next/dev-stale-20260924` (bozuk dev önbelleği, kenara alındı) silinebilir.
+
+## E. Bu turda (2026-09-24) yapılan git işleri
+
+`79028c7` workspace silme düzeltmesi · `4f06320` P11–P13 özellikleri (+ eksik
+`Errors.notFound` çevirisi) · `51068eb` yol haritası notları · `0fe1c0d` Emir'in
+commit'leriyle birleştirme (changelog: bizim yayınlanmamış kayıtlarımız Emir'in canlıdaki
+kaydının üstünde, "yeni" rozeti doğru çalışsın diye; Yenilikler paneli artık tarihe göre
+grupluyor) · bu listenin commit'i · `chore(release): v0.1.18` + yerel etiket. **Push yok.**
+
+---
+
+# Deploy ayrıntıları — komutlar ve gerekçeler (sıra için üstteki TEK LİSTE esastır)
 
 > P adımları tamamlandıkça buraya ekle. Buradaki her madde **deploy'u bloklar**.
 > Son güncelleme: 2026-09-24 (P12 + workspace silme düzeltmesi + P13 sonrası). Deploy
