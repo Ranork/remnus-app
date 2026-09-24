@@ -2984,7 +2984,11 @@ proje penceresi (kilitli oturum, sade kenar çubuğu), pencerede bilgi haritası
 6. **CLI yayını** (web'den SONRA; npm'de 0.1.8, repo 0.1.9):
    `cd cli; npm login; npm publish`. Ayrıntı §2 madde 3.
 7. **Masaüstü sürümü:** `v0.1.18` etiketi yerelde hazır (sürüm commit'i:
-   `chore(release): v0.1.18`). `git push origin v0.1.18` → GitHub Actions "Tauri Release"
+   `chore(release): v0.1.18`, `npm run release:patch`'in yaptığıyla birebir aynı: 4 dosya,
+   aynı commit mesajı ve etiket). **`npm run release:patch`'i şimdi ÇALIŞTIRMA** — 0.1.19'a
+   yükseltip branch + etiketi hemen iter, yani migration'lardan önce deploy tetikler.
+   Kısayol: 2. adım bitince `git push origin master --follow-tags` 3. ve 7. adımı birlikte
+   yapar. Ayrı istersen: `git push origin v0.1.18` → GitHub Actions "Tauri Release"
    4 platformu sırayla derler (~uzun sürer), release'i ve güncelleyicinin `latest.json`'ını
    yayınlar; `/download` sabit adlı dosyalara bakar. Not: masaüstü kabuğunda (`src-tauri/`)
    `v0.1.17`'den beri değişiklik **yok** — içerik zaten web'den geliyor; bu sürüm kurulu
