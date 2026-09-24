@@ -1,12 +1,13 @@
 'use server';
 import { db } from '@/db';
-import { users, workspaces, workspaceMembers, demoSessions } from '@/db/schema';
+import { users, workspaceMembers, demoSessions } from '@/db/schema';
 import { eq, ne, and, lt } from 'drizzle-orm';
 import { encode } from '@auth/core/jwt';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
 import { createDemoSeedData } from '@/lib/seed';
+import { deleteWorkspaceData } from '@/lib/services/workspaceDeletion';
 
 // Each "Try the demo" click provisions its OWN throwaway demo account
 // (`demo+<uuid>@remnus.com`, role 'demo') with a freshly seeded workspace.
@@ -21,7 +22,9 @@ const DEMO_CLEANUP_LIMIT = 25;
 
 // Delete a demo user and everything they own. Workspaces have no FK to the user
 // (ownership lives in workspace_members), so they must be removed explicitly via
-// the membership rows; the user delete then cascades sessions/accounts/members.
+// the membership rows — through deleteWorkspaceData, since a bare workspace
+// delete leaves the seeded Sprint Board database and its rows behind — and the
+// user delete then cascades sessions/accounts/members.
 async function purgeDemoUser(userId: string) {
   const memberships = await db
     .select({ workspaceId: workspaceMembers.workspaceId })
@@ -29,7 +32,7 @@ async function purgeDemoUser(userId: string) {
     .where(eq(workspaceMembers.userId, userId));
 
   for (const { workspaceId } of memberships) {
-    await db.delete(workspaces).where(eq(workspaces.id, workspaceId));
+    await deleteWorkspaceData(workspaceId);
   }
   await db.delete(users).where(eq(users.id, userId));
 }

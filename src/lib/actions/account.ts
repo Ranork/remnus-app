@@ -8,6 +8,7 @@ import { getTranslations } from 'next-intl/server';
 import { signOut } from '@/auth';
 import { cloudinary } from '@/lib/cloudinary';
 import { cancelSubscription } from './billing';
+import { deleteWorkspaceData } from '@/lib/services/workspaceDeletion';
 import { sendEmail, canReceiveEmail, isMailConfigured, getMailableUser } from '@/lib/email/send';
 import { accountDeletionConfirmEmail } from '@/lib/email/templates';
 import { SITE_URL } from '@/lib/email/theme';
@@ -130,8 +131,10 @@ async function performAccountDeletion(userId: string): Promise<void> {
   // members, it just loses its "created by" attribution.
   await db.update(agentTokens).set({ createdBy: null }).where(eq(agentTokens.createdBy, userId));
 
-  // Delete every workspace where this user is the only member — cascades
-  // workspace_items/standalone_pages/databases/pages/shared_pages/tokens/etc.
+  // Delete every workspace where this user is the only member, with ALL its
+  // content: `deleteWorkspaceData` also removes the databases, their rows and
+  // the comments, which a bare workspace delete left behind (databases.item_id
+  // is SET NULL) — erasure was incomplete until 2026-09-24.
   // A workspace with other members is left alone; the user-delete below
   // removes just this user's own membership row from it.
   const memberships = await db
@@ -146,7 +149,7 @@ async function performAccountDeletion(userId: string): Promise<void> {
       .where(and(eq(workspaceMembers.workspaceId, workspaceId), ne(workspaceMembers.userId, userId)))
       .limit(1);
     if (!otherMember) {
-      await db.delete(workspaces).where(eq(workspaces.id, workspaceId));
+      await deleteWorkspaceData(workspaceId);
     }
   }
 

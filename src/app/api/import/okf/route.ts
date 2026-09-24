@@ -1,9 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getTranslations } from 'next-intl/server';
-import { eq } from 'drizzle-orm';
-import { db } from '@/db';
-import { workspaces } from '@/db/schema';
 import { auth } from '@/auth';
+import { deleteWorkspaceData } from '@/lib/services/workspaceDeletion';
 import { createImportedWorkspaceForUser, ImportWorkspaceLimitError } from '@/lib/import/workspace-import';
 import { rewriteImportedConceptLinks } from '@/lib/okf/importLinks';
 import { normalizeArchivePath } from '@/lib/okf/paths';
@@ -149,7 +147,8 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     if (createdWorkspaceId) {
       try {
-        await db.delete(workspaces).where(eq(workspaces.id, createdWorkspaceId));
+        // The import may already have created databases and rows.
+        await deleteWorkspaceData(createdWorkspaceId);
       } catch (cleanupError) {
         console.error('[import/okf] rollback failed', cleanupError);
       }

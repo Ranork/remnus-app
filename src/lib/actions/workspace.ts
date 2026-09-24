@@ -14,6 +14,7 @@ import { checkCanCreateWorkspace } from '@/lib/services/billing';
 import { recordDeletionTombstone, getRelatedPages } from '@/lib/services/workspace';
 import { syncPageLinks, removePageLinksFor, purgeReferencesTo } from '@/lib/services/pageLinks';
 import { snapshotBeforeDelete, maybeSnapshotContentUpdate, type SnapshotActor } from '@/lib/services/snapshots';
+import { deleteWorkspaceData } from '@/lib/services/workspaceDeletion';
 
 export type { RelatedPageRef } from '@/lib/services/workspace';
 
@@ -197,7 +198,8 @@ export async function deleteWorkspace(id: string) {
     };
   }
 
-  await db.delete(workspaces).where(eq(workspaces.id, id));
+  // Not a bare DELETE: databases (+ rows) and comments outlive it (services/workspaceDeletion.ts).
+  await deleteWorkspaceData(id);
 
   const cookieStore = await cookies();
   if (cookieStore.get('remnus_workspace_id')?.value === id) {
@@ -1014,7 +1016,7 @@ export async function adminDeleteWorkspace(workspaceId: string) {
     throw new Error(t('adminRequired'));
   }
 
-  await db.delete(workspaces).where(eq(workspaces.id, workspaceId));
+  await deleteWorkspaceData(workspaceId);
   revalidatePath('/', 'layout');
   return { success: true };
 }

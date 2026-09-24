@@ -80,6 +80,22 @@ async function main() {
     if (!presentNames.has(name)) problems.push(`missing search index object: ${name} (apply-0052-search-index.ts)`);
   }
 
+  // Content a deleted workspace left behind. Every deletion path goes through
+  // deleteWorkspaceData (services/workspaceDeletion.ts) since 2026-09-24; a count
+  // here means an older leftover (run src/db/cleanup-orphaned-workspace-data.ts) or
+  // a NEW path that deletes a workspace with a bare DELETE. A note, not a failure:
+  // it does not break a deploy.
+  if (actualTables.has('databases') && actualTables.has('workspace_items') && actualTables.has('page_comments')) {
+    const orphans = await client.execute(`
+      select
+        (select count(*) from databases where item_id is null or item_id not in (select id from workspace_items)) as dbs,
+        (select count(*) from page_comments where workspace_id not in (select id from workspaces)) as comments`);
+    const { dbs, comments } = orphans.rows[0] as unknown as { dbs: number; comments: number };
+    if (Number(dbs) + Number(comments) > 0) {
+      notes.push(`left behind by deleted workspaces: ${dbs} database(s), ${comments} comment(s) — see src/db/cleanup-orphaned-workspace-data.ts`);
+    }
+  }
+
   for (const table of actualTables) {
     // search_fts* are the FTS5 table and its shadow tables, checked above.
     if (!declared.has(table) && !table.startsWith('sqlite_') && !table.startsWith('__') && !table.startsWith('_') && !table.startsWith('search_fts')) {
