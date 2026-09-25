@@ -13,8 +13,8 @@
 import crypto from 'crypto';
 import { db } from '@/db';
 import { pageSnapshots, workspaceItems, standalonePages, databases, dashboards, pages } from '@/db/schema';
-import { eq, and, lt, desc, asc, inArray, sql } from 'drizzle-orm';
-import { syncPageLinks } from './pageLinks';
+import { eq, and, or, lt, desc, asc, inArray, sql } from 'drizzle-orm';
+import { purgeReferencesTo, removePageLinksFor, syncPageLinks } from './pageLinks';
 
 const RETENTION_DAYS = 30;
 const MAX_VERSIONS_PER_PAGE = 20;
@@ -341,6 +341,9 @@ export async function restoreSnapshot(workspaceId: string, snapshotId: string): 
         createdAt: now,
         updatedAt: now,
       });
+      // The delete dropped this page's link-graph rows; without a re-sync the
+      // restored page shows no links in backlinks, the map or get_related_pages.
+      await syncPageLinks(workspaceId, snap.originalId, 'page', snap.content ?? '');
     } else if (snap.itemType === 'dashboard') {
       // The spec was snapshotted as JSON text in `content`. A spec that no
       // longer parses restores as an empty dashboard rather than failing the
@@ -400,10 +403,19 @@ export async function restoreSnapshot(workspaceId: string, snapshotId: string): 
     createdAt: now,
     updatedAt: now,
   });
+  await syncPageLinks(workspaceId, snap.originalId, 'database_row', snap.content ?? '');
 
   await db.delete(pageSnapshots).where(eq(pageSnapshots.id, snapshotId));
   return { restored: true, id: snap.originalId, itemType: 'database_row', databaseId: snap.databaseId };
 }
+
+const RELEASE_FIELDS = {
+  reason: pageSnapshots.reason,
+  itemType: pageSnapshots.itemType,
+  originalId: pageSnapshots.originalId,
+  databaseId: pageSnapshots.databaseId,
+};
+const RELEASE_CHUNK = 500;
 
 // Called from the daily recurrence cron (see AGENTS.md's "don't add a new
 // scheduler" instruction — this reuses the existing daily maintenance job).
@@ -414,8 +426,70 @@ export async function purgeExpiredSnapshots(): Promise<number> {
   const deleted = await db
     .delete(pageSnapshots)
     .where(lt(pageSnapshots.createdAt, cutoff))
-    .returning({ id: pageSnapshots.id });
+    .returning(RELEASE_FIELDS);
+  await releaseTrashedReferences(deleted);
   return deleted.length;
+}
+
+/**
+ * A trashed item keeps the links other pages hold to it, so a restore needs no
+ * repair. Once its trash copy is gone for good (expired, or evicted by the byte
+ * cap) it can never come back: strip those links from the pages still holding
+ * them and drop their graph rows — never for an id that exists again.
+ * Best-effort per chunk, like the rest of the link-graph side effects.
+ */
+export async function releaseTrashedReferences(
+  snapshots: Array<{ reason: 'delete' | 'update'; itemType: string; originalId: string; databaseId: string | null }>,
+): Promise<void> {
+  const ids = new Set<string>();
+  for (const snap of snapshots) {
+    if (snap.reason !== 'delete') continue;
+    ids.add(snap.originalId);
+    // A database is linked by its own databases.id too (a /db/<id> href).
+    if (snap.itemType === 'database' && snap.databaseId) ids.add(snap.databaseId);
+  }
+  const all = [...ids];
+  for (let i = 0; i < all.length; i += RELEASE_CHUNK) {
+    const chunk = all.slice(i, i + RELEASE_CHUNK);
+    try {
+      const [items, dbs, rows] = await db.batch([
+        db.select({ id: workspaceItems.id }).from(workspaceItems).where(inArray(workspaceItems.id, chunk)),
+        db.select({ id: databases.id }).from(databases).where(inArray(databases.id, chunk)),
+        db.select({ id: pages.id }).from(pages).where(inArray(pages.id, chunk)),
+      ]);
+      const live = new Set([...items, ...dbs, ...rows].map((row) => row.id));
+      const gone = chunk.filter((id) => !live.has(id));
+      if (gone.length === 0) continue;
+      await purgeReferencesTo(gone);
+      await removePageLinksFor(gone);
+    } catch {
+      // Left dangling: readers already drop unresolvable link targets.
+    }
+  }
+}
+
+/** Which of `ids` sit in this workspace's Trash — an item, a row, or a database by either id. */
+export async function listTrashedIds(workspaceId: string, ids: string[]): Promise<string[]> {
+  const wanted = new Set(ids.filter(Boolean));
+  if (wanted.size === 0) return [];
+  const list = [...wanted];
+  const rows = await db
+    .select({ originalId: pageSnapshots.originalId, itemType: pageSnapshots.itemType, databaseId: pageSnapshots.databaseId })
+    .from(pageSnapshots)
+    .where(and(
+      eq(pageSnapshots.workspaceId, workspaceId),
+      eq(pageSnapshots.reason, 'delete'),
+      or(
+        inArray(pageSnapshots.originalId, list),
+        and(eq(pageSnapshots.itemType, 'database'), inArray(pageSnapshots.databaseId, list)),
+      ),
+    ));
+  const found = new Set<string>();
+  for (const row of rows) {
+    if (wanted.has(row.originalId)) found.add(row.originalId);
+    if (row.itemType === 'database' && row.databaseId && wanted.has(row.databaseId)) found.add(row.databaseId);
+  }
+  return [...found];
 }
 
 // Workspace-level total byte cap across ALL snapshots (any reason) — the
@@ -452,7 +526,8 @@ export async function enforceWorkspaceSnapshotByteCaps(): Promise<number> {
       over -= size;
     }
     if (staleIds.length > 0) {
-      await db.delete(pageSnapshots).where(inArray(pageSnapshots.id, staleIds));
+      const evicted = await db.delete(pageSnapshots).where(inArray(pageSnapshots.id, staleIds)).returning(RELEASE_FIELDS);
+      await releaseTrashedReferences(evicted);
       totalDeleted += staleIds.length;
     }
   }

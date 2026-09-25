@@ -137,14 +137,16 @@ function trustBoost(trust: KnowledgeTrust, policy: ContextTrustPolicy): number {
 // An inverted index over the workspace: per-field term counts per document plus
 // one vocabulary → documents map, so a query touches only the documents that
 // contain one of its terms instead of re-scanning every token of every page.
-// Scoring is unchanged from the token-list version it replaced: a document
-// token matches a query term when either is a prefix of the other, and a
-// field's tf is the count of such tokens.
+// A document token matches a query term when either is a prefix of the other
+// (a shorter document token only from MIN_STEM_LENGTH letters, see
+// matchingTokens), and a field's tf is the count of such tokens.
 
 const FIELDS = ['title', 'metadata', 'content'] as const;
 type Field = typeof FIELDS[number];
 const FIELD_WEIGHTS: Record<Field, number> = { title: 4, metadata: 2.5, content: 1 };
 const MIN_TERM_LENGTH = 3;
+/** Shortest document token that may stand in for a longer query term: a stem, "hata" for "hatası". */
+const MIN_STEM_LENGTH = 4;
 
 type IndexedDoc = {
   item: KnowledgeCorpusItem;
@@ -229,7 +231,9 @@ function matchingTokens(index: CorpusIndex, term: string): string[] {
     tokens.push(index.sortedVocabulary[i]);
   }
   // Tokens the term starts with (shorter than the term; equality is covered above).
-  for (let length = MIN_TERM_LENGTH; length < term.length; length++) {
+  // A 3-letter token counts only as a one-letter stem ("row" for "rows"): words
+  // like "per" or "ara" otherwise matched "performance" or "araştır".
+  for (let length = Math.max(MIN_TERM_LENGTH, Math.min(MIN_STEM_LENGTH, term.length - 1)); length < term.length; length++) {
     const prefix = term.slice(0, length);
     if (index.vocabulary.has(prefix)) tokens.push(prefix);
   }

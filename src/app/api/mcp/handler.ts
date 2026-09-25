@@ -17,8 +17,9 @@ import { LATEST_PROTOCOL_VERSION } from '@modelcontextprotocol/sdk/types.js';
 import bcrypt from 'bcryptjs';
 import { createHash, timingSafeEqual } from 'crypto';
 import { db } from '@/db';
-import { agentTokens, oauthAccessTokens } from '@/db/schema';
-import { eq, and, isNull } from 'drizzle-orm';
+import { agentTokens } from '@/db/schema';
+import { eq } from 'drizzle-orm';
+import { effectiveAgentScope, findOAuthTokenForAuth, findPatForAuth } from '@/lib/services/agentAccess';
 import { registerResources } from './resources';
 import { registerPrompts } from './prompts';
 import { registerReadTools } from './tools/read';
@@ -85,16 +86,13 @@ export async function verifyBearerToken(authHeader: string | null): Promise<Toke
 
   // OAuth access token (oa_ prefix)
   if (scheme === 'oa') {
-    const [row] = await db
-      .select()
-      .from(oauthAccessTokens)
-      .where(and(eq(oauthAccessTokens.tokenPrefix, prefix8), isNull(oauthAccessTokens.revokedAt)))
-      .limit(1);
+    const found = await findOAuthTokenForAuth(prefix8);
 
-    if (!row) {
+    if (!found) {
       console.error('[mcp/auth] oauth_token_not_found', { prefix: prefix8 });
       return 'invalid_token';
     }
+    const row = found.token;
     if (!await secretMatches('oa', row.id, row.tokenHash, secret)) {
       console.error('[mcp/auth] oauth_token_hash_mismatch', { prefix: prefix8 });
       return 'invalid_token';
@@ -103,9 +101,15 @@ export async function verifyBearerToken(authHeader: string | null): Promise<Toke
       console.error('[mcp/auth] oauth_token_expired', { prefix: prefix8, expiresAt: row.expiresAt });
       return 'invalid_token';
     }
+    // The grantee's access is re-read on every request: removed → refused, viewer → read.
+    const scope = effectiveAgentScope(found.grant);
+    if (!scope) {
+      console.error('[mcp/auth] oauth_token_member_gone', { prefix: prefix8 });
+      return 'invalid_token';
+    }
 
-    console.log('[mcp/auth] oauth_token_ok', { prefix: prefix8, scope: row.scope });
-    return { tokenId: row.id, tokenKind: 'oauth', workspaceId: row.workspaceId, scope: row.scope as 'read' | 'write', agentName: row.agentName ?? null, ownerUserId: row.userId ?? null };
+    console.log('[mcp/auth] oauth_token_ok', { prefix: prefix8, scope });
+    return { tokenId: row.id, tokenKind: 'oauth', workspaceId: row.workspaceId, scope, agentName: row.agentName ?? null, ownerUserId: row.userId ?? null };
   }
 
   // Personal access token (rmns_ prefix)
@@ -114,19 +118,22 @@ export async function verifyBearerToken(authHeader: string | null): Promise<Toke
     return 'invalid_token';
   }
 
-  const [row] = await db
-    .select()
-    .from(agentTokens)
-    .where(and(eq(agentTokens.tokenPrefix, prefix8), isNull(agentTokens.revokedAt)))
-    .limit(1);
+  const found = await findPatForAuth(prefix8);
 
-  if (!row) return 'invalid_token';
+  if (!found) return 'invalid_token';
+  const row = found.token;
   if (!await secretMatches('pat', row.id, row.tokenHash, secret)) return 'invalid_token';
   if (row.expiresAt && row.expiresAt.getTime() < Date.now()) return 'invalid_token';
+  // Same as OAuth: the creator's membership and role decide, not the scope stored at mint.
+  const scope = effectiveAgentScope(found.grant);
+  if (!scope) {
+    console.error('[mcp/auth] pat_member_gone', { prefix: prefix8 });
+    return 'invalid_token';
+  }
 
   db.update(agentTokens).set({ lastUsedAt: new Date() }).where(eq(agentTokens.id, row.id)).catch(() => {});
 
-  return { tokenId: row.id, tokenKind: 'pat', workspaceId: row.workspaceId, scope: row.scope as 'read' | 'write', agentName: row.agentName ?? null, ownerUserId: row.createdBy ?? null };
+  return { tokenId: row.id, tokenKind: 'pat', workspaceId: row.workspaceId, scope, agentName: row.agentName ?? null, ownerUserId: row.createdBy ?? null };
 }
 
 // ── Rate limiting (60 req/min per token, in-memory token bucket) ──────────────

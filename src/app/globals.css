@@ -740,6 +740,13 @@ pre,
   color: #a6bdf5;
   text-decoration-color: #8aa6ee;
 }
+/* Link to an item in the Trash: kept so a restore brings it back, inert until then. */
+.prose-editor a.page-link-trashed,
+.prose-editor a.page-link-trashed:hover {
+  opacity: 0.55;
+  text-decoration-line: line-through;
+  cursor: default;
+}
 /* Internal page/database links (href starts with "/") read as page references:
    a small document glyph + slightly heavier weight, distinct from raw URLs. */
 .prose-editor a[href^="/"]:not([href^="//"]) {

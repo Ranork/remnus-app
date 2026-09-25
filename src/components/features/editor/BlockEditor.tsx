@@ -107,6 +107,8 @@ import { CalloutBlock } from './CalloutBlockExtension';
 import { BookmarkBlock } from './BookmarkBlockExtension';
 import { FileBlock } from './FileBlockExtension';
 import { PageLink } from './PageLinkNode';
+import { TrashedTargets, trashedTargetsKey, collectLinkTargets } from './TrashedTargetsExtension';
+import { getTrashedLinkTargets } from '@/lib/actions/trash';
 import { PageMention } from './PageMentionExtension';
 import { EmojiSuggestion } from './EmojiExtension';
 import { FencedCodeBlock } from './CodeBlockExtension';
@@ -356,6 +358,7 @@ const BlockEditor = forwardRef<BlockEditorHandle, Props>(function BlockEditor({
       BookmarkBlock,
       FileBlock.configure({ workspaceId: workspaceId ?? null }),
       PageLink,
+      TrashedTargets.configure({ hint: tEditor('linkInTrashHint') }),
       PageMention,
       EmojiSuggestion,
       FencedCodeBlock,
@@ -418,8 +421,23 @@ const BlockEditor = forwardRef<BlockEditorHandle, Props>(function BlockEditor({
         if (!ed) return slice.content.textBetween(0, slice.content.size, '\n\n', '\n');
         return fragmentToCleanMarkdown(ed, slice.content);
       },
+      handleDOMEvents: {
+        // A page link is a contenteditable=false atom, so the browser also follows
+        // its href natively on `click` — a full reload racing the save + SPA push
+        // that handleClick (which only sees the earlier mouseup) already started.
+        click: (_view, event) => {
+          const href = (event.target as HTMLElement | null)?.closest('a[data-page-link]')?.getAttribute('href');
+          if (href?.startsWith('/') && !href.startsWith('//')) event.preventDefault();
+          return false;
+        },
+      },
       handleClick: (_view, _pos, event) => {
         const anchor = (event.target as HTMLElement | null)?.closest('a');
+        // A link to an item in the Trash stays inert until it is restored.
+        if (anchor?.hasAttribute('data-trashed')) {
+          event.preventDefault();
+          return true;
+        }
         const href = anchor?.getAttribute('href');
         if (!href) return false;
 
@@ -833,6 +851,23 @@ const BlockEditor = forwardRef<BlockEditorHandle, Props>(function BlockEditor({
   useEffect(() => {
     editorRef.current = editor;
   }, [editor]);
+
+  // Mark links whose target sits in the Trash (see TrashedTargetsExtension).
+  // Once per editor: a link added later comes from the picker, so it is live.
+  // Share views have no workspace session to ask with.
+  useEffect(() => {
+    if (!editor || !workspaceId || shareMap) return;
+    const ids = collectLinkTargets(editor.state.doc);
+    if (ids.length === 0) return;
+    let cancelled = false;
+    getTrashedLinkTargets(workspaceId, ids)
+      .then((trashed) => {
+        if (cancelled || trashed.length === 0 || editor.isDestroyed) return;
+        editor.view.dispatch(editor.state.tr.setMeta(trashedTargetsKey, trashed));
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [editor, workspaceId, shareMap]);
 
   // Heal a schema-invalid initial document. @tiptap/markdown can parse certain
   // HTML-bearing / Notion-imported markdown into structurally invalid nodes — a

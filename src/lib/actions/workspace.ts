@@ -12,7 +12,7 @@ import { getTranslations } from 'next-intl/server';
 import { isCloudinaryUrl, deleteCloudinaryImage } from '@/lib/cloudinary';
 import { checkCanCreateWorkspace } from '@/lib/services/billing';
 import { recordDeletionTombstone, getRelatedPages } from '@/lib/services/workspace';
-import { syncPageLinks, removePageLinksFor, purgeReferencesTo } from '@/lib/services/pageLinks';
+import { syncPageLinks, removeOutgoingPageLinks } from '@/lib/services/pageLinks';
 import { snapshotBeforeDelete, maybeSnapshotContentUpdate, type SnapshotActor } from '@/lib/services/snapshots';
 import { deleteWorkspaceData } from '@/lib/services/workspaceDeletion';
 
@@ -549,11 +549,21 @@ export async function deleteWorkspaceItem(itemId: string) {
   const user = await getCurrentUserAllowingWorkspaceLock();
   const actor: SnapshotActor = { kind: 'human', userId, label: user.name || user.email || 'Someone' };
 
-  await deleteWorkspaceItemRecursive(
-    workspaceId, itemId, item[0].type, item[0].title,
-    { parentId: item[0].parentId, icon: item[0].icon, iconColor: item[0].iconColor, sortOrder: item[0].sortOrder },
-    actor,
-  );
+  // A delete to the Trash never rewrites another page: links to the deleted
+  // items stay (the editor dims them) so a restore brings them back; they are
+  // stripped only when the trash copy is gone for good (releaseTrashedReferences).
+  // Only the deleted items' own outgoing graph rows go, once for the subtree.
+  const deadIds: string[] = [];
+  try {
+    await deleteWorkspaceItemRecursive(
+      workspaceId, itemId, item[0].type, item[0].title,
+      { parentId: item[0].parentId, icon: item[0].icon, iconColor: item[0].iconColor, sortOrder: item[0].sortOrder },
+      actor,
+      deadIds,
+    );
+  } finally {
+    await removeOutgoingPageLinks(deadIds);
+  }
   revalidatePath('/', 'layout');
 }
 
@@ -610,6 +620,7 @@ async function deleteWorkspaceItemRecursive(
   title: string,
   meta: { parentId: string | null; icon: string | null; iconColor: string | null; sortOrder: number },
   actor: SnapshotActor,
+  deadIds: string[],
 ) {
   // Find all children
   const children = await db.select({
@@ -625,13 +636,14 @@ async function deleteWorkspaceItemRecursive(
       workspaceId, child.id, child.type, child.title,
       { parentId: child.parentId, icon: child.icon, iconColor: child.iconColor, sortOrder: child.sortOrder },
       actor,
+      deadIds,
     );
   }
 
   // Every id another page could have linked to. A database is reachable both by
   // its workspace-item id (childBlock) and its databases.id (a /db/<id> href),
   // and its rows disappear with it — so links to any of them are about to die.
-  const deadIds: string[] = [itemId];
+  const nodeDeadIds: string[] = [itemId];
 
   if (type === 'database') {
     const [dbRow] = await db
@@ -640,7 +652,7 @@ async function deleteWorkspaceItemRecursive(
       .where(eq(databases.itemId, itemId))
       .limit(1);
     if (dbRow) {
-      deadIds.push(dbRow.id);
+      nodeDeadIds.push(dbRow.id);
       const rows = await db
         .select({
           id: pages.id, title: pages.title, content: pages.content, properties: pages.properties,
@@ -649,7 +661,7 @@ async function deleteWorkspaceItemRecursive(
         .from(pages)
         .where(eq(pages.databaseId, dbRow.id));
       for (const r of rows) {
-        deadIds.push(r.id);
+        nodeDeadIds.push(r.id);
         await snapshotBeforeDelete({
           workspaceId, originalId: r.id, itemType: 'database_row', title: r.title,
           content: r.content, properties: r.properties, icon: r.icon, iconColor: r.iconColor,
@@ -694,11 +706,8 @@ async function deleteWorkspaceItemRecursive(
 
   await db.delete(workspaceItems).where(eq(workspaceItems.id, itemId));
   await recordDeletionTombstone(workspaceId, itemId, type, title);
-  // Strip the now-dead child-block buttons / inline links out of the pages that
-  // referenced this item, then drop the graph rows. Order matters: the purge
-  // finds those pages *through* the graph rows.
-  await purgeReferencesTo(deadIds);
-  await removePageLinksFor(deadIds);
+  // Only ids that are actually gone — a failure above leaves their graph rows alone.
+  deadIds.push(...nodeDeadIds);
 }
 
 async function getWorkspaceIdForParent(parentId: string): Promise<string | null> {

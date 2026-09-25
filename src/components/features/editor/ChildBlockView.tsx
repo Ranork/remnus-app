@@ -1,20 +1,26 @@
 'use client';
 import { NodeViewWrapper } from '@tiptap/react';
 import { useRouter } from 'next/navigation';
-import { Lock } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { Lock, Trash2 } from 'lucide-react';
 import PageIcon from '../PageIcon';
 import { useTabs } from '@/components/providers/TabsContext';
 
 export default function ChildBlockView({
   node,
   editor,
+  decorations,
 }: {
   node: any;
   editor: any;
+  decorations?: readonly any[];
 }) {
   const { itemId, databaseId, title, itemType, icon, iconColor } = node.attrs;
   const router = useRouter();
   const tabs = useTabs();
+  const t = useTranslations('Editor');
+  // Set by TrashedTargetsExtension: the target is in the Trash, not gone.
+  const trashed = !!decorations?.some((decoration) => decoration.spec?.trashed);
 
   const ext = editor.extensionManager.extensions.find((e: any) => e.name === 'childBlock');
   const shareMap = ext?.options?.shareMap as Record<string, string> | null;
@@ -30,6 +36,7 @@ export default function ChildBlockView({
     e.preventDefault();
     e.stopPropagation();
     if (isSharedView && !sharedSlug) return; // not shared — block navigation
+    if (trashed) return;
 
     // Ctrl/Cmd+click or middle-click → open in a new tab (Tauri only; web has no provider).
     const newTab = !!tabs && !isSharedView && (e.metaKey || e.ctrlKey || e.button === 1);
@@ -60,15 +67,25 @@ export default function ChildBlockView({
         <button
           onClick={handleNavigate}
           onAuxClick={(e) => { if (e.button === 1) handleNavigate(e); }}
-          disabled={isSharedView && !sharedSlug}
+          disabled={(isSharedView && !sharedSlug) || trashed}
+          title={trashed ? t('linkInTrashHint') : undefined}
           className={`flex-1 text-sm truncate text-left transition-colors ${
-            isSharedView && !sharedSlug
-              ? 'text-neutral-600 cursor-default'
-              : 'text-neutral-300 hover:text-white cursor-pointer'
+            trashed
+              ? 'text-neutral-600 line-through cursor-default'
+              : isSharedView && !sharedSlug
+                ? 'text-neutral-600 cursor-default'
+                : 'text-neutral-300 hover:text-white cursor-pointer'
           }`}
         >
           {title}
         </button>
+
+        {trashed && (
+          <span className="shrink-0 flex items-center gap-1 text-xs text-neutral-600">
+            <Trash2 size={11} />
+            {t('linkInTrash')}
+          </span>
+        )}
 
         {isSharedView && !sharedSlug && (
           <span title="Not shared" className="shrink-0">

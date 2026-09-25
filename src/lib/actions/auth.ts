@@ -15,6 +15,7 @@ import { getCurrentUser } from '@/lib/auth/session';
 import { LAST_PATH_COOKIE } from '@/lib/constants/cookies';
 import { deleteAssetByUrl } from '@/lib/services/assets';
 import { checkCanAddSeatForEmail } from '@/lib/services/billing';
+import { revokeAgentAccess, restrictAgentAccessToRead } from '@/lib/services/agentAccess';
 import { isPlanTier, type PlanTier } from '@/lib/billing/plans';
 
 /**
@@ -197,6 +198,8 @@ export async function removeFromWorkspace(workspaceId: string, userId: string) {
         eq(workspaceMembers.userId, userId),
       ),
     );
+  // Their agents go with them — a token is their access, not the workspace's.
+  await revokeAgentAccess([workspaceId], userId);
 
   revalidatePath('/');
   return { success: true };
@@ -375,6 +378,7 @@ export async function updateWorkspaceMemberRole(
     .update(workspaceMembers)
     .set({ role })
     .where(eq(workspaceMembers.id, targetMember.id));
+  if (role === 'viewer') await restrictAgentAccessToRead(workspaceId, userId);
 
   revalidatePath('/');
   return { success: true };

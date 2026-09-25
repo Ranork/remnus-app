@@ -805,8 +805,11 @@ function computeAttention(model: GraphModel, now: number): GraphAttention {
     (node.staleAt !== 0 && node.staleAt < now) ||
     ((node.state & NODE_STATE.statusMask) >> NODE_STATE.statusShift) === 3);
 
+  // A node only mentioned (never linked) would read as both "nothing links
+  // here" and "well connected"; the orphan list already shows its mentions.
+  const orphanIds = new Set(orphanNodes.map((node) => node.id));
   const hubs = model.order
-    .filter((node) => (degree.get(node.id) ?? 0) >= HUB_MIN_DEGREE && (node.state & NODE_STATE.trustMask) !== 2 && node.kind !== NODE_KIND.dashboard)
+    .filter((node) => (degree.get(node.id) ?? 0) >= HUB_MIN_DEGREE && (node.state & NODE_STATE.trustMask) !== 2 && node.kind !== NODE_KIND.dashboard && !orphanIds.has(node.id))
     .sort((a, b) => (degree.get(b.id) ?? 0) - (degree.get(a.id) ?? 0))
     .slice(0, HUB_LIMIT);
 

@@ -160,8 +160,24 @@ export async function syncPageLinksBulk(
 }
 
 /**
- * Drop every link-graph row touching a hard-deleted item (as source or target).
- * Called best-effort from the same delete paths that write deletion tombstones.
+ * Drop the link-graph rows a deleted item's own body produced, and keep the rows
+ * other pages hold TO it. An item deleted to the Trash keeps its id, so the links
+ * pointing at it work again the moment it is restored; they are stripped only
+ * once its trash copy is gone for good (`releaseTrashedReferences`).
+ */
+export async function removeOutgoingPageLinks(ids: string[]): Promise<void> {
+  const from = ids.filter(Boolean);
+  if (from.length === 0) return;
+  try {
+    await db.delete(pageLinks).where(inArray(pageLinks.fromId, from));
+  } catch {
+    // Swallow — see module doc comment.
+  }
+}
+
+/**
+ * Drop every link-graph row touching an item that is gone for good (as source or
+ * target): its trash copy expired, or it was deleted without one.
  */
 export async function removePageLinksFor(itemId: string | string[]): Promise<void> {
   const ids = (Array.isArray(itemId) ? itemId : [itemId]).filter(Boolean);
@@ -219,10 +235,9 @@ export function stripPageRefs(markdown: string, ids: Set<string>): string {
 /**
  * Rewrite every page that references one of `ids`, stripping the dead links.
  *
- * Without this, deleting a page left the embedded child-block button sitting in
- * its parent's body: `removePageLinksFor` only drops the graph rows, which the
- * backlinks panel reads — it never touches the markdown that actually renders
- * the button.
+ * Only for items that can never come back — a trash copy that expired or was
+ * evicted, or a delete that writes none. A delete to the Trash leaves these
+ * links in place (the editor dims them) so a restore needs no repair.
  *
  * MUST run before `removePageLinksFor` for the same ids: the sources are found
  * via the very graph rows that call deletes. Best-effort, like the rest of this

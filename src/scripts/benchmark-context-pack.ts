@@ -113,8 +113,43 @@ async function checkCorpusCache() {
   assert.equal(later.concepts.find(concept => concept.id === 'aging')?.metadata.stale, true, 'Freshness must be recomputed on a cache hit');
 }
 
+/**
+ * A short common word must not stand in for a long query term. Under the
+ * reverse-prefix rule "per" matched "performance" and "performans", so pages
+ * saying only "one model per table" ranked for a performance task and their
+ * matchedTerms claimed words the page never contains (live report, 2026-09-25).
+ * A real stem still has to work: "hata" for a Turkish task saying "hatasını".
+ */
+async function checkShortPrefixNoise() {
+  const page = (id: string, title: string, content: string): KnowledgeCorpusItem => ({
+    id, itemType: 'page', title, content, breadcrumb: [],
+    metadata: { tags: [], sources: [], stale: false, trust: 'unverified', status: 'stable' },
+  });
+  const small: ContextPackDependencies = {
+    ...dependencies,
+    listKnowledgeCorpus: async () => [
+      page('modules', 'Domain Modules', 'Fatura screen: Invoices.jsx lists every invoice.'),
+      page('arch', 'Architecture', 'Request layer, one model per table, context providers per page.'),
+      page('tests', 'No automated test suite', 'Changes are checked by hand, one screen per release.'),
+      page('slow', 'Slow report rendering', 'The stock report scans every row; performance drops for large dealers.'),
+      page('errors', 'Bilinen hata listesi', 'Giriş ekranında görülen hata ve geçici çözümü.'),
+    ],
+  };
+  const perf = await prepareContextPack('prefix-check', {
+    task: 'Fatura ekranındaki performans sorununu araştır', keywords: ['invoice', 'performance'], maxTokens: 1_000, maxConcepts: 5,
+  }, small);
+  const perfIds = perf.concepts.map(concept => concept.id);
+  assert.ok(!perfIds.includes('arch') && !perfIds.includes('tests'), `"per" matched a performance task: ${JSON.stringify(perf.concepts.map(c => [c.id, c.selectionReason.matchedTerms]))}`);
+  assert.ok(perfIds.includes('modules') && perfIds.includes('slow'), `The real matches went missing: ${JSON.stringify(perfIds)}`);
+
+  const stem = await prepareContextPack('prefix-check', { task: 'giriş hatasını düzelt', maxTokens: 1_000, maxConcepts: 3 }, small);
+  const errors = stem.concepts.find(concept => concept.id === 'errors');
+  assert.ok(errors?.selectionReason.matchedTerms.includes('hatasini'), `A Turkish suffix no longer reaches its stem: ${JSON.stringify(stem.concepts.map(c => [c.id, c.selectionReason.matchedTerms]))}`);
+}
+
 async function main() {
   await checkCorpusCache();
+  await checkShortPrefixNoise();
   const naiveTokens = Math.ceil(JSON.stringify(corpus).length / 4);
   let reciprocalRank = 0;
   let topOne = 0;

@@ -8,6 +8,7 @@ import { getTranslations } from 'next-intl/server';
 import { stripe, priceIdForTier } from '@/lib/stripe';
 import { syncSubscriptionForCustomer } from '@/lib/billing/sync';
 import { getOwnerUsage, getOwnerPlan, countSeats, resolveBillingOwner, setOwnerPlanTier } from '@/lib/services/billing';
+import { revokeAgentAccess } from '@/lib/services/agentAccess';
 import { isPlanTier, type PlanTier } from '@/lib/billing/plans';
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
@@ -276,6 +277,7 @@ export async function removeUserFromPool(userId: string): Promise<{ success?: bo
   if (wsIds.length === 0) return { success: true };
 
   await db.delete(workspaceMembers).where(and(inArray(workspaceMembers.workspaceId, wsIds), eq(workspaceMembers.userId, userId)));
+  await revokeAgentAccess(wsIds, userId);
   revalidatePath('/');
   return { success: true };
 }

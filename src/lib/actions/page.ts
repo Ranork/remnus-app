@@ -10,7 +10,7 @@ import { isCloudinaryUrl, deleteCloudinaryImage } from '@/lib/cloudinary';
 import { recordDeletionTombstone } from '@/lib/services/workspace';
 import { snapshotBeforeDelete, maybeSnapshotContentUpdate } from '@/lib/services/snapshots';
 import { exdateOccurrenceForPage } from '@/lib/services/recurrence';
-import { syncPageLinks, removePageLinksFor, purgeReferencesTo } from '@/lib/services/pageLinks';
+import { syncPageLinks, removeOutgoingPageLinks } from '@/lib/services/pageLinks';
 import { coerceRowValues, extractRowContent, assignOptionColors, type DatabaseColumn } from '@/lib/utils/propertyCoercion';
 
 const MAX_BULK_ROWS = 500;
@@ -232,10 +232,9 @@ export async function deletePage(id: string, databaseId: string) {
 
   await db.delete(pages).where(eq(pages.id, id));
   await recordDeletionTombstone(workspaceId, id, 'database_row', row?.title ?? '');
-  // Strip dead links to this row out of the pages that referenced it, before
-  // dropping the graph rows the purge needs to find them.
-  await purgeReferencesTo([id]);
-  await removePageLinksFor(id);
+  // Links other pages hold to this row stay until its trash copy is gone for
+  // good, so a restore brings them back; only the row's own graph rows go.
+  await removeOutgoingPageLinks([id]);
   revalidatePath(`/db/${databaseId}`);
 }
 

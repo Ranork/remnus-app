@@ -14,9 +14,15 @@ npm run test:okf         # Targeted OKF/context-pack check (pure, no DB)
 npm run test:recurrence  # Recurrence rule engine — 26 pure-function assertions, no DB
 npm run test:access      # Workspace access requests (npx remnus join) — writes+cleans up rows, LOCAL DB ONLY:
 #                           DATABASE_URL="file:local.db" npm run test:access
+npm run test:agent-access  # Removed member / viewer → their PAT + OAuth tokens refused/read-only (request time + stored rows), LOCAL DB ONLY:
+#                           DATABASE_URL="file:local.db" npm run test:agent-access
 npm run bench:context    # Synthetic Context Pack ranking/token regression + (P13) docs/ graph-expansion report (related refs vs controls)
 npm run test:code-paths  # P13: knowledge sources read as repo paths + file matching (pure, no DB)
 npm run test:workspace-deletion  # deleteWorkspaceData leaves nothing behind (DATABASE_URL="file:local.db"; refuses remote)
+npm run test:trash-links  # delete + restore keeps links, restore re-syncs page_links, map orphan≠hub (DATABASE_URL="file:local.db"; refuses remote)
+# Real type check while .next/dev/types/routes.d.ts is half-written: a syntax error there makes tsc skip ALL semantic
+# checks ("only .next errors" ≠ clean). Restart dev to regenerate it, or tsc -p a temp config that excludes .next/dev
+# and next-env.d.ts (next-env imports that file) and includes .next/types instead.
 npx tsx src/db/cleanup-orphaned-workspace-data.ts [--apply]  # leftovers of deleted workspaces; dry run by default; plain run = PROD (.env)
 npm run bench:graph      # Knowledge map: mention thresholds on docs/ + synthetic 5k workspace (DATABASE_URL="file:local.db" — refuses remote; --keep/--member/--cleanup)
 npm run bench:tokens     # Read-shaping savings (digest vs crawl, fields, outline) — needs a DB:

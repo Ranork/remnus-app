@@ -2959,7 +2959,25 @@ Türkçe görev + keywords, dosya → sayfa) · Playwright: demo giriş, Yenilik
 proje penceresi (kilitli oturum, sade kenar çubuğu), pencerede bilgi haritası + kod katmanı.
 8 dilde çeviri anahtarları eşit (Emir'in `LandingNext`'i hariç, bkz. D).
 
-## B. Senin adımların — sırayla (deploy günü)
+## B0. DEPLOY YAPILDI — 2026-09-24 (akşam)
+
+- Hakan `master`'ı push'ladı → Vercel deploy **Ready** (canlıda `/wiki/calibrate.md` 200,
+  `/graph` rotası var). Deploy migration'lardan önce gitti; zararsızdı (arama indeks yoksa
+  taramaya düşer, `0053` yalnız indeks) — kodda doğrulanmıştı.
+- Claude, Hakan'ın onayıyla, Turso prod'a: `0052` (Index rebuilt: 6.328 doküman, 1,2 sn),
+  `0053` (plan `agent_activity_workspace_created_idx`), `db:drift` → **OK**.
+- Kalıntı temizliği `--apply`: silinmiş workspace'lerin **1.155 database, 15.618 satır
+  (~6,07M karakter), 1 yorum** silindi; After = 0; `db:drift` notsuz OK. Sonra salt-okuma
+  bütünlük kontrolü: canlı database öğelerinin hepsinin verisi yerinde, yetim database/satır 0;
+  canlı öğe 787 + satır 5.541 = 6.328 = temizlikten ÖNCE kurulan arama indeksi → canlı içerikten
+  hiçbir şey silinmedi. Canlı toplamlar: 130 kullanıcı, 177 workspace, 235 database.
+- Duman testi (terminal): `.md` 200 + `text/markdown` + canonical, `yok.md` 404, yeni wiki
+  sayfaları 200, `llms.txt`, `/graph` → login, `/api/mcp` token'sız 401.
+- `v0.1.18` etiketi push'landı → Actions "Tauri Release" başladı.
+- CLI 0.1.9: npm girişi Hakan'ın tarayıcısında bekliyor (bu makinede npm oturumu yoktu).
+- Aşağıdaki B listesi artık yalnız referans; kalan işler Hakan'ın elle test listesinde (C + ölçümler).
+
+## B. Senin adımların — sırayla (deploy günü) — B0'a göre büyük kısmı YAPILDI
 
 1. **Push'tan önce** uzakta yeni commit var mı bak: `git fetch; git status -sb`. `behind`
    görürsen önce `git pull` (merge), sonra devam.

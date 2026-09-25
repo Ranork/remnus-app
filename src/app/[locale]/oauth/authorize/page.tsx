@@ -153,7 +153,7 @@ export default async function OAuthAuthorizePage({
     if (!currentUser) return;
 
     const [member] = await db
-      .select({ id: workspaceMembers.userId })
+      .select({ id: workspaceMembers.userId, role: workspaceMembers.role })
       .from(workspaceMembers)
       .where(and(
         eq(workspaceMembers.workspaceId, workspaceId),
@@ -162,6 +162,9 @@ export default async function OAuthAuthorizePage({
       .limit(1);
 
     if (!member) return;
+
+    // A viewer's agent may only read — the form field is client input.
+    const scope = member.role === 'viewer' ? 'read' : chosenScope;
 
     const code = randomBytes(32).toString('hex');
     await db.insert(oauthAuthCodes).values({
@@ -172,7 +175,7 @@ export default async function OAuthAuthorizePage({
       redirectUri:         redirect_uri!,
       codeChallenge:       code_challenge!,
       codeChallengeMethod: code_challenge_method,
-      scope:               chosenScope,
+      scope,
       agentName:           chosenAgent,
       displayName:         chosenDisplayName,
       expiresAt:           new Date(Date.now() + 10 * 60 * 1000), // 10 min
@@ -181,7 +184,7 @@ export default async function OAuthAuthorizePage({
     // Funnel: user approved consent — the auth code is now in flight to the editor.
     await captureForUser('oauth_consent_result', currentUser.id, {
       result: 'approved',
-      scope: chosenScope,
+      scope,
       workspaceId,
       clientId: client_id,
       agentName: chosenAgent,

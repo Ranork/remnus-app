@@ -24,7 +24,7 @@ import {
 } from '@/db/schema';
 import { eq, ne, and, or, asc, desc, gte, lte, sql, inArray } from 'drizzle-orm';
 import type { SQLiteColumn } from 'drizzle-orm/sqlite-core';
-import { syncPageLinks, syncPageLinksBulk, removePageLinksFor, purgeReferencesTo } from './pageLinks';
+import { syncPageLinks, syncPageLinksBulk, removeOutgoingPageLinks } from './pageLinks';
 import { snapshotBeforeDelete, maybeSnapshotContentUpdate, type SnapshotActor } from './snapshots';
 import { recordGeneratedKnowledgeBulk, type KnowledgeMetadataInput } from './knowledge';
 import { activityAtOrAfter, auditVisibleSince } from './auditRetention';
@@ -1939,6 +1939,14 @@ export async function recordDeletionTombstone(
   }
 }
 
+// A delete to the Trash never rewrites another page's body: links to the deleted
+// items stay (the editor dims them), so a restore brings them back, and they are
+// stripped only once the trash copy is gone for good (releaseTrashedReferences in
+// services/snapshots.ts). Only the deleted items' own outgoing graph rows go.
+async function releaseDeletedItems(deadIds: string[]) {
+  await removeOutgoingPageLinks(deadIds);
+}
+
 async function deleteWorkspaceItemAndDescendants(
   workspaceId: string,
   itemId: string,
@@ -1946,6 +1954,7 @@ async function deleteWorkspaceItemAndDescendants(
   title: string,
   meta: { parentId: string | null; icon: string | null; iconColor: string | null; sortOrder: number },
   actor: SnapshotActor,
+  deadIds: string[],
 ) {
   const children = await db
     .select({
@@ -1965,13 +1974,14 @@ async function deleteWorkspaceItemAndDescendants(
       workspaceId, child.id, child.type, child.title,
       { parentId: child.parentId, icon: child.icon, iconColor: child.iconColor, sortOrder: child.sortOrder },
       actor,
+      deadIds,
     );
   }
 
   // Every id another page could have linked to: a database is reachable by its
   // workspace-item id (childBlock) and its databases.id (a /db/<id> href), and
-  // its rows die with it. See purgeReferencesTo.
-  const deadIds: string[] = [itemId];
+  // its rows die with it. See removeOutgoingPageLinks.
+  const nodeDeadIds: string[] = [itemId];
 
   if (type === 'database') {
     const [dbRow] = await db
@@ -1980,7 +1990,7 @@ async function deleteWorkspaceItemAndDescendants(
       .where(eq(databases.itemId, itemId))
       .limit(1);
     if (dbRow) {
-      deadIds.push(dbRow.id);
+      nodeDeadIds.push(dbRow.id);
       const rows = await db
         .select({
           id: pages.id, title: pages.title, content: pages.content, properties: pages.properties,
@@ -1989,7 +1999,7 @@ async function deleteWorkspaceItemAndDescendants(
         .from(pages)
         .where(eq(pages.databaseId, dbRow.id));
       for (const r of rows) {
-        deadIds.push(r.id);
+        nodeDeadIds.push(r.id);
         await snapshotBeforeDelete({
           workspaceId, originalId: r.id, itemType: 'database_row', title: r.title,
           content: r.content, properties: r.properties, icon: r.icon, iconColor: r.iconColor,
@@ -2033,13 +2043,12 @@ async function deleteWorkspaceItemAndDescendants(
 
   await db.delete(workspaceItems).where(eq(workspaceItems.id, itemId));
   await recordDeletionTombstone(workspaceId, itemId, type, title);
-  // Purge before removing the graph rows — the purge finds referencing pages
-  // through them.
-  await purgeReferencesTo(deadIds);
-  await removePageLinksFor(deadIds);
+  // Only ids that are actually gone — a failure above leaves their graph rows alone.
+  deadIds.push(...nodeDeadIds);
 }
 
-export async function deleteItemFromWorkspace(workspaceId: string, itemId: string, actor: SnapshotActor) {
+/** `deadIds`: collect instead of releasing, for a caller deleting several items at once. */
+export async function deleteItemFromWorkspace(workspaceId: string, itemId: string, actor: SnapshotActor, deadIds?: string[]) {
   const [item] = await db
     .select({
       workspaceId: workspaceItems.workspaceId, type: workspaceItems.type, title: workspaceItems.title,
@@ -2052,11 +2061,17 @@ export async function deleteItemFromWorkspace(workspaceId: string, itemId: strin
 
   if (item) {
     if (item.workspaceId !== workspaceId) throw new Error('Access denied');
-    await deleteWorkspaceItemAndDescendants(
-      workspaceId, itemId, item.type, item.title,
-      { parentId: item.parentId, icon: item.icon, iconColor: item.iconColor, sortOrder: item.sortOrder },
-      actor,
-    );
+    const collected = deadIds ?? [];
+    try {
+      await deleteWorkspaceItemAndDescendants(
+        workspaceId, itemId, item.type, item.title,
+        { parentId: item.parentId, icon: item.icon, iconColor: item.iconColor, sortOrder: item.sortOrder },
+        actor,
+        collected,
+      );
+    } finally {
+      if (!deadIds) await releaseDeletedItems(collected);
+    }
     return { deleted: true, type: item.type as 'page' | 'database' | 'dashboard' };
   }
 
@@ -2082,8 +2097,8 @@ export async function deleteItemFromWorkspace(workspaceId: string, itemId: strin
   });
   await db.delete(pages).where(eq(pages.id, itemId));
   await recordDeletionTombstone(workspaceId, itemId, 'database_row', page.title);
-  await purgeReferencesTo([itemId]);
-  await removePageLinksFor(itemId);
+  if (deadIds) deadIds.push(itemId);
+  else await releaseDeletedItems([itemId]);
   return { deleted: true, type: 'db-row' as const };
 }
 
@@ -2097,9 +2112,12 @@ export async function bulkDeleteItemsFromWorkspace(
   itemIds: string[],
   actor: SnapshotActor,
 ): Promise<{ id: string; ok: boolean; error?: string }[]> {
+  // One release for the whole batch, after every item's trash copy exists.
+  const deadIds: string[] = [];
   const settled = await Promise.allSettled(
-    itemIds.map((id) => deleteItemFromWorkspace(workspaceId, id, actor)),
+    itemIds.map((id) => deleteItemFromWorkspace(workspaceId, id, actor, deadIds)),
   );
+  await releaseDeletedItems(deadIds);
   return settled.map((result, i) => (
     result.status === 'fulfilled'
       ? { id: itemIds[i], ok: true }
@@ -2459,7 +2477,13 @@ export async function createDatabaseView(
     ...(input.icon ? { icon: input.icon } : {}),
     ...(input.iconColor ? { iconColor: input.iconColor } : {}),
   };
-  const nextViews = [...seedDefaultViews(dbRecord.views as any[] | null), newView];
+  // Skip the synthetic default when this is the first view ever added and it is
+  // itself a table view — it already satisfies "a Table view always exists",
+  // so seeding one too would leave two duplicate Table tabs.
+  const existingViews = dbRecord.views as any[] | null;
+  const isFirstView = !Array.isArray(existingViews) || existingViews.length === 0;
+  const baseViews = isFirstView && input.type === 'table' ? [] : seedDefaultViews(existingViews);
+  const nextViews = [...baseViews, newView];
 
   await db.update(databases).set({ views: nextViews, updatedAt: new Date() }).where(eq(databases.id, resolvedId));
   return { created: true, view: newView };

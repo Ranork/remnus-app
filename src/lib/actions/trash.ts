@@ -6,7 +6,7 @@ import { revalidatePath } from 'next/cache';
 import { getTranslations } from 'next-intl/server';
 import { getCurrentUserAllowingWorkspaceLock } from '@/lib/auth/session';
 import { assertWorkspaceLockAllows } from '@/lib/auth/workspaceLock';
-import { listTrashForWorkspaces, restoreSnapshot } from '@/lib/services/snapshots';
+import { listTrashForWorkspaces, listTrashedIds, restoreSnapshot } from '@/lib/services/snapshots';
 import type { TrashEntry, RestoreResult } from '@/lib/services/snapshots';
 
 // Direct from-clause re-export — same pattern as `RelatedPageRef` in
@@ -74,6 +74,16 @@ export async function getUserTrashCount(): Promise<number> {
 
   const entries = await listTrashForWorkspaces(visible.map((w) => w.id));
   return entries.length;
+}
+
+/** Most link targets one editor asks about. */
+const MAX_LINK_TARGETS = 500;
+
+// Which of a page's link targets sit in the Trash: links to them are kept so a
+// restore brings them back, and the editor dims them until then.
+export async function getTrashedLinkTargets(workspaceId: string, ids: string[]): Promise<string[]> {
+  await assertWorkspaceAccess(workspaceId);
+  return listTrashedIds(workspaceId, ids.slice(0, MAX_LINK_TARGETS));
 }
 
 // Restore is human-only by design — there is no MCP counterpart to this
