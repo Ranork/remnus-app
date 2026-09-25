@@ -40,6 +40,7 @@ export async function GET(request: Request) {
       scope: result.scope,
       mcpUrl: result.mcpUrl,
       replacedPrevious: result.replacedPrevious ?? false,
+      role: result.role ?? null,
       retryAt: result.retryAt ?? null,
     }),
     { headers: NO_STORE },

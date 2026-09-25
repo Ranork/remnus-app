@@ -288,6 +288,7 @@ async function joinView({
           scope: minted?.scope ?? scope,
           mcpUrl: workspaceMcpUrl(APP_URL, workspaceId),
           replacedPrevious: minted?.replacedPrevious ?? false,
+          role: current.role,
         });
 
         destination = `/install?done=joined&workspace=${encodeURIComponent(workspaceName)}`;

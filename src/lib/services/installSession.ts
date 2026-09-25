@@ -62,6 +62,9 @@ export interface InstallResult {
   /** `join` only: a previous token for this same person + project was revoked to make
    *  room for this one, so the CLI can say so instead of silently dropping a session. */
   replacedPrevious?: boolean;
+  /** `join` + `connected` only: the joiner's own role, so the CLI can tell "you picked
+   *  read only" apart from "a viewer can only read". Never set for a non-member. */
+  role?: 'owner' | 'member' | 'viewer';
   /** `denied` only: ISO timestamp after which asking again is allowed. */
   retryAt?: string;
 }

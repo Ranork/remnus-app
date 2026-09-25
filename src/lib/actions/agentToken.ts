@@ -1,6 +1,6 @@
 'use server';
 import { db } from '@/db';
-import { agentTokens, workspaceMembers, workspaces, agentActivity, oauthAccessTokens, oauthClients } from '@/db/schema';
+import { agentTokens, workspaceMembers, workspaces, agentActivity, oauthAccessTokens, oauthClients, users } from '@/db/schema';
 import { eq, and, isNull, desc, inArray, gte, sql } from 'drizzle-orm';
 import { getCurrentUser } from '@/lib/auth/session';
 import { getTranslations } from 'next-intl/server';
@@ -291,10 +291,26 @@ export async function getUserWorkspacesWithTokens() {
       expiresAt:   agentTokens.expiresAt,
       lastUsedAt:  agentTokens.lastUsedAt,
       workspaceId: agentTokens.workspaceId,
+      createdBy:   agentTokens.createdBy,
+      creatorName:  users.name,
+      creatorEmail: users.email,
+      creatorAccountRole: users.role,
     })
     .from(agentTokens)
+    .leftJoin(users, eq(users.id, agentTokens.createdBy))
     .where(and(inArray(agentTokens.workspaceId, wsIds), isNull(agentTokens.revokedAt)))
     .orderBy(desc(agentTokens.createdAt));
+
+  // Whose agent each token is: an owner looking at two identical "Remnus CLI · <project>"
+  // rows must be able to tell a teammate's from their own before revoking either. The
+  // role is the creator's role *now* — a token whose creator has left no longer works
+  // (agentAccess.ts refuses it) and is flagged so it can be cleared. Names and emails are
+  // already visible to every member in the Members tab.
+  const creatorRoles = await db
+    .select({ workspaceId: workspaceMembers.workspaceId, userId: workspaceMembers.userId, role: workspaceMembers.role })
+    .from(workspaceMembers)
+    .where(inArray(workspaceMembers.workspaceId, wsIds));
+  const roleOf = new Map(creatorRoles.map(r => [`${r.workspaceId}:${r.userId}`, r.role]));
 
   return wsList.map(ws => ({
     id:        ws.id,
@@ -304,7 +320,23 @@ export async function getUserWorkspacesWithTokens() {
     canManage: ws.memberRole === 'owner' || user.role === 'admin',
     tokens: tokenList
       .filter(t => t.workspaceId === ws.id)
-      .map(t => ({ ...t, canRevoke: ws.memberRole === 'owner' || user.role === 'admin' })),
+      .map(({ createdBy, creatorName, creatorEmail, creatorAccountRole, ...t }) => {
+        const role = (roleOf.get(`${ws.id}:${createdBy}`) ?? null) as 'owner' | 'member' | 'viewer' | null;
+        return {
+          ...t,
+          canRevoke: ws.memberRole === 'owner' || user.role === 'admin',
+          owner: createdBy
+            ? {
+                name: creatorName,
+                email: creatorEmail,
+                isYou: createdBy === user.id,
+                role,
+                // Same rule as effectiveAgentScope: a site admin's token works without membership.
+                active: role !== null || creatorAccountRole === 'admin',
+              }
+            : null,
+        };
+      }),
   }));
 }
 

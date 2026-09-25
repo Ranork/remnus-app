@@ -174,9 +174,16 @@ export async function joinCommand(options = {}) {
 
   if (result.scope === 'read') {
     say();
-    warn('This connection is read-only.');
-    detail('Your role in this workspace does not allow writing, so the agent can read');
-    detail('pages and databases but not change them.');
+    warn('This connection is read-only: the agent can read pages and databases but not change them.');
+    // `role` arrives from servers that send it; without it, say nothing about the cause
+    // rather than blame a role for what may have been the choice on the connect screen.
+    if (result.role === 'viewer') {
+      detail('Your role in this workspace is Viewer, which only allows reading.');
+      detail('Ask the workspace owner to make you a Member, then run `npx remnus join` again.');
+    } else if (result.role) {
+      detail('"Read only" was chosen on the connect screen. To let the agent write, run');
+      detail('`npx remnus join` again and choose "Read and write".');
+    }
   }
 
   say();

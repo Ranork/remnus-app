@@ -90,6 +90,37 @@ async function probeConnection(config, token) {
   }
 }
 
+/**
+ * What an agent on this token may do right now: the server lists write tools only to a
+ * session that may write (the holder's current role counts, not the scope at join).
+ * Returns 'write' | 'read', or null when the list could not be read.
+ */
+async function probeAccess(config, token) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), PROBE_TIMEOUT_MS);
+
+  try {
+    const res = await fetch(config.mcpUrl, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Accept: 'application/json, text/event-stream',
+        Authorization: `Bearer ${token}`,
+      },
+      body: JSON.stringify({ jsonrpc: '2.0', id: 2, method: 'tools/list', params: {} }),
+      signal: controller.signal,
+    });
+    if (!res.ok || !(res.headers.get('content-type') ?? '').includes('application/json')) return null;
+    const tools = (await res.json())?.result?.tools;
+    if (!Array.isArray(tools)) return null;
+    return tools.some((tool) => tool?.annotations?.readOnlyHint === false) ? 'write' : 'read';
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export async function doctorCommand() {
   const root = findProjectRoot(process.cwd());
   const config = readConfig(root);
@@ -210,6 +241,18 @@ export async function doctorCommand() {
 
   if (probe.state === 'ok') {
     ok('Remnus answered — the connection works.');
+    // Not counted as a problem: read-only is a legitimate choice (or a Viewer role). It
+    // is said out loud so nobody reads "everything checks out" as "the agent can write".
+    const access = await probeAccess(config, credentials.token);
+    if (access === 'write') {
+      ok('Access: read and write');
+    } else if (access === 'read') {
+      warn('Access: read only — agents here can read pages and databases but not change them.');
+      detail('To let them write, run `npx remnus join` again and choose "Read and write".');
+      detail('If that screen says your role only allows reading, ask the workspace owner to make you a Member.');
+    } else {
+      warn('Could not tell whether this token can write.');
+    }
     // While we are here: a connection that works can also refresh the map, which is
     // what an agent reads first. Failure is reported, not counted — the map is a cache.
     try {

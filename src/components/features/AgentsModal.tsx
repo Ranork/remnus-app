@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslations } from 'next-intl';
-import { X, Bot, ChevronDown, RefreshCw, Link2, Check } from 'lucide-react';
+import { X, Bot, ChevronDown, RefreshCw, Link2, Check, User } from 'lucide-react';
 import PageIcon from '@/components/features/PageIcon';
 import { ConfirmDialog } from '@/components/features/ConfirmDialog';
 import ConnectModal from '@/components/features/agents/ConnectModal';
@@ -220,6 +220,20 @@ function TokenRow({
     ? `${row.data.tokenPrefix}… · ${t('lastUsed')}: ${row.data.lastUsedAt ? relativeTime(row.data.lastUsedAt) : t('never')}`
     : `OAuth · ${relativeTime(row.data.createdAt)}`;
 
+  // Whose agent this is. OAuth rows are always the viewer's own (the list is filtered to
+  // them); a PAT can be anyone's in the workspace, or nobody's once the account is gone.
+  const owner = isPat
+    ? row.data.owner
+    : { name: null, email: null, isYou: true, role: null, active: true };
+  const ownerLabel = !owner
+    ? t('tokenOwnerDeleted')
+    : owner.isYou ? t('you') : (owner.name || owner.email || '—');
+  const ownerEmail = owner && !owner.isYou && owner.name ? owner.email : null;
+  const roleLabel = owner?.role === 'owner' ? t('roleOwner')
+    : owner?.role === 'member' ? t('roleMember')
+    : owner?.role === 'viewer' ? t('roleViewer')
+    : null;
+
   return (
     <div className="flex items-center gap-2.5 p-3 group">
       <AgentTypePicker
@@ -248,6 +262,23 @@ function TokenRow({
             {scope === 'write' ? t('tokenScopeWrite') : t('tokenScopeRead')}
           </span>
           {expiryBadge}
+        </div>
+        <div
+          className="flex items-center gap-1.5 mt-0.5 min-w-0 text-[10px]"
+          title={owner && !owner.isYou ? t('tokenOwnerTitle', { name: [owner.name, owner.email].filter(Boolean).join(' · ') || '—' }) : undefined}
+        >
+          <User size={10} className="text-neutral-500 shrink-0" />
+          <span className={`truncate ${owner ? 'text-neutral-300' : 'text-neutral-500 italic'}`}>{ownerLabel}</span>
+          {ownerEmail && <span className="text-neutral-500 truncate hidden sm:inline">{ownerEmail}</span>}
+          {roleLabel && <span className="text-neutral-500 shrink-0">· {roleLabel}</span>}
+          {owner && !owner.active && (
+            <span
+              className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full border shrink-0 text-red-400 bg-red-500/10 border-red-500/20"
+              title={t('tokenOwnerNotMemberHint')}
+            >
+              {t('tokenOwnerNotMember')}
+            </span>
+          )}
         </div>
         <p className="text-[10px] text-neutral-500 mt-0.5 font-mono">{subline}</p>
       </div>

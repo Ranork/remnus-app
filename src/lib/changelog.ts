@@ -45,6 +45,31 @@ const FIRST_VISIT_WINDOW_DAYS = 7;
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-09-25-agents-show-who-connected',
+    date: '2026-09-25',
+    category: 'improved',
+    title: {
+      en: 'See whose agent each connection is',
+      tr: 'Her bağlantının kime ait olduğunu görün',
+      de: 'Sehen, wem jeder Agent gehört',
+      es: 'Mira de quién es cada agente',
+      fr: 'Voyez à qui appartient chaque agent',
+      hi: 'देखें कि हर एजेंट किसका है',
+      ru: 'Видно, чей это агент',
+      zh: '查看每个智能体属于谁',
+    },
+    summary: {
+      en: 'The AI Agents panel now shows who connected each agent and their role, and flags connections from people who have left the workspace so you can revoke them.',
+      tr: 'AI Ajanları paneli artık her ajanı kimin bağladığını ve rolünü gösteriyor, çalışma alanından ayrılan kişilerin bağlantılarını da iptal edebilmeniz için işaretliyor.',
+      de: 'Das Panel „KI-Agenten“ zeigt jetzt, wer jeden Agenten verbunden hat und mit welcher Rolle, und markiert Verbindungen von Personen, die den Arbeitsbereich verlassen haben, damit Sie sie widerrufen können.',
+      es: 'El panel de Agentes IA ahora muestra quién conectó cada agente y con qué rol, y marca las conexiones de quienes ya dejaron el espacio de trabajo para que puedas revocarlas.',
+      fr: 'Le panneau Agents IA indique désormais qui a connecté chaque agent et avec quel rôle, et signale les connexions des personnes qui ont quitté l’espace de travail pour que vous puissiez les révoquer.',
+      hi: 'AI एजेंट पैनल अब दिखाता है कि हर एजेंट को किसने जोड़ा और उसकी भूमिका क्या है, और कार्यक्षेत्र छोड़ चुके लोगों के कनेक्शन चिह्नित करता है ताकि आप उन्हें रद्द कर सकें।',
+      ru: 'Панель ИИ-агентов теперь показывает, кто подключил каждого агента и с какой ролью, и отмечает подключения людей, покинувших пространство, чтобы вы могли их отозвать.',
+      zh: 'AI 智能体面板现在会显示每个智能体由谁连接及其角色，并标出已离开工作区的成员的连接，方便你撤销。',
+    },
+  },
+  {
     id: '2026-09-25-removed-members-lose-agent-access',
     date: '2026-09-25',
     category: 'fixed',
