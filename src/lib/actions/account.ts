@@ -9,6 +9,7 @@ import { signOut } from '@/auth';
 import { cloudinary } from '@/lib/cloudinary';
 import { cancelSubscription } from './billing';
 import { deleteWorkspaceData } from '@/lib/services/workspaceDeletion';
+import { revokeAllAgentAccessOf } from '@/lib/services/agentAccess';
 import { sendEmail, canReceiveEmail, isMailConfigured, getMailableUser } from '@/lib/email/send';
 import { accountDeletionConfirmEmail } from '@/lib/email/templates';
 import { SITE_URL } from '@/lib/email/theme';
@@ -124,11 +125,13 @@ async function performAccountDeletion(userId: string): Promise<void> {
     } catch { /* best-effort */ }
   }
 
-  // agent_tokens.created_by has no ON DELETE action (unlike most user FKs),
-  // so it would block the user delete below for tokens left in a shared
-  // workspace the caller doesn't solely own. Null it out first — the token
-  // itself is workspace-owned and keeps working for the workspace's other
-  // members, it just loses its "created by" attribution.
+  // The person's agents go with the account: their tokens sit on their own machines, and
+  // agent access follows membership (services/agentAccess.ts). Revoke first — once
+  // created_by is nulled below they can no longer be told apart. (Before 2026-09-25 these
+  // tokens kept working as "workspace-owned".)
+  await revokeAllAgentAccessOf(userId);
+  // agent_tokens.created_by has no ON DELETE action (unlike most user FKs), so it would
+  // block the user delete below for tokens left in a shared workspace. Null it out.
   await db.update(agentTokens).set({ createdBy: null }).where(eq(agentTokens.createdBy, userId));
 
   // Delete every workspace where this user is the only member, with ALL its

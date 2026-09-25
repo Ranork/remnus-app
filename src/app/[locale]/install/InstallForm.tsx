@@ -67,7 +67,7 @@ export function InstallForm({ projectName, authMode, workspaces, userName, error
               alt="Remnus"
               className="w-14 h-14 object-contain rounded-xl mb-4 shadow-lg"
             />
-            <h1 className="text-2xl font-bold text-white tracking-tight">{t('title')}</h1>
+            <h1 className="text-2xl font-bold text-neutral-50 tracking-tight">{t('title')}</h1>
           </Link>
           <div className="flex items-center gap-2 mt-3 px-3 py-1.5 rounded-lg bg-neutral-900 border border-neutral-800">
             <Terminal size={13} className="text-neutral-500 shrink-0" />
@@ -150,7 +150,7 @@ export function InstallForm({ projectName, authMode, workspaces, userName, error
                           {ws.name.charAt(0).toUpperCase()}
                         </span>
                     }
-                    <span className={`flex-1 text-sm truncate ${active ? 'text-blue-100' : 'text-neutral-200'}`}>
+                    <span className={`flex-1 text-sm truncate ${active ? 'text-blue-400' : 'text-neutral-200'}`}>
                       {ws.name}
                     </span>
                     {active && <Check size={15} className="text-blue-400 shrink-0" />}
@@ -168,7 +168,7 @@ export function InstallForm({ projectName, authMode, workspaces, userName, error
                 }`}
               >
                 <Plus size={16} className={creatingNew ? 'text-blue-300 shrink-0' : 'text-neutral-400 shrink-0'} />
-                <span className={`flex-1 text-sm truncate ${creatingNew ? 'text-blue-100' : 'text-neutral-200'}`}>
+                <span className={`flex-1 text-sm truncate ${creatingNew ? 'text-blue-400' : 'text-neutral-200'}`}>
                   {t('newWorkspaceOption')}
                 </span>
                 {creatingNew && <Check size={15} className="text-blue-400 shrink-0" />}

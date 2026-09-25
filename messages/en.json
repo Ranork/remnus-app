@@ -471,6 +471,9 @@
     "tokenOwnerNotMember": "No longer a member",
     "tokenOwnerNotMemberHint": "This person is no longer in the workspace, so this token no longer works. Revoke it to clear it from the list.",
     "tokenOwnerDeleted": "Deleted account",
+    "revokeTokenConfirm": "Revoke \"{name}\" ({owner})? Any agent using it loses access immediately.",
+    "tokenAutoRenewing": "Auto-renewing",
+    "tokenAutoRenewingHint": "The access token renews itself every hour; the connection stays valid for 30 days after sign-in.",
     "never": "Never",
     "revokeToken": "Revoke",
     "revoking": "Revoking...",
@@ -1899,6 +1902,7 @@
     "accessLevel": "Access level",
     "scopeReadLabel": "Read only",
     "scopeWriteLabel": "Read & write",
+    "viewerScopeHint": "Your role in this workspace is Viewer, so this connection can only read.",
     "agentTypeLabel": "Agent type (optional)",
     "agentNameLabel": "Connection name",
     "agentNamePlaceholder": "e.g. Claude Code"

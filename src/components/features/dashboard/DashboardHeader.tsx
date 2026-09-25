@@ -44,9 +44,20 @@ export default function DashboardHeader({
     return () => clearTimeout(timer);
   }, [title, itemId]);
 
+  // A rename made elsewhere (an agent, another tab) arrives in `initialTitle` on the next
+  // refresh; adopt it unless a local edit is still waiting for the save above.
+  useEffect(() => {
+    if (initialTitle === savedTitle.current || title !== savedTitle.current) return;
+    savedTitle.current = initialTitle;
+    setTitle(initialTitle);
+  }, [initialTitle, title]);
+
+  // After every render, not only on a title change: a server refresh re-renders the
+  // layout's default "Remnus" <title>, and this component's props are plain strings, so
+  // nothing else here changes identity to re-run the effect.
   useEffect(() => {
     document.title = `${title || t('untitled')} | Remnus`;
-  }, [title, t]);
+  });
 
   const handleIconSelect = (nextIcon: string | null, nextColor: string | null) => {
     setIcon(nextIcon);

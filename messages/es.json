@@ -471,6 +471,9 @@
     "tokenOwnerNotMember": "Ya no es miembro",
     "tokenOwnerNotMemberHint": "Esta persona ya no está en el espacio de trabajo, así que este token ya no funciona. Revócalo para quitarlo de la lista.",
     "tokenOwnerDeleted": "Cuenta eliminada",
+    "revokeTokenConfirm": "¿Revocar \"{name}\" ({owner})? Cualquier agente que lo use pierde el acceso al instante.",
+    "tokenAutoRenewing": "Renovación automática",
+    "tokenAutoRenewingHint": "El token de acceso se renueva cada hora; la conexión sigue siendo válida 30 días después de iniciar sesión.",
     "never": "Nunca",
     "revokeToken": "Revocar",
     "revoking": "Revocando...",
@@ -1875,6 +1878,7 @@
     "accessLevel": "Nivel de acceso",
     "scopeReadLabel": "Solo lectura",
     "scopeWriteLabel": "Lectura y escritura",
+    "viewerScopeHint": "Tu rol en este espacio de trabajo es Espectador, así que esta conexión solo puede leer.",
     "agentTypeLabel": "Tipo de agente (opcional)",
     "agentNameLabel": "Nombre de la conexión",
     "agentNamePlaceholder": "p. ej. Claude Code"

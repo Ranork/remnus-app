@@ -44,6 +44,20 @@ function debounce<T extends (...args: any[]) => any>(fn: T, delay: number) {
   };
 }
 
+/** Longer than the property/content save debounces plus a round-trip (see BlockEditor). */
+const LOCAL_SAVE_QUIET_MS = 2500;
+
+/** Order-independent identity of a properties object: the server merges an agent's
+ *  properties into the row, so the same values can come back in a different key order. */
+function stableKey(value: unknown): string {
+  if (Array.isArray(value)) return `[${value.map(stableKey).join(',')}]`;
+  if (value && typeof value === 'object') {
+    return `{${Object.keys(value as Record<string, unknown>).sort()
+      .map((k) => `${JSON.stringify(k)}:${stableKey((value as Record<string, unknown>)[k])}`).join(',')}}`;
+  }
+  return JSON.stringify(value ?? null);
+}
+
 // Textarea that grows with its content instead of scrolling sideways — used for
 // the page title and free-text property values so long text wraps to new lines.
 function AutoGrowTextarea({
@@ -215,8 +229,51 @@ const PageEditor = forwardRef<PageEditorHandle, PageEditorProps>(function PageEd
   useEffect(() => {
     setIcon(initialPage.icon);
     setIconColor(initialPage.iconColor);
-    setProperties(initialPage.properties || {});
   }, [initialPage.id, initialPage.icon, initialPage.iconColor]);
+
+  // Live properties (2026-09-25). A refresh brings the row's current properties (an
+  // agent's `update_page`, another tab), but they were only read on a page switch, so the
+  // title and fields of an open row stayed stale. Same rule as the body in BlockEditor:
+  // adopt the server's properties unless this editor holds an unsaved edit of its own,
+  // and not within LOCAL_SAVE_QUIET_MS of a local edit (a debounced save may still land).
+  const syncedPropsRef = useRef({ id: initialPage.id, key: stableKey(initialPage.properties || {}) });
+  const lastLocalPropEditRef = useRef(0);
+  // Handlers only flag the edit; the time is taken here, outside render.
+  const localPropEditRef = useRef(false);
+  useEffect(() => {
+    if (!localPropEditRef.current) return;
+    localPropEditRef.current = false;
+    lastLocalPropEditRef.current = Date.now();
+  }, [properties]);
+  useEffect(() => {
+    const incoming = initialPage.properties || {};
+    const incomingKey = stableKey(incoming);
+    if (syncedPropsRef.current.id !== initialPage.id) {
+      syncedPropsRef.current = { id: initialPage.id, key: incomingKey };
+      setProperties(incoming);
+      return;
+    }
+    let retry: ReturnType<typeof setTimeout> | undefined;
+    const adopt = () => {
+      const synced = syncedPropsRef.current;
+      if (incomingKey === synced.key) return;
+      const localKey = stableKey(propertiesRef.current);
+      if (localKey === incomingKey) {
+        syncedPropsRef.current = { id: initialPage.id, key: incomingKey };
+        return;
+      }
+      if (localKey !== synced.key) return;
+      const quietFor = Date.now() - lastLocalPropEditRef.current;
+      if (quietFor < LOCAL_SAVE_QUIET_MS) {
+        retry = setTimeout(adopt, LOCAL_SAVE_QUIET_MS - quietFor);
+        return;
+      }
+      syncedPropsRef.current = { id: initialPage.id, key: incomingKey };
+      setProperties(incoming);
+    };
+    adopt();
+    return () => { if (retry) clearTimeout(retry); };
+  }, [initialPage.id, initialPage.properties]);
 
   const schema = database.schema as any[];
 
@@ -231,17 +288,20 @@ const PageEditor = forwardRef<PageEditorHandle, PageEditorProps>(function PageEd
   }, [database.views, schema]);
   const pageTitle = properties['title'] || 'Untitled';
 
+  // Re-applied after every server refresh too (`initialPage` is a new object then): the
+  // refresh re-renders the layout's default "Remnus" <title>, which would otherwise stay.
   useEffect(() => {
     if (!isPeek) {
       document.title = `${pageTitle} | Remnus`;
     }
-  }, [pageTitle, isPeek]);
+  }, [pageTitle, isPeek, initialPage]);
 
   const saveContent = useCallback(async (md: string) => {
     setSaveState('saving');
     try {
       await updatePageContent(initialPage.id, md);
       patchPageCache({ content: md });
+      editorRef.current?.markSaved(md);
       setSaveState('saved');
     } catch {
       setSaveState('error');
@@ -261,7 +321,10 @@ const PageEditor = forwardRef<PageEditorHandle, PageEditorProps>(function PageEd
   const debouncedSaveProps = useMemo(
     () =>
       debounce((props: Record<string, any>) => {
-        updatePageProperties(initialPage.id, props);
+        // Once saved, the server holds these: later server versions compare against them.
+        updatePageProperties(initialPage.id, props).then(() => {
+          syncedPropsRef.current = { id: initialPage.id, key: stableKey(props) };
+        });
         patchPageCache({ properties: props });
         onPageUpdated?.({ ...initialPage, icon: iconRef.current, iconColor: iconColorRef.current, properties: props });
       }, 600),
@@ -272,6 +335,7 @@ const PageEditor = forwardRef<PageEditorHandle, PageEditorProps>(function PageEd
   // For text/number inputs: update state immediately, persist after pause
   const handleTextPropertyChange = (colId: string, value: any) => {
     const newProps = { ...properties, [colId]: value };
+    localPropEditRef.current = true;
     setProperties(newProps);
     debouncedSaveProps(newProps);
   };
@@ -279,8 +343,10 @@ const PageEditor = forwardRef<PageEditorHandle, PageEditorProps>(function PageEd
   // For discrete controls (select, date, multi_select): save immediately
   const handlePropertyChange = async (colId: string, value: any) => {
     const newProps = { ...properties, [colId]: value };
+    localPropEditRef.current = true;
     setProperties(newProps);
     await updatePageProperties(initialPage.id, newProps);
+    syncedPropsRef.current = { id: initialPage.id, key: stableKey(newProps) };
     patchPageCache({ properties: newProps });
     if (onPageUpdated) {
       onPageUpdated({ ...initialPage, icon, iconColor, properties: newProps });

@@ -126,6 +126,9 @@ export type BlockEditorHandle = {
   getMarkdown: () => string;
   /** Replace the whole document from a storage-markdown string and persist it immediately. */
   replaceContent: (markdown: string) => void;
+  /** The server now holds `markdown` (a save of this editor's text succeeded): the live
+   *  content sync compares later server versions against it. */
+  markSaved: (markdown: string) => void;
 };
 
 type Props = {
@@ -282,6 +285,11 @@ const BlockEditor = forwardRef<BlockEditorHandle, Props>(function BlockEditor({
       // point of this action is an explicit, immediate save — flush it now
       // rather than waiting out the debounce.
       onImmediateSaveRef.current?.(editor.getMarkdown());
+    },
+    // Without this the baseline moved only when the save came back through a refresh, and
+    // a server change landing before that read as "unsaved local work" and was never shown.
+    markSaved: (markdown: string) => {
+      if (syncedRef.current) syncedRef.current = { raw: markdown, md: markdown };
     },
   }), []);
 

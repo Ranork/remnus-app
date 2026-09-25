@@ -146,15 +146,18 @@ export default function StandalonePageEditor({
     setTitle(item.title);
   }, [item.title, title]);
 
+  // Re-applied after every server refresh too (`item` is a new object then): the refresh
+  // re-renders the layout's default "Remnus" <title>, which would otherwise stay.
   useEffect(() => {
     document.title = `${title || 'Untitled'} | Remnus`;
-  }, [title]);
+  }, [title, item]);
 
   const saveContent = useCallback(async (md: string) => {
     setSaveState('saving');
     try {
       await updateStandalonePageContent(item.id, md);
       patchPageCache({ content: md });
+      editorRef.current?.markSaved(md);
       setSaveState('saved');
     } catch {
       setSaveState('error');

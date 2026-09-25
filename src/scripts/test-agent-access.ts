@@ -26,6 +26,7 @@ import {
   findPatForAuth,
   restrictAgentAccessToRead,
   revokeAgentAccess,
+  revokeAllAgentAccessOf,
   type AgentGrant,
 } from '@/lib/services/agentAccess';
 
@@ -51,6 +52,7 @@ const SUFFIX = `test-agent-access-${Date.now()}`;
 const ownerId = `${SUFFIX}-owner`;
 const memberId = `${SUFFIX}-member`;
 const adminId = `${SUFFIX}-admin`;
+const leaverId = `${SUFFIX}-leaver`;
 const W = `${SUFFIX}-ws`;
 const W2 = `${SUFFIX}-ws2`;
 const prefix = () => randomBytes(4).toString('hex');
@@ -62,6 +64,9 @@ const P = {
   admin: prefix(),
   legacy: prefix(),
   oauthMember: prefix(),
+  leaverW: prefix(),
+  leaverW2: prefix(),
+  oauthLeaver: prefix(),
 };
 
 async function seed() {
@@ -70,6 +75,7 @@ async function seed() {
     { id: ownerId, name: 'Owner A', email: `${ownerId}@example.invalid`, role: 'user' },
     { id: memberId, name: 'Member B', email: `${memberId}@example.invalid`, role: 'user' },
     { id: adminId, name: 'Admin', email: `${adminId}@example.invalid`, role: 'admin' },
+    { id: leaverId, name: 'Leaver', email: `${leaverId}@example.invalid`, role: 'user' },
   ]);
   await db.insert(workspaces).values([
     { id: W, name: 'Agent access', billingOwnerId: ownerId, createdAt: now, updatedAt: now },
@@ -80,6 +86,8 @@ async function seed() {
     { workspaceId: W, userId: memberId, role: 'member', createdAt: now },
     { workspaceId: W2, userId: ownerId, role: 'owner', createdAt: now },
     { workspaceId: W2, userId: memberId, role: 'member', createdAt: now },
+    { workspaceId: W, userId: leaverId, role: 'member', createdAt: now },
+    { workspaceId: W2, userId: leaverId, role: 'member', createdAt: now },
   ]);
   const pat = (workspaceId: string, tokenPrefix: string, createdBy: string | null) => ({
     workspaceId, name: `Remnus CLI · ${tokenPrefix}`, tokenPrefix, tokenHash: 'x',
@@ -91,11 +99,19 @@ async function seed() {
     pat(W2, P.memberOther, memberId),
     pat(W, P.admin, adminId),
     pat(W, P.legacy, null),
+    pat(W, P.leaverW, leaverId),
+    pat(W2, P.leaverW2, leaverId),
   ]);
-  await db.insert(oauthAccessTokens).values({
-    tokenPrefix: P.oauthMember, tokenHash: 'x', clientId: `${SUFFIX}-client`, userId: memberId,
-    workspaceId: W, scope: 'write', expiresAt: new Date(now.getTime() + 3600_000), createdAt: now,
-  });
+  await db.insert(oauthAccessTokens).values([
+    {
+      tokenPrefix: P.oauthMember, tokenHash: 'x', clientId: `${SUFFIX}-client`, userId: memberId,
+      workspaceId: W, scope: 'write', expiresAt: new Date(now.getTime() + 3600_000), createdAt: now,
+    },
+    {
+      tokenPrefix: P.oauthLeaver, tokenHash: 'x', clientId: `${SUFFIX}-client`, userId: leaverId,
+      workspaceId: W2, scope: 'write', expiresAt: new Date(now.getTime() + 3600_000), createdAt: now,
+    },
+  ]);
 }
 
 async function cleanup() {
@@ -103,7 +119,7 @@ async function cleanup() {
   await db.delete(oauthAccessTokens).where(inArray(oauthAccessTokens.workspaceId, [W, W2]));
   await db.delete(workspaceMembers).where(inArray(workspaceMembers.workspaceId, [W, W2]));
   await db.delete(workspaces).where(inArray(workspaces.id, [W, W2]));
-  await db.delete(users).where(inArray(users.id, [ownerId, memberId, adminId]));
+  await db.delete(users).where(inArray(users.id, [ownerId, memberId, adminId, leaverId]));
 }
 
 async function patScope(tokenPrefix: string) {
@@ -180,6 +196,14 @@ async function lifecycle() {
   check('creator-less PAT: write', await patScope(P.legacy) === 'write');
   await revokeAgentAccess([], memberId);
   check('revoke with no workspaces is a no-op', await patScope(P.memberOther) === 'write');
+
+  // Account deletion: every token of that person, in every workspace, before created_by goes.
+  check('leaver: PATs work before deletion', await patScope(P.leaverW) === 'write' && await patScope(P.leaverW2) === 'write');
+  await revokeAllAgentAccessOf(leaverId);
+  check('account deletion: PAT in W revoked', await findPatForAuth(P.leaverW) === null);
+  check('account deletion: PAT in W2 revoked', await findPatForAuth(P.leaverW2) === null);
+  check('account deletion: OAuth revoked', await findOAuthTokenForAuth(P.oauthLeaver) === null);
+  check('account deletion: others untouched', await patScope(P.owner) === 'write' && await patScope(P.memberOther) === 'write');
 }
 
 async function main() {

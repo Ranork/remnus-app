@@ -471,6 +471,9 @@
     "tokenOwnerNotMember": "Kein Mitglied mehr",
     "tokenOwnerNotMemberHint": "Diese Person ist nicht mehr im Arbeitsbereich, daher funktioniert dieses Token nicht mehr. Widerrufen Sie es, um es aus der Liste zu entfernen.",
     "tokenOwnerDeleted": "Gelöschtes Konto",
+    "revokeTokenConfirm": "„{name}“ ({owner}) widerrufen? Jeder Agent, der es verwendet, verliert sofort den Zugriff.",
+    "tokenAutoRenewing": "Automatisch erneuert",
+    "tokenAutoRenewingHint": "Das Zugriffstoken erneuert sich stündlich; die Verbindung bleibt nach der Anmeldung 30 Tage gültig.",
     "never": "Nie",
     "revokeToken": "Widerrufen",
     "revoking": "Wird widerrufen...",
@@ -1875,6 +1878,7 @@
     "accessLevel": "Zugriffsebene",
     "scopeReadLabel": "Nur Lesen",
     "scopeWriteLabel": "Lesen & Schreiben",
+    "viewerScopeHint": "Ihre Rolle in diesem Arbeitsbereich ist Betrachter, daher kann diese Verbindung nur lesen.",
     "agentTypeLabel": "Agententyp (optional)",
     "agentNameLabel": "Verbindungsname",
     "agentNamePlaceholder": "z. B. Claude Code"

@@ -15,9 +15,10 @@
 //    `restrictAgentAccessToRead`), so the AI Agents panel and the plan's agent quota
 //    tell the truth instead of counting credentials that can no longer do anything.
 //
-// A PAT whose `created_by` is null belonged to an account that was deleted; account
-// deletion keeps such tokens working as workspace-owned (see `performAccountDeletion`),
-// and there is no one left to check, so they keep their stored scope.
+// Deleting an account revokes that person's tokens (`revokeAllAgentAccessOf`) before
+// `created_by` is nulled for the foreign key. A creator-less PAT that is still live
+// predates that (2026-09-25): there is no one left to check, so it keeps its stored scope,
+// and the AI Agents panel lists it as "Deleted account" for the owner to revoke.
 //
 // Cookie-free by design (the service-layer convention).
 
@@ -152,6 +153,24 @@ export async function revokeAgentAccess(workspaceIds: string[], userId: string):
       eq(oauthAccessTokens.userId, userId),
       isNull(oauthAccessTokens.revokedAt),
     ));
+}
+
+/**
+ * An account is being deleted: every agent credential it holds, in every workspace,
+ * stops now. Call it before nulling `agent_tokens.created_by` — afterwards the tokens
+ * can no longer be told apart from anyone else's.
+ */
+export async function revokeAllAgentAccessOf(userId: string): Promise<void> {
+  const now = new Date();
+  await db
+    .update(agentTokens)
+    .set({ revokedAt: now })
+    .where(and(eq(agentTokens.createdBy, userId), isNull(agentTokens.revokedAt)));
+  // OAuth rows cascade with the user only where foreign keys are enforced (not on Turso).
+  await db
+    .update(oauthAccessTokens)
+    .set({ revokedAt: now })
+    .where(and(eq(oauthAccessTokens.userId, userId), isNull(oauthAccessTokens.revokedAt)));
 }
 
 /**

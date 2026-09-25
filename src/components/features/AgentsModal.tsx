@@ -1,7 +1,7 @@
 ﻿'use client';
 import { useState, useEffect, useRef, useLayoutEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { X, Bot, ChevronDown, RefreshCw, Link2, Check, User } from 'lucide-react';
 import PageIcon from '@/components/features/PageIcon';
 import { ConfirmDialog } from '@/components/features/ConfirmDialog';
@@ -55,13 +55,15 @@ function expiryCls(state: ReturnType<typeof expiryState>): string {
   return 'text-neutral-500 bg-neutral-800 border-neutral-700';
 }
 
-function relativeTime(d: Date | null): string {
+/** "52 sn önce" / "52s ago" in the UI locale — this used to be English everywhere. */
+function relativeTime(d: Date | null, locale: string): string {
   if (!d) return '—';
   const s = Math.floor((Date.now() - new Date(d).getTime()) / 1000);
-  if (s < 60)    return `${s}s ago`;
-  if (s < 3600)  return `${Math.floor(s / 60)}m ago`;
-  if (s < 86400) return `${Math.floor(s / 3600)}h ago`;
-  return `${Math.floor(s / 86400)}d ago`;
+  const rtf = new Intl.RelativeTimeFormat(locale, { numeric: 'auto', style: 'short' });
+  if (s < 60)    return rtf.format(-s, 'second');
+  if (s < 3600)  return rtf.format(-Math.floor(s / 60), 'minute');
+  if (s < 86400) return rtf.format(-Math.floor(s / 3600), 'hour');
+  return rtf.format(-Math.floor(s / 86400), 'day');
 }
 
 function formatTool(tool: string): string {
@@ -167,6 +169,7 @@ function TokenRow({
 }) {
   const [revoking, setRevoking] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const locale = useLocale();
 
   // Normalize fields across the two token kinds
   const isPat = row.kind === 'pat';
@@ -210,21 +213,22 @@ function TokenRow({
         );
       })()
     : (
-        <span className="flex items-center gap-1 text-[9px] font-semibold px-1.5 py-0.5 rounded-full border shrink-0 text-green-400 bg-green-500/10 border-green-500/20" title="Access token auto-refreshes every hour; session valid for 30 days from initial login">
+        <span className="flex items-center gap-1 text-[9px] font-semibold px-1.5 py-0.5 rounded-full border shrink-0 text-green-400 bg-green-500/10 border-green-500/20" title={t('tokenAutoRenewingHint')}>
           <RefreshCw size={8} />
-          Auto-renewing
+          {t('tokenAutoRenewing')}
         </span>
       );
 
   const subline = isPat
-    ? `${row.data.tokenPrefix}… · ${t('lastUsed')}: ${row.data.lastUsedAt ? relativeTime(row.data.lastUsedAt) : t('never')}`
-    : `OAuth · ${relativeTime(row.data.createdAt)}`;
+    ? `${row.data.tokenPrefix}… · ${t('lastUsed')}: ${row.data.lastUsedAt ? relativeTime(row.data.lastUsedAt, locale) : t('never')}`
+    : `OAuth · ${relativeTime(row.data.createdAt, locale)}`;
 
-  // Whose agent this is. OAuth rows are always the viewer's own (the list is filtered to
-  // them); a PAT can be anyone's in the workspace, or nobody's once the account is gone.
-  const owner = isPat
-    ? row.data.owner
-    : { name: null, email: null, isYou: true, role: null, active: true };
+  // Whose agent this is: anyone's in the workspace, or — for a PAT — nobody's once the
+  // creator's account is gone.
+  const owner = row.data.owner;
+  // Only the grantee (or an admin) may relabel an OAuth connection; a PAT's owner-level
+  // controls follow the revoke permission.
+  const canEditType = isPat ? canRevoke : row.data.canEditType;
   const ownerLabel = !owner
     ? t('tokenOwnerDeleted')
     : owner.isYou ? t('you') : (owner.name || owner.email || '—');
@@ -240,7 +244,7 @@ function TokenRow({
         override={override}
         hint={iconHint}
         fallback={isPat ? 'zap' : 'globe'}
-        canEdit={canRevoke}
+        canEdit={canEditType}
         onPick={handlePickAgent}
         t={t}
       />
@@ -294,7 +298,7 @@ function TokenRow({
       {showConfirm && (
         <ConfirmDialog
           title={t('revokeToken')}
-          description={t('removeConfirm', { name })}
+          description={t('revokeTokenConfirm', { name, owner: ownerLabel })}
           confirmLabel={t('revokeToken')}
           cancelLabel={t('cancel')}
           onConfirm={doRevoke}
@@ -373,6 +377,7 @@ interface Props {
 export default function AgentsModal({ onClose }: Props) {
   const t = useTranslations('WorkspaceSettings');
   const tW = useTranslations('Workspace');
+  const locale = useLocale();
 
   const [workspaces,    setWorkspaces]    = useState<WsWithTokens[]>([]);
   const [activity,      setActivity]      = useState<ActivityRow[]>([]);
@@ -595,7 +600,7 @@ export default function AgentsModal({ onClose }: Props) {
                               {act.workspaceName}
                             </span>
                             <span className="text-[10px] text-neutral-600 shrink-0 ml-auto font-mono">
-                              {relativeTime(act.createdAt)}
+                              {relativeTime(act.createdAt, locale)}
                             </span>
                           </div>
                         );

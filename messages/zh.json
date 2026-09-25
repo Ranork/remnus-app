@@ -471,6 +471,9 @@
     "tokenOwnerNotMember": "已不是成员",
     "tokenOwnerNotMemberHint": "此人已不在工作区中，因此该令牌已失效。撤销它即可从列表中移除。",
     "tokenOwnerDeleted": "已删除的账户",
+    "revokeTokenConfirm": "撤销“{name}”（{owner}）？使用它的智能体将立即失去访问权限。",
+    "tokenAutoRenewing": "自动续期",
+    "tokenAutoRenewingHint": "访问令牌每小时自动续期；连接在登录后 30 天内有效。",
     "never": "从未",
     "revokeToken": "撤销",
     "revoking": "正在撤销...",
@@ -1875,6 +1878,7 @@
     "accessLevel": "访问级别",
     "scopeReadLabel": "只读",
     "scopeWriteLabel": "读写",
+    "viewerScopeHint": "你在此工作区中的角色是查看者，因此此连接只能读取。",
     "agentTypeLabel": "智能体类型（可选）",
     "agentNameLabel": "连接名称",
     "agentNamePlaceholder": "例如 Claude Code"

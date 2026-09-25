@@ -15,7 +15,7 @@ import { getCurrentUser } from '@/lib/auth/session';
 import { LAST_PATH_COOKIE } from '@/lib/constants/cookies';
 import { deleteAssetByUrl } from '@/lib/services/assets';
 import { checkCanAddSeatForEmail } from '@/lib/services/billing';
-import { revokeAgentAccess, restrictAgentAccessToRead } from '@/lib/services/agentAccess';
+import { revokeAgentAccess, revokeAllAgentAccessOf, restrictAgentAccessToRead } from '@/lib/services/agentAccess';
 import { isPlanTier, type PlanTier } from '@/lib/billing/plans';
 
 /**
@@ -309,8 +309,9 @@ export async function adminDeleteUser(userId: string) {
   await db.delete(sessions).where(eq(sessions.userId, userId));
   await db.delete(workspaceMembers).where(eq(workspaceMembers.userId, userId));
   await db.delete(userSessions).where(eq(userSessions.userId, userId));
-  // agent_tokens.created_by references user(id) with no cascade — null it out
-  // so the token (which belongs to the workspace, not the user) survives.
+  // Their agents go with the account (see performAccountDeletion); revoke before
+  // created_by — which has no cascade — is nulled so the delete can go through.
+  await revokeAllAgentAccessOf(userId);
   await db.update(agentTokens).set({ createdBy: null }).where(eq(agentTokens.createdBy, userId));
   await db.delete(users).where(eq(users.id, userId));
   revalidatePath('/');

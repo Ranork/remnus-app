@@ -444,12 +444,24 @@ export default function DatabaseView({
   const activeView = views.find((v) => v.id === activeViewId) ?? views[0];
   const config = activeView.config;
 
-  // Synchronize document title
+  // A rename made elsewhere (an agent, another tab) arrives in `database.name` on the next
+  // refresh; the input read it only once. Adopt it unless a local edit is still waiting for
+  // the save above (same rule as the page editors).
   useEffect(() => {
-    if (database && activeView) {
-      document.title = `${dbName || database.name} - ${activeView.name} | Remnus`;
+    const incoming = database.name ?? '';
+    if (incoming === savedDbName.current || dbName !== savedDbName.current) return;
+    savedDbName.current = incoming;
+    setDbName(incoming);
+  }, [database.name, dbName]);
+
+  // Synchronize document title — re-applied after every server refresh too (`database` is a
+  // new object then): the refresh re-renders the layout's default "Remnus" <title>.
+  const activeViewName = activeView?.name;
+  useEffect(() => {
+    if (database && activeViewName) {
+      document.title = `${dbName || database.name} - ${activeViewName} | Remnus`;
     }
-  }, [dbName, database?.name, activeView?.name]);
+  }, [dbName, database, activeViewName]);
 
   const mutateConfig = useCallback(
     (fn: (cfg: typeof config) => typeof config) => {
@@ -1544,7 +1556,7 @@ export default function DatabaseView({
                     className="flex items-center gap-1.5 text-xs text-neutral-400 hover:text-neutral-200 transition-colors py-1 px-2.5 hover:bg-neutral-800/40 border border-neutral-800 cursor-pointer rounded"
                   >
                     <Maximize2 size={12} />
-                    <span>Open in full page</span>
+                    <span>{t('openInFullPage')}</span>
                   </button>
                   <div className="relative">
                     <button

@@ -1,7 +1,7 @@
 'use server';
 import { db } from '@/db';
 import { agentTokens, workspaceMembers, workspaces, agentActivity, oauthAccessTokens, oauthClients, users } from '@/db/schema';
-import { eq, and, isNull, desc, inArray, gte, sql } from 'drizzle-orm';
+import { eq, and, or, isNull, desc, inArray, gt, gte, sql } from 'drizzle-orm';
 import { getCurrentUser } from '@/lib/auth/session';
 import { getTranslations } from 'next-intl/server';
 import { checkCanAddAgent } from '@/lib/services/billing';
@@ -472,8 +472,18 @@ export async function updateAgentToken(
   await db.update(agentTokens).set(patch).where(eq(agentTokens.id, tokenId));
 }
 
+/** Same as REFRESH_TOKEN_TTL_MS in api/oauth/token: past it a connection cannot renew,
+ *  so an unrevoked row that old is dead and not worth listing. */
+const OAUTH_REFRESH_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
+
+/**
+ * OAuth connections for the AI Agents panel: your own everywhere, and — in a workspace
+ * you own (or as a site admin) — everyone's, so an owner can see and cut off a member's
+ * agent the same way as a PAT. Each row names whose connection it is.
+ */
 export async function getUserOAuthTokens() {
   const user = await getCurrentUser();
+  const isAdmin = user.role === 'admin';
 
   const rows = await db
     .select({
@@ -490,6 +500,10 @@ export async function getUserOAuthTokens() {
       workspaceIcon:  workspaces.icon,
       memberRole:     workspaceMembers.role,
       clientName:     oauthClients.clientName,
+      grantee:        oauthAccessTokens.userId,
+      granteeName:    users.name,
+      granteeEmail:   users.email,
+      granteeAccountRole: users.role,
     })
     .from(oauthAccessTokens)
     .innerJoin(workspaces, eq(oauthAccessTokens.workspaceId, workspaces.id))
@@ -498,16 +512,38 @@ export async function getUserOAuthTokens() {
       eq(workspaceMembers.userId, user.id),
     ))
     .leftJoin(oauthClients, eq(oauthAccessTokens.clientId, oauthClients.clientId))
+    .leftJoin(users, eq(users.id, oauthAccessTokens.userId))
     .where(and(
-      eq(oauthAccessTokens.userId, user.id),
       isNull(oauthAccessTokens.revokedAt),
+      gt(oauthAccessTokens.createdAt, new Date(Date.now() - OAUTH_REFRESH_WINDOW_MS)),
+      isAdmin ? undefined : or(eq(oauthAccessTokens.userId, user.id), eq(workspaceMembers.role, 'owner')),
     ))
     .orderBy(desc(oauthAccessTokens.createdAt));
 
-  return rows.map(row => ({
-    ...row,
-    canRevoke: row.memberRole === 'owner' || true, // owners can revoke; OAuth tokens are always user-owned
-  }));
+  const wsIds = [...new Set(rows.map(r => r.workspaceId))];
+  const granteeRoles = wsIds.length === 0 ? [] : await db
+    .select({ workspaceId: workspaceMembers.workspaceId, userId: workspaceMembers.userId, role: workspaceMembers.role })
+    .from(workspaceMembers)
+    .where(inArray(workspaceMembers.workspaceId, wsIds));
+  const roleOf = new Map(granteeRoles.map(r => [`${r.workspaceId}:${r.userId}`, r.role]));
+
+  return rows.map(({ grantee, granteeName, granteeEmail, granteeAccountRole, ...row }) => {
+    const isYou = grantee === user.id;
+    const role = (roleOf.get(`${row.workspaceId}:${grantee}`) ?? null) as 'owner' | 'member' | 'viewer' | null;
+    return {
+      ...row,
+      canRevoke: isYou || row.memberRole === 'owner' || isAdmin,
+      // The brand icon is the grantee's own label (setOAuthTokenAgent allows only them).
+      canEditType: isYou || isAdmin,
+      owner: {
+        name: granteeName,
+        email: granteeEmail,
+        isYou,
+        role,
+        active: role !== null || granteeAccountRole === 'admin',
+      },
+    };
+  });
 }
 
 /** Set the canonical agent id (AGENT_MARKS id) override on an OAuth token — for brand-icon display. User-owned. */
@@ -554,13 +590,21 @@ export async function revokeOAuthToken(tokenId: string): Promise<void> {
   const t = await getTranslations('Errors');
 
   const [token] = await db
-    .select({ userId: oauthAccessTokens.userId })
+    .select({ userId: oauthAccessTokens.userId, workspaceId: oauthAccessTokens.workspaceId })
     .from(oauthAccessTokens)
     .where(and(eq(oauthAccessTokens.id, tokenId), isNull(oauthAccessTokens.revokedAt)))
     .limit(1);
 
   if (!token) throw new Error(t('notFound'));
-  if (token.userId !== user.id && user.role !== 'admin') throw new Error(t('unauthorized'));
+  if (token.userId !== user.id && user.role !== 'admin') {
+    // The workspace owner may cut off a member's connection, as with a PAT.
+    const [membership] = await db
+      .select({ role: workspaceMembers.role })
+      .from(workspaceMembers)
+      .where(and(eq(workspaceMembers.workspaceId, token.workspaceId), eq(workspaceMembers.userId, user.id)))
+      .limit(1);
+    if (membership?.role !== 'owner') throw new Error(t('unauthorized'));
+  }
 
   await db
     .update(oauthAccessTokens)

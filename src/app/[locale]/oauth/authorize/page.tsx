@@ -93,14 +93,16 @@ export default async function OAuthAuthorizePage({
   if (!user) redirect(`/login?callbackUrl=${encodeURIComponent(`/oauth/authorize?${new URLSearchParams(params as Record<string,string>).toString()}`)}`);
 
   // Fetch user's workspaces (owner or member)
-  const userWorkspaces = await db
-    .select({ id: workspaces.id, name: workspaces.name, icon: workspaces.icon, iconColor: workspaces.iconColor })
+  const userWorkspaces = (await db
+    .select({ id: workspaces.id, name: workspaces.name, icon: workspaces.icon, iconColor: workspaces.iconColor, role: workspaceMembers.role })
     .from(workspaces)
     .innerJoin(workspaceMembers, and(
       eq(workspaceMembers.workspaceId, workspaces.id),
       eq(workspaceMembers.userId, user!.id),
     ))
-    .orderBy(workspaces.name);
+    .orderBy(workspaces.name))
+    // The form offers write only where the role allows it; handleApprove clamps again.
+    .map(({ role, ...ws }) => ({ ...ws, viewer: role === 'viewer' }));
 
   if (userWorkspaces.length === 0) {
     return <ErrorPage title={t('errorTitle')} message={t('noWorkspaces')} />;

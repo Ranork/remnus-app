@@ -12,6 +12,8 @@ interface Workspace {
   name: string;
   icon: string | null;
   iconColor?: string | null;
+  /** Viewer role here: a connection can only read (the server clamps it regardless). */
+  viewer?: boolean;
 }
 
 interface Props {
@@ -39,7 +41,12 @@ export function OAuthAuthorizeForm({ clientName, scope, workspaces, userName, on
   // Friendly label for the connection — defaults to the client-reported name.
   const [agentLabel, setAgentLabel] = useState<string>(clientName ?? '');
 
-  const scopePermissions = selectedScope === 'write'
+  // A viewer's connection can only read — say so instead of offering a choice the
+  // server would quietly overrule.
+  const viewerOnly = workspaces.find((ws) => ws.id === selectedWorkspace)?.viewer === true;
+  const effectiveScope = viewerOnly ? 'read' : selectedScope;
+
+  const scopePermissions = effectiveScope === 'write'
     ? [t('permReadWrite'), t('permCreateEdit')]
     : [t('permReadOnly')];
 
@@ -64,7 +71,7 @@ export function OAuthAuthorizeForm({ clientName, scope, workspaces, userName, on
               alt="Remnus"
               className="w-14 h-14 object-contain rounded-xl mb-4 shadow-lg"
             />
-            <h1 className="text-2xl font-bold text-white tracking-tight">Remnus</h1>
+            <h1 className="text-2xl font-bold text-neutral-50 tracking-tight">Remnus</h1>
           </Link>
           <p className="text-neutral-400 text-sm mt-2 text-center px-2">
             {t('subtitle', { client: clientName })}
@@ -83,8 +90,9 @@ export function OAuthAuthorizeForm({ clientName, scope, workspaces, userName, on
                   key={s}
                   type="button"
                   onClick={() => setSelectedScope(s)}
-                  className={`flex-1 px-3 py-2 rounded-lg border text-xs font-semibold transition-all ${
-                    selectedScope === s
+                  disabled={viewerOnly && s === 'write'}
+                  className={`flex-1 px-3 py-2 rounded-lg border text-xs font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed ${
+                    effectiveScope === s
                       ? s === 'write'
                         ? 'bg-amber-500/10 border-amber-500/40 text-amber-300'
                         : 'bg-blue-500/10 border-blue-500/40 text-blue-300'
@@ -95,6 +103,9 @@ export function OAuthAuthorizeForm({ clientName, scope, workspaces, userName, on
                 </button>
               ))}
             </div>
+            {viewerOnly && (
+              <p className="text-xs text-neutral-500 leading-relaxed mb-3">{t('viewerScopeHint')}</p>
+            )}
             <ul className="space-y-2">
               {scopePermissions.map((perm) => (
                 <li key={perm} className="flex items-center gap-2.5 text-sm text-neutral-300">
@@ -108,7 +119,7 @@ export function OAuthAuthorizeForm({ clientName, scope, workspaces, userName, on
           </div>
 
           <form action={onApprove} className="px-6 py-5">
-            <input type="hidden" name="scope" value={selectedScope} />
+            <input type="hidden" name="scope" value={effectiveScope} />
             <input type="hidden" name="workspace_id" value={selectedWorkspace} />
             <input type="hidden" name="agent_name" value={selectedAgent ?? ''} />
 
@@ -136,7 +147,7 @@ export function OAuthAuthorizeForm({ clientName, scope, workspaces, userName, on
                           {ws.name.charAt(0).toUpperCase()}
                         </span>
                     }
-                    <span className={`flex-1 text-sm truncate ${active ? 'text-blue-100' : 'text-neutral-200'}`}>
+                    <span className={`flex-1 text-sm truncate ${active ? 'text-blue-400' : 'text-neutral-200'}`}>
                       {ws.name}
                     </span>
                     {active && <Check size={15} className="text-blue-400 shrink-0" />}

@@ -471,6 +471,9 @@
     "tokenOwnerNotMember": "N’est plus membre",
     "tokenOwnerNotMemberHint": "Cette personne ne fait plus partie de l’espace de travail, ce jeton ne fonctionne donc plus. Révoquez-le pour le retirer de la liste.",
     "tokenOwnerDeleted": "Compte supprimé",
+    "revokeTokenConfirm": "Révoquer « {name} » ({owner}) ? Tout agent qui l’utilise perd l’accès immédiatement.",
+    "tokenAutoRenewing": "Renouvellement automatique",
+    "tokenAutoRenewingHint": "Le jeton d’accès se renouvelle toutes les heures ; la connexion reste valable 30 jours après la connexion.",
     "never": "Jamais",
     "revokeToken": "Révoquer",
     "revoking": "Révocation...",
@@ -1875,6 +1878,7 @@
     "accessLevel": "Niveau d’accès",
     "scopeReadLabel": "Lecture seule",
     "scopeWriteLabel": "Lecture et écriture",
+    "viewerScopeHint": "Votre rôle dans cet espace de travail est Spectateur, cette connexion ne peut donc que lire.",
     "agentTypeLabel": "Type d’agent (facultatif)",
     "agentNameLabel": "Nom de la connexion",
     "agentNamePlaceholder": "ex. Claude Code"

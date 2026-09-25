@@ -471,6 +471,9 @@
     "tokenOwnerNotMember": "Больше не участник",
     "tokenOwnerNotMemberHint": "Этого человека больше нет в пространстве, поэтому токен больше не работает. Отзовите его, чтобы убрать из списка.",
     "tokenOwnerDeleted": "Удалённый аккаунт",
+    "revokeTokenConfirm": "Отозвать «{name}» ({owner})? Любой агент, который его использует, сразу потеряет доступ.",
+    "tokenAutoRenewing": "Автообновление",
+    "tokenAutoRenewingHint": "Токен доступа обновляется каждый час; подключение действует 30 дней после входа.",
     "never": "Никогда",
     "revokeToken": "Отозвать",
     "revoking": "Отзыв...",
@@ -1875,6 +1878,7 @@
     "accessLevel": "Уровень доступа",
     "scopeReadLabel": "Только чтение",
     "scopeWriteLabel": "Чтение и запись",
+    "viewerScopeHint": "Ваша роль в этом пространстве — Наблюдатель, поэтому это подключение может только читать.",
     "agentTypeLabel": "Тип агента (необязательно)",
     "agentNameLabel": "Название подключения",
     "agentNamePlaceholder": "напр. Claude Code"

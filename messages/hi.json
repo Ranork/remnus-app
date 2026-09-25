@@ -471,6 +471,9 @@
     "tokenOwnerNotMember": "अब सदस्य नहीं",
     "tokenOwnerNotMemberHint": "यह व्यक्ति अब कार्यक्षेत्र में नहीं है, इसलिए यह टोकन अब काम नहीं करता। इसे सूची से हटाने के लिए रद्द करें।",
     "tokenOwnerDeleted": "हटाया गया खाता",
+    "revokeTokenConfirm": "\"{name}\" ({owner}) रद्द करें? इसका उपयोग करने वाले किसी भी एजेंट की पहुँच तुरंत बंद हो जाएगी।",
+    "tokenAutoRenewing": "अपने-आप नवीनीकरण",
+    "tokenAutoRenewingHint": "एक्सेस टोकन हर घंटे अपने-आप नवीनीकृत होता है; कनेक्शन साइन-इन के बाद 30 दिन तक मान्य रहता है।",
     "never": "कभी नहीं",
     "revokeToken": "रद्द करें",
     "revoking": "रद्द हो रहा है...",
@@ -1875,6 +1878,7 @@
     "accessLevel": "एक्सेस स्तर",
     "scopeReadLabel": "केवल पढ़ें",
     "scopeWriteLabel": "पढ़ें और लिखें",
+    "viewerScopeHint": "इस कार्यक्षेत्र में आपकी भूमिका दर्शक है, इसलिए यह कनेक्शन सिर्फ़ पढ़ सकता है।",
     "agentTypeLabel": "एजेंट प्रकार (वैकल्पिक)",
     "agentNameLabel": "कनेक्शन नाम",
     "agentNamePlaceholder": "जैसे Claude Code"

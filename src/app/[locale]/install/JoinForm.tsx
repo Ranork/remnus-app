@@ -83,7 +83,7 @@ export function JoinForm({ projectName, userName, authMode, access, error, onJoi
               alt="Remnus"
               className="w-14 h-14 object-contain rounded-xl mb-4 shadow-lg"
             />
-            <h1 className="text-2xl font-bold text-white tracking-tight">{heading}</h1>
+            <h1 className="text-2xl font-bold text-neutral-50 tracking-tight">{heading}</h1>
           </Link>
           <div className="flex items-center gap-2 mt-3 px-3 py-1.5 rounded-lg bg-neutral-900 border border-neutral-800">
             <Terminal size={13} className="text-neutral-500 shrink-0" />

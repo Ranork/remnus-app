@@ -471,6 +471,9 @@
     "tokenOwnerNotMember": "Artık üye değil",
     "tokenOwnerNotMemberHint": "Bu kişi artık çalışma alanında değil, bu yüzden bu token çalışmıyor. Listeden kaldırmak için iptal edin.",
     "tokenOwnerDeleted": "Silinmiş hesap",
+    "revokeTokenConfirm": "\"{name}\" ({owner}) iptal edilsin mi? Bunu kullanan ajanların erişimi hemen kesilir.",
+    "tokenAutoRenewing": "Otomatik yenileniyor",
+    "tokenAutoRenewingHint": "Erişim anahtarı her saat kendini yeniler; bağlantı girişten sonra 30 gün geçerli kalır.",
     "never": "Hiç",
     "revokeToken": "İptal Et",
     "revoking": "İptal ediliyor...",
@@ -1899,6 +1902,7 @@
     "accessLevel": "Erişim seviyesi",
     "scopeReadLabel": "Salt okunur",
     "scopeWriteLabel": "Okuma ve yazma",
+    "viewerScopeHint": "Bu çalışma alanındaki rolünüz İzleyici, bu yüzden bu bağlantı yalnızca okuyabilir.",
     "agentTypeLabel": "Ajan türü (isteğe bağlı)",
     "agentNameLabel": "Bağlantı adı",
     "agentNamePlaceholder": "örn. Claude Code"
