@@ -137,6 +137,15 @@ export default function StandalonePageEditor({
     return () => clearTimeout(t);
   }, [title, item.id, patchPageCache]);
 
+  // A rename made elsewhere (an agent, another tab) arrives in `item.title` on the next
+  // refresh; the input read it only once. Adopt it unless a local edit is still waiting
+  // for the save above — same rule as the body (see the live content sync in BlockEditor).
+  useEffect(() => {
+    if (item.title === savedTitle.current || title !== savedTitle.current) return;
+    savedTitle.current = item.title;
+    setTitle(item.title);
+  }, [item.title, title]);
+
   useEffect(() => {
     document.title = `${title || 'Untitled'} | Remnus`;
   }, [title]);

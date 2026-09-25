@@ -275,7 +275,7 @@ After `init`, an agent fills the workspace in from [docs/mcp/calibrate.md](docs/
 
 ## Live refresh (the change signal)
 
-How a human sees an agent's writes appear. Four pieces, and each one is load-bearing:
+How a human sees an agent's writes appear. Five pieces, and each one is load-bearing:
 
 1. **`services/changeVersion.ts`** — one monotonic epoch-seconds number per caller, from
    `max()` over workspace items, standalone pages, databases, rows, comments **and
@@ -305,6 +305,19 @@ How a human sees an agent's writes appear. Four pieces, and each one is load-bea
    **not** treat `mousemove` as activity: the 10s idle timer it replaced meant a human
    watching an agent deferred every refresh indefinitely just by holding the mouse, for a
    worst case of 40s+.
+
+5. **The open page adopts it** (2026-09-25). A refresh only re-renders props; `BlockEditor`
+   is keyed by the page id and read `initialContent` once, so an agent's `update_page` never
+   reached an open page (nor did the Yenile button) until the user left and came back. Its
+   live-content effect now adopts a changed `initialContent` in place with
+   `setContent(…, { emitUpdate: false })` (no save back), but only when the editor still
+   equals the serialization of the server content it last matched (`syncedRef`) — any
+   unsaved local work is left alone — and not within `LOCAL_SAVE_QUIET_MS` (2.5s) of a local
+   change, when a debounced save of older text could still land (it retries after). The
+   standalone title input follows the same rule. Row pages (`PageEditor`) get the body; their
+   properties/title still sync only on page change. Verified in a real project window: idle
+   adopt, Yenile with the change poll blocked (0.95s), typing across a remote write (kept),
+   rename + body after a local edit, and no write-back.
 
 There is no server push. `lib/realtime/publish.ts` and its 45 no-op call sites were removed
 rather than left looking live; an in-memory EventEmitter cannot fan out across Vercel's

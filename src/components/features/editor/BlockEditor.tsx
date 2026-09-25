@@ -1,5 +1,5 @@
 'use client';
-import { useRef, useEffect, useMemo, forwardRef, useImperativeHandle } from 'react';
+import { useRef, useEffect, useMemo, useState, forwardRef, useImperativeHandle } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { useEditor, EditorContent } from '@tiptap/react';
@@ -218,6 +218,10 @@ function uploadFiles(editor: any, files: File[], workspaceId: string | null, pos
   }
 }
 
+/** Longer than the editors' 1s save debounce plus a round-trip: after this long with no
+ *  local change, no save of older text can still be on its way. */
+const LOCAL_SAVE_QUIET_MS = 2500;
+
 function buildInitialContent(markdown: string, subItems: WorkspaceItemRow[]): string {
   if (!subItems.length) return markdown;
 
@@ -287,6 +291,15 @@ const BlockEditor = forwardRef<BlockEditorHandle, Props>(function BlockEditor({
   useEffect(() => {
     onImmediateSaveRef.current = onImmediateSave;
   }, [onImmediateSave]);
+
+  // Live content — see the sync effect below the child-block reconciliation.
+  const lastLocalUpdateRef = useRef(0);
+  const syncedRef = useRef<{ raw: string; md: string } | null>(null);
+  const subItemsRef = useRef(initialSubItems);
+  useEffect(() => {
+    subItemsRef.current = initialSubItems;
+  }, [initialSubItems]);
+  const [trashCheck, setTrashCheck] = useState(0);
 
   const computedInitial = useMemo(
     () => buildInitialContent(initialContent, initialSubItems ?? []),
@@ -371,6 +384,7 @@ const BlockEditor = forwardRef<BlockEditorHandle, Props>(function BlockEditor({
     content: computedInitial,
     contentType: 'markdown',
     onUpdate: ({ editor }) => {
+      lastLocalUpdateRef.current = Date.now();
       const md = (editor as any).getMarkdown();
       onChange(md);
     },
@@ -853,7 +867,8 @@ const BlockEditor = forwardRef<BlockEditorHandle, Props>(function BlockEditor({
   }, [editor]);
 
   // Mark links whose target sits in the Trash (see TrashedTargetsExtension).
-  // Once per editor: a link added later comes from the picker, so it is live.
+  // Once per editor, and again after adopting content written elsewhere (an agent may
+  // have linked anything); a link added here comes from the picker, so it is live.
   // Share views have no workspace session to ask with.
   useEffect(() => {
     if (!editor || !workspaceId || shareMap) return;
@@ -867,7 +882,7 @@ const BlockEditor = forwardRef<BlockEditorHandle, Props>(function BlockEditor({
       })
       .catch(() => {});
     return () => { cancelled = true; };
-  }, [editor, workspaceId, shareMap]);
+  }, [editor, workspaceId, shareMap, trashCheck]);
 
   // Heal a schema-invalid initial document. @tiptap/markdown can parse certain
   // HTML-bearing / Notion-imported markdown into structurally invalid nodes — a
@@ -997,6 +1012,58 @@ const BlockEditor = forwardRef<BlockEditorHandle, Props>(function BlockEditor({
       // Positions went stale (concurrent edit) — skip; the next refresh retries.
     }
   }, [editor, initialSubItems]);
+
+  // Live content (2026-09-25). The editor is keyed by the page id and reads
+  // initialContent once, so an agent's `update_page` reached this component's props on
+  // the next refresh (change poll, or the Yenile button) and stopped there — only
+  // leaving the page and coming back showed it. Adopt the server's content in place,
+  // but only while the editor holds nothing of its own:
+  //   • `syncedRef` = the server content this editor last matched (`raw`) and how the
+  //     editor serialized it then (`md`). The editor differing from `md` is unsaved
+  //     local work and is never overwritten; the next save wins, as before.
+  //   • The editor already equal to the incoming content is our own save coming back:
+  //     only the baseline moves.
+  //   • Within LOCAL_SAVE_QUIET_MS of a local change, a debounced save of the old text
+  //     may still be pending and would write it over what we adopt — wait, then retry.
+  // Declared after the reconciliation above so the first baseline includes its edits.
+  // `emitUpdate: false`: adopting never saves anything back.
+  useEffect(() => {
+    if (!editor) return;
+    if (!syncedRef.current) {
+      syncedRef.current = { raw: initialContent, md: editor.getMarkdown() };
+      return;
+    }
+    let retry: ReturnType<typeof setTimeout> | undefined;
+    const adopt = () => {
+      const synced = syncedRef.current;
+      if (!synced || editor.isDestroyed || initialContent === synced.raw) return;
+      const current = editor.getMarkdown();
+      if (current === initialContent) {
+        syncedRef.current = { raw: initialContent, md: current };
+        return;
+      }
+      if (current !== synced.md) return;
+      const quietFor = Date.now() - lastLocalUpdateRef.current;
+      if (quietFor < LOCAL_SAVE_QUIET_MS) {
+        retry = setTimeout(adopt, LOCAL_SAVE_QUIET_MS - quietFor);
+        return;
+      }
+      const { from, to } = editor.state.selection;
+      const hadFocus = editor.isFocused;
+      editor.commands.setContent(buildInitialContent(initialContent, subItemsRef.current ?? []), {
+        contentType: 'markdown',
+        emitUpdate: false,
+      });
+      if (hadFocus) {
+        const size = editor.state.doc.content.size;
+        editor.commands.setTextSelection({ from: Math.min(from, size), to: Math.min(to, size) });
+      }
+      syncedRef.current = { raw: initialContent, md: editor.getMarkdown() };
+      setTrashCheck((n) => n + 1);
+    };
+    adopt();
+    return () => { if (retry) clearTimeout(retry); };
+  }, [editor, initialContent]);
 
   if (!editor) return null;
 

@@ -45,6 +45,31 @@ const FIRST_VISIT_WINDOW_DAYS = 7;
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-09-25-open-page-shows-agent-edits',
+    date: '2026-09-25',
+    category: 'fixed',
+    title: {
+      en: 'Open pages show agent edits live',
+      tr: 'Açık sayfalar ajan değişikliklerini canlı gösteriyor',
+      de: 'Offene Seiten zeigen Agenten-Änderungen live',
+      es: 'Las páginas abiertas muestran en vivo los cambios de los agentes',
+      fr: 'Les pages ouvertes affichent en direct les modifications des agents',
+      hi: 'खुले पेज एजेंट के बदलाव तुरंत दिखाते हैं',
+      ru: 'Открытые страницы сразу показывают правки агентов',
+      zh: '打开的页面实时显示智能体的修改',
+    },
+    summary: {
+      en: 'When an agent changes the page you have open, the new text and title now appear right away without leaving the page, and anything you are still typing is never overwritten.',
+      tr: 'Açık olan sayfanızı bir ajan değiştirdiğinde yeni metin ve başlık artık sayfadan çıkmadan hemen görünüyor, sizin o an yazdıklarınız ise asla ezilmiyor.',
+      de: 'Wenn ein Agent die Seite ändert, die Sie geöffnet haben, erscheinen neuer Text und Titel jetzt sofort, ohne die Seite zu verlassen, und was Sie gerade tippen, wird nie überschrieben.',
+      es: 'Cuando un agente cambia la página que tienes abierta, el nuevo texto y el título aparecen al instante sin salir de la página, y lo que estás escribiendo nunca se sobrescribe.',
+      fr: 'Quand un agent modifie la page que vous avez ouverte, le nouveau texte et le titre apparaissent tout de suite sans quitter la page, et ce que vous êtes en train de taper n’est jamais écrasé.',
+      hi: 'जब कोई एजेंट आपका खुला पेज बदलता है, तो नया टेक्स्ट और शीर्षक अब पेज छोड़े बिना तुरंत दिखते हैं, और आप जो लिख रहे हैं वह कभी ओवरराइट नहीं होता।',
+      ru: 'Когда агент меняет открытую у вас страницу, новый текст и заголовок теперь появляются сразу, без ухода со страницы, а то, что вы печатаете, никогда не перезаписывается.',
+      zh: '当智能体修改你正打开的页面时，新的文本和标题现在会立即显示，无需离开页面，而你正在输入的内容绝不会被覆盖。',
+    },
+  },
+  {
     id: '2026-09-25-agents-show-who-connected',
     date: '2026-09-25',
     category: 'improved',
