@@ -33,6 +33,26 @@ that `npx remnus init` runs and the [calibration guide](calibrate.md) in the sam
 repository, so it reads the steps and the code they run together. The prompt works
 in any language.
 
+Setup happens in **two sessions**, and that is not something the agent can skip: agents
+load MCP servers when a session starts, so the session that runs `init` never has Remnus
+tools of its own.
+
+1. **This session:** the agent runs `npx remnus init`, your browser opens, you pick the
+   workspace. The page then tells you to close the tab and go back to your agent.
+2. **A new session:** the agent that ran `init` tells you, in your language, to open a new
+   chat in this project (or restart the agent) and paste one short prompt — `Continue the
+   Remnus setup`, translated. In that new session the agent has the Remnus tools and fills
+   the workspace in to match the project ([Step 2](#step-2--set-the-workspace-up-for-this-project)).
+
+**For the agent running this guide:**
+
+- Run `npx remnus init` and wait for it to finish (up to five minutes while the human
+  signs in). It opens the sign-in page in the human's browser itself. **Do not repeat the
+  sign-in link in the chat** — the output labels it as a fallback for when no browser
+  window appeared, and by the time you read the output it has already been used.
+- Do not try to calibrate in this session. `init` ends with a block addressed to you:
+  pass its message on to the human in their language, prompt included, and stop there.
+
 ## What this does, in full
 
 - **Network:** the Remnus server you point it at (`remnus.com` by default, or your
@@ -65,7 +85,10 @@ npx remnus init
 ```
 
 This opens a browser once for sign-in and a workspace picker (create a new one, or
-connect an existing one), then writes, without overwriting anything already there:
+connect an existing one), then writes, without overwriting anything already there.
+The sign-in link works once and for five minutes; opening it again afterwards only says
+the project is already connected (or that the link expired) instead of connecting
+anything a second time.
 
 | File | Committed? | What it is |
 | --- | --- | --- |
@@ -74,7 +97,7 @@ connect an existing one), then writes, without overwriting anything already ther
 | `.remnus/credentials.json` | no | This project's token — auto-added to `.gitignore` |
 | `.remnus/workspace-map.md` | no | Cached map of the workspace, so an agent starts with the ids in hand |
 | `AGENTS.md` / `CLAUDE.md` | yes | Tells any agent how to use the workspace |
-| `.claude/settings.json` | yes | A `SessionStart` hook that opens the workspace on a fresh Claude Code session |
+| `.claude/settings.json` | yes | A `SessionStart` hook that opens the workspace on a fresh Claude Code session and, until calibration has run, tells that session's agent where step 2 is |
 
 Only the first person runs this. Everyone else on the team runs
 [`npx remnus join`](project-join.md), which writes only `.remnus/credentials.json` and
@@ -111,10 +134,15 @@ appear in every diff. A team that would rather share one copy runs `npx remnus s
 
 ## Step 2 — Set the workspace up for this project
 
-`init` prints a URL — `<your Remnus instance>/wiki/calibrate.md`, the guide as raw
-markdown ([also readable as a page](calibrate.md)) — and the sentence to hand an agent
-with it. Every wiki page has that `.md` twin, a fraction of the page's size, so an agent
-reads the guide and its playbooks whole instead of a summary. It's a one-time guide
+In a new session, say `Continue the Remnus setup` (in any language). The agent finds out
+what that means from the Remnus section `init` wrote into `AGENTS.md`/`CLAUDE.md` — and in
+Claude Code also from the session-start hook, which adds one line to a new session's
+context for as long as `.remnus/config.json` says `"calibrated": false` (and nothing once
+it says `true`; it never starts calibration unasked). Both point at
+`<your Remnus instance>/wiki/calibrate.md`, the guide as raw markdown
+([also readable as a page](calibrate.md)). Every wiki page has that `.md` twin, a
+fraction of the page's size, so an agent reads the guide and its playbooks whole instead
+of a summary. It's a one-time guide
 for whichever agent is running in this project, served live rather than copied into
 the project, so it can't go stale. It has the agent read the project (manifest,
 README, structure, commit history), model what it actually contains, and build pages,
@@ -135,29 +163,37 @@ decisions and gotchas written against it, and the knowledge map's **Code files**
 draws those files, folder by folder, next to the pages. Only paths travel — no code is
 read or sent.
 
-It's optional — the workspace works empty too. If you'd like it done: whoever just
-ran `init` (or is picking up a project someone else connected, with
-`.remnus/config.json` still saying `"calibrated": false`) can fetch that URL and
-follow it. See [Calibrate](calibrate.md) for exactly what that step reads, writes,
-and where it's logged.
+It's optional — the workspace works empty too. Anyone picking up a project whose
+`.remnus/config.json` still says `"calibrated": false` can ask for it the same way. See
+[Calibrate](calibrate.md) for exactly what that step reads, writes, and where it's logged.
 
-Right after `init`, an agent session that was already running won't see the Remnus tools
-yet — agents load MCP servers when a session starts. Reload them before calibrating (in
-Claude Code: `/mcp`, then reconnect `remnus`, or start a new session).
+Instead of a new session, reloading the MCP servers in the running one also works (in
+Claude Code: `/mcp`, then reconnect `remnus`) — a new chat is simply the instruction that
+works in every agent.
 
 ## Step 3 — See it, verify it
 
 ```bash
-npx remnus open      # open this project's workspace in its own signed-in window
+npx remnus open      # open this project's workspace (desktop app, else its own window)
 npx remnus doctor    # check whether the connection is healthy
 npx remnus sync      # rewrite the local workspace map from the live workspace
 ```
 
 In Claude Code, a fresh session already does the `open` part on its own — the hook
 `init` wrote fires on `startup` (not on resumes), so a human sees the workspace
-without a separate step. The window opens already signed in, to this project's
-workspace only — account settings, billing and your other workspaces stay behind a
-normal login. `doctor` reports exactly which command fixes a broken
+without a separate step. Where it opens:
+
+- **The Remnus desktop app**, if it is installed (0.1.19 or later): your own, full
+  session, with the project's workspace opened as a tab — and nothing new at all when
+  that workspace is already the one showing, so a new agent session doesn't stack tabs.
+- Otherwise a **project window**: its own window, already signed in, to this project's
+  workspace only — account settings, billing and your other workspaces stay behind a
+  normal login. One per project: if it is already open, `open` doesn't add another.
+
+`npx remnus open --prefer desktop|window|browser|off|auto` changes that for this computer
+(`off` stops the session hook from opening anything; `npx remnus open` by hand still
+does). The choice is stored in your own user data folder, never in the project, so it
+doesn't travel to teammates. `doctor` reports exactly which command fixes a broken
 connection, and separately nudges you if a newer `remnus` has shipped since this
 project was pinned. Every project connected this way gets its own MCP endpoint
 (`/api/mcp/w/<workspace-id>`), so two projects on one machine never share a

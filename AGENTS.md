@@ -158,7 +158,8 @@ Turns any directory into a Remnus-connected project: **one project = one workspa
 `remnus init` never shows a token. The CLI invents a `deviceId`, opens `/install?device_id=…&project=…`, and polls `/api/install/poll` until the browser side lands ([src/lib/services/installSession.ts](src/lib/services/installSession.ts)).
 
 - Storage reuses `client_auth_tokens` (**no migration**). The Tauri sign-in bridge stores a bare JWT there; install results are a JSON envelope tagged `kind: 'install'`, and a read that finds anything else reports "nothing pending" instead of consuming someone else's sign-in.
-- One-time read, 5-minute TTL.
+- One-time read, 5-minute TTL. The read is a conditional `UPDATE … WHERE token = <payload just read> RETURNING` that swaps the result for a token-less `{kind: 'install-used', status}` marker (kept 7 days), so two overlapping polls can't both get the token **and** the link stays recognisably spent.
+- **A link does its job once (R1, 2026-09-26).** `getInstallLinkState(deviceId, issued)` → `open | used | expired`; `/install` checks it *before* sign-in (the closed views name no workspace) and **both server actions re-check it before minting** — before this, re-opening a finished link (from scrollback, or an agent repeating it in chat) showed the form again and approving it minted a token no CLI would ever receive. A pending (not yet polled) result also counts as `used`. `expired` comes from `issued=<epoch s>` on the link (CLI ≥ 0.1.11), stamped in **server** time — the CLI reads the `Date` header of one poll before building the URL, so a skewed laptop clock can't make a fresh link look old; `INSTALL_LINK_LIFETIME_MS` = 5 min, the CLI waits 5 min + 15 s. `issued` is not a credential (forging it only changes what the forger sees); every redirect (`linkHref`: login round trip, errors) carries it along. Old CLIs send no stamp → no expiry judged.
 - `/api/install/poll` is the **only** public path (allowlisted in [src/auth.config.ts](src/auth.config.ts)); `no-store` is mandatory or a cached `{ready:false}` hangs the install forever.
 - `/install` is **not** allowlisted, but it must not rely on `getCurrentUser()` for the redirect — that goes to a bare `/login` and drops the device id. The page builds its own `callbackUrl`, same as the OAuth consent screen.
 - `mode=oauth` mints nothing and only carries the workspace choice back.
@@ -173,10 +174,21 @@ Standalone ESM Node package, **zero dependencies**, published to npm as `remnus`
 - `mcp` is a stdio↔HTTPS bridge. **Nothing but protocol bytes may touch stdout** — every log in the package goes to stderr ([cli/src/lib/ui.js](cli/src/lib/ui.js)). On 401/403 it answers the request with a JSON-RPC error (never leave an agent hanging) *and* tells the human to run `remnus init`.
 - OAuth mode delegates to `mcp-remote` against the pinned URL.
 - Ignore rules come from one place, `ignorePatternsFor` in [cli/src/lib/map.js](cli/src/lib/map.js). `init`, `join` and `sync` all pass it to `ensureGitignore`, so a later writer can never drop a pattern an earlier one added.
+- **Setup is two sessions, and `init` says so once (R1).** The session that runs `init` has no Remnus tools (MCP servers load at session start), so `init` ends with one `── For the agent ──` block: step 1 done, don't repeat the (used) sign-in link, tell the human *in their language* to open a new chat and paste `Continue the Remnus setup`. There is no second instruction set. The sign-in link is printed by `openSignInPage` ([cli/src/lib/install.js](cli/src/lib/install.js)) — plain for `--no-browser` / `REMNUS_NO_BROWSER=1` / a failed open, labelled "Only if no browser window appeared" after a successful open (a spawn succeeding doesn't prove a window appeared, so hiding it would strand WSL/remote users). What "continue the Remnus setup" means is in the `AGENTS.md` block (calibrated `false` → follow the guide when the human asks, never unasked) and, in Claude Code, in the hook's stdout (§4).
 
 ### 4. Signed-in project windows (workspace-locked sessions)
 
-`npx remnus open` (and the Claude Code `SessionStart` hook that runs it) opens the workspace **already signed in**, but only to that project's workspace.
+`npx remnus open` (and the Claude Code `SessionStart` hook that runs it, `npx remnus@<pin> open --hook`) opens the workspace **already signed in**, but only to that project's workspace.
+
+**Where `open` opens (R1, CLI ≥ 0.1.11)** — [cli/src/commands/open.js](cli/src/commands/open.js):
+1. **Desktop app** if installed and ≥ `DESKTOP_OPEN_MIN_VERSION` (0.1.19, [cli/src/lib/desktop.js](cli/src/lib/desktop.js)): `remnus://open?workspace=<id>` → the user's own **unlocked** session (so no project-window banner there). Detection: Windows reads `HK{CU,LM}\Software\Classes\remnus\shell\open\command` (exe must exist) + `Uninstall\Remnus` `DisplayVersion` (what the Tauri NSIS installer writes — verified on a real 0.1.18 install); macOS `Remnus.app/Contents/Info.plist`; Linux `xdg-mime` (no version → only with an explicit `desktop` choice). An unreadable/older version falls through — an old app would just come to the front showing whatever it had. The exe is started with the link as its only argument (= what the protocol handler runs).
+2. **Project window** (below), **one per project**: `isWindowOpen` checks Chromium's own profile lock (Windows `lockfile` → EBUSY while running; elsewhere the `SingletonLock` symlink + pid) **before** asking for a ticket. Verified: a second `--app` launch on a running profile opens a **second window** — with the hook firing on every fresh session, windows stacked up.
+3. The plain `/w/<id>` link.
+Personal choice `open --prefer auto|desktop|window|browser|off` → `<user data>/remnus/settings.json` (never the committed config); `REMNUS_OPEN` overrides; `off` stops only the hook.
+
+**The hook's output contract** ([docs](https://code.claude.com/docs/en/hooks), verified 2026-09-26): SessionStart **stdout** (plain text, capped at 10,000 chars) goes into the new session's context; **stderr on exit 0 goes to the debug log only** — so everything the CLI prints for humans (all stderr, `ui.js`) never reaches the agent. `--hook` writes exactly one stdout paragraph while `.remnus/config.json` says `calibrated !== true` (step 2 pending → follow `<server>/wiki/calibrate.md` *when the human asks*, never unasked) and **nothing** once calibrated; it never prints a link to relay. Any failure in hook mode exits 0 silently (a failing hook is an error notice atop every session). The session's first reply waits for the hook, so keep it fast.
+
+**Desktop side** ([src-tauri/src/lib.rs](src-tauri/src/lib.rs)): `handle_open_link` shape-checks the id (`[A-Za-z0-9_-]{1,64}`), dedupes (a running app receives each link twice — plugin event + single-instance argv loop — 3 s window), focuses, and emits `desktop-open-workspace {workspaceId}` — or holds it as `pending` until the page emits `desktop-open-ready`. Cold start (Windows/Linux) reads `deep_link().get_current()` in `setup` (the plugin parsed argv before our handler existed); only `open` links, the `auth` link keeps its old behaviour. Web: [DesktopOpenListener](src/components/features/DesktopOpenListener.tsx) (always mounted in `AppShell` inside `TabsProvider`, no-op outside Tauri) re-checks the id, does **nothing** if `remnus_workspace_id` already is that workspace (the common case: the hook fires on every session of the same project), else `openInNewTab('/w/<id>')`. A deep link can come from any website, so nothing in it chooses a URL — the page builds the path on its own origin; worst case a member's desktop switches to another of *their* workspaces. Needs a desktop release; the web half ships with the web deploy.
 
 **Flow:** CLI `POST /api/window/ticket` with the project PAT → server returns a path to `/api/window/activate?ticket=…` → CLI opens it with Chromium `--app` in a **per-workspace browser profile** (`--user-data-dir` under the OS app-data dir, [cli/src/lib/window.js](cli/src/lib/window.js)) → activate route calls `signIn('workspace-window')` → redirect to `/w/<id>`.
 
@@ -212,7 +224,10 @@ Code that must work in a window opts in via `getCurrentUserAllowingWorkspaceLock
   (`target="_blank"` stays inside the isolated profile). `ProjectWindowBanner` therefore
   links to the public `/download` page and copies `origin + /app` to the clipboard; sign-out
   survives only as a demoted "End this session". `remnus open` prints the workspace URL for
-  the same reason.
+  the same reason. Since R1 the strip is one quiet 32 px line — "Project window · <workspace>"
+  and an ⓘ button; the explanation (`Layout.projectWindowExplain`) and those three actions live
+  in its popover (Escape/outside click close). It stays in the banner slot, not the sidebar
+  header: the sidebar can be hidden and is a drawer on phones.
 
 ### 5. Joining a connected project (`npx remnus join`)
 

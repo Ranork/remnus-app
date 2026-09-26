@@ -3,6 +3,7 @@ import { usePathname } from 'next/navigation';
 import { useSyncExternalStore, useRef, useState, type ReactNode } from 'react';
 import { useTranslations } from 'next-intl';
 import TauriTitlebar from './features/TauriTitlebar';
+import DesktopOpenListener from './features/DesktopOpenListener';
 import TabHost from './providers/TabHost';
 import ZoomProvider from './providers/ZoomProvider';
 import { TabsProvider } from './providers/TabsContext';
@@ -106,6 +107,8 @@ export default function AppShell({
   return (
     <ZoomProvider>
       <TabsProvider items={items} enabled={isTauri}>
+        {/* Always rendered (a no-op outside the desktop shell), so the tree never changes shape. */}
+        <DesktopOpenListener />
         {/*
           `relative` is required so the absolute aside is positioned within this
           container. The aside never participates in flex layout (always absolute),

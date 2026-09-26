@@ -8,7 +8,15 @@ npx remnus init
 
 Your browser opens once. You sign in, pick (or create) a workspace for this project,
 and the command writes everything the project needs. No token is ever shown to you or
-pasted anywhere.
+pasted anywhere. The sign-in link is printed too, but labelled as the fallback for when no
+browser window appeared; it works once and for five minutes — opening it again later only
+says the project is already connected.
+
+That is step 1 of 2. Agents load MCP servers when a session starts, so the session that ran
+`init` has no Remnus tools; `init` ends with a short message for the agent to pass on: open a
+new chat (or restart the agent) and paste **Continue the Remnus setup**. In that new session
+the agent reads the project into the workspace (calibration). It is optional — the workspace
+also works empty.
 
 Full walkthrough (also the page to hand an AI agent and ask it to run this for you):
 [remnus.com/wiki/project-install](https://remnus.com/wiki/project-install).
@@ -29,7 +37,7 @@ sends its owner an access request. See
 | `.remnus/credentials.json` | **no** | This project's token. Added to `.gitignore` automatically. |
 | `.remnus/workspace-map.md` | **no** | Cached map of the workspace, so an agent starts knowing what is where. |
 | `AGENTS.md` / `CLAUDE.md` | yes | A marked section telling agents how to use the workspace. |
-| `.claude/settings.json` | yes | A `SessionStart` hook that opens the workspace on a fresh Claude Code session. Inert elsewhere. |
+| `.claude/settings.json` | yes | A `SessionStart` hook (`remnus open --hook`) that opens the workspace on a fresh Claude Code session and, until the project is calibrated, tells that session's agent in one line where step 2 is. Inert elsewhere. |
 
 Existing files are edited, never replaced: other MCP servers in `.mcp.json`, other hooks
 in `.claude/settings.json`, your own `.gitignore` rules, and everything you wrote around
@@ -40,11 +48,27 @@ the marked section all survive a re-run.
 ```bash
 npx remnus init      # connect this project to a workspace
 npx remnus join      # get your own access to a project someone else connected
-npx remnus open      # open this project's workspace in its own signed-in window
+npx remnus open      # open this project's workspace (desktop app, else its own window)
 npx remnus sync      # refresh the local workspace map
 npx remnus doctor    # check whether the connection still works
 npx remnus mcp       # run the MCP server (.mcp.json calls this for you)
 ```
+
+## Where `open` opens
+
+1. **The Remnus desktop app**, when it is installed (version 0.1.19 or later): your own full
+   session, the workspace opened as a tab — or nothing new at all if it is already the one
+   showing.
+2. **A project window** otherwise: an app window in a browser profile of its own, signed in
+   to this workspace only (needs Edge or Chrome and the project token). One per project —
+   if it is already open, `open` does not add another.
+3. **The workspace link** in an ordinary window, where the normal sign-in takes over.
+
+`npx remnus open --prefer <where>` saves your choice for this computer (in your user data
+folder — never in the project, so it does not travel to teammates): `auto` (the order
+above), `desktop`, `window`, `browser` (your default browser, your own session) or `off`
+(new agent sessions stop opening Remnus; `npx remnus open` still does). `REMNUS_OPEN=<where>`
+overrides it for one shell.
 
 `init` on a project that is **already** connected joins it rather than reconnecting it:
 re-pointing a committed `.remnus/config.json` at a different workspace would silently
@@ -85,6 +109,8 @@ team's CLI agrees), `--untrack` reverts.
 | `--server <url>` | Point at a self-hosted Remnus instance. |
 | `--dir <path>` | Set up a directory other than the current one. |
 | `--track` / `--untrack` | `sync`: commit the workspace map, or go back to ignoring it. |
+| `--no-browser` | `init` / `join`: print the sign-in link instead of opening a browser (also `REMNUS_NO_BROWSER=1`). |
+| `--prefer <where>` | `open`: where to open from now on, on this computer (see above). |
 
 `REMNUS_SERVER_URL` does the same job as `--server` if you would rather set it in the
 environment.

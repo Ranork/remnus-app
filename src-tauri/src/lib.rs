@@ -3,11 +3,12 @@ mod agent_connect;
 use std::fs;
 use std::path::PathBuf;
 use std::sync::Mutex;
+use std::time::{Duration, Instant};
 use tauri::{
     menu::{Menu, MenuItem},
     tray::{MouseButton, TrayIconBuilder, TrayIconEvent},
     webview::DownloadEvent,
-    Emitter, Manager, State, WebviewUrl, WebviewWindowBuilder, WindowEvent,
+    Emitter, Listener, Manager, State, WebviewUrl, WebviewWindowBuilder, WindowEvent,
 };
 use tauri_plugin_deep_link::DeepLinkExt;
 use tauri_plugin_dialog::DialogExt;
@@ -171,11 +172,81 @@ fn focus_main_window<R: tauri::Runtime>(app: &tauri::AppHandle<R>) {
     }
 }
 
-/// Handle a `remnus://auth?token=<jwt>` deep-link URL by navigating the main
-/// webview to the client-activate endpoint. Shared between the macOS
-/// `on_open_url` handler and the Windows/Linux single-instance argv path.
+/// `remnus://open?workspace=<id>` — sent by `npx remnus open` (and the Claude Code
+/// session hook that runs it) so a project opens here, in the user's own session.
+///
+/// The link only ever carries a workspace id. It is shape-checked here and again by the
+/// page, and the page builds the path (`/w/<id>`) itself on the app's own origin — a deep
+/// link can be fired by any website or program, so nothing in it may choose where the
+/// webview goes.
+#[derive(Default)]
+struct DesktopOpen {
+    inner: Mutex<DesktopOpenState>,
+}
+
+#[derive(Default)]
+struct DesktopOpenState {
+    /// Set once the page says it is listening (`desktop-open-ready`).
+    web_ready: bool,
+    /// A workspace asked for before that: the app was closed, or still loading.
+    pending: Option<String>,
+    /// The last one handled. A running app receives each link twice — through the
+    /// deep-link plugin's own event and through the single-instance argv loop below —
+    /// and must open it once.
+    last: Option<(String, Instant)>,
+}
+
+const OPEN_EVENT: &str = "desktop-open-workspace";
+
+fn is_workspace_id(id: &str) -> bool {
+    !id.is_empty()
+        && id.len() <= 64
+        && id.bytes().all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_')
+}
+
+fn handle_open_link<R: tauri::Runtime>(app: &tauri::AppHandle<R>, url: &url::Url) {
+    let Some(id) = url
+        .query_pairs()
+        .find(|(k, _)| k == "workspace")
+        .map(|(_, v)| v.into_owned())
+    else {
+        return;
+    };
+    if !is_workspace_id(&id) {
+        return;
+    }
+
+    let state = app.state::<DesktopOpen>();
+    let send_now = {
+        let Ok(mut s) = state.inner.lock() else { return };
+        if let Some((prev, at)) = &s.last {
+            if *prev == id && at.elapsed() < Duration::from_secs(3) {
+                return;
+            }
+        }
+        s.last = Some((id.clone(), Instant::now()));
+        if !s.web_ready {
+            s.pending = Some(id.clone());
+        }
+        s.web_ready
+    };
+
+    focus_main_window(app);
+    if send_now {
+        let _ = app.emit(OPEN_EVENT, serde_json::json!({ "workspaceId": id }));
+    }
+}
+
+/// Handle a `remnus://` deep-link URL. `remnus://open?…` opens a workspace (above);
+/// `remnus://auth?token=<jwt>` navigates the main webview to the client-activate
+/// endpoint. Shared between the macOS `on_open_url` handler and the Windows/Linux
+/// single-instance argv path.
 fn handle_deep_link_url<R: tauri::Runtime>(app: &tauri::AppHandle<R>, url: &url::Url) {
     if url.scheme() != "remnus" {
+        return;
+    }
+    if url.host_str() == Some("open") {
+        handle_open_link(app, url);
         return;
     }
     let token = url
@@ -228,6 +299,7 @@ pub fn run() {
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_dialog::init())
         .manage(DownloadConfig::default())
+        .manage(DesktopOpen::default())
         .setup(|app| {
             // Restore the persisted custom download directory (if any) into state.
             if let Some(cfg) = download_config_path(app.handle()) {
@@ -332,6 +404,32 @@ pub fn run() {
                     handle_deep_link_url(&handle, &url);
                 }
             });
+
+            // The page announces it listens for `desktop-open-workspace`; hand it whatever
+            // `remnus://open` link arrived before that.
+            let ready_handle = app.handle().clone();
+            app.listen_any("desktop-open-ready", move |_| {
+                let pending = {
+                    let state = ready_handle.state::<DesktopOpen>();
+                    let Ok(mut s) = state.inner.lock() else { return };
+                    s.web_ready = true;
+                    s.pending.take()
+                };
+                if let Some(id) = pending {
+                    let _ = ready_handle.emit(OPEN_EVENT, serde_json::json!({ "workspaceId": id }));
+                }
+            });
+
+            // Started by a `remnus://open` link (Windows/Linux): the plugin read it from argv
+            // before the handler above existed, so pick it up here. Only `open` — the sign-in
+            // link keeps its existing behaviour.
+            if let Ok(Some(urls)) = app.deep_link().get_current() {
+                for url in urls {
+                    if url.scheme() == "remnus" && url.host_str() == Some("open") {
+                        handle_open_link(app.handle(), &url);
+                    }
+                }
+            }
 
             // Check for updates in the background after a short delay.
             // Emits "update-available" with { version, body } when an update is found.

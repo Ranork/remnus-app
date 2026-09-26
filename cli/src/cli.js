@@ -14,10 +14,10 @@ const PKG = JSON.parse(
   fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'package.json'), 'utf8'),
 );
 
-const FLAGS_WITH_VALUES = new Set(['--server', '--dir']);
+const FLAGS_WITH_VALUES = new Set(['--server', '--dir', '--prefer']);
 
 function parseArgs(argv) {
-  const options = { oauth: false, http: false, noBrowser: false, reconnect: false, track: false, untrack: false, server: null, dir: null };
+  const options = { oauth: false, http: false, noBrowser: false, reconnect: false, track: false, untrack: false, hook: false, server: null, dir: null, prefer: null };
   const positional = [];
 
   for (let i = 0; i < argv.length; i += 1) {
@@ -39,6 +39,8 @@ function parseArgs(argv) {
     if (arg === '--reconnect' || arg === '--new') { options.reconnect = true; continue; }
     if (arg === '--track') { options.track = true; continue; }
     if (arg === '--untrack') { options.untrack = true; continue; }
+    // How the Claude Code SessionStart hook runs `open` (see commands/open.js).
+    if (arg === '--hook') { options.hook = true; continue; }
     if (arg === '--help' || arg === '-h') { positional.push('help'); continue; }
     if (arg === '--version' || arg === '-v') { positional.push('version'); continue; }
     if (arg.startsWith('-')) throw new Error(`Unknown option: ${arg}`);
@@ -57,7 +59,7 @@ function printHelp() {
   say(bold('Commands'));
   say('  init      Connect this project to a Remnus workspace');
   say('  join      Get your own access to a project someone else connected');
-  say('  open      Open this project\'s workspace in your browser');
+  say('  open      Open this project\'s workspace (desktop app if installed, else its own window)');
   say('  sync      Refresh the local workspace map (.remnus/workspace-map.md)');
   say('  doctor    Check whether the connection still works');
   say('  mcp       Run the MCP server (your .mcp.json calls this)');
@@ -68,6 +70,8 @@ function printHelp() {
   say('  --oauth          Let the agent sign in itself; store no token in the project');
   say('  --http           Write a direct HTTP endpoint into .mcp.json instead of this CLI');
   say('  --no-browser     Print the sign-in link instead of opening a browser');
+  say('  --prefer <where> open: where to open from now on, on this computer —');
+  say('                   auto | desktop | window | browser | off (off: not on session start)');
   say('  --server <url>   Use a self-hosted Remnus instance');
   say('  --dir <path>     Set up a different directory than the current one');
   say();
@@ -94,7 +98,7 @@ export async function run(argv) {
       return;
 
     case 'open':
-      process.exitCode = await openCommand();
+      process.exitCode = await openCommand(options);
       return;
 
     case 'sync':

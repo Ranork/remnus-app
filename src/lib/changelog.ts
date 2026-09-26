@@ -45,6 +45,31 @@ const FIRST_VISIT_WINDOW_DAYS = 7;
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-09-26-clearer-project-setup',
+    date: '2026-09-26',
+    category: 'improved',
+    title: {
+      en: 'Project setup shows the next step',
+      tr: 'Proje kurulumu bir sonraki adımı gösteriyor',
+      de: 'Die Projekteinrichtung zeigt den nächsten Schritt',
+      es: 'La configuración del proyecto muestra el siguiente paso',
+      fr: 'La configuration du projet indique l’étape suivante',
+      hi: 'प्रोजेक्ट सेटअप अगला कदम दिखाता है',
+      ru: 'Настройка проекта подсказывает следующий шаг',
+      zh: '项目设置会告诉你下一步',
+    },
+    summary: {
+      en: 'Connecting a project now ends with one clear next step from your agent, a setup link opened twice no longer connects anything again, projects open in the latest Remnus desktop app when you have it, and the project window’s top bar is calmer.',
+      tr: 'Bir projeyi bağlamak artık ajanınızdan gelen tek ve net bir sonraki adımla bitiyor, ikinci kez açılan kurulum bağlantısı hiçbir şeyi yeniden bağlamıyor, projeler kuruluysa en güncel Remnus masaüstü uygulamasında açılıyor ve proje penceresinin üst şeridi sadeleşti.',
+      de: 'Das Verbinden eines Projekts endet jetzt mit einem klaren nächsten Schritt von Ihrem Agenten, ein zweimal geöffneter Einrichtungslink verbindet nichts erneut, Projekte öffnen sich in der neuesten Remnus-Desktop-App, sofern installiert, und die obere Leiste des Projektfensters ist ruhiger.',
+      es: 'Conectar un proyecto ahora termina con un siguiente paso claro de tu agente, un enlace de configuración abierto dos veces ya no vuelve a conectar nada, los proyectos se abren en la última app de escritorio de Remnus si la tienes y la barra superior de la ventana de proyecto es más sencilla.',
+      fr: 'Connecter un projet se termine désormais par une étape suivante claire donnée par votre agent, un lien de configuration ouvert deux fois ne reconnecte plus rien, les projets s’ouvrent dans la dernière app de bureau Remnus si vous l’avez, et la barre du haut de la fenêtre de projet est plus sobre.',
+      hi: 'प्रोजेक्ट कनेक्ट करने के बाद अब आपका एजेंट एक साफ़ अगला कदम बताता है, दो बार खोला गया सेटअप लिंक दोबारा कुछ कनेक्ट नहीं करता, Remnus का नया डेस्कटॉप ऐप होने पर प्रोजेक्ट उसी में खुलते हैं, और प्रोजेक्ट विंडो की ऊपरी पट्टी अब सरल है।',
+      ru: 'Подключение проекта теперь заканчивается одним понятным следующим шагом от агента, повторно открытая ссылка настройки больше ничего не подключает заново, проекты открываются в новом настольном приложении Remnus, если оно установлено, а верхняя полоса окна проекта стала спокойнее.',
+      zh: '连接项目后，你的智能体现在会给出一个明确的下一步，重复打开的设置链接不会再次连接任何内容，安装了最新 Remnus 桌面应用时项目会在其中打开，项目窗口顶部栏也更简洁了。',
+    },
+  },
+  {
     id: '2026-09-25-cli-explains-access',
     date: '2026-09-25',
     category: 'improved',

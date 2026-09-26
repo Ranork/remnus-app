@@ -2,7 +2,7 @@ import { spawn } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
-import { detail, warn } from './ui.js';
+import { detail, step, warn } from './ui.js';
 
 export function newDeviceId() {
   return randomUUID();
@@ -16,11 +16,38 @@ export function newDeviceId() {
  * one. It is **not** a credential — it comes out of a committed file — and the
  * server re-checks membership on every request regardless of what is in this URL.
  */
-export function installUrl(serverUrl, { deviceId, projectName, authMode, workspaceId }) {
+export function installUrl(serverUrl, { deviceId, projectName, authMode, workspaceId, issuedAt }) {
   const params = new URLSearchParams({ device_id: deviceId, project: projectName });
   if (authMode === 'oauth') params.set('mode', 'oauth');
   if (workspaceId) params.set('workspace', workspaceId);
+  // Lets the page say "this link has expired" instead of minting a token that no
+  // terminal is waiting for any more. Display logic only, never a credential.
+  if (issuedAt) params.set('issued', String(Math.floor(issuedAt / 1000)));
   return `${serverUrl}/install?${params.toString()}`;
+}
+
+/**
+ * The server's clock, read from the `Date` header of one cheap poll. The link's age is
+ * judged by the server, so it has to be stamped in server time — a laptop clock that
+ * is a few minutes off would otherwise open a fresh link as "expired". Null when the
+ * server can't be reached; the link then simply carries no stamp.
+ */
+export async function serverTime(serverUrl, deviceId) {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 4000);
+  try {
+    const res = await fetch(`${serverUrl}/api/install/poll?device_id=${encodeURIComponent(deviceId)}`, {
+      headers: { Accept: 'application/json', 'Cache-Control': 'no-cache' },
+      signal: controller.signal,
+    });
+    await res.text();
+    const at = Date.parse(res.headers.get('date') ?? '');
+    return Number.isNaN(at) ? null : at;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 /**
@@ -49,6 +76,31 @@ export function openBrowser(url) {
   } catch {
     return false;
   }
+}
+
+/**
+ * Opens the sign-in page and says so, for `init` and `join` alike.
+ *
+ * When the browser opened, the link is still printed, but labelled as a fallback: a
+ * successful spawn does not prove a window appeared (WSL, a remote desktop, an
+ * `xdg-open` with no handler), and hiding the link would leave that person staring at
+ * a five-minute wait with nothing to click. The label is also for an agent running
+ * this command — it reads the output only after the browser step is over, and must
+ * not hand the link back to the human as something still to do.
+ */
+export function openSignInPage(url, { skipBrowser }) {
+  if (skipBrowser) {
+    step('Open this link to sign in:');
+    detail(url);
+    return;
+  }
+  if (openBrowser(url)) {
+    step('Opened the sign-in page in your browser.');
+    detail(`Only if no browser window appeared: ${url}`);
+    return;
+  }
+  warn('Could not open a browser automatically — open this link to sign in:');
+  detail(url);
 }
 
 /** Absolute path to Edge or Chrome on Windows, or null if neither is installed
@@ -151,8 +203,9 @@ const POLL_SCHEDULE = [
   { untilMs: 3 * 60 * 1000, intervalMs: 2000 },
 ];
 const POLL_INTERVAL_MAX_MS = 3000;
-/** Matches the server's own install-session lifetime; waiting longer cannot succeed. */
-const POLL_TIMEOUT_MS = 5 * 60 * 1000;
+/** The server stops accepting a link five minutes after it was issued. The extra seconds
+ *  pick up an approval that landed in the last moment, between two polls. */
+const POLL_TIMEOUT_MS = 5 * 60 * 1000 + 15 * 1000;
 
 const pollIntervalAt = (elapsedMs) =>
   POLL_SCHEDULE.find((step) => elapsedMs < step.untilMs)?.intervalMs ?? POLL_INTERVAL_MAX_MS;

@@ -128,9 +128,10 @@ export function detectAgentDocs(root) {
 }
 
 const SESSION_START_MATCHER = 'startup';
-// Matches our hook regardless of which version it was pinned to, so re-running
-// `init` on a newer CLI replaces the old pin instead of adding a second entry.
-const SESSION_START_COMMAND_RE = /^npx remnus(?:@\S+)? open$/;
+// Matches our hook regardless of which version it was pinned to (and from before it
+// gained `--hook`), so re-running `init` on a newer CLI replaces the old entry instead
+// of adding a second one.
+const SESSION_START_COMMAND_RE = /^npx remnus(?:@\S+)? open(?: --hook)?$/;
 
 /**
  * Adds (or updates) a Claude Code `SessionStart` hook that opens this project's

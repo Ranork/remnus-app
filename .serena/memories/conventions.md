@@ -208,3 +208,21 @@ Primary sources: `AI.md`, `AGENTS.md`, `messages/`, `src/auth.config.ts`, `src/l
   until both halves have content.
 - Recovery advice must name `join`, not `init`, wherever the project is connected and only the
   credential is missing (`mcp.js` 401/403 + missing-token, `doctor`'s no-token branch).
+
+## Install link, session hook, `open` (R1, 2026-09-26)
+- **An install link mints at most once.** Any code path that mints/requests from `/install`
+  re-checks `getInstallLinkState` inside the action, not only at render. Carry `issued` through
+  every redirect (`linkHref`). `issued` is display logic, never trust it for access.
+- **Claude Code SessionStart: stdout → agent context, stderr (exit 0) → debug log only.** The CLI
+  prints all human output to stderr; only `open --hook` writes stdout, one paragraph while
+  `calibrated !== true`, nothing after. Never print a link there the agent could relay, never make
+  it start calibration unasked, and exit 0 on any failure.
+- **`init` has one closing instruction set** (the "For the agent" block); don't add a second.
+  The prompt it hands over (`Continue the Remnus setup`) is resolved by the `AGENTS.md` block
+  template and the hook — change all three together.
+- **`open` must not stack windows**: check `isWindowOpen(profileDir)` before a ticket/launch.
+  Desktop first only if `desktopKnowsOpen` (bump `DESKTOP_OPEN_MIN_VERSION` if the route's first
+  desktop release is not 0.1.19). Personal `open` preference lives in the user data dir, never in
+  the committed config.
+- **Deep links choose no URL.** `remnus://open` carries only a shape-checked workspace id; the
+  page builds `/w/<id>` on its own origin.

@@ -30,7 +30,7 @@ function pinnedHookVersionFrom(settingsDoc) {
   if (!Array.isArray(entries)) return null;
   for (const entry of entries) {
     for (const hook of entry?.hooks ?? []) {
-      const match = /^npx remnus@(\S+) open$/.exec(hook?.command ?? '');
+      const match = /^npx remnus@(\S+) open(?: --hook)?$/.exec(hook?.command ?? '');
       if (match) return match[1];
     }
   }
@@ -190,8 +190,8 @@ export async function doctorCommand() {
     }
     if (latest && pinnedHookVersion && latest !== pinnedHookVersion) {
       warn(`The SessionStart hook is also pinned to an older remnus: ${pinnedHookVersion} → ${bold(latest)}.`);
-      detail(`In .claude/settings.json, change "remnus@${pinnedHookVersion} open" to`);
-      detail(`"remnus@${latest} open" (or run \`npx remnus init --reconnect\` to move the pin).`);
+      detail(`In .claude/settings.json, change the "remnus@${pinnedHookVersion} open…" command to`);
+      detail(`"npx remnus@${latest} open --hook" (or run \`npx remnus init --reconnect\` to move the pin).`);
     }
   }
 

@@ -9,7 +9,12 @@ import { mintAgentToken, mintProjectAgentToken } from '@/lib/actions/agentToken'
 import { submitWorkspaceAccessRequest } from '@/lib/actions/accessRequests';
 import { createWorkspace } from '@/lib/actions/workspace';
 import { resolveJoinAccess } from '@/lib/services/accessRequests';
-import { isDeviceIdShape, putInstallResult } from '@/lib/services/installSession';
+import {
+  getInstallLinkState,
+  isDeviceIdShape,
+  putInstallResult,
+  type InstallLinkState,
+} from '@/lib/services/installSession';
 import { isWorkspaceIdShape, workspaceMcpUrl } from '@/lib/mcp/workspaceEndpoint';
 import { InstallForm } from './InstallForm';
 import { JoinForm } from './JoinForm';
@@ -43,7 +48,32 @@ interface SearchParams {
   done?: string;
   /** On `done`, the workspace name to show. Otherwise: the join target's **id**. */
   workspace?: string;
+  /** When the CLI issued this link, epoch seconds in server time (CLI ≥ 0.1.11). */
+  issued?: string;
   error?: string;
+}
+
+interface LinkContext {
+  deviceId: string;
+  projectName: string;
+  oauthMode: boolean;
+  joinTarget: string | null;
+  issued: string | undefined;
+}
+
+/**
+ * This same link, rebuilt from its parts — for the login round trip, for an error, and
+ * for sending a spent link back to itself so the page shows why it is spent. Every exit
+ * carries `issued` along, or a link could outlive its five minutes by bouncing through
+ * the login page.
+ */
+function linkHref(link: LinkContext, extra: Record<string, string> = {}): string {
+  const params = new URLSearchParams({ device_id: link.deviceId, project: link.projectName });
+  if (link.oauthMode) params.set('mode', 'oauth');
+  if (link.joinTarget) params.set('workspace', link.joinTarget);
+  if (link.issued) params.set('issued', link.issued);
+  for (const [key, value] of Object.entries(extra)) params.set(key, value);
+  return `/install?${params.toString()}`;
 }
 
 /** Project names come off the user's filesystem: show them, but bound what we render. */
@@ -83,13 +113,18 @@ export default async function InstallPage({
   // whether a well-formed one names a real workspace is not something this screen
   // may reveal (see `joinView`).
   const joinTarget = isWorkspaceIdShape(params.workspace) ? params.workspace : null;
+  const link: LinkContext = { deviceId: installDeviceId, projectName, oauthMode, joinTarget, issued: params.issued };
+
+  // Before sign-in on purpose: a spent link has nothing to sign in for. The screen names
+  // no workspace, so it tells whoever holds the link nothing they didn't already know.
+  const linkState = await getInstallLinkState(installDeviceId, params.issued);
+  if (linkState.state !== 'open') {
+    return <InstallLinkClosedView state={linkState} command={joinTarget ? 'npx remnus join' : 'npx remnus init'} />;
+  }
 
   const user = await getCurrentUser().catch(() => null);
   if (!user) {
-    const back = new URLSearchParams({ device_id: installDeviceId, project: projectName });
-    if (oauthMode) back.set('mode', 'oauth');
-    if (joinTarget) back.set('workspace', joinTarget);
-    redirect(`/login?callbackUrl=${encodeURIComponent(`/install?${back.toString()}`)}`);
+    redirect(`/login?callbackUrl=${encodeURIComponent(linkHref(link))}`);
   }
 
   if (joinTarget) {
@@ -97,9 +132,7 @@ export default async function InstallPage({
       workspaceId: joinTarget,
       userId: user!.id,
       userName: user!.name ?? user!.email ?? '',
-      projectName,
-      oauthMode,
-      installDeviceId,
+      link,
       error: params.error,
     });
   }
@@ -128,6 +161,10 @@ export default async function InstallPage({
 
     const currentUser = await getCurrentUser().catch(() => null);
     if (!currentUser) return;
+
+    // Re-checked at submit, not only at render: a form left open in a second tab, or past
+    // the five minutes, must not mint a token that no terminal will ever pick up.
+    if ((await getInstallLinkState(installDeviceId, link.issued)).state !== 'open') redirect(linkHref(link));
 
     const scope = formData.get('scope') === 'read' ? 'read' : 'write';
     const target = (formData.get('workspace_id') as string | null) ?? '';
@@ -193,14 +230,7 @@ export default async function InstallPage({
     }
 
     if (destination) redirect(destination);
-
-    const back = new URLSearchParams({
-      device_id: installDeviceId,
-      project: projectName,
-      error: failure ?? 'unknown',
-    });
-    if (oauthMode) back.set('mode', 'oauth');
-    redirect(`/install?${back.toString()}`);
+    redirect(linkHref(link, { error: failure ?? 'unknown' }));
   }
 
   return (
@@ -229,27 +259,27 @@ async function joinView({
   workspaceId,
   userId,
   userName,
-  projectName,
-  oauthMode,
-  installDeviceId,
+  link,
   error,
 }: {
   workspaceId: string;
   userId: string;
   userName: string;
-  projectName: string;
-  oauthMode: boolean;
-  installDeviceId: string;
+  link: LinkContext;
   error?: string;
 }) {
   const t = await getTranslations('Install');
   const access = await resolveJoinAccess(workspaceId, userId);
+  const { projectName, oauthMode, deviceId: installDeviceId } = link;
 
   async function handleJoin(formData: FormData) {
     'use server';
 
     const currentUser = await getCurrentUser().catch(() => null);
     if (!currentUser) return;
+
+    // Same as `handleInstall`: a spent or expired link must not mint (or request) anything.
+    if ((await getInstallLinkState(installDeviceId, link.issued)).state !== 'open') redirect(linkHref(link));
 
     const requestedScope = formData.get('scope') === 'read' ? 'read' : 'write';
     const note = ((formData.get('note') as string | null) ?? '').trim().slice(0, 280);
@@ -307,13 +337,7 @@ async function joinView({
         // Routed through `destination` like every other exit here: `redirect()` throws,
         // and inside this try the catch below would swallow it as an install failure.
         if (result.state === 'member') {
-          const back = new URLSearchParams({
-            device_id: installDeviceId,
-            project: projectName,
-            workspace: workspaceId,
-          });
-          if (oauthMode) back.set('mode', 'oauth');
-          destination = `/install?${back.toString()}`;
+          destination = linkHref(link);
         } else {
           // The CLI is waiting on the poll channel, so every outcome reports back —
           // a person staring at a terminal deserves to be told "denied" rather than
@@ -337,15 +361,7 @@ async function joinView({
     }
 
     if (destination) redirect(destination);
-
-    const back = new URLSearchParams({
-      device_id: installDeviceId,
-      project: projectName,
-      workspace: workspaceId,
-      error: failure ?? 'unknown',
-    });
-    if (oauthMode) back.set('mode', 'oauth');
-    redirect(`/install?${back.toString()}`);
+    redirect(linkHref(link, { error: failure ?? 'unknown' }));
   }
 
   return (
@@ -419,6 +435,50 @@ async function InstallDoneView({
             {t('openWorkspace')}
           </Link>
         )}
+      </div>
+    </div>
+  );
+}
+
+/**
+ * A link that already did its job, or waited too long. Deliberately a dead end — no form,
+ * no "try again" button: the only way to a working link is a fresh CLI run, because only
+ * a CLI that is still waiting can receive what the form would produce.
+ */
+async function InstallLinkClosedView({
+  state,
+  command,
+}: {
+  state: Exclude<InstallLinkState, { state: 'open' }>;
+  command: string;
+}) {
+  const t = await getTranslations('Install');
+  const connected = state.state === 'used' && state.status === 'connected';
+
+  const title = connected ? t('usedTitle') : state.state === 'used' ? t('usedOtherTitle') : t('expiredTitle');
+  const hint = connected
+    ? t('usedHint')
+    : state.state === 'used'
+      ? t('usedOtherHint', { command })
+      : t('expiredHint', { command });
+
+  return (
+    <div className="min-h-screen bg-neutral-950 flex items-center justify-center p-4">
+      <div className="w-full max-w-sm text-center">
+        <div className={`w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-5 ${connected ? 'bg-green-500/15' : 'bg-neutral-800'}`}>
+          {connected ? (
+            <svg viewBox="0 0 24 24" fill="none" stroke="#7fc36d" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7">
+              <polyline points="20 6 9 17 4 12" />
+            </svg>
+          ) : (
+            <svg viewBox="0 0 24 24" fill="none" stroke="#a3a3a3" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7">
+              <circle cx="12" cy="12" r="9" />
+              <polyline points="12 7 12 12 15 14" />
+            </svg>
+          )}
+        </div>
+        <h1 className="text-lg font-semibold text-white mb-2">{title}</h1>
+        <p className="text-sm text-neutral-500 leading-relaxed">{hint}</p>
       </div>
     </div>
   );

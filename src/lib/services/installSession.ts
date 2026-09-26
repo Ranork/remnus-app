@@ -14,7 +14,7 @@
 
 import { db } from '@/db';
 import { clientAuthTokens } from '@/db/schema';
-import { eq, lt } from 'drizzle-orm';
+import { and, eq, lt } from 'drizzle-orm';
 
 /** Matches the CLI's generated device id (a UUID). Rejects anything that could not
  *  have come from us before it is used as a lookup key. */
@@ -73,6 +73,83 @@ export interface InstallResult {
  *  that an abandoned install leaves nothing usable behind. */
 const TTL_MS = 5 * 60 * 1000;
 
+/**
+ * How long an install link is good for after the CLI issued it. The CLI waits exactly
+ * this long (plus a few seconds); an approval after that would mint a token no terminal
+ * is waiting for any more.
+ */
+export const INSTALL_LINK_LIFETIME_MS = 5 * 60 * 1000;
+
+/**
+ * What a link leaves behind once its result has been picked up: no token, just the fact
+ * that it was used. Without it, opening the same link again — from the terminal's
+ * scrollback, or because an agent repeated it in chat — showed the connect form again,
+ * and approving it minted a second token that nobody would ever receive.
+ */
+interface UsedMarker {
+  kind: 'install-used';
+  status: InstallStatus;
+}
+
+/** Long enough to cover "I clicked the link again the next day"; the row carries no secret. */
+const USED_MARKER_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
+export type InstallLinkState =
+  | { state: 'open' }
+  | { state: 'used'; status: InstallStatus }
+  | { state: 'expired' };
+
+/**
+ * The `issued` stamp the CLI puts on the link, in epoch seconds of *this server's* clock
+ * (the CLI reads it off a response's `Date` header, so a skewed laptop clock can't make a
+ * fresh link look old). It is not a credential — forging it only changes which screen the
+ * forger sees. Absent (CLIs before 0.1.11) or implausible → null, and no expiry is judged.
+ */
+function parseIssuedAt(value: string | null | undefined): number | null {
+  if (!value || !/^\d{9,11}$/.test(value)) return null;
+  const ms = Number(value) * 1000;
+  return ms > Date.now() + 10 * 60 * 1000 ? null : ms;
+}
+
+function parseEnvelope(raw: string): InstallResult | UsedMarker | null {
+  try {
+    const parsed = JSON.parse(raw) as { kind?: unknown } | null;
+    if (parsed && (parsed.kind === 'install' || parsed.kind === 'install-used')) {
+      return parsed as InstallResult | UsedMarker;
+    }
+  } catch {
+    // A bare JWT from the Tauri sign-in bridge — not ours.
+  }
+  return null;
+}
+
+/**
+ * Whether the install page may still offer to connect for this link. A result waiting
+ * to be picked up counts as used too: the approval already happened. Used wins over
+ * expired, so an old link that did its job says so rather than "expired".
+ */
+export async function getInstallLinkState(
+  deviceId: string,
+  issued: string | null | undefined,
+): Promise<InstallLinkState> {
+  if (!isDeviceIdShape(deviceId)) return { state: 'open' };
+
+  const [entry] = await db
+    .select({ token: clientAuthTokens.token, expiresAt: clientAuthTokens.expiresAt })
+    .from(clientAuthTokens)
+    .where(eq(clientAuthTokens.deviceId, deviceId))
+    .limit(1);
+
+  if (entry && entry.expiresAt >= new Date()) {
+    const envelope = parseEnvelope(entry.token);
+    if (envelope) return { state: 'used', status: envelope.status ?? 'connected' };
+  }
+
+  const issuedAt = parseIssuedAt(issued);
+  if (issuedAt !== null && Date.now() > issuedAt + INSTALL_LINK_LIFETIME_MS) return { state: 'expired' };
+  return { state: 'open' };
+}
+
 export async function putInstallResult(deviceId: string, result: Omit<InstallResult, 'kind'>): Promise<void> {
   if (!isDeviceIdShape(deviceId)) throw new Error('Invalid device id');
 
@@ -89,8 +166,9 @@ export async function putInstallResult(deviceId: string, result: Omit<InstallRes
 }
 
 /**
- * Returns the pending install result and deletes it — one-time use, so a token that
- * leaks from the wait channel cannot be replayed. Returns null when nothing is
+ * Returns the pending install result and replaces it with a token-less "used" marker —
+ * one-time use, so a token that leaks from the wait channel cannot be replayed, while the
+ * install page can still tell that this link is spent. Returns null when nothing is
  * pending, when it has expired, or when the entry belongs to the Tauri sign-in flow.
  */
 export async function consumeInstallResult(deviceId: string): Promise<InstallResult | null> {
@@ -109,19 +187,19 @@ export async function consumeInstallResult(deviceId: string): Promise<InstallRes
     return null;
   }
 
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(entry.token);
-  } catch {
-    // A bare JWT from the Tauri sign-in bridge. Not ours — leave it for its own
-    // poller instead of consuming (and destroying) someone else's sign-in.
-    return null;
-  }
+  // A bare JWT (Tauri sign-in bridge) parses to null: not ours — leave it for its own
+  // poller instead of consuming (and destroying) someone else's sign-in.
+  const envelope = parseEnvelope(entry.token);
+  if (!envelope || envelope.kind !== 'install') return null;
 
-  if (!parsed || typeof parsed !== 'object' || (parsed as InstallResult).kind !== 'install') {
-    return null;
-  }
+  const marker: UsedMarker = { kind: 'install-used', status: envelope.status ?? 'connected' };
+  // Conditional on the exact payload just read, so two overlapping polls can't both be
+  // handed the token: only the one whose update lands gets it.
+  const claimed = await db
+    .update(clientAuthTokens)
+    .set({ token: JSON.stringify(marker), expiresAt: new Date(Date.now() + USED_MARKER_TTL_MS) })
+    .where(and(eq(clientAuthTokens.deviceId, deviceId), eq(clientAuthTokens.token, entry.token)))
+    .returning({ deviceId: clientAuthTokens.deviceId });
 
-  await db.delete(clientAuthTokens).where(eq(clientAuthTokens.deviceId, deviceId));
-  return parsed as InstallResult;
+  return claimed.length ? envelope : null;
 }

@@ -12,7 +12,7 @@ import {
 } from '../lib/project.js';
 import { ensureGitignore, writeMcpConfig } from '../lib/files.js';
 import { ignorePatternsFor } from '../lib/map.js';
-import { installUrl, newDeviceId, openBrowser, waitForInstall } from '../lib/install.js';
+import { installUrl, newDeviceId, openSignInPage, serverTime, waitForInstall } from '../lib/install.js';
 import { bold, detail, dim, ok, say, step, warn } from '../lib/ui.js';
 
 // ── `remnus join` ────────────────────────────────────────────────────────────
@@ -96,14 +96,11 @@ export async function joinCommand(options = {}) {
   }
 
   const deviceId = newDeviceId();
-  const url = installUrl(serverUrl, { deviceId, projectName, workspaceId: config.workspaceId });
+  const issuedAt = await serverTime(serverUrl, deviceId);
+  const url = installUrl(serverUrl, { deviceId, projectName, workspaceId: config.workspaceId, issuedAt });
 
   const skipBrowser = options.noBrowser || process.env.REMNUS_NO_BROWSER === '1';
-  step(skipBrowser ? 'Open this link to sign in:' : 'Opening your browser to sign in…');
-  detail(url);
-  if (!skipBrowser && !openBrowser(url)) {
-    warn('Could not open a browser automatically — open the link above.');
-  }
+  openSignInPage(url, { skipBrowser });
   say();
   step('Waiting for you to finish in the browser…');
 

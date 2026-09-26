@@ -18,7 +18,7 @@ import {
   writeMcpConfig,
   writeSessionStartHook,
 } from '../lib/files.js';
-import { installUrl, newDeviceId, openBrowser, waitForInstall } from '../lib/install.js';
+import { installUrl, newDeviceId, openSignInPage, serverTime, waitForInstall } from '../lib/install.js';
 import { MAP_FILE, ignorePatternsFor, refreshWorkspaceMap } from '../lib/map.js';
 import { joinCommand } from './join.js';
 import { bold, detail, dim, ok, say, step, warn } from '../lib/ui.js';
@@ -113,18 +113,15 @@ export async function initCommand(options) {
   }
 
   const deviceId = newDeviceId();
-  const url = installUrl(serverUrl, { deviceId, projectName, authMode });
+  const issuedAt = await serverTime(serverUrl, deviceId);
+  const url = installUrl(serverUrl, { deviceId, projectName, authMode, issuedAt });
 
   step(`Connecting ${bold(projectName)} to Remnus`);
   detail(root);
   say();
   // Headless boxes, CI and anyone who would rather click the link themselves.
   const skipBrowser = options.noBrowser || process.env.REMNUS_NO_BROWSER === '1';
-  step(skipBrowser ? 'Open this link to sign in:' : 'Opening your browser to sign in…');
-  detail(url);
-  if (!skipBrowser && !openBrowser(url)) {
-    warn('Could not open a browser automatically — open the link above.');
-  }
+  openSignInPage(url, { skipBrowser });
   say();
   step('Waiting for you to finish in the browser…');
 
@@ -210,14 +207,13 @@ export async function initCommand(options) {
     if (state !== 'unchanged') detail(`${docName}  (${state})`);
   }
 
-  // Claude Code only (inert, harmless file for any other client): opens this
-  // workspace automatically on a fresh session, so the human sees it without a
-  // separate manual step. `open` itself is naive — the web app's own auth/access
-  // layer handles whatever this browser's session state actually is. Pinned to
-  // this CLI's version for the same reason as the .mcp.json entry above — an
-  // auto-run hook is exactly the kind of thing that shouldn't silently float to
-  // whatever npm has today.
-  const hookState = writeSessionStartHook(root, `npx remnus@${CLI_VERSION} open`);
+  // Claude Code only (inert, harmless file for any other client). On a fresh session it
+  // opens this workspace, so the human sees it without a separate step, and — `--hook` —
+  // tells that session's agent in one line whether setup still has a step to go (see
+  // `open.js`). Pinned to this CLI's version for the same reason as the .mcp.json entry
+  // above — an auto-run hook is exactly the kind of thing that shouldn't silently float
+  // to whatever npm has today.
+  const hookState = writeSessionStartHook(root, `npx remnus@${CLI_VERSION} open --hook`);
   if (hookState !== 'unchanged') detail(`.claude/settings.json  (${hookState})`);
 
   say();
@@ -229,19 +225,31 @@ export async function initCommand(options) {
 
   ok('Setup complete.');
   say();
-  step('Reload MCP servers in any agent session that was already running.');
-  say(dim('Agents load MCP servers when a session starts. In Claude Code, run /mcp and reconnect'));
-  say(dim('remnus, or start a new session — until then that session has no Remnus tools.'));
+  printNextStep();
   say();
-  step('This project is not marked as set up yet.');
-  say(dim('To have an agent read the project and fill the workspace in to match it,'));
-  say(dim('tell it (after the reload above):'));
+  say(dim(`Step 2 is optional — the workspace also works empty. Anytime: ${bold('npx remnus open')} shows the`));
+  say(dim(`workspace, ${bold('npx remnus doctor')} checks the connection.`));
+}
+
+/**
+ * The one set of instructions `init` ends with, addressed to the agent that ran it.
+ *
+ * That agent cannot finish the setup itself: MCP servers load when a session starts, so
+ * the session that ran `init` has no Remnus tools. What it can do is tell the human the
+ * one thing to do next — in their language, which only the agent knows. The prompt it
+ * hands over is short on purpose: in the new session the `AGENTS.md` block (and, in
+ * Claude Code, the SessionStart hook) says what "continue the Remnus setup" means.
+ */
+function printNextStep() {
+  const rule = '─'.repeat(64);
+  say(dim(`── For the agent ${rule.slice(17)}`));
+  say('Step 1 of 2 is done. Step 2 — reading this project into the workspace — needs a');
+  say('new session: agents load Remnus tools only when a session starts. The sign-in');
+  say('link above has been used; do not repeat it. Tell the human, in their language:');
   say();
-  say(`    Calibrate the Remnus workspace by following ${bold(calibrateUrl)}${readWhole}`);
+  say(`  Remnus is connected. To finish the setup, open a new chat in this project`);
+  say(`  (or restart your agent) and paste: ${bold('Continue the Remnus setup')}`);
   say();
-  say(dim('It is optional — the workspace also works empty. An interrupted run picks up'));
-  say(dim('where it stopped: the guide keeps its progress in the workspace itself.'));
-  say();
-  say(dim(`In Claude Code, a new session opens this workspace automatically. Anywhere,`));
-  say(dim(`run ${bold('npx remnus open')} to see it, or ${bold('npx remnus doctor')} to check the connection.`));
+  say('Translate that message, the prompt included.');
+  say(dim(rule));
 }
