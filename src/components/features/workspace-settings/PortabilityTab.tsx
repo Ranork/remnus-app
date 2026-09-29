@@ -5,6 +5,7 @@ import { Activity, Archive, BrainCircuit, CheckCircle, Download, FileText, Loade
 import { useTranslations } from 'next-intl';
 import { getWorkspaceContextPolicy, updateWorkspaceContextPolicy } from '@/lib/actions/knowledge';
 import type { ContextPolicy } from '@/lib/services/knowledge';
+import { SimpleSelect } from '@/components/ui/select';
 
 interface PortabilityTabProps {
   workspaceId: string;
@@ -205,17 +206,27 @@ export default function PortabilityTab({ workspaceId, workspaceName }: Portabili
             <div className="grid gap-3 sm:grid-cols-2">
               <label className="space-y-1 text-[11px] text-neutral-500">
                 <span>{t('contextPolicyBudget')}</span>
-                <select value={contextPolicy.autoMaxTokens} onChange={event => setContextPolicy(current => ({ ...current, autoMaxTokens: Number(event.target.value) }))} className="w-full border-b border-neutral-700 bg-neutral-900 px-1 py-1.5 text-xs text-neutral-200 outline-none">
-                  <option value={1000}>1,000</option><option value={2000}>2,000</option><option value={4000}>4,000</option><option value={6000}>6,000</option>
-                </select>
+                <SimpleSelect
+                  value={String(contextPolicy.autoMaxTokens)}
+                  onValueChange={value => setContextPolicy(current => ({ ...current, autoMaxTokens: Number(value) }))}
+                  options={[1000, 2000, 4000, 6000].map(n => ({ value: String(n), label: n.toLocaleString('en-US') }))}
+                  aria-label={t('contextPolicyBudget')}
+                  className="w-full"
+                />
               </label>
               <label className="space-y-1 text-[11px] text-neutral-500">
                 <span>{t('contextPolicyTrust')}</span>
-                <select value={contextPolicy.trustPolicy} onChange={event => setContextPolicy(current => ({ ...current, trustPolicy: event.target.value as ContextPolicy['trustPolicy'] }))} className="w-full border-b border-neutral-700 bg-neutral-900 px-1 py-1.5 text-xs text-neutral-200 outline-none">
-                  <option value="any">{t('contextPolicyTrustAny')}</option>
-                  <option value="prefer-human-reviewed">{t('contextPolicyTrustPrefer')}</option>
-                  <option value="human-reviewed-only">{t('contextPolicyTrustOnly')}</option>
-                </select>
+                <SimpleSelect
+                  value={contextPolicy.trustPolicy}
+                  onValueChange={value => setContextPolicy(current => ({ ...current, trustPolicy: value as ContextPolicy['trustPolicy'] }))}
+                  options={[
+                    { value: 'any', label: t('contextPolicyTrustAny') },
+                    { value: 'prefer-human-reviewed', label: t('contextPolicyTrustPrefer') },
+                    { value: 'human-reviewed-only', label: t('contextPolicyTrustOnly') },
+                  ]}
+                  aria-label={t('contextPolicyTrust')}
+                  className="w-full"
+                />
               </label>
             </div>
             <div className="flex items-center gap-3">

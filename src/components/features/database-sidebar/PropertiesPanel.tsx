@@ -14,7 +14,8 @@ import {
   STATUS_GROUP_DEFAULT_COLOR,
   DEFAULT_STATUS_OPTIONS,
 } from '@/lib/types/properties';
-import { getPropertyIcon, selectCls } from './shared';
+import { getPropertyIcon } from './shared';
+import { SimpleSelect } from '@/components/ui/select';
 import PageIcon from '../PageIcon';
 import IconPicker from '../IconPicker';
 
@@ -78,32 +79,33 @@ export default function PropertiesPanel({
                 placeholder={t('propertyName')}
                 className="flex-1 min-w-0 bg-transparent text-xs text-neutral-200 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
               />
-              <select
+              <SimpleSelect
                 value={col.type}
-                onChange={(e) => {
-                  const nextType = e.target.value;
+                onValueChange={(nextType) => {
                   // Seed sensible defaults so the new type is usable immediately.
                   const options = nextType === 'status' ? DEFAULT_STATUS_OPTIONS : [];
                   onUpdateColumn(idx, { type: nextType, options, defaultValue: undefined });
                 }}
                 disabled={isTitle || isIdColumn}
-                className={`${selectCls} text-neutral-400 py-1 px-1.5 shrink-0 disabled:opacity-40 w-28 cursor-pointer truncate`}
-              >
-                {isIdColumn && <option value="id" hidden>{t('typeId')}</option>}
-                <option value="text">{t('typeText')}</option>
-                <option value="select">{t('typeSelect')}</option>
-                <option value="multi_select">{t('typeMultiSelect')}</option>
-                <option value="status">{t('typeStatus')}</option>
-                <option value="user">{t('typeUser')}</option>
-                <option value="multi_user">{t('typeMultiUser')}</option>
-                <option value="number">{t('typeNumber')}</option>
-                <option value="date">{t('typeDate')}</option>
-                <option value="datetime">{t('typeDateTime')}</option>
-                <option value="checkbox">{t('typeCheckbox')}</option>
-                <option value="url">{t('typeUrl')}</option>
-                <option value="email">{t('typeEmail')}</option>
-                <option value="phone">{t('typePhone')}</option>
-              </select>
+                size="sm"
+                className="w-28 text-neutral-400"
+                options={[
+                  ...(isIdColumn ? [{ value: 'id', label: t('typeId') }] : []),
+                  { value: 'text', label: t('typeText') },
+                  { value: 'select', label: t('typeSelect') },
+                  { value: 'multi_select', label: t('typeMultiSelect') },
+                  { value: 'status', label: t('typeStatus') },
+                  { value: 'user', label: t('typeUser') },
+                  { value: 'multi_user', label: t('typeMultiUser') },
+                  { value: 'number', label: t('typeNumber') },
+                  { value: 'date', label: t('typeDate') },
+                  { value: 'datetime', label: t('typeDateTime') },
+                  { value: 'checkbox', label: t('typeCheckbox') },
+                  { value: 'url', label: t('typeUrl') },
+                  { value: 'email', label: t('typeEmail') },
+                  { value: 'phone', label: t('typePhone') },
+                ]}
+              />
               {!isTitle ? (
                 <button onClick={() => onRemoveColumn(idx)} className="text-neutral-500 hover:text-red-400 p-0.5 transition-colors cursor-pointer shrink-0">
                   <X size={12} />
@@ -118,17 +120,20 @@ export default function PropertiesPanel({
                 <div className="flex items-center justify-between gap-2">
                   <span className="text-[10px] text-neutral-500 uppercase tracking-wider">{t('dateFormat')}</span>
                   <div className="flex items-center gap-2">
-                    <select
+                    <SimpleSelect
                       value={col.dateFormat || 'default'}
-                      onChange={(e) => onUpdateColumn(idx, { dateFormat: e.target.value })}
-                      className={`${selectCls} text-neutral-400 py-1 px-1.5 cursor-pointer w-28 truncate`}
-                    >
-                      <option value="default">{t('dateFormatDefault')}</option>
-                      <option value="iso">{t('dateFormatISO')}</option>
-                      <option value="uk">{t('dateFormatUK')}</option>
-                      <option value="us">{t('dateFormatUS')}</option>
-                      <option value="relative">{t('dateFormatRelative')}</option>
-                    </select>
+                      onValueChange={(v) => onUpdateColumn(idx, { dateFormat: v })}
+                      size="sm"
+                      className="w-28 text-neutral-400"
+                      aria-label={t('dateFormat')}
+                      options={[
+                        { value: 'default', label: t('dateFormatDefault') },
+                        { value: 'iso', label: t('dateFormatISO') },
+                        { value: 'uk', label: t('dateFormatUK') },
+                        { value: 'us', label: t('dateFormatUS') },
+                        { value: 'relative', label: t('dateFormatRelative') },
+                      ]}
+                    />
                     <span className="w-5 shrink-0" />
                   </div>
                 </div>
@@ -197,24 +202,27 @@ export default function PropertiesPanel({
                           style={{ color: c.text, width: `${Math.max(30, opt.value.length * 6 + 8)}px`, minWidth: '24px' }}
                         />
                         {col.type === 'status' && (
-                          <select
+                          <SimpleSelect
                             value={getStatusGroup(opt)}
-                            onClick={(e) => e.stopPropagation()}
-                            onChange={(e) => {
-                              const group = e.target.value as StatusGroup;
+                            stopPropagation
+                            onValueChange={(v) => {
+                              const group = v as StatusGroup;
                               const newOpts = [...(col.options || [])].map((o: string | SelectOption, i: number) =>
                                 i === optIdx ? { ...normalizeOption(o), group } : o,
                               );
                               onUpdateColumn(idx, { options: newOpts });
                             }}
-                            className="bg-black/20 border-none focus:outline-none rounded text-[9px] py-0 px-0.5 cursor-pointer ml-0.5"
+                            size="xs"
+                            className="ml-0.5 h-4 min-w-0 border-none bg-black/20 px-0.5 text-[9px] font-normal hover:border-transparent"
                             style={{ color: c.text }}
                             title={t('statusGroup')}
-                          >
-                            <option value="todo">{t('statusGroupTodo')}</option>
-                            <option value="in_progress">{t('statusGroupInProgress')}</option>
-                            <option value="complete">{t('statusGroupComplete')}</option>
-                          </select>
+                            aria-label={t('statusGroup')}
+                            options={[
+                              { value: 'todo', label: t('statusGroupTodo') },
+                              { value: 'in_progress', label: t('statusGroupInProgress') },
+                              { value: 'complete', label: t('statusGroupComplete') },
+                            ]}
+                          />
                         )}
                         {col.type !== 'multi_select' && (
                           <button

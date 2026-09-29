@@ -12,6 +12,7 @@
 import { Fragment, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { Copy, Check, RefreshCw, Pencil, Trash2, Undo2, Loader2, Save, X } from 'lucide-react';
+import { SimpleSelect } from '@/components/ui/select';
 import {
   deleteProspectInvite,
   refreshFromScoutForge,
@@ -256,10 +257,16 @@ export default function InviteStatusTable({
                         <input value={edit.appLogoUrl} onChange={(e) => setEdit({ ...edit, appLogoUrl: e.target.value })} placeholder={t('appLogoUrlLabel')} className={inputCls} />
                         <input value={edit.appTagline} onChange={(e) => setEdit({ ...edit, appTagline: e.target.value })} placeholder={t('appTaglineLabel')} className={inputCls} />
                         <input value={edit.appUrl} onChange={(e) => setEdit({ ...edit, appUrl: e.target.value })} placeholder={t('appUrlLabel')} className={inputCls} />
-                        <select value={edit.giftTier} onChange={(e) => setEdit({ ...edit, giftTier: e.target.value as 'startup' | 'professional' })} className={inputCls}>
-                          <option value="startup">{tBilling('tier_startup')}</option>
-                          <option value="professional">{tBilling('tier_professional')}</option>
-                        </select>
+                        <SimpleSelect
+                          value={edit.giftTier}
+                          onValueChange={(v) => setEdit({ ...edit, giftTier: v as 'startup' | 'professional' })}
+                          options={[
+                            { value: 'startup', label: tBilling('tier_startup') },
+                            { value: 'professional', label: tBilling('tier_professional') },
+                          ]}
+                          size="sm"
+                          className="w-full"
+                        />
                         <input type="number" min={1} value={edit.giftDays} onChange={(e) => setEdit({ ...edit, giftDays: Number(e.target.value) })} className={inputCls} />
                       </div>
                       {rowError?.id === invite.id && <p className="mt-2 text-xs text-red-400">{rowError.text}</p>}

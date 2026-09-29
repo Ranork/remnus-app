@@ -17,6 +17,7 @@ import RecurringBadge from './recurrence/RecurringBadge';
 import { updatePageIcon } from '@/lib/actions/page';
 import { updateDatabaseSchema } from '@/lib/actions/database';
 import { ConfirmDialog } from './ConfirmDialog';
+import { SimpleSelect } from '@/components/ui/select';
 
 // ── Coarse-pointer (touch) detection via useSyncExternalStore ───────────────────
 const COARSE_POINTER_QUERY = '(hover: none)';
@@ -977,15 +978,13 @@ export default function TableLayout({
                   return (
                     <div className="flex flex-col gap-1.5 mt-1">
                       <div className="flex items-center gap-1">
-                        <select
+                        <SimpleSelect
                           value={activeFilter.operator}
-                          onChange={(e) => handleUpdateFilter(activeFilter.id, { operator: e.target.value as FilterOperator })}
-                          className="bg-neutral-950 border border-neutral-800 text-neutral-300 text-xs py-1 px-2 rounded outline-none cursor-pointer flex-1 min-w-0"
-                        >
-                          {OPERATORS.map((op) => (
-                            <option key={op.value} value={op.value}>{op.label}</option>
-                          ))}
-                        </select>
+                          onValueChange={(v) => handleUpdateFilter(activeFilter.id, { operator: v as FilterOperator })}
+                          options={OPERATORS.map((op) => ({ value: op.value, label: op.label }))}
+                          size="sm"
+                          className="min-w-0 flex-1 shrink"
+                        />
                         <button
                           onClick={() => handleDeleteFilter(activeFilter.id)}
                           className="text-neutral-600 hover:text-red-400 transition-colors cursor-pointer p-0.5"

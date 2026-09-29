@@ -306,6 +306,7 @@
     "agentsConnectNudge": "Bağla"
   },
   "WorkspaceSettings": {
+    "roleLabel": "Rol",
     "title": "Çalışma Alanı Ayarları",
     "tabGeneral": "Genel",
     "tabMembers": "Üyeler",
@@ -2649,5 +2650,9 @@
       "ctaPrimary": "Ücretsiz başla",
       "ctaSecondary": "Dokümanları oku"
     }
+  },
+  "UI": {
+    "close": "Kapat",
+    "actionFailed": "İşlem tamamlanamadı. Lütfen tekrar deneyin."
   }
 }

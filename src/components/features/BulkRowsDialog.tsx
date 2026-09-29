@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { X, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { SimpleSelect } from '@/components/ui/select';
 import { parseTabularPaste } from '@/lib/utils/parseTabularPaste';
 import { CONTENT_HEADER } from '@/lib/utils/propertyCoercion';
 import { bulkCreatePages, bulkUpdatePagesByMatch } from '@/lib/actions/page';
@@ -189,15 +190,13 @@ export function BulkRowsDialog({ databaseId, schema, onClose }: BulkRowsDialogPr
               {mode === 'update' && (
                 <div className="flex items-center gap-2">
                   <label className="text-xs text-neutral-400 shrink-0">{t('bulkImport.matchColumn')}</label>
-                  <select
+                  <SimpleSelect
                     value={matchColumnId}
-                    onChange={(e) => setMatchColumnId(e.target.value)}
-                    className="flex-1 bg-neutral-900 border border-neutral-800 rounded px-2 py-1.5 text-xs text-neutral-200"
-                  >
-                    {matchableColumns.map((c) => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
-                  </select>
+                    onValueChange={setMatchColumnId}
+                    options={matchableColumns.map((c) => ({ value: c.id, label: c.name }))}
+                    aria-label={t('bulkImport.matchColumn')}
+                    className="flex-1"
+                  />
                 </div>
               )}
 

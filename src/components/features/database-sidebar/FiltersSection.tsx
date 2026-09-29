@@ -4,6 +4,7 @@ import { Plus, X } from 'lucide-react';
 import { type SelectOption, normalizeOption } from '@/lib/types/properties';
 import type { ViewFilter, FilterOperator } from '@/lib/types/views';
 import { Checkbox, selectCls } from './shared';
+import { SimpleSelect } from '@/components/ui/select';
 
 const OPERATOR_KEYS: { value: FilterOperator; key: string; needsValue: boolean }[] = [
   { value: 'contains',     key: 'operatorContains',       needsValue: true  },
@@ -65,20 +66,18 @@ export default function FiltersSection({ filters, schema, onFiltersChange }: Fil
             return (
               <div key={filter.id} className="px-4 py-2.5 border-b border-neutral-800/40 flex flex-col gap-1.5">
                 <div className="flex items-center gap-1.5">
-                  <select
+                  <SimpleSelect
                     value={filter.columnId}
-                    onChange={(e) => updateFilter(filter.id, { columnId: e.target.value })}
-                    className={`${selectCls} flex-1 min-w-0`}
-                  >
-                    {schema.map((col) => <option key={col.id} value={col.id}>{col.name}</option>)}
-                  </select>
-                  <select
+                    onValueChange={(v) => updateFilter(filter.id, { columnId: v })}
+                    options={schema.map((col) => ({ value: col.id, label: col.name }))}
+                    className="min-w-0 flex-1 shrink"
+                  />
+                  <SimpleSelect
                     value={filter.operator}
-                    onChange={(e) => updateFilter(filter.id, { operator: e.target.value as FilterOperator })}
-                    className={`${selectCls} flex-1 min-w-0`}
-                  >
-                    {OPERATORS.map((op) => <option key={op.value} value={op.value}>{op.label}</option>)}
-                  </select>
+                    onValueChange={(v) => updateFilter(filter.id, { operator: v as FilterOperator })}
+                    options={OPERATORS.map((op) => ({ value: op.value, label: op.label }))}
+                    className="min-w-0 flex-1 shrink"
+                  />
                   <button
                     onClick={() => deleteFilter(filter.id)}
                     className="text-neutral-600 hover:text-red-400 transition-colors cursor-pointer shrink-0 p-0.5"

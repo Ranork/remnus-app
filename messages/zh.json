@@ -306,6 +306,7 @@
     "agentsConnectNudge": "连接"
   },
   "WorkspaceSettings": {
+    "roleLabel": "角色",
     "title": "工作区设置",
     "tabGeneral": "常规",
     "tabMembers": "成员",
@@ -2321,5 +2322,9 @@
     "localTruncated": "显示最近的 {count} 个",
     "localOpenFull": "打开完整地图",
     "localEmpty": "目前还没有任何内容与此页面相连。"
+  },
+  "UI": {
+    "close": "关闭",
+    "actionFailed": "操作未完成，请重试。"
   }
 }

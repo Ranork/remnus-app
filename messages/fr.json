@@ -306,6 +306,7 @@
     "agentsConnectNudge": "Connecter"
   },
   "WorkspaceSettings": {
+    "roleLabel": "Rôle",
     "title": "Paramètres de l'Espace",
     "tabGeneral": "Général",
     "tabMembers": "Membres",
@@ -2321,5 +2322,9 @@
     "localTruncated": "Les {count} plus proches sont affichés",
     "localOpenFull": "Ouvrir la carte complète",
     "localEmpty": "Rien n'est encore relié à cette page."
+  },
+  "UI": {
+    "close": "Fermer",
+    "actionFailed": "Cela n’a pas fonctionné. Veuillez réessayer."
   }
 }

@@ -145,6 +145,7 @@ Repository monorepo değildir. Ana npm uygulamasına ek olarak dağıtım için 
 - Server action/component'ta doğrudan `auth()` çağırma; `src/lib/auth/session.ts` içindeki `getCurrentUser()` kullan.
 - Proje pencereleri workspace'e kilitli oturum kullanır ve kilit **varsayılan-ret**tir: `auth()` kilitli oturumu çıkış yapmış sayar, `getCurrentUser()` hata fırlatır. Bir action yalnızca workspace içeriğiyse `getCurrentUserAllowingWorkspaceLock()` kullanıp çözdüğü workspace için `assertWorkspaceLockAllows()` çağırmalıdır (admin kısayolundan önce). Ayrıntı: `AGENTS.md` → **Project Install** §4.
 - Workspace/database erişiminde sırasıyla `assertWorkspaceAccess` veya `assertDatabaseAccess` uygula.
+- Yeni UI `src/components/ui/` (shadcn/ui + Base UI) kullanır: native `<select>` yok (`SimpleSelect`), async butonlarda `Button loading`, async `ConfirmDialog`. shadcn token sınıfları (`bg-popover` vb.) tanımlı değil, palet sınıflarını kullan.
 - Workspace UI flat/borderless ve üç katmanlı neutral palette kullanır; auth sayfalarının rounded-card stili bilinçli istisnadır.
 - Yapısal sidebar mutasyonları dışında content editlerinde `revalidatePath('/')` kullanma; optimistic client akışını koru.
 - `workspace_items`, `standalone_pages`, `databases`, `pages` insertlerinde `createdAt`/`updatedAt` değerlerini açıkça `new Date()` ile yaz.

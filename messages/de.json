@@ -306,6 +306,7 @@
     "agentsConnectNudge": "Verbinden"
   },
   "WorkspaceSettings": {
+    "roleLabel": "Rolle",
     "title": "Arbeitsbereichseinstellungen",
     "tabGeneral": "Allgemein",
     "tabMembers": "Mitglieder",
@@ -2321,5 +2322,9 @@
     "localTruncated": "Die nächsten {count} werden angezeigt",
     "localOpenFull": "Ganze Karte öffnen",
     "localEmpty": "Mit dieser Seite ist noch nichts verbunden."
+  },
+  "UI": {
+    "close": "Schließen",
+    "actionFailed": "Das hat nicht geklappt. Bitte versuche es erneut."
   }
 }

@@ -5,6 +5,7 @@ import { BrainCircuit, Check, ChevronRight, Loader2, ShieldCheck } from 'lucide-
 import { useTranslations } from 'next-intl';
 import { getPageKnowledge, markPageKnowledgeReviewed, updatePageKnowledge } from '@/lib/actions/knowledge';
 import type { KnowledgeCorpusItem, KnowledgeStatus } from '@/lib/services/knowledge';
+import { SimpleSelect } from '@/components/ui/select';
 
 const EMPTY_FORM = { conceptType: '', description: '', tags: '', sources: '', status: 'draft' as KnowledgeStatus, staleAfter: '' };
 
@@ -95,11 +96,17 @@ export default function KnowledgeContextPanel({ workspaceId, pageId }: { workspa
                 </label>
                 <label className="space-y-1 text-[11px] text-neutral-500">
                   <span>{t('knowledgeStatus')}</span>
-                  <select value={form.status} onChange={event => setForm(current => ({ ...current, status: event.target.value as KnowledgeStatus }))} className="w-full border-b border-neutral-700 bg-neutral-900 px-1 py-1.5 text-xs text-neutral-200 outline-none focus:border-blue-500">
-                    <option value="draft">{t('knowledgeStatusDraft')}</option>
-                    <option value="stable">{t('knowledgeStatusStable')}</option>
-                    <option value="deprecated">{t('knowledgeStatusDeprecated')}</option>
-                  </select>
+                  <SimpleSelect
+                    value={form.status}
+                    onValueChange={value => setForm(current => ({ ...current, status: value as KnowledgeStatus }))}
+                    options={[
+                      { value: 'draft', label: t('knowledgeStatusDraft') },
+                      { value: 'stable', label: t('knowledgeStatusStable') },
+                      { value: 'deprecated', label: t('knowledgeStatusDeprecated') },
+                    ]}
+                    aria-label={t('knowledgeStatus')}
+                    className="w-full"
+                  />
                 </label>
               </div>
               <label className="block space-y-1 text-[11px] text-neutral-500">

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Plus, X } from 'lucide-react';
+import { SimpleSelect, type SelectOption } from '@/components/ui/select';
 import {
   getDashboardEditorOptions,
   saveDashboardBlock,
@@ -43,7 +44,11 @@ const DATE_TYPES = new Set(['date', 'datetime']);
 const SOURCE_TYPES = new Set<DashboardBlockType>(['metric', 'chart', 'list']);
 
 const inputCls = 'w-full border-b border-neutral-700 bg-transparent px-1 py-1.5 text-xs text-neutral-200 outline-none placeholder:text-neutral-600 focus:border-neutral-500';
-const selectCls = `${inputCls} bg-neutral-900`;
+
+/** A block-editor dropdown: full width, string values. */
+function Sel({ value, onChange, options }: { value: string; onChange: (value: string) => void; options: SelectOption[] }) {
+  return <SimpleSelect value={value} onValueChange={onChange} options={options} className="w-full" />;
+}
 
 function emptyDraft(type: DashboardBlockType): Draft {
   switch (type) {
@@ -219,24 +224,27 @@ export default function DashboardBlockEditor({
           </Field>
 
           <Field label={t('editor.width')}>
-            <select className={selectCls} value={draft.width ?? ''} onChange={(e) => set({ width: e.target.value || undefined })}>
-              <option value="">{t('editor.widthAuto')}</option>
-              <option value="quarter">{t('editor.widthQuarter')}</option>
-              <option value="half">{t('editor.widthHalf')}</option>
-              <option value="full">{t('editor.widthFull')}</option>
-            </select>
+            <Sel
+              value={draft.width ?? ''}
+              onChange={(v) => set({ width: v || undefined })}
+              options={[
+                { value: '', label: t('editor.widthAuto') },
+                { value: 'quarter', label: t('editor.widthQuarter') },
+                { value: 'half', label: t('editor.widthHalf') },
+                { value: 'full', label: t('editor.widthFull') },
+              ]}
+            />
           </Field>
 
           {!options && !failed && <p className="text-xs text-neutral-600">{t('editor.loading')}</p>}
 
           {options && (SOURCE_TYPES.has(type) || type === 'database_embed') && (
             <Field label={`${t('editor.database')} *`}>
-              <select className={selectCls} value={databaseId} onChange={(e) => changeDatabase(e.target.value)}>
-                <option value="">{t('editor.chooseDatabase')}</option>
-                {options.databases.map((d) => (
-                  <option key={d.id} value={d.id}>{d.name}</option>
-                ))}
-              </select>
+              <Sel
+                value={databaseId}
+                onChange={changeDatabase}
+                options={[{ value: '', label: t('editor.chooseDatabase') }, ...options.databases.map((d) => ({ value: d.id, label: d.name }))]}
+              />
             </Field>
           )}
 
@@ -251,11 +259,11 @@ export default function DashboardBlockEditor({
           {options && type === 'metric' && database && (
             <>
               <Field label={t('editor.aggregate')}>
-                <select className={selectCls} value={draft.aggregate ?? 'count'} onChange={(e) => set({ aggregate: e.target.value })}>
-                  {(['count', 'sum', 'avg', 'min', 'max'] as const).map((a) => (
-                    <option key={a} value={a}>{t(`editor.aggregates.${a}`)}</option>
-                  ))}
-                </select>
+                <Sel
+                  value={draft.aggregate ?? 'count'}
+                  onChange={(aggregate) => set({ aggregate })}
+                  options={(['count', 'sum', 'avg', 'min', 'max'] as const).map((a) => ({ value: a, label: t(`editor.aggregates.${a}`) }))}
+                />
               </Field>
               {draft.aggregate && draft.aggregate !== 'count' && (
                 <ColumnSelect label={`${t('editor.column')} *`} database={database} value={draft.columnId} only={(c) => c.type === 'number'} onChange={(columnId) => set({ columnId })} />
@@ -288,27 +296,35 @@ export default function DashboardBlockEditor({
           {options && type === 'chart' && database && (
             <>
               <Field label={t('editor.variant')}>
-                <select className={selectCls} value={draft.variant} onChange={(e) => set({ variant: e.target.value })}>
-                  {(['donut', 'bar', 'line'] as const).map((v) => (
-                    <option key={v} value={v}>{t(`editor.variants.${v}`)}</option>
-                  ))}
-                </select>
+                <Sel
+                  value={draft.variant}
+                  onChange={(variant) => set({ variant })}
+                  options={(['donut', 'bar', 'line'] as const).map((v) => ({ value: v, label: t(`editor.variants.${v}`) }))}
+                />
               </Field>
               <ColumnSelect label={`${tDb('groupBy')} *`} database={database} value={draft.groupBy} onChange={(groupBy) => set({ groupBy })} />
               {DATE_TYPES.has(database.columns.find((c) => c.id === draft.groupBy)?.type ?? '') && (
                 <Field label={t('editor.bucket')}>
-                  <select className={selectCls} value={draft.bucket ?? ''} onChange={(e) => set({ bucket: e.target.value || undefined })}>
-                    <option value="">{t('editor.buckets.day')}</option>
-                    <option value="week">{t('editor.buckets.week')}</option>
-                    <option value="month">{t('editor.buckets.month')}</option>
-                  </select>
+                  <Sel
+                    value={draft.bucket ?? ''}
+                    onChange={(v) => set({ bucket: v || undefined })}
+                    options={[
+                      { value: '', label: t('editor.buckets.day') },
+                      { value: 'week', label: t('editor.buckets.week') },
+                      { value: 'month', label: t('editor.buckets.month') },
+                    ]}
+                  />
                 </Field>
               )}
               <Field label={t('editor.aggregate')}>
-                <select className={selectCls} value={draft.aggregate ?? 'count'} onChange={(e) => set({ aggregate: e.target.value })}>
-                  <option value="count">{t('editor.aggregates.count')}</option>
-                  <option value="sum">{t('editor.aggregates.sum')}</option>
-                </select>
+                <Sel
+                  value={draft.aggregate ?? 'count'}
+                  onChange={(aggregate) => set({ aggregate })}
+                  options={[
+                    { value: 'count', label: t('editor.aggregates.count') },
+                    { value: 'sum', label: t('editor.aggregates.sum') },
+                  ]}
+                />
               </Field>
               {draft.aggregate === 'sum' && (
                 <ColumnSelect label={`${t('editor.valueColumn')} *`} database={database} value={draft.valueColumnId} only={(c) => c.type === 'number'} onChange={(valueColumnId) => set({ valueColumnId })} />
@@ -322,23 +338,22 @@ export default function DashboardBlockEditor({
               <LimitField value={draft.limit} fallback={5} min={1} max={20} onChange={(limit) => set({ limit })} />
               <div className="grid grid-cols-2 gap-3">
                 <Field label={t('editor.sortBy')}>
-                  <select
-                    className={selectCls}
+                  <Sel
                     value={draft.sort?.columnId ?? ''}
-                    onChange={(e) => set({ sort: e.target.value ? { columnId: e.target.value, direction: draft.sort?.direction ?? 'asc' } : undefined })}
-                  >
-                    <option value="">{t('editor.sortNone')}</option>
-                    {database.columns.map((c) => (
-                      <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
-                  </select>
+                    onChange={(columnId) => set({ sort: columnId ? { columnId, direction: draft.sort?.direction ?? 'asc' } : undefined })}
+                    options={[{ value: '', label: t('editor.sortNone') }, ...database.columns.map((c) => ({ value: c.id, label: c.name }))]}
+                  />
                 </Field>
                 {draft.sort && (
                   <Field label={t('editor.direction')}>
-                    <select className={selectCls} value={draft.sort.direction} onChange={(e) => set({ sort: { ...draft.sort, direction: e.target.value } })}>
-                      <option value="asc">{tDb('sortAscending')}</option>
-                      <option value="desc">{tDb('sortDescending')}</option>
-                    </select>
+                    <Sel
+                      value={draft.sort.direction}
+                      onChange={(direction) => set({ sort: { ...draft.sort, direction } })}
+                      options={[
+                        { value: 'asc', label: tDb('sortAscending') },
+                        { value: 'desc', label: tDb('sortDescending') },
+                      ]}
+                    />
                   </Field>
                 )}
               </div>
@@ -367,12 +382,11 @@ export default function DashboardBlockEditor({
           {options && type === 'database_embed' && database && (
             <>
               <Field label={t('editor.view')}>
-                <select className={selectCls} value={draft.viewId ?? ''} onChange={(e) => set({ viewId: e.target.value || undefined })}>
-                  <option value="">{t('editor.firstView')}</option>
-                  {database.views.map((v) => (
-                    <option key={v.id} value={v.id}>{v.name}</option>
-                  ))}
-                </select>
+                <Sel
+                  value={draft.viewId ?? ''}
+                  onChange={(v) => set({ viewId: v || undefined })}
+                  options={[{ value: '', label: t('editor.firstView') }, ...database.views.map((v) => ({ value: v.id, label: v.name }))]}
+                />
               </Field>
               <LimitField value={draft.limit} fallback={10} min={1} max={50} onChange={(limit) => set({ limit })} />
             </>
@@ -389,11 +403,11 @@ export default function DashboardBlockEditor({
                 />
               </Field>
               <Field label={t('editor.tone')}>
-                <select className={selectCls} value={draft.tone ?? 'default'} onChange={(e) => set({ tone: e.target.value === 'default' ? undefined : e.target.value })}>
-                  {(['default', 'info', 'warning'] as const).map((tone) => (
-                    <option key={tone} value={tone}>{t(`editor.tones.${tone}`)}</option>
-                  ))}
-                </select>
+                <Sel
+                  value={draft.tone ?? 'default'}
+                  onChange={(tone) => set({ tone: tone === 'default' ? undefined : tone })}
+                  options={(['default', 'info', 'warning'] as const).map((tone) => ({ value: tone, label: t(`editor.tones.${tone}`) }))}
+                />
               </Field>
             </>
           )}
@@ -404,16 +418,11 @@ export default function DashboardBlockEditor({
                 {(draft.items as { itemId: string; label?: string }[]).map((link, i) => (
                   <div key={i} className="flex items-start gap-2">
                     <div className="min-w-0 flex-1 space-y-1">
-                      <select
-                        className={selectCls}
+                      <Sel
                         value={link.itemId}
-                        onChange={(e) => set({ items: draft.items.map((l: object, k: number) => (k === i ? { ...l, itemId: e.target.value } : l)) })}
-                      >
-                        <option value="">{t('editor.chooseItem')}</option>
-                        {options.items.map((item) => (
-                          <option key={item.id} value={item.id}>{item.title || t('untitled')}</option>
-                        ))}
-                      </select>
+                        onChange={(itemId) => set({ items: draft.items.map((l: object, k: number) => (k === i ? { ...l, itemId } : l)) })}
+                        options={[{ value: '', label: t('editor.chooseItem') }, ...options.items.map((item) => ({ value: item.id, label: item.title || t('untitled') }))]}
+                      />
                       <input
                         className={inputCls}
                         placeholder={t('editor.linkLabel')}
@@ -499,12 +508,11 @@ function ColumnSelect({
   const columns = only ? database.columns.filter(only) : database.columns;
   return (
     <Field label={label}>
-      <select className={selectCls} value={value ?? ''} onChange={(e) => onChange(e.target.value)}>
-        <option value="">{t('editor.chooseColumn')}</option>
-        {columns.map((c) => (
-          <option key={c.id} value={c.id}>{c.name}</option>
-        ))}
-      </select>
+      <Sel
+        value={value ?? ''}
+        onChange={onChange}
+        options={[{ value: '', label: t('editor.chooseColumn') }, ...columns.map((c) => ({ value: c.id, label: c.name }))]}
+      />
     </Field>
   );
 }
@@ -532,26 +540,24 @@ function FiltersEditor({
           return (
             <div key={i} className="flex items-start gap-2">
               <div className="grid min-w-0 flex-1 grid-cols-2 gap-x-2 gap-y-1">
-                <select className={selectCls} value={filter.columnId} onChange={(e) => update(i, { columnId: e.target.value, value: '' })}>
-                  <option value="">{t('editor.chooseColumn')}</option>
-                  {database.columns.map((c) => (
-                    <option key={c.id} value={c.id}>{c.name}</option>
-                  ))}
-                </select>
-                <select className={selectCls} value={filter.operator} onChange={(e) => update(i, { operator: e.target.value })}>
-                  {OPERATORS.map((op) => (
-                    <option key={op} value={op}>{tDb(OPERATOR_LABELS[op])}</option>
-                  ))}
-                </select>
+                <Sel
+                  value={filter.columnId}
+                  onChange={(columnId) => update(i, { columnId, value: '' })}
+                  options={[{ value: '', label: t('editor.chooseColumn') }, ...database.columns.map((c) => ({ value: c.id, label: c.name }))]}
+                />
+                <Sel
+                  value={filter.operator}
+                  onChange={(operator) => update(i, { operator })}
+                  options={OPERATORS.map((op) => ({ value: op, label: tDb(OPERATOR_LABELS[op]) }))}
+                />
                 {needsValue && (
                   <div className="col-span-2">
                     {pickOption ? (
-                      <select className={selectCls} value={filter.value ?? ''} onChange={(e) => update(i, { value: e.target.value })}>
-                        <option value="">{t('editor.chooseValue')}</option>
-                        {column.options.map((o) => (
-                          <option key={o} value={o}>{o}</option>
-                        ))}
-                      </select>
+                      <Sel
+                        value={filter.value ?? ''}
+                        onChange={(v) => update(i, { value: v })}
+                        options={[{ value: '', label: t('editor.chooseValue') }, ...column.options.map((o) => ({ value: o, label: o }))]}
+                      />
                     ) : (
                       <input className={inputCls} placeholder={tDb('filterValue')} value={filter.value ?? ''} onChange={(e) => update(i, { value: e.target.value })} />
                     )}

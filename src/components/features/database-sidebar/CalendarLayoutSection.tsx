@@ -2,7 +2,8 @@
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { GripVertical, ArrowLeft, ArrowUp, ArrowRight, ArrowDown } from 'lucide-react';
-import { getPropertyIcon, Checkbox, selectCls, CollapsibleSection } from './shared';
+import { getPropertyIcon, Checkbox, CollapsibleSection } from './shared';
+import { SimpleSelect } from '@/components/ui/select';
 
 interface CalendarLayoutSectionProps {
   schema: any[];
@@ -93,10 +94,12 @@ export default function CalendarLayoutSection({
           <div>
             <span className="block text-[10px] text-neutral-500 uppercase tracking-wider mb-1.5">{t('calendarBy')}</span>
             {dateColumns.length > 0 ? (
-              <select value={dateCol} onChange={(e) => onDateColChange?.(e.target.value)} className={`${selectCls} w-full`}>
-                <option value="">Select property…</option>
-                {dateColumns.map((col: any) => <option key={col.id} value={col.id}>{col.name}</option>)}
-              </select>
+              <SimpleSelect
+                value={dateCol ?? ''}
+                onValueChange={(v) => onDateColChange?.(v)}
+                options={[{ value: '', label: 'Select property…' }, ...dateColumns.map((col: any) => ({ value: col.id, label: col.name }))]}
+                className="w-full"
+              />
             ) : (
               <span className="text-xs text-amber-500/80">{t('addDateForCalendar')}</span>
             )}
@@ -104,17 +107,21 @@ export default function CalendarLayoutSection({
           <div className="flex gap-3">
             <div className="flex-1">
               <span className="block text-[10px] text-neutral-500 uppercase tracking-wider mb-1.5">View</span>
-              <select value={viewMode} onChange={(e) => onViewModeChange?.(e.target.value as 'month' | 'week')} className={`${selectCls} w-full`}>
-                <option value="month">Month</option>
-                <option value="week">Week</option>
-              </select>
+              <SimpleSelect
+                value={viewMode ?? 'month'}
+                onValueChange={(v) => onViewModeChange?.(v as 'month' | 'week')}
+                options={[{ value: 'month', label: 'Month' }, { value: 'week', label: 'Week' }]}
+                className="w-full"
+              />
             </div>
             <div className="flex-1">
               <span className="block text-[10px] text-neutral-500 uppercase tracking-wider mb-1.5">{t('weekStart')}</span>
-              <select value={firstDayOfWeek || 'sunday'} onChange={(e) => onFirstDayOfWeekChange?.(e.target.value as 'sunday' | 'monday')} className={`${selectCls} w-full`}>
-                <option value="sunday">{t('sunday')}</option>
-                <option value="monday">{t('monday')}</option>
-              </select>
+              <SimpleSelect
+                value={firstDayOfWeek || 'sunday'}
+                onValueChange={(v) => onFirstDayOfWeekChange?.(v as 'sunday' | 'monday')}
+                options={[{ value: 'sunday', label: t('sunday') }, { value: 'monday', label: t('monday') }]}
+                className="w-full"
+              />
             </div>
           </div>
         </div>
@@ -159,10 +166,12 @@ export default function CalendarLayoutSection({
           </button>
           <div className="flex items-center justify-between gap-3">
             <span className="text-xs text-neutral-300 shrink-0">{t('propertyText')}</span>
-            <select value={propertyTextClamp} onChange={(e) => onPropertyTextClampChange?.(e.target.value as 'truncate' | 'wrap')} className={`${selectCls} w-28 shrink-0 cursor-pointer`}>
-              <option value="truncate">{t('truncate')}</option>
-              <option value="wrap">{t('wrap')}</option>
-            </select>
+            <SimpleSelect
+              value={propertyTextClamp}
+              onValueChange={(v) => onPropertyTextClampChange?.(v as 'truncate' | 'wrap')}
+              options={[{ value: 'truncate', label: t('truncate') }, { value: 'wrap', label: t('wrap') }]}
+              className="w-28"
+            />
           </div>
         </div>
       </CollapsibleSection>
@@ -173,17 +182,21 @@ export default function CalendarLayoutSection({
           <div className="px-4 pb-3 flex flex-col gap-2">
             <div className="flex items-center justify-between gap-3">
               <span className="text-xs text-neutral-300 shrink-0">{t('cardBackground')}</span>
-              <select value={cardBgCol ?? ''} onChange={(e) => onCardBgColChange?.(e.target.value)} className={`${selectCls} w-32 shrink-0 cursor-pointer truncate`}>
-                <option value="">None</option>
-                {colorColumns.map((col: any) => <option key={col.id} value={col.id}>{col.name}</option>)}
-              </select>
+              <SimpleSelect
+                value={cardBgCol ?? ''}
+                onValueChange={(v) => onCardBgColChange?.(v)}
+                options={[{ value: '', label: 'None' }, ...colorColumns.map((col: any) => ({ value: col.id, label: col.name }))]}
+                className="w-32"
+              />
             </div>
             <div className="flex items-center justify-between gap-3">
               <span className="text-xs text-neutral-300 shrink-0">{t('accentLine')}</span>
-              <select value={cardColorCol ?? ''} onChange={(e) => onCardColorColChange?.(e.target.value)} className={`${selectCls} w-32 shrink-0 cursor-pointer truncate`}>
-                <option value="">None</option>
-                {colorColumns.map((col: any) => <option key={col.id} value={col.id}>{col.name}</option>)}
-              </select>
+              <SimpleSelect
+                value={cardColorCol ?? ''}
+                onValueChange={(v) => onCardColorColChange?.(v)}
+                options={[{ value: '', label: 'None' }, ...colorColumns.map((col: any) => ({ value: col.id, label: col.name }))]}
+                className="w-32"
+              />
             </div>
             {cardColorCol && (
               <div className="flex items-center justify-between gap-3">

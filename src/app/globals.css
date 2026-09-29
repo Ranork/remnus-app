@@ -645,6 +645,13 @@ pre,
   color: white;
   letter-spacing: -0.01em;
 }
+/* h1/h2 are pure white on the dark themes; on the light theme that is white on white,
+   so the heading vanished. neutral-50 is the darkest text colour there. */
+[data-theme="catppuccin"] .prose-editor h1,
+[data-theme="catppuccin"] .prose-editor h2 {
+  color: var(--color-neutral-50);
+}
+
 .prose-editor h3 {
   position: relative;
   font-size: 1.2rem;

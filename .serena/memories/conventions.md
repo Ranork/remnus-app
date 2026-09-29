@@ -226,3 +226,9 @@ Primary sources: `AI.md`, `AGENTS.md`, `messages/`, `src/auth.config.ts`, `src/l
   the committed config.
 - **Deep links choose no URL.** `remnus://open` carries only a shape-checked workspace id; the
   page builds `/w/<id>` on its own origin.
+
+## UI primitives (R3, 2026-09-29)
+- **`src/components/ui/`** holds shadcn/ui components on **Base UI** (`@base-ui/react`, `class-variance-authority`; `components.json` style `base-nova`, `cn` = `src/lib/cn.ts`). Colours come from the app's own neutral/blue/red palette (never shadcn's `bg-popover`-style tokens: they are not defined in `globals.css` and a missing token renders transparent).
+- **No native `<select>` in new UI**: use `SimpleSelect` (`options`, `size`, `className`, `aria-label`); the popup portals to `<body>` at z-9999 so it opens in front of z-300 modals. Grouped/custom lists: compose `Select*` parts.
+- **Async buttons**: `Button` `loading` (spinner, disabled, `aria-busy`, width kept). **`ConfirmDialog.onConfirm` may return a promise**: dialog stays open with a spinner, buttons/Escape held, rejection shown inside; on success it stays busy, so the caller must unmount it (setState false / navigate). A sync `onConfirm` still closes itself.
+- `UI` i18n namespace (close, actionFailed) is for these primitives. Add keys as text inserts, not by re-serialising a locale file (hand formatting would churn).

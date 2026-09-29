@@ -88,14 +88,13 @@ export default function ShareModal({ pageId, workspaceId, isAdmin, onClose }: Pr
     setShowRevokeConfirm(true);
   };
 
-  const doRevoke = () => {
+  // Async on purpose: the confirm dialog stays open with a spinner until the share is gone.
+  const doRevoke = async () => {
     if (!existing) return;
+    await revokeShare(existing.id, workspaceId);
+    setExisting(null);
+    setChildrenShared(null);
     setShowRevokeConfirm(false);
-    startTransition(async () => {
-      await revokeShare(existing.id, workspaceId);
-      setExisting(null);
-      setChildrenShared(null);
-    });
   };
 
   const handleCopy = () => {

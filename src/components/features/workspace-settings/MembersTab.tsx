@@ -1,7 +1,7 @@
 'use client';
 import { useState, useTransition, useEffect } from 'react';
 import { useTranslations } from 'next-intl';
-import { UserPlus, AlertCircle, Check, Trash, Copy, Mail, Hand, X } from 'lucide-react';
+import { UserPlus, AlertCircle, Check, Trash, Copy, Mail, Hand, X, Loader2 } from 'lucide-react';
 import {
   inviteToWorkspace,
   removeFromWorkspace,
@@ -17,6 +17,7 @@ import {
 } from '@/lib/actions/accessRequests';
 import type { CurrentUser, WorkspaceMember } from './types';
 import { ConfirmDialog } from '@/components/features/ConfirmDialog';
+import { SimpleSelect } from '@/components/ui/select';
 
 interface MembersTabProps {
   workspaceId: string;
@@ -37,6 +38,10 @@ export default function MembersTab({
 }: MembersTabProps) {
   const t = useTranslations('WorkspaceSettings');
   const tBilling = useTranslations('Billing');
+  const roleOptions = [
+    { value: 'member', label: t('roleMember') },
+    { value: 'viewer', label: t('roleViewer') },
+  ];
 
   const [seatUsage, setSeatUsage] = useState<{ used: number; limit: number } | null>(null);
   const [invites, setInvites] = useState<{ id: string; email: string; role: string; inviteLink: string }[]>([]);
@@ -46,6 +51,7 @@ export default function MembersTab({
     { id: string; name: string | null; email: string | null; projectName: string | null; note: string | null }[]
   >([]);
   const [requestPendingId, setRequestPendingId] = useState<string | null>(null);
+  const [revokingInviteId, setRevokingInviteId] = useState<string | null>(null);
   const [inviteLink, setInviteLink] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
@@ -84,7 +90,10 @@ export default function MembersTab({
   };
 
   const handleRevokeInvite = async (id: string) => {
+    if (revokingInviteId) return;
+    setRevokingInviteId(id);
     await revokeWorkspaceInvite(id).catch(() => {});
+    setRevokingInviteId(null);
     loadInvites();
     getWorkspaceSeatUsage(workspaceId).then((u) => setSeatUsage(u)).catch(() => {});
   };
@@ -204,15 +213,14 @@ export default function MembersTab({
               disabled={isInviting}
               className="flex-1 bg-neutral-900 border border-neutral-700 rounded-md text-neutral-100 placeholder-neutral-600 px-3 py-1.5 text-sm outline-none focus:border-blue-500/60 transition-colors disabled:opacity-50"
             />
-            <select
+            <SimpleSelect
               value={inviteRole}
-              onChange={(e) => setInviteRole(e.target.value as 'member' | 'viewer')}
+              onValueChange={(v) => setInviteRole(v as 'member' | 'viewer')}
+              options={roleOptions}
               disabled={isInviting}
-              className="bg-neutral-900 border border-neutral-700 rounded-md text-neutral-100 px-2 py-1.5 text-xs outline-none cursor-pointer focus:border-blue-500/60"
-            >
-              <option value="member">{t('roleMember')}</option>
-              <option value="viewer">{t('roleViewer')}</option>
-            </select>
+              aria-label={t('roleLabel')}
+              className="h-auto self-stretch rounded-md bg-neutral-900 text-neutral-100"
+            />
             <button
               type="submit"
               disabled={isInviting || !inviteEmail.trim() || atSeatLimit}
@@ -336,8 +344,8 @@ export default function MembersTab({
                 <button onClick={() => copyLink(inv.inviteLink)} className="shrink-0 text-neutral-500 hover:text-neutral-200 transition-colors" title={tBilling('copy')}>
                   <Copy size={13} />
                 </button>
-                <button onClick={() => handleRevokeInvite(inv.id)} className="shrink-0 text-neutral-500 hover:text-red-400 transition-colors" title={tBilling('revokeInvite')}>
-                  <Trash size={13} />
+                <button onClick={() => handleRevokeInvite(inv.id)} disabled={!!revokingInviteId} aria-busy={revokingInviteId === inv.id} className="shrink-0 text-neutral-500 hover:text-red-400 transition-colors disabled:opacity-50" title={tBilling('revokeInvite')}>
+                  {revokingInviteId === inv.id ? <Loader2 size={13} className="animate-spin" /> : <Trash size={13} />}
                 </button>
               </div>
             ))}
@@ -402,14 +410,14 @@ export default function MembersTab({
                     ) : isPending ? (
                       <div className="w-3.5 h-3.5 rounded-full border border-neutral-700 border-t-neutral-400 animate-spin shrink-0" />
                     ) : hasPrivilegedAccess && !isMe ? (
-                      <select
+                      <SimpleSelect
+                        size="xs"
                         value={member.role}
-                        onChange={(e) => handleRoleChange(member.id, e.target.value as 'member' | 'viewer')}
-                        className="bg-neutral-800 border border-neutral-700 rounded px-1.5 py-0.5 text-[10px] font-semibold text-neutral-300 outline-none cursor-pointer hover:border-neutral-600 focus:border-blue-500/60"
-                      >
-                        <option value="member">{t('roleMember')}</option>
-                        <option value="viewer">{t('roleViewer')}</option>
-                      </select>
+                        onValueChange={(v) => handleRoleChange(member.id, v as 'member' | 'viewer')}
+                        options={roleOptions}
+                        aria-label={t('roleLabel')}
+                        className="text-neutral-300"
+                      />
                     ) : (
                       <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border ${
                         member.role === 'viewer'

@@ -306,6 +306,7 @@
     "agentsConnectNudge": "Connect"
   },
   "WorkspaceSettings": {
+    "roleLabel": "Role",
     "title": "Workspace Settings",
     "tabGeneral": "General",
     "tabMembers": "Members",
@@ -2649,5 +2650,9 @@
       "ctaPrimary": "Start free",
       "ctaSecondary": "Read the docs"
     }
+  },
+  "UI": {
+    "close": "Close",
+    "actionFailed": "That didn’t work. Please try again."
   }
 }

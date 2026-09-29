@@ -306,6 +306,7 @@
     "agentsConnectNudge": "कनेक्ट करें"
   },
   "WorkspaceSettings": {
+    "roleLabel": "भूमिका",
     "title": "कार्यक्षेत्र सेटिंग",
     "tabGeneral": "सामान्य",
     "tabMembers": "सदस्य",
@@ -2321,5 +2322,9 @@
     "localTruncated": "सबसे नज़दीकी {count} दिखाए जा रहे हैं",
     "localOpenFull": "पूरा मैप खोलें",
     "localEmpty": "इस पेज से अभी कुछ नहीं जुड़ा है।"
+  },
+  "UI": {
+    "close": "बंद करें",
+    "actionFailed": "यह नहीं हो सका। कृपया फिर से कोशिश करें।"
   }
 }

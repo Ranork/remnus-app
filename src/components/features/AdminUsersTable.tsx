@@ -9,6 +9,7 @@ import type { PlanTier } from '@/lib/billing/plans';
 import { useTranslations, useLocale } from 'next-intl';
 import { formatDate, formatDuration, formatRelative, formatBytes } from './admin/format';
 import AdminUserDetailModal from './admin/AdminUserDetailModal';
+import { SimpleSelect } from '@/components/ui/select';
 
 type UserRow = {
   id: string;
@@ -106,7 +107,6 @@ export default function AdminUsersTable({
     setSortKey(null); // third click clears sort
   };
 
-  const selectCls = 'bg-neutral-900 border border-neutral-800 rounded-md text-xs text-neutral-300 px-2 py-1.5 focus:outline-none focus:border-blue-500';
 
   return (
     <div className="border border-neutral-800 rounded-lg overflow-hidden">
@@ -121,17 +121,27 @@ export default function AdminUsersTable({
             className="w-full bg-neutral-900 border border-neutral-800 rounded-md text-xs text-neutral-200 pl-8 pr-2 py-1.5 placeholder:text-neutral-600 focus:outline-none focus:border-blue-500"
           />
         </div>
-        <select value={roleFilter} onChange={(e) => { setRoleFilter(e.target.value); setPage(0); }} className={selectCls}>
-          <option value="all">{t('allRoles')}</option>
-          <option value="admin">{t('roleAdmin')}</option>
-          <option value="user">{t('roleUser')}</option>
-        </select>
-        <select value={authFilter} onChange={(e) => { setAuthFilter(e.target.value); setPage(0); }} className={selectCls}>
-          <option value="all">{t('allMethods')}</option>
-          <option value="google">{t('signInGoogle')}</option>
-          <option value="github">{t('signInGithub')}</option>
-          <option value="email">{t('signInEmail')}</option>
-        </select>
+        <SimpleSelect
+          value={roleFilter}
+          onValueChange={(v) => { setRoleFilter(v); setPage(0); }}
+          options={[
+            { value: 'all', label: t('allRoles') },
+            { value: 'admin', label: t('roleAdmin') },
+            { value: 'user', label: t('roleUser') },
+          ]}
+          aria-label={t('allRoles')}
+        />
+        <SimpleSelect
+          value={authFilter}
+          onValueChange={(v) => { setAuthFilter(v); setPage(0); }}
+          options={[
+            { value: 'all', label: t('allMethods') },
+            { value: 'google', label: t('signInGoogle') },
+            { value: 'github', label: t('signInGithub') },
+            { value: 'email', label: t('signInEmail') },
+          ]}
+          aria-label={t('allMethods')}
+        />
       </div>
 
       {total === 0 ? (
@@ -269,15 +279,13 @@ export default function AdminUsersTable({
                 </span>
                 <label className="flex items-center gap-1.5 text-xs text-neutral-500">
                   {t('rowsPerPage')}
-                  <select
-                    value={pageSize}
-                    onChange={(e) => { setPageSize(Number(e.target.value)); setPage(0); }}
-                    className={selectCls}
-                  >
-                    {PAGE_SIZE_OPTIONS.map((n) => (
-                      <option key={n} value={n}>{n}</option>
-                    ))}
-                  </select>
+                  <SimpleSelect
+                    value={String(pageSize)}
+                    onValueChange={(v) => { setPageSize(Number(v)); setPage(0); }}
+                    options={PAGE_SIZE_OPTIONS.map((n) => ({ value: String(n), label: String(n) }))}
+                    size="sm"
+                    contentClassName="min-w-20"
+                  />
                 </label>
               </div>
               {totalPages > 1 && (

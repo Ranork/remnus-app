@@ -3,6 +3,7 @@ import { useTranslations } from 'next-intl';
 import { Plus, X } from 'lucide-react';
 import type { ViewSort } from '@/lib/types/views';
 import { selectCls } from './shared';
+import { SimpleSelect } from '@/components/ui/select';
 
 interface SortsSectionProps {
   sorts: ViewSort[];
@@ -40,13 +41,12 @@ export default function SortsSection({ sorts, schema, onSortsChange }: SortsSect
         <div className="flex flex-col">
           {sorts.map((sort) => (
             <div key={sort.id} className="flex items-center gap-1.5 px-4 py-2.5 border-b border-neutral-800/40">
-              <select
+              <SimpleSelect
                 value={sort.columnId}
-                onChange={(e) => updateSort(sort.id, { columnId: e.target.value })}
-                className={`${selectCls} flex-1 min-w-0`}
-              >
-                {schema.map((col) => <option key={col.id} value={col.id}>{col.name}</option>)}
-              </select>
+                onValueChange={(v) => updateSort(sort.id, { columnId: v })}
+                options={schema.map((col) => ({ value: col.id, label: col.name }))}
+                className="min-w-0 flex-1 shrink"
+              />
               <button
                 onClick={() => updateSort(sort.id, { direction: sort.direction === 'asc' ? 'desc' : 'asc' })}
                 className={`${selectCls} shrink-0 hover:bg-neutral-800 transition-colors`}

@@ -46,6 +46,7 @@
   "dependencies": {
     "@auth/drizzle-adapter": "^1.11.2",
     "@aws-sdk/client-sesv2": "^3.1079.0",
+    "@base-ui/react": "^1.8.0",
     "@capacitor/android": "^8.3.4",
     "@capacitor/app": "^8.1.0",
     "@capacitor/cli": "^8.3.4",
@@ -82,6 +83,7 @@
     "@types/jszip": "^3.4.0",
     "@vercel/analytics": "^2.0.1",
     "bcryptjs": "^3.0.3",
+    "class-variance-authority": "^0.7.1",
     "cloudinary": "^2.10.0",
     "clsx": "^2.1.1",
     "d3-hierarchy": "^3.1.2",

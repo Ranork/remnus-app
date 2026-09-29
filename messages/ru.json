@@ -306,6 +306,7 @@
     "agentsConnectNudge": "Подключить"
   },
   "WorkspaceSettings": {
+    "roleLabel": "Роль",
     "title": "Настройки пространства",
     "tabGeneral": "Общие",
     "tabMembers": "Участники",
@@ -2321,5 +2322,9 @@
     "localTruncated": "Показаны ближайшие {count}",
     "localOpenFull": "Открыть всю карту",
     "localEmpty": "С этой страницей пока ничего не связано."
+  },
+  "UI": {
+    "close": "Закрыть",
+    "actionFailed": "Не получилось. Попробуйте ещё раз."
   }
 }

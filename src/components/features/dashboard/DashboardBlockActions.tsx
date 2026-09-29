@@ -100,9 +100,11 @@ export default function DashboardBlockActions({
           confirmLabel={t('removeBlock')}
           cancelLabel={t('cancel')}
           onCancel={() => setConfirming(false)}
-          onConfirm={() => {
+          onConfirm={async () => {
+            // Stays open with a spinner until the block is gone and the page refreshed.
+            await deleteDashboardBlock(itemId, blockId);
+            router.refresh();
             setConfirming(false);
-            run(() => deleteDashboardBlock(itemId, blockId));
           }}
         />
       )}

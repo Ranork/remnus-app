@@ -506,8 +506,23 @@ sunucularının kullandığı tanınmış kalıp → korundu. CLI'a dokunulmadı
 **Doğrulama:** eslint, tsc, `test:agent-access` 34/34, köprü üzerinden scope (write 27/16, read 11/0),
 fixture token'lar local.db'den silindi, dev durduruldu (port 3000 boş).
 
+**Prod ölçümü (Hakan, Ford-Netsis-UI, `remnus@0.1.9`, `bench:mcp-handshake`, 5 çalıştırma):**
+
+| | Önce (iad1, 70b00f7 öncesi) | Sonra (dub1, 70b00f7) |
+|---|---|---|
+| tools/list | 0,5–0,9 sn | 0,22–0,32 sn |
+| prompts/list | 0,5–0,9 sn | 0,28–0,35 sn (bir kez 1,47) |
+| resources/list | 0,9–2,6 sn | 0,37–0,48 sn |
+| sıcak initialize (≈2 sn'si npx) | ~2,4 sn | ~2,5 sn |
+| toplam, sıcak medyan | 3,6 sn | 3,4 sn (en iyi 2,7) |
+| ilk çalıştırma (soğuk) | 6,9 sn | 6,6 sn |
+
+Sunucu istekleri 2–3× hızlandı (her tool çağrısı dahil). Köprü + sunucu en kötü ~6,6 sn;
+Hakan'ın 15–20 sn'si burada yok → kalanı Claude Code'un açılışında. Tekrar yavaşsa
+`claude --debug` MCP satırları.
+
 **Açık / Hakan'da:**
-1. Deploy öncesi ve sonrası bağlı bir projede:
+1. (Yapıldı, yukarıda.) Deploy öncesi ve sonrası bağlı bir projede:
    `node D:\Workspace\GitHub\remnus-app\scripts\mcp-handshake-timing.mjs --project . --runs 5`
    (salt okuma, yalnız süre yazar). 15–20 sn'nin kalanı (hesaplanan: sıcak ~4–5, soğuk ~6–8 sn)
    bu ölçümle bulunacak; hâlâ yavaşsa `claude --debug` MCP bağlantı satırları.
@@ -608,6 +623,43 @@ olduğunu anlamıyor."
   primitifleri kullanılır, async buton loading gösterir" kuralı.
 - update-handoff; commit yok; "Tamamlandı" notu.
 ```
+
+
+### ✅ R3 — Tamamlandı (2026-09-29, Claude; commit/push yok)
+
+**Karar 0 (Hakan):** shadcn/ui. Base UI tabanlı (`components.json` style `base-nova`); yeni bağımlılıklar
+`@base-ui/react` 1.8, `class-variance-authority`. CLI'ın eklediği yanlış `cn` paketi kaldırıldı,
+`cn` = `src/lib/cn.ts` (clsx + tailwind-merge, zaten vardı).
+
+**Primitifler:** `src/components/ui/{select,button,dialog}.tsx`. `SimpleSelect` (options, ikon/renk noktası,
+size xs/sm/default, title/style/stopPropagation), `Button` (primary/secondary/ghost/danger, `loading`),
+`ConfirmDialog` async `onConfirm` (spinner, butonlar+Escape tutulur, hata diyalogda, başarıda meşgul kalır →
+çağıran kapatır). Renkler uygulama paleti; shadcn token sınıfları (`bg-popover`…) tanımsız → şeffaf render ettiği
+için (Hakan'ın ekran görüntüsü) tamamen kaldırıldı. `UI` i18n namespace'i 8 dilde.
+
+**Select taşıma:** 18 dosyada 48 native select → 46'sı `SimpleSelect` (DashboardBlockEditor 15, CalendarLayout 6,
+…). İstisna: OAuthAuthorizeForm'da gerçek select yok (yorum satırıydı). Kalan `<select`: 0.
+
+**Loading taraması (önce → sonra):**
+| Yer | Önce | Sonra |
+|---|---|---|
+| Satır sayfası silme (PageEditor) — Hakan'ın örneği | diyalog anında kapanıyor, silme+yönlendirme sırasında hiçbir şey | diyalog açık, spinner, Escape/çift tık tutulur, sonra yönlendirir (Playwright, 3 sn gecikmeyle doğrulandı, tek POST) |
+| Paylaşımı kaldır (SharingTab, ShareModal) | diyalog kapanır, geri bildirim yok | spinner'lı diyalog |
+| Pano bloğu sil (DashboardBlockActions) | diyalog kapanır, ikonlar soluk | spinner'lı diyalog |
+| Tekrarlayan kart kapsam diyaloğu | onay butonu tepkisiz, çift tık mümkün | `Button loading`, iptal/Escape tutulur |
+| Davet iptali (MembersTab) | tepkisiz | satırda spinner |
+| Satır sil (DatabaseView.handleDeletePage) | iyimser, hata olursa satır ekrandan kayboluyor | hata olursa geri koyar |
+Zaten doğru olanlar (dokunulmadı): çalışma alanı silme, üye çıkarma/devir, erişim isteği, token iptali, çöp kutusu
+geri yükleme, sürüm geri yükleme, faturalama, toplu ekleme.
+
+**Ek düzeltmeler (Hakan'ın bildirdikleri):** açık temada editör h1/h2 sabit `color: white` idi (görünmüyordu) →
+`[data-theme="catppuccin"]` için `neutral-50`; select popup şeffaflığı (yukarıda).
+
+**Doğrulama:** tsc, eslint (0 hata; uyarılar önceden var), Playwright (yerel dev + local.db, demo kullanıcı):
+modal içinde açılma (z-9999), klavye ok/Enter/Escape, typeahead, 5 tema, 375 px genişlik (trigger sıkışması
+düzeltildi), async ConfirmDialog. Eksik: DashboardBlockEditor ve 5 tema × tüm sidebar select'lerinin tek tek
+görsel turu; Base UI typeahead `ü`/`u` ayrımı yapmıyor.
+**Açık:** R8'de `src/components/ui/` yeniden boyanacak (tek yer). Çalışma ağacı: commit'siz (R2'den sonraki tüm iş).
 
 ---
 

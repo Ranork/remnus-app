@@ -81,6 +81,7 @@ Remnus is fully internationalized using **next-intl v4** (App Router native). Al
 5. **No hardcoded display strings** — not even English fallbacks like `|| 'Untitled'`. Always use `t('key')`.
 6. **Date formatting** — use `useLocale()` (client) or locale from `getRequestConfig` (server) instead of `'en-US'`.
 7. **Namespace selection** — pick the closest existing namespace. Create a new one only for a clearly standalone domain (add to all 8 files and document here).
+8. **UI primitives** — new UI uses `src/components/ui/` (shadcn/ui on Base UI; see `components.json`): `SimpleSelect` instead of a native `<select>`, `Button loading` for async actions, and `ConfirmDialog` with an async `onConfirm` (stays open with a spinner until the caller unmounts it). Colours are the app palette (`neutral/blue/red`), not shadcn token classes such as `bg-popover`, which are not defined here.
 
 ### Agent Task Management & Work Plan
 

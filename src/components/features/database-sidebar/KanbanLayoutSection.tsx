@@ -2,7 +2,8 @@
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { GripVertical, ArrowLeft, ArrowUp, ArrowRight, ArrowDown } from 'lucide-react';
-import { getPropertyIcon, Checkbox, selectCls, CollapsibleSection } from './shared';
+import { getPropertyIcon, Checkbox, CollapsibleSection } from './shared';
+import { SimpleSelect } from '@/components/ui/select';
 import GroupingLayoutSection from './GroupingLayoutSection';
 
 interface KanbanLayoutSectionProps {
@@ -136,10 +137,12 @@ export default function KanbanLayoutSection({
           </button>
           <div className="flex items-center justify-between gap-3">
             <span className="text-xs text-neutral-300 shrink-0">{t('propertyText')}</span>
-            <select value={propertyTextClamp} onChange={(e) => onPropertyTextClampChange?.(e.target.value as 'truncate' | 'wrap')} className={`${selectCls} w-28 shrink-0 cursor-pointer`}>
-              <option value="truncate">{t('truncate')}</option>
-              <option value="wrap">{t('wrap')}</option>
-            </select>
+            <SimpleSelect
+              value={propertyTextClamp}
+              onValueChange={(v) => onPropertyTextClampChange?.(v as 'truncate' | 'wrap')}
+              options={[{ value: 'truncate', label: t('truncate') }, { value: 'wrap', label: t('wrap') }]}
+              className="w-28"
+            />
           </div>
         </div>
       </CollapsibleSection>
@@ -149,17 +152,21 @@ export default function KanbanLayoutSection({
         <div className="px-4 pb-3 flex flex-col gap-2">
           <div className="flex items-center justify-between gap-3">
             <span className="text-xs text-neutral-300 shrink-0">{t('cardBackground')}</span>
-            <select value={cardBgCol ?? ''} onChange={(e) => onCardBgColChange?.(e.target.value)} className={`${selectCls} w-32 shrink-0 cursor-pointer truncate`}>
-              <option value="">None</option>
-              {colorColumns.map((col: any) => <option key={col.id} value={col.id}>{col.name}</option>)}
-            </select>
+            <SimpleSelect
+              value={cardBgCol ?? ''}
+              onValueChange={(v) => onCardBgColChange?.(v)}
+              options={[{ value: '', label: 'None' }, ...colorColumns.map((col: any) => ({ value: col.id, label: col.name }))]}
+              className="w-32"
+            />
           </div>
           <div className="flex items-center justify-between gap-3">
             <span className="text-xs text-neutral-300 shrink-0">{t('accentLine')}</span>
-            <select value={cardColorCol ?? ''} onChange={(e) => onCardColorColChange?.(e.target.value)} className={`${selectCls} w-32 shrink-0 cursor-pointer truncate`}>
-              <option value="">None</option>
-              {colorColumns.map((col: any) => <option key={col.id} value={col.id}>{col.name}</option>)}
-            </select>
+            <SimpleSelect
+              value={cardColorCol ?? ''}
+              onValueChange={(v) => onCardColorColChange?.(v)}
+              options={[{ value: '', label: 'None' }, ...colorColumns.map((col: any) => ({ value: col.id, label: col.name }))]}
+              className="w-32"
+            />
           </div>
           {cardColorCol && (
             <div className="flex items-center justify-between gap-3">

@@ -167,8 +167,9 @@ export function useRecurrenceControls({
 
   const handleScopeConfirm = (scope: RecurrenceScope, includeDirty: boolean) => {
     if (!scopeDialog) return;
+    // Returned so the scope dialog can show a spinner until the mutation settles.
     if (scopeDialog.mode === 'delete') {
-      run(async () => {
+      return run(async () => {
         const result = await deleteRecurringPage(scopeDialog.pageId, scope, includeDirty);
         // Cards with content are kept (detached) rather than deleted — say so,
         // otherwise a delete that mostly no-oped looks identical to a bug.
@@ -176,13 +177,13 @@ export function useRecurrenceControls({
         return result;
       });
     } else if (scopeDialog.mode === 'remove') {
-      run(async () => {
+      return run(async () => {
         const result = await endSeriesRecurrence(scopeDialog.pageId, scope as 'thisAndFollowing' | 'all');
         if (result) setFeedback({ type: 'removed', count: result.removed });
         return result;
       });
     } else {
-      run(() =>
+      return run(() =>
         changeSeriesRule(scopeDialog.pageId, scopeDialog.rule, scope as 'thisAndFollowing' | 'all'),
       );
     }

@@ -975,7 +975,7 @@ const PageEditor = forwardRef<PageEditorHandle, PageEditorProps>(function PageEd
           confirmLabel={t('delete')}
           cancelLabel={t('deleteCancel')}
           onConfirm={async () => {
-            setShowDeleteConfirm(false);
+            // Stays open and busy until the page has actually gone and we have left it.
             await deletePage(initialPage.id, database.id);
             router.push(`/db/${database.id}`);
           }}

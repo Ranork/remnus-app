@@ -6,6 +6,7 @@ import { useTranslations } from 'next-intl';
 import { AlertTriangle, Info, Repeat, Trash2, Unlink } from 'lucide-react';
 import type { RecurrenceScope } from '@/lib/services/recurrence';
 import { OptionTile } from './parts';
+import { Button } from '@/components/ui/button';
 
 // The "this / this and following / all" question, shared by deleting a
 // recurring card and by changing its rhythm.
@@ -36,7 +37,9 @@ interface RecurrenceScopeDialogProps {
   scopes?: RecurrenceScope[];
   /** Impact per scope; undefined while it is still being fetched. */
   impact: Partial<Record<RecurrenceScope, ScopeImpact>>;
-  onConfirm: (scope: RecurrenceScope, includeDirty: boolean) => void;
+  /** May return a promise: the confirm button then shows a spinner (and Cancel/Escape are
+   *  held) until it settles. */
+  onConfirm: (scope: RecurrenceScope, includeDirty: boolean) => void | Promise<unknown>;
   onCancel: () => void;
 }
 
@@ -50,12 +53,13 @@ export default function RecurrenceScopeDialog({
   const t = useTranslations('Recurrence');
   const [scope, setScope] = useState<RecurrenceScope>(scopes[0]);
   const [includeDirty, setIncludeDirty] = useState(false);
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onCancel(); };
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape' && !busy) onCancel(); };
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
-  }, [onCancel]);
+  }, [onCancel, busy]);
 
   const current = impact[scope];
   // Remove ("Kaldır tekrarı") never deletes content, so there is nothing to
@@ -78,7 +82,7 @@ export default function RecurrenceScopeDialog({
   return createPortal(
     <div
       className="fixed inset-0 bg-black/60 z-300 flex items-center justify-center p-4 md:p-6"
-      onClick={onCancel}
+      onClick={busy ? undefined : onCancel}
     >
       <div
         role="dialog"
@@ -153,20 +157,24 @@ export default function RecurrenceScopeDialog({
         </div>
 
         <div className="flex gap-2 justify-end px-5 py-3 border-t border-neutral-800 shrink-0">
-          <button
-            onClick={onCancel}
-            className="px-4 py-2 text-xs font-medium text-neutral-400 hover:text-neutral-200 bg-neutral-800 hover:bg-neutral-750 rounded-lg transition-colors"
-          >
+          <Button variant="secondary" onClick={onCancel} disabled={busy}>
             {t('cancel')}
-          </button>
-          <button
-            onClick={() => onConfirm(scope, includeDirty)}
-            className={`px-4 py-2 text-xs font-semibold text-white rounded-lg transition-colors ${
-              isDelete ? 'bg-red-500/80 hover:bg-red-500' : 'bg-blue-500 hover:bg-blue-400'
-            }`}
+          </Button>
+          <Button
+            variant={isDelete ? 'danger' : 'primary'}
+            loading={busy}
+            onClick={async () => {
+              if (busy) return;
+              setBusy(true);
+              try {
+                await onConfirm(scope, includeDirty);
+              } finally {
+                setBusy(false);
+              }
+            }}
           >
             {t(copy.confirm as 'scopeConfirmDelete')}
-          </button>
+          </Button>
         </div>
       </div>
     </div>,

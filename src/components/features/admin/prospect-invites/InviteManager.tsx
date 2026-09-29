@@ -7,6 +7,7 @@
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Plus, Download, Copy, Check, Loader2 } from 'lucide-react';
+import { SimpleSelect } from '@/components/ui/select';
 import { createProspectInvite, lookupScoutForgeApp } from '@/lib/actions/prospectInvites';
 
 type Busy = 'fetch' | 'save' | null;
@@ -157,10 +158,16 @@ export default function InviteManager({ onChanged }: { onChanged: () => Promise<
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <div>
           <label className={labelCls}>{t('giftTierLabel')}</label>
-          <select value={giftTier} onChange={(e) => setGiftTier(e.target.value as 'startup' | 'professional')} className={inputCls}>
-            <option value="startup">{tBilling('tier_startup')}</option>
-            <option value="professional">{tBilling('tier_professional')}</option>
-          </select>
+          <SimpleSelect
+            value={giftTier}
+            onValueChange={(v) => setGiftTier(v as 'startup' | 'professional')}
+            options={[
+              { value: 'startup', label: tBilling('tier_startup') },
+              { value: 'professional', label: tBilling('tier_professional') },
+            ]}
+            size="sm"
+            className="w-full"
+          />
         </div>
         <div>
           <label className={labelCls}>{t('giftDaysLabel')}</label>

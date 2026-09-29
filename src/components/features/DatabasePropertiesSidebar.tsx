@@ -14,7 +14,7 @@ import SortsSection from './database-sidebar/SortsSection';
 import KanbanLayoutSection from './database-sidebar/KanbanLayoutSection';
 import CalendarLayoutSection from './database-sidebar/CalendarLayoutSection';
 import GroupingLayoutSection from './database-sidebar/GroupingLayoutSection';
-import { selectCls } from './database-sidebar/shared';
+import { SimpleSelect } from '@/components/ui/select';
 
 interface DatabasePropertiesSidebarProps {
   database: any;
@@ -200,11 +200,16 @@ export default function DatabasePropertiesSidebar({
               <div className="px-4 pb-3 flex flex-col gap-3 relative">
                 <div>
                   <span className="block text-[10px] text-neutral-500 uppercase tracking-wider mb-1.5">{t('openPagesAs')}</span>
-                  <select value={openBehavior} onChange={(e) => onOpenBehaviorChange(e.target.value as 'center' | 'side' | 'full')} className={`${selectCls} w-full`}>
-                    <option value="full">{t('openFull')}</option>
-                    <option value="side">{t('openSide')}</option>
-                    <option value="center">{t('openCenter')}</option>
-                  </select>
+                  <SimpleSelect
+                    value={openBehavior}
+                    onValueChange={(v) => onOpenBehaviorChange(v as 'center' | 'side' | 'full')}
+                    options={[
+                      { value: 'full', label: t('openFull') },
+                      { value: 'side', label: t('openSide') },
+                      { value: 'center', label: t('openCenter') },
+                    ]}
+                    className="w-full"
+                  />
                 </div>
                 <div>
                   <span className="block text-[10px] text-neutral-500 uppercase tracking-wider mb-1.5">{t('defaultPageIcon')}</span>
@@ -254,10 +259,12 @@ export default function DatabasePropertiesSidebar({
                     <div>
                       <span className="block text-[10px] text-neutral-500 uppercase tracking-wider mb-1.5">{t('rowColor')}</span>
                       {colorColumns.length > 0 ? (
-                        <select value={rowColorCol ?? ''} onChange={(e) => onRowColorColChange?.(e.target.value)} className={`${selectCls} w-full`}>
-                          <option value="">None</option>
-                          {colorColumns.map((col: any) => <option key={col.id} value={col.id}>{col.name}</option>)}
-                        </select>
+                        <SimpleSelect
+                          value={rowColorCol ?? ''}
+                          onValueChange={(v) => onRowColorColChange?.(v)}
+                          options={[{ value: '', label: 'None' }, ...colorColumns.map((col: any) => ({ value: col.id, label: col.name }))]}
+                          className="w-full"
+                        />
                       ) : (
                         <span className="text-xs text-amber-500/80">{t('addSelectProperty')}</span>
                       )}

@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState, useTransition } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Globe, Copy, Check, Trash2, Lock, PenLine, ExternalLink, AlertCircle, Users } from 'lucide-react';
 import {
@@ -25,7 +25,6 @@ export default function SharingTab({ workspaceId, isAdmin, onNavigateToMembers }
   const [shares, setShares] = useState<ShareRecord[]>([]);
   const [loading, setLoading] = useState(true);
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [, startTransition] = useTransition();
   const [confirmShare, setConfirmShare] = useState<ShareRecord | null>(null);
 
   const load = async () => {
@@ -51,14 +50,13 @@ export default function SharingTab({ workspaceId, isAdmin, onNavigateToMembers }
     setConfirmShare(share);
   };
 
-  const doRevoke = () => {
+  // Async on purpose: the confirm dialog stays open with a spinner until the share is gone.
+  const doRevoke = async () => {
     if (!confirmShare) return;
     const share = confirmShare;
+    await revokeShare(share.id, workspaceId);
+    setShares(prev => prev.filter(s => s.id !== share.id));
     setConfirmShare(null);
-    startTransition(async () => {
-      await revokeShare(share.id, workspaceId);
-      setShares(prev => prev.filter(s => s.id !== share.id));
-    });
   };
 
   return (

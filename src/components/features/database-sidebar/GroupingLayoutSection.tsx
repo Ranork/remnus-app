@@ -2,7 +2,8 @@
 
 import { useTranslations } from 'next-intl';
 import { normalizeOption } from '@/lib/types/properties';
-import { Checkbox, CollapsibleSection, selectCls } from './shared';
+import { Checkbox, CollapsibleSection } from './shared';
+import { SimpleSelect } from '@/components/ui/select';
 
 interface GroupingLayoutSectionProps {
   schema: any[];
@@ -36,10 +37,15 @@ export default function GroupingLayoutSection({
         {selectColumns.length > 0 ? (
           <div>
             <span className="block text-[10px] text-neutral-500 uppercase tracking-wider mb-1.5">{t('groupBy')}</span>
-            <select value={groupByCol ?? ''} onChange={(e) => onGroupByColChange?.(e.target.value)} className={`${selectCls} w-full`}>
-              {allowNoGrouping && <option value="">{t('noGrouping')}</option>}
-              {selectColumns.map((col: any) => <option key={col.id} value={col.id}>{col.name}</option>)}
-            </select>
+            <SimpleSelect
+              value={groupByCol ?? ''}
+              onValueChange={(v) => onGroupByColChange?.(v)}
+              options={[
+                ...(allowNoGrouping ? [{ value: '', label: t('noGrouping') }] : []),
+                ...selectColumns.map((col: any) => ({ value: col.id, label: col.name })),
+              ]}
+              className="w-full"
+            />
           </div>
         ) : (
           <span className="text-xs text-amber-500/80">{t('addSelectForGroup')}</span>

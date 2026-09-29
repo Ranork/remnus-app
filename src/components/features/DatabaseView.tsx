@@ -603,9 +603,16 @@ export default function DatabaseView({
 
   const handleDeletePage = async (pageId: string) => {
     // Optimistic delete
+    const before = localPages;
     setLocalPages((prev) => prev.filter((p) => p.id !== pageId));
-    // Persist
-    await deletePage(pageId, database.id);
+    // Persist. A failed delete puts the row back — otherwise it disappears from the
+    // screen while still existing, and reappears on the next refresh.
+    try {
+      await deletePage(pageId, database.id);
+    } catch (err) {
+      console.error('[Remnus] delete row failed:', err);
+      setLocalPages(before);
+    }
   };
 
   // Series-aware delete for the Table and Kanban views. Only the scope dialog

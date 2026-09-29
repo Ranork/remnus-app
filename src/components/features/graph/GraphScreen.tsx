@@ -55,6 +55,7 @@ import {
   type NodeKindCode,
 } from '@/lib/graph/types';
 import type { GraphCanvasHandle, GraphColorMode, GraphLayers, GraphLayoutMode } from './GraphCanvas';
+import { SimpleSelect } from '@/components/ui/select';
 
 const GraphCanvas = dynamic(() => import('./GraphCanvas'), { ssr: false });
 
@@ -318,29 +319,27 @@ export default function GraphScreen({ workspace }: { workspace: { id: string; na
 
         <label className="flex items-center gap-1.5 text-xs text-neutral-500">
           <span className="hidden sm:inline">{t('colorLabel')}</span>
-          <select
+          <SimpleSelect
             value={colorMode}
-            onChange={(e) => updatePrefs({ colorMode: e.target.value as GraphColorMode })}
-            className="border border-neutral-800 bg-neutral-850 px-1.5 py-1 text-xs text-neutral-200 focus:outline-none focus-visible:ring-1 focus-visible:ring-blue-500"
-          >
-            <option value="type">{t('colorType')}</option>
-            <option value="trust">{t('colorTrust')}</option>
-            <option value="agent">{t('colorAgent')}</option>
-            {canCluster && <option value="cluster">{t('colorCluster')}</option>}
-          </select>
+            onValueChange={(v) => updatePrefs({ colorMode: v as GraphColorMode })}
+            size="sm"
+            options={[
+              { value: 'type', label: t('colorType') },
+              { value: 'trust', label: t('colorTrust') },
+              { value: 'agent', label: t('colorAgent') },
+              ...(canCluster ? [{ value: 'cluster', label: t('colorCluster') }] : []),
+            ]}
+          />
         </label>
 
         {colorMode === 'agent' && (
-          <select
+          <SimpleSelect
             aria-label={t('activityLabel')}
-            value={prefs.activityDays}
-            onChange={(e) => updatePrefs({ activityDays: Number(e.target.value) })}
-            className="border border-neutral-800 bg-neutral-850 px-1.5 py-1 text-xs text-neutral-200 focus:outline-none focus-visible:ring-1 focus-visible:ring-blue-500"
-          >
-            {ACTIVITY_DAY_OPTIONS.map((days) => (
-              <option key={days} value={days}>{t('activityDays', { days })}</option>
-            ))}
-          </select>
+            value={String(prefs.activityDays)}
+            onValueChange={(v) => updatePrefs({ activityDays: Number(v) })}
+            size="sm"
+            options={ACTIVITY_DAY_OPTIONS.map((days) => ({ value: String(days), label: t('activityDays', { days }) }))}
+          />
         )}
 
         <div className="relative">
