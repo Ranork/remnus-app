@@ -242,6 +242,11 @@
     "widthFull": "पूर्ण"
   },
   "Workspace": {
+    "savingsEmpty": "जब आपके एजेंट काम करना शुरू करेंगे, तो Remnus से बचे टोकन यहाँ दिखेंगे।",
+    "accountMenu": "खाता मेनू",
+    "dashboardShort": "डैशबोर्ड",
+    "mapShort": "नक्शा",
+    "dashboardOpenFailed": "डैशबोर्ड नहीं खुल सका। फिर से कोशिश करें।",
     "planBilling": "प्लान और बिलिंग",
     "saving": "सहेजा जा रहा है...",
     "save": "सहेजें",
@@ -842,6 +847,10 @@
     }
   },
   "Dashboard": {
+    "deleteDashboard": "डैशबोर्ड हटाएँ",
+    "deleteDashboardTitle": "यह डैशबोर्ड हटाएँ?",
+    "deleteDashboardBody": "यह ट्रैश में चला जाता है और वहाँ से वापस लाया जा सकता है। आपका डेटा जैसा है वैसा रहता है।",
+    "deleteDashboardConfirm": "हटाएँ",
     "untitled": "बिना नाम का डैशबोर्ड",
     "renameDashboard": "डैशबोर्ड का नाम",
     "blockCount": "{count, plural, =0 {अभी कोई ब्लॉक नहीं} one {# ब्लॉक} other {# ब्लॉक}}",

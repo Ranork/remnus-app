@@ -242,6 +242,11 @@
     "widthFull": "整页"
   },
   "Workspace": {
+    "savingsEmpty": "智能体开始工作后，Remnus 为它们节省的 token 会显示在这里。",
+    "accountMenu": "账户菜单",
+    "dashboardShort": "仪表盘",
+    "mapShort": "图谱",
+    "dashboardOpenFailed": "无法打开仪表盘，请重试。",
     "planBilling": "套餐与计费",
     "saving": "正在保存...",
     "save": "保存",
@@ -842,6 +847,10 @@
     }
   },
   "Dashboard": {
+    "deleteDashboard": "删除仪表盘",
+    "deleteDashboardTitle": "删除此仪表盘？",
+    "deleteDashboardBody": "它会移到回收站，可从那里恢复。你的数据不受影响。",
+    "deleteDashboardConfirm": "删除",
     "untitled": "未命名仪表板",
     "renameDashboard": "仪表板名称",
     "blockCount": "{count, plural, =0 {还没有区块} other {# 个区块}}",

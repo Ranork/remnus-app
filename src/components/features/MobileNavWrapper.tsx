@@ -6,13 +6,15 @@ import type { WorkspaceItemRow } from '@/lib/actions/workspace';
 import { logout } from '@/lib/actions/auth';
 import { createPage } from '@/lib/actions/page';
 import { setLocale } from '@/lib/actions/locale';
-import { X, Plus, Layers, LogOut, Shield, User, Settings, Bot, CreditCard } from 'lucide-react';
+import { X, Plus, Layers, LogOut, Shield, User, Settings, Bot, CreditCard, Trash2, Sparkles } from 'lucide-react';
 import { useTranslations, useLocale } from 'next-intl';
 import TemplatePickerModal from './TemplatePickerModal';
 import FlagIcon from './FlagIcon';
 import UserSettingsModal from './UserSettingsModal';
 import AgentsModal from './AgentsModal';
 import BillingModal from './BillingModal';
+import TrashModal from './TrashModal';
+import { useWhatsNew } from './WhatsNewButton';
 
 type WorkspaceType = { id: string; name: string };
 type CurrentUser = {
@@ -91,6 +93,7 @@ export default function MobileNavWrapper({
 }) {
   const t = useTranslations('MobileNav');
   const tw = useTranslations('Workspace');
+  const tNew = useTranslations('WhatsNew');
   const locale = useLocale();
   const pathname = usePathname();
   const router = useRouter();
@@ -101,6 +104,8 @@ export default function MobileNavWrapper({
   const [userSettingsOpen, setUserSettingsOpen] = useState(false);
   const [agentsModalOpen, setAgentsModalOpen] = useState(false);
   const [billingModalOpen, setBillingModalOpen] = useState(false);
+  const [trashModalOpen, setTrashModalOpen] = useState(false);
+  const whatsNew = useWhatsNew();
   const [, startLangTransition] = useTransition();
 
   // Close sheets on route change
@@ -228,6 +233,30 @@ export default function MobileNavWrapper({
           </div>
           )}
 
+          {/* Trash and what's new: workspace content / product news, so a project window keeps
+              them — same split as the desktop account menu. */}
+          <div className="border-t border-neutral-800 pt-3 flex flex-col gap-1">
+            <button
+              onClick={() => { setOpenSheet(null); setTrashModalOpen(true); }}
+              className="flex items-center gap-3 w-full px-3 py-3 rounded-lg text-neutral-300 hover:bg-neutral-800 hover:text-white transition-colors text-sm font-medium"
+            >
+              <Trash2 size={16} className="shrink-0 text-neutral-400" />
+              <span>{tw('myTrash')}</span>
+            </button>
+            <button
+              onClick={() => { setOpenSheet(null); whatsNew.open(); }}
+              className="flex items-center gap-3 w-full px-3 py-3 rounded-lg text-neutral-300 hover:bg-neutral-800 hover:text-white transition-colors text-sm font-medium"
+            >
+              <Sparkles size={16} className="shrink-0 text-neutral-400" />
+              <span>{tNew('title')}</span>
+              {whatsNew.unseenCount > 0 && (
+                <span className="ml-auto min-w-4 shrink-0 rounded-full bg-red-500 px-1.5 py-0.5 text-center text-[10px] font-bold leading-none text-white">
+                  {whatsNew.unseenCount > 9 ? '9+' : whatsNew.unseenCount}
+                </span>
+              )}
+            </button>
+          </div>
+
           {/* Language grid */}
           <div className="border-t border-neutral-800 pt-4">
             <p className="text-[10px] font-semibold text-neutral-500 uppercase tracking-widest mb-3">Language</p>
@@ -273,6 +302,9 @@ export default function MobileNavWrapper({
       {billingModalOpen && (
         <BillingModal isDemo={currentUser.role === 'demo'} onClose={() => setBillingModalOpen(false)} />
       )}
+
+      {trashModalOpen && <TrashModal onClose={() => setTrashModalOpen(false)} />}
+      {whatsNew.modal}
 
       {/* Template picker */}
       {isTemplatePickerOpen && activeWorkspace.id && (

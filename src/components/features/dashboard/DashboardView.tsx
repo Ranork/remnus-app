@@ -62,10 +62,12 @@ export default async function DashboardView({
     <div className="mx-auto w-full max-w-6xl px-5 py-8 sm:px-10 sm:py-10">
       <DashboardHeader
         itemId={item.id}
+        workspaceId={item.workspaceId}
         initialTitle={item.title}
         initialIcon={item.icon}
         initialIconColor={item.iconColor}
         blockCount={blocks.length}
+        isHome={item.isHome}
       />
 
       {resolved.fatal && (

@@ -753,6 +753,46 @@ kart gibi olabilir, sen karar ver."
 - update-handoff; commit yok; "Tamamlandı" notu.
 ```
 
+### ✅ R4 — Tamamlandı (2026-09-29, Claude; commit/push yok)
+
+**Görev A — alt kısım.** Sıra: tasarruf kartı → AI Ajanlarım (dışarıda kalan tek buton: ürünün özü) →
+tek hesap satırı (`AccountMenu.tsx`, avatar+ad, yukarı açılan menü): Ayarlar, Plan ve Faturalama (tier rozeti),
+Çöp Kutusu (sayı), Uygulamayı yükle, Yenilikler (okunmamış sayı), Admin (yalnız admin), Çıkış.
+Okunmamış Yenilikler avatarda kırmızı nokta olarak da görünür. `WhatsNewButton`/`PwaInstallButton` hook'a
+çevrildi (modal menü kapanınca ölmesin diye çağıran render eder). Proje penceresi: menüde yalnız Çöp Kutusu +
+Yenilikler; AI Ajanlarım/Ayarlar/Faturalama/Kurulum/Admin/Çıkış koşullu render ile hiç yok (kilitli pencerede
+doğrulandı). Mobil kullanıcı sayfasına Çöp Kutusu + Yenilikler eklendi (aynı bölünme).
+
+**Görev B — Pano + Harita.** Her açık çalışma alanının en üstünde `WorkspaceQuickLinks` (iki buton, rota ile
+senkron aktif durum); global "Bilgi haritası" butonu kaldırıldı. Ana pano: `workspaces.home_dashboard_item_id`
+(migration **0054**, `src/db/apply-0054-home-dashboard.ts`, idempotent, `ALTER TABLE ADD COLUMN`; `db:drift` temiz).
+**Bilinçli tasarım: FK yok**, okuma anında doğrulanır (`HOME_DASHBOARD_SQL`: öğe var + dashboard + aynı workspace),
+böylece pano silinince düğme "oluştur"a döner, çöp kutusundan geri yüklenince (aynı id) kendiliğinden geri gelir —
+ikisi de Playwright'ta doğrulandı. Pano yoksa düğme boş pano oluşturup ana yapar (`openOrCreateHomeDashboard`,
+lock opt-in). Ana pano ağaçta gizli; silme pano başlığında (async ConfirmDialog → `/w/<id>`), yeniden adlandırma
+zaten başlıkta. `setHomeDashboard` servisi + `setWorkspaceHomeDashboard` action hazır; MCP'ye dokunulmadı (R6).
+Backfill: tam olarak 1 panosu olan workspace o panoyu ana pano yapar (birden fazlaysa dokunulmaz); yerelde 0 satır
+etkilendi, prod'da etkisi deploy günü görünür.
+
+**Görev C — tasarruf kartı.** Tek bileşen, 3 yüzey: `sidebar` (kompakt kart, sıfırken gizli), `modal` (AI
+Ajanlarım'ın en üstünde hero; sıfırken dürüst "ilk oturumdan sonra" notu), `dashboard` (R6 için, kendi verisini
+çeker). Sayı artık `compactDisplay:'long'` ile yazılı ("98,1 bin", "98.1 thousand", "9.8万"); her rakamın dayanağı
+hero'da görünür metin, sidebar'da tooltip. Eski modal alt bölümü kaldırıldı.
+
+**Yol boyu düzeltmeler.** `HOME_DASHBOARD_SQL` ilk halinde tek tablolu sorguda `id`'yi yanlış bağlıyordu (isHome hep
+false) — Playwright yakaladı, tabloyu elle yazarak düzeltildi. Silme sonrası `/`'e (pazarlama sayfası) gidiyordu →
+`/w/<id>`. shadcn CLI yine sahte `cn` paketi ekledi → kaldırıldı (`ui/dropdown-menu.tsx` elle, palet sınıflarıyla).
+
+**Doğrulama:** tsc, eslint (0 hata; uyarı sayısı 47→46), test:workspace-deletion 13, test:trash-links 32,
+test:agent-access 34, test:access 28. Playwright (yerel dev + local.db, demo kullanıcılar; fixture ve seed satırları
+silindi): normal oturum, Pano oluştur/aç/sil/geri yükle, hesap menüsü, kilitli proje penceresi (ticket akışı),
+mobil 375 px (menü sheet'in önünde), tasarruf kartı sidebar+modal (geçici audit satırlarıyla), açık + 3 koyu tema.
+Eksik: çok çalışma alanlı hesapta yan yana Pano satırları, Tauri.
+
+**Deploy günü (Hakan):** (1) `npx tsx src/db/apply-0054-home-dashboard.ts` (prod = `.env`; hedefi çıktıdaki
+"Target:" satırından doğrula) **kod yayına girmeden ÖNCE** — çalışma alanı listesi sorgusu sütunu seçiyor,
+sütun yokken sidebar açılmaz; (2) `npm run db:drift`; (3) push. Migration geri alınabilir (sütun sadece okunur).
+
 ---
 
 # R5 — Sidebar canlılığı ve üyelik isteği göstergesi

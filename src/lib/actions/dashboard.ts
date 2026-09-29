@@ -8,7 +8,13 @@ import { getCurrentUserAllowingWorkspaceLock } from '@/lib/auth/session';
 import { assertWorkspaceLockAllows } from '@/lib/auth/workspaceLock';
 import { DASHBOARD_SPEC_VERSION, EMPTY_DASHBOARD_SPEC, validateDashboardSpec } from '@/lib/dashboard/schema';
 import { resolveDashboard, type ResolvedDashboard } from '@/lib/dashboard/data';
-import { DashboardInputError, patchDashboard, type DashboardPatch } from '@/lib/services/dashboards';
+import {
+  DashboardInputError,
+  getHomeDashboardItemId,
+  patchDashboard,
+  setHomeDashboard,
+  type DashboardPatch,
+} from '@/lib/services/dashboards';
 
 /**
  * Session-aware actions for dashboard items. The cookie-free half (spec
@@ -48,6 +54,8 @@ export type DashboardItem = {
   iconColor: string | null;
   parentId: string | null;
   updatedAt: Date;
+  /** This is the workspace's pinned Pano — hidden from the sidebar tree, so its header carries delete. */
+  isHome: boolean;
 };
 
 export async function createDashboard(
@@ -107,7 +115,10 @@ export async function getDashboardByItemId(
     .where(eq(dashboards.itemId, itemId))
     .limit(1);
 
-  const resolved = await resolveDashboard(item.workspaceId, row?.spec ?? EMPTY_DASHBOARD_SPEC);
+  const [resolved, homeId] = await Promise.all([
+    resolveDashboard(item.workspaceId, row?.spec ?? EMPTY_DASHBOARD_SPEC),
+    getHomeDashboardItemId(item.workspaceId),
+  ]);
 
   return {
     item: {
@@ -118,6 +129,7 @@ export async function getDashboardByItemId(
       iconColor: item.iconColor,
       parentId: item.parentId,
       updatedAt: item.updatedAt,
+      isHome: homeId === item.id,
     },
     resolved,
   };
@@ -298,4 +310,36 @@ export async function getDashboardEditorOptions(itemId: string): Promise<Dashboa
       .map((i) => ({ id: i.id, title: i.title, type: i.type }))
       .sort((a, b) => a.title.localeCompare(b.title)),
   };
+}
+
+/**
+ * The sidebar's pinned "Pano" button. Returns the workspace's home dashboard, creating
+ * an empty one (and pointing the workspace at it) the first time. Workspace content, so
+ * it works in a project window like every other action in this file.
+ */
+export async function openOrCreateHomeDashboard(workspaceId: string, title: string): Promise<{ itemId: string; created: boolean }> {
+  await assertWorkspaceAccess(workspaceId);
+
+  const existing = await getHomeDashboardItemId(workspaceId);
+  if (existing) return { itemId: existing, created: false };
+
+  const { itemId } = await createDashboard(workspaceId, title);
+  await setHomeDashboard(workspaceId, itemId);
+  // createDashboard revalidated before the workspace pointed at the new dashboard; do it
+  // again so the sidebar's refreshed props already carry the home id.
+  revalidatePath('/', 'layout');
+  return { itemId, created: true };
+}
+
+/** Make an existing dashboard the workspace's home (null clears it). */
+export async function setWorkspaceHomeDashboard(workspaceId: string, itemId: string | null): Promise<{ ok: boolean; error?: string }> {
+  await assertWorkspaceAccess(workspaceId);
+  try {
+    await setHomeDashboard(workspaceId, itemId);
+  } catch (err) {
+    if (err instanceof DashboardInputError) return { ok: false, error: err.message };
+    throw err;
+  }
+  revalidatePath('/', 'layout');
+  return { ok: true };
 }

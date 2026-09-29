@@ -10,6 +10,12 @@ export const workspaces = sqliteTable('workspaces', {
   // The paying user whose plan governs this workspace's limits (seats/agents/storage).
   // Nullable for orphaned/admin-claimed workspaces. Migration 0027.
   billingOwnerId: text('billing_owner_id'),
+  // The workspace's "home" dashboard (the pinned Pano button in the sidebar). Migration
+  // 0054. Deliberately NOT a foreign key: it is validated when read (the item must still
+  // exist, be a dashboard and belong to this workspace — see `HOME_DASHBOARD_SQL` in
+  // services/dashboards.ts), so deleting it empties the button, and restoring it from the
+  // trash (same id) brings the button back with no bookkeeping in the delete paths.
+  homeDashboardItemId: text('home_dashboard_item_id'),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`CURRENT_TIMESTAMP`),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().default(sql`CURRENT_TIMESTAMP`),
 });

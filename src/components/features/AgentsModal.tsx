@@ -19,6 +19,7 @@ import {
   setOAuthTokenAgent,
 } from '@/lib/actions/agentToken';
 import { getMyAgentMetrics, type AgentMetrics } from '@/lib/actions/agentMetrics';
+import AgentSavingsCard from './AgentSavingsCard';
 
 type WsWithTokens = Awaited<ReturnType<typeof getUserWorkspacesWithTokens>>[number];
 type WorkspaceToken = WsWithTokens['tokens'][number];
@@ -356,18 +357,6 @@ function WorkspaceSection({
   );
 }
 
-function SavingsRow({ value, label, hint }: { value: string; label: string; hint: string }) {
-  return (
-    <div className="space-y-0.5">
-      <div className="flex items-baseline gap-2">
-        <span className="text-sm font-semibold text-neutral-100 tabular-nums">{value}</span>
-        <span className="text-[11px] text-neutral-400">{label}</span>
-      </div>
-      <p className="text-[10px] text-neutral-500 leading-relaxed">{hint}</p>
-    </div>
-  );
-}
-
 // ── main component ────────────────────────────────────────────────────────────
 
 interface Props {
@@ -376,7 +365,6 @@ interface Props {
 
 export default function AgentsModal({ onClose }: Props) {
   const t = useTranslations('WorkspaceSettings');
-  const tW = useTranslations('Workspace');
   const locale = useLocale();
 
   const [workspaces,    setWorkspaces]    = useState<WsWithTokens[]>([]);
@@ -461,6 +449,9 @@ export default function AgentsModal({ onClose }: Props) {
 
         {/* Body */}
         <div className="overflow-y-auto flex-1 p-6 space-y-5">
+          {/* What the agents have saved, first: it is why the rest of this list exists. */}
+          {!loading && totalTokens > 0 && <AgentSavingsCard variant="modal" metrics={metrics} />}
+
           {loading ? (
             <div className="py-16 flex justify-center">
               <div className="w-5 h-5 rounded-full border-2 border-neutral-800 border-t-neutral-500 animate-spin" />
@@ -504,43 +495,6 @@ export default function AgentsModal({ onClose }: Props) {
               <span className="text-[11px] text-neutral-400">
                 {t('agentsUsageValue', { tokens: formatTokens(usage.bytes), calls: usage.calls })}
               </span>
-            </div>
-          )}
-
-          {/* Savings detail — where the sidebar card's tooltips become readable text.
-              Each row states its own basis; a figure nobody can check is a figure
-              nobody believes. */}
-          {!loading && metrics && metrics.savedBytes > 0 && (
-            <div className="border-t border-neutral-800 pt-4 space-y-3">
-              <span className="text-[11px] font-semibold text-neutral-300 uppercase tracking-widest">
-                {tW('savingsDetailTitle')}
-              </span>
-              <SavingsRow
-                value={formatTokens(metrics.savedBytes)}
-                label={tW('savingsLabel')}
-                hint={tW('savingsHint', { calls: metrics.savedCalls })}
-              />
-              {metrics.recalledItems > 0 && (
-                <SavingsRow
-                  value={String(metrics.recalledItems)}
-                  label={tW('savingsRecalledLabel')}
-                  hint={tW('savingsRecalledHint')}
-                />
-              )}
-              {metrics.agentWrites > 0 && (
-                <SavingsRow
-                  value={String(metrics.agentWrites)}
-                  label={tW('savingsWrittenLabel')}
-                  hint={tW('savingsWrittenHint')}
-                />
-              )}
-              {metrics.p50Ms != null && (
-                <SavingsRow
-                  value={tW('savingsSpeed', { ms: metrics.p50Ms })}
-                  label={tW('savingsSpeedLabel')}
-                  hint={tW('savingsSpeedHint')}
-                />
-              )}
             </div>
           )}
 

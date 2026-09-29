@@ -242,6 +242,11 @@
     "widthFull": "Tam"
   },
   "Workspace": {
+    "savingsEmpty": "Ajanların çalışmaya başlayınca, Remnus'un onlara kazandırdığı token'lar burada görünecek.",
+    "accountMenu": "Hesap menüsü",
+    "dashboardShort": "Pano",
+    "mapShort": "Harita",
+    "dashboardOpenFailed": "Pano açılamadı. Tekrar dene.",
     "planBilling": "Plan ve Faturalama",
     "saving": "Kaydediliyor...",
     "save": "Kaydet",
@@ -842,6 +847,10 @@
     }
   },
   "Dashboard": {
+    "deleteDashboard": "Panoyu sil",
+    "deleteDashboardTitle": "Bu pano silinsin mi?",
+    "deleteDashboardBody": "Çöp kutusuna taşınır ve oradan geri yüklenebilir. Verilerine dokunulmaz.",
+    "deleteDashboardConfirm": "Sil",
     "untitled": "Adsız pano",
     "renameDashboard": "Pano adı",
     "blockCount": "{count, plural, =0 {Henüz blok yok} other {# blok}}",

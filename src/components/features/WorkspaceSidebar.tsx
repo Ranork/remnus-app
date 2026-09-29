@@ -15,13 +15,10 @@ import {
   ChevronRight,
   Check,
   Trash,
-  Trash2,
   Edit3,
   Briefcase,
   MoreHorizontal,
   Copy,
-  LogOut,
-  Shield,
   Settings,
   Layers,
   ArrowLeft,
@@ -29,12 +26,10 @@ import {
   Globe,
   Eye,
   EyeOff,
-  CreditCard,
   ArrowUpRight,
   Link2,
   PanelLeftClose,
   PanelLeft,
-  Waypoints,
 } from 'lucide-react';
 import PageIcon from './PageIcon';
 import { useContextMenu, type MenuItem } from './ContextMenu';
@@ -63,8 +58,10 @@ import AgentSavingsCard from './AgentSavingsCard';
 import TrashModal from './TrashModal';
 import OnboardingGuide from './onboarding/OnboardingGuide';
 import AgentDetectGuide from './agent-detect/AgentDetectGuide';
-import PwaInstallButton from './PwaInstallButton';
-import WhatsNewButton from './WhatsNewButton';
+import AccountMenu from './AccountMenu';
+import WorkspaceQuickLinks from './WorkspaceQuickLinks';
+import { usePwaInstall } from './PwaInstallButton';
+import { useWhatsNew } from './WhatsNewButton';
 import BillingModal from './BillingModal';
 import UserSettingsModal from './UserSettingsModal';
 import { getUserAgentTokenCount } from '@/lib/actions/agentToken';
@@ -95,6 +92,8 @@ type WorkspaceType = {
   icon?: string | null;
   iconColor?: string | null;
   hidden?: boolean | null;
+  /** The pinned Pano (already validated server-side). Left out of the tree below. */
+  homeDashboardItemId?: string | null;
 };
 
 type CurrentUser = {
@@ -137,7 +136,6 @@ export default function WorkspaceSidebar({
   const tLayout = useTranslations('Layout');
   const tSharing = useTranslations('Sharing');
   const tBilling = useTranslations('Billing');
-  const tGraph = useTranslations('Graph');
   const router = useRouter();
   const pathname = usePathname();
   const [isPending, startTransition] = useTransition();
@@ -148,7 +146,6 @@ export default function WorkspaceSidebar({
   // the active pane's queries, which the server route's revalidatePath cannot.
   const { refresh: refreshActivePane } = useTabNav();
   const [isSaving, startSaveTransition] = useTransition();
-  const [avatarError, setAvatarError] = useState(false);
   const [isTauri, setIsTauri] = useState(false);
   const { isPeeking, pin } = useSidebarPeek();
 
@@ -232,6 +229,8 @@ export default function WorkspaceSidebar({
   const [trashModalOpen, setTrashModalOpen] = useState(false);
   const [billingModalOpen, setBillingModalOpen] = useState(false);
   const [userSettingsOpen, setUserSettingsOpen] = useState(false);
+  const whatsNew = useWhatsNew();
+  const pwa = usePwaInstall();
   // null = not yet loaded (avoids a false "no agents" warning flash on first render)
   const [agentTokenCount, setAgentTokenCount] = useState<number | null>(null);
   const [trashCount, setTrashCount] = useState<number | null>(null);
@@ -991,7 +990,8 @@ export default function WorkspaceSidebar({
           .filter((w) => showHidden || !w.hidden || w.id === activeWorkspaceIdFromPath)
           .map((w) => {
           const isExpanded = expandedWorkspaces[w.id] !== false;
-          const workspaceChildren = itemsByWorkspace[w.id] || [];
+          // The pinned Pano is represented by its button, not by a second tree row.
+          const workspaceChildren = (itemsByWorkspace[w.id] || []).filter((i) => i.id !== w.homeDashboardItemId);
           const isCurrentActive = w.id === activeWorkspaceIdFromPath;
 
           const isWorkspaceDragged = draggedWorkspaceId === w.id;
@@ -1123,6 +1123,13 @@ export default function WorkspaceSidebar({
               {/* Workspace Children Subtree */}
               {isExpanded && (
                 <div className="pl-3 space-y-0.5 border-l border-neutral-800 ml-2.5 my-1">
+                  <WorkspaceQuickLinks
+                    workspaceId={w.id}
+                    homeDashboardId={w.homeDashboardItemId ?? null}
+                    onHomeCreated={(itemId) =>
+                      setLocalWorkspaces((prev) => prev.map((x) => (x.id === w.id ? { ...x, homeDashboardItemId: itemId } : x)))
+                    }
+                  />
                   {(() => {
                     const topLevelChildren = workspaceChildren.filter(item => !item.parentId);
 
@@ -1643,17 +1650,19 @@ export default function WorkspaceSidebar({
         </div>
       )}
 
-      {/* What the agents have saved. Workspace-scoped in a project window (content
-          data the lock allows), account-wide otherwise; it hides itself when there
-          is nothing measured yet. */}
+      {/* What the agents have saved, as a card: the number that says what Remnus is for
+          should not be a footnote. Workspace-scoped in a project window (content data the
+          lock allows), account-wide otherwise. */}
       <AgentSavingsCard
+        variant="sidebar"
         workspaceId={isProjectWindow ? activeWorkspace.id : undefined}
         onOpenDetail={isProjectWindow ? undefined : () => setAgentsModalOpen(true)}
       />
 
-      {/* AI Agents button — account-level (tokens span every workspace the user is in),
-          and in a project window the modal is opened with a token that can't list them,
-          so it would show nothing useful. */}
+      {/* AI Agents — the one entry kept outside the account menu: it is what the product is
+          for. Account-level (tokens span every workspace the user is in), and in a project
+          window the modal is opened with a token that can't list them, so it would show
+          nothing useful. */}
       {!isProjectWindow && (
       <div className="shrink-0 px-2 pt-1">
         <button
@@ -1680,145 +1689,37 @@ export default function WorkspaceSidebar({
       </div>
       )}
 
-      {/* Knowledge map (P12) — the active workspace as a graph. Workspace content,
-          so a project window keeps it (AGENTS.md → Project Install §4). */}
-      {activeWorkspaceIdFromPath && (
-        <div className="shrink-0 px-2">
-          <Link
-            href={`/graph/${activeWorkspaceIdFromPath}`}
-            className={`w-full flex items-center gap-1.5 min-w-0 px-2 py-1.5 rounded-md text-sm transition-all duration-200 ${
-              pathname.startsWith('/graph/')
-                ? 'bg-neutral-850 text-neutral-50 font-medium'
-                : 'text-neutral-300 hover:bg-neutral-800 hover:text-neutral-50'
-            }`}
-          >
-            <Waypoints size={14} className="shrink-0 text-neutral-500" />
-            <span className="truncate">{tGraph('title')}</span>
-          </Link>
-        </div>
-      )}
-
-      {/* Trash button — same "common ground" placement as AI Agents, not
-          buried in a per-workspace Settings tab (deletions can happen in any
-          workspace, from any client, so the entry point shouldn't be scoped
-          to whichever workspace happens to be active). */}
-      <div className="shrink-0 px-2 pb-1">
-        <button
-          onClick={() => setTrashModalOpen(true)}
-          className="w-full flex items-center gap-1.5 min-w-0 px-2 py-1.5 rounded-md text-sm text-neutral-300 hover:bg-neutral-800 hover:text-neutral-50 transition-all duration-200"
-        >
-          <Trash2 size={14} className="shrink-0 text-neutral-500" />
-          <span className="truncate">{t('myTrash')}</span>
-          {trashCount !== null && trashCount > 0 && (
-            <span className="ml-auto shrink-0 text-[10px] font-bold text-neutral-400 bg-neutral-800 border border-neutral-700 px-1.5 py-0.5 rounded-full leading-none">
-              {trashCount}
-            </span>
-          )}
-        </button>
-      </div>
-
-      {/* Plan / Billing button — account-level; the lock denies it server-side */}
-      {!isProjectWindow && (
-      <div className="shrink-0 px-2">
-        <button
-          onClick={() => setBillingModalOpen(true)}
-          className="w-full flex items-center gap-1.5 min-w-0 px-2 py-1.5 rounded-md text-sm text-neutral-300 hover:bg-neutral-800 hover:text-neutral-50 transition-all duration-200"
-        >
-          <CreditCard size={14} className="shrink-0 text-neutral-400" />
-          <span className="truncate">{t('planBilling')}</span>
-          {planTier && (
-            <span
-              className="ml-auto shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded-full leading-none border"
-              style={TIER_BADGE[planTier]}
-            >
-              {tBilling(`tier_${planTier}` as 'tier_free')}
-            </span>
-          )}
-        </button>
-      </div>
-      )}
-
-      {/* Install app (PWA) button — web only, hidden in Tauri / when installed.
-          A project window is already its own installed-feeling window, and it lives in a
-          throwaway browser profile, so installing from here would produce an app pinned to
-          one project. */}
-      {!isProjectWindow && <PwaInstallButton />}
-
-      {/* What's New — product changelog; badge counts entries shipped since the
-          last time this user opened the panel. Kept in project windows: it's product
-          news, not account state. */}
-      <WhatsNewButton />
-
-      {/* Settings button — account settings, denied to a locked session */}
-      {!isProjectWindow && (
-      <div className="shrink-0 px-2 pb-1">
-        <button
-          onClick={() => setUserSettingsOpen(true)}
-          className="w-full flex items-center gap-1.5 min-w-0 px-2 py-1.5 rounded-md text-sm text-neutral-300 hover:bg-neutral-800 hover:text-neutral-50 transition-all duration-200"
-        >
-          <Settings size={14} className="shrink-0 text-neutral-400" />
-          <span className="truncate">{t('settings')}</span>
-        </button>
-      </div>
-      )}
-
-      {/* User panel */}
-      <div className="shrink-0 border-t border-neutral-800 px-3 py-2.5 flex items-center gap-2.5">
-        {/* Avatar */}
-        <div className="shrink-0">
-          {currentUser.image && currentUser.image !== '' && currentUser.image !== 'null' && !avatarError ? (
-            <img
-              src={currentUser.image}
-              alt={currentUser.name ?? 'User'}
-              className="w-7 h-7 rounded-full object-cover"
-              onError={() => setAvatarError(true)}
-            />
-          ) : (
-            <div
-              translate="no"
-              className="w-7 h-7 rounded-full bg-neutral-700 flex items-center justify-center text-xs font-semibold text-neutral-200 notranslate"
-            >
-              {(currentUser.name || currentUser.email || 'U').trim().charAt(0).toUpperCase()}
-            </div>
-          )}
-        </div>
-
-        {/* Name + role */}
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-1.5">
-            <span className="text-xs font-medium text-neutral-200 truncate">
-              {currentUser.name ?? currentUser.email ?? 'User'}
-            </span>
-            {/* Admin panel is account-level — a locked session can't open it. */}
-            {currentUser.role === 'admin' && !isProjectWindow && (
-              <Link
-                href="/admin"
-                className={`shrink-0 flex items-center gap-0.5 text-[9px] font-semibold px-1 py-0.5 rounded transition-colors ${pathname.startsWith('/admin') ? 'text-blue-300 bg-blue-500/20' : 'text-blue-400 bg-blue-500/10 hover:bg-blue-500/20 hover:text-blue-300'}`}
+      {/* Everything else lives behind the account row: settings, plan, trash, app install,
+          what's new, admin, sign-out. A project window renders only trash and what's new
+          (workspace content / product news) — the rest is account-level and denied by the
+          lock, so it is not rendered at all rather than hidden. */}
+      <div className="shrink-0 border-t border-neutral-800 mt-1 px-2 py-2">
+        <AccountMenu
+          user={currentUser}
+          isProjectWindow={isProjectWindow}
+          planBadge={
+            planTier ? (
+              <span
+                className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full leading-none border"
+                style={TIER_BADGE[planTier]}
               >
-                <Shield size={8} />
-                {t('adminLink')}
-              </Link>
-            )}
-          </div>
-          {currentUser.name && currentUser.email && (
-            <p className="text-[10px] text-neutral-500 truncate">{currentUser.email}</p>
-          )}
-        </div>
-
-        {/* Logout — in a project window signing out only closes this window's session
-            (there is nothing to sign back into inside its isolated browser profile), so
-            the banner carries that action, labelled for what it does. The panel still
-            shows which account the window is running as. */}
-        {!isProjectWindow && (
-          <button
-            onClick={() => logout()}
-            className="shrink-0 p-1.5 rounded text-neutral-500 hover:text-neutral-200 hover:bg-neutral-800 transition-colors cursor-pointer"
-            title={t('signOut')}
-          >
-            <LogOut size={13} />
-          </button>
-        )}
+                {tBilling(`tier_${planTier}` as 'tier_free')}
+              </span>
+            ) : undefined
+          }
+          trashCount={trashCount}
+          whatsNewUnseen={whatsNew.unseenCount}
+          canInstall={pwa.available}
+          onOpenSettings={() => setUserSettingsOpen(true)}
+          onOpenBilling={() => setBillingModalOpen(true)}
+          onOpenTrash={() => setTrashModalOpen(true)}
+          onOpenWhatsNew={whatsNew.open}
+          onInstall={pwa.open}
+          onSignOut={() => logout()}
+        />
       </div>
+      {whatsNew.modal}
+      {pwa.modal}
     </div>
   );
 }

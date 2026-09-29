@@ -242,6 +242,11 @@
     "widthFull": "Completo"
   },
   "Workspace": {
+    "savingsEmpty": "Cuando tus agentes empiecen a trabajar, aquí verás los tokens que Remnus les ahorra.",
+    "accountMenu": "Menú de cuenta",
+    "dashboardShort": "Panel",
+    "mapShort": "Mapa",
+    "dashboardOpenFailed": "No se pudo abrir el panel. Inténtalo de nuevo.",
     "planBilling": "Plan y facturación",
     "saving": "Guardando...",
     "save": "Guardar",
@@ -842,6 +847,10 @@
     }
   },
   "Dashboard": {
+    "deleteDashboard": "Eliminar panel",
+    "deleteDashboardTitle": "¿Eliminar este panel?",
+    "deleteDashboardBody": "Se mueve a la papelera y se puede restaurar desde allí. Tus datos no se tocan.",
+    "deleteDashboardConfirm": "Eliminar",
     "untitled": "Panel sin título",
     "renameDashboard": "Nombre del panel",
     "blockCount": "{count, plural, =0 {Aún sin bloques} one {# bloque} other {# bloques}}",

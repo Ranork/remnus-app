@@ -242,6 +242,11 @@
     "widthFull": "Vollständig"
   },
   "Workspace": {
+    "savingsEmpty": "Sobald deine Agenten arbeiten, siehst du hier, wie viele Tokens Remnus ihnen erspart.",
+    "accountMenu": "Kontomenü",
+    "dashboardShort": "Dashboard",
+    "mapShort": "Karte",
+    "dashboardOpenFailed": "Das Dashboard konnte nicht geöffnet werden. Versuche es erneut.",
     "planBilling": "Plan & Abrechnung",
     "saving": "Wird gespeichert...",
     "save": "Speichern",
@@ -842,6 +847,10 @@
     }
   },
   "Dashboard": {
+    "deleteDashboard": "Dashboard löschen",
+    "deleteDashboardTitle": "Dieses Dashboard löschen?",
+    "deleteDashboardBody": "Es wandert in den Papierkorb und kann dort wiederhergestellt werden. Deine Daten bleiben unverändert.",
+    "deleteDashboardConfirm": "Löschen",
     "untitled": "Unbenanntes Dashboard",
     "renameDashboard": "Dashboard-Name",
     "blockCount": "{count, plural, =0 {Noch keine Blöcke} one {# Block} other {# Blöcke}}",

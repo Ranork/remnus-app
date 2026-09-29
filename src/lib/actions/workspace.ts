@@ -12,6 +12,7 @@ import { getTranslations } from 'next-intl/server';
 import { isCloudinaryUrl, deleteCloudinaryImage } from '@/lib/cloudinary';
 import { checkCanCreateWorkspace } from '@/lib/services/billing';
 import { recordDeletionTombstone, getRelatedPages } from '@/lib/services/workspace';
+import { HOME_DASHBOARD_SQL } from '@/lib/services/dashboards';
 import { syncPageLinks, removeOutgoingPageLinks } from '@/lib/services/pageLinks';
 import { snapshotBeforeDelete, maybeSnapshotContentUpdate, type SnapshotActor } from '@/lib/services/snapshots';
 import { deleteWorkspaceData } from '@/lib/services/workspaceDeletion';
@@ -131,6 +132,7 @@ export async function getWorkspaces() {
       createdAt: workspaces.createdAt,
       updatedAt: workspaces.updatedAt,
       hidden:    workspaceMembers.hidden,
+      homeDashboardItemId: HOME_DASHBOARD_SQL,
     })
     .from(workspaces)
     .innerJoin(

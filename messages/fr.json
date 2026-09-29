@@ -242,6 +242,11 @@
     "widthFull": "Complet"
   },
   "Workspace": {
+    "savingsEmpty": "Dès que vos agents se mettront au travail, les tokens que Remnus leur fait économiser apparaîtront ici.",
+    "accountMenu": "Menu du compte",
+    "dashboardShort": "Tableau de bord",
+    "mapShort": "Carte",
+    "dashboardOpenFailed": "Impossible d’ouvrir le tableau de bord. Réessayez.",
     "planBilling": "Forfait et facturation",
     "saving": "Enregistrement...",
     "save": "Enregistrer",
@@ -842,6 +847,10 @@
     }
   },
   "Dashboard": {
+    "deleteDashboard": "Supprimer le tableau de bord",
+    "deleteDashboardTitle": "Supprimer ce tableau de bord ?",
+    "deleteDashboardBody": "Il est placé dans la corbeille et peut y être restauré. Vos données restent intactes.",
+    "deleteDashboardConfirm": "Supprimer",
     "untitled": "Tableau de bord sans titre",
     "renameDashboard": "Nom du tableau de bord",
     "blockCount": "{count, plural, =0 {Aucun bloc pour l'instant} one {# bloc} other {# blocs}}",

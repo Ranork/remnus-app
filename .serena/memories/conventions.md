@@ -232,3 +232,10 @@ Primary sources: `AI.md`, `AGENTS.md`, `messages/`, `src/auth.config.ts`, `src/l
 - **No native `<select>` in new UI**: use `SimpleSelect` (`options`, `size`, `className`, `aria-label`); the popup portals to `<body>` at z-9999 so it opens in front of z-300 modals. Grouped/custom lists: compose `Select*` parts.
 - **Async buttons**: `Button` `loading` (spinner, disabled, `aria-busy`, width kept). **`ConfirmDialog.onConfirm` may return a promise**: dialog stays open with a spinner, buttons/Escape held, rejection shown inside; on success it stays busy, so the caller must unmount it (setState false / navigate). A sync `onConfirm` still closes itself.
 - `UI` i18n namespace (close, actionFailed) is for these primitives. Add keys as text inserts, not by re-serialising a locale file (hand formatting would churn).
+
+## Sidebar, account menu, home dashboard (V2 R4, 2026-09-29)
+- Account-level sidebar entries live in `AccountMenu.tsx` (avatar row → menu), not as new nav rows. Only AI Agents stays outside. A project window renders just Trash + What's New there (conditional render, not CSS).
+- `WhatsNewButton`/`PwaInstallButton` are hooks now (`useWhatsNew`, `usePwaInstall`): render the returned `modal` outside the menu so it outlives it.
+- Each expanded workspace starts with `WorkspaceQuickLinks` (Pano + Map). `workspaces.home_dashboard_item_id` (migration 0054, applied by `src/db/apply-0054-home-dashboard.ts`) is NOT a foreign key: always read it through `HOME_DASHBOARD_SQL` / `getHomeDashboardItemId` (validates existence + type + workspace, so delete/restore need no bookkeeping). That fragment hand-writes `workspaces.…` — never alias `workspaces` around it. The home dashboard is hidden from the tree; its header carries delete.
+- `AgentSavingsCard` has `variant` sidebar/modal/dashboard; numbers use `compactDisplay: 'long'` (never the "98,1 B" shorthand).
+- shadcn CLI gotchas: `npx shadcn add …` re-adds a bogus `cn` npm package and writes token classes (`bg-popover`…) that are undefined here — run `npm uninstall cn`, and rewrite with palette classes (see `ui/dropdown-menu.tsx`).

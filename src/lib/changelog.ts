@@ -45,6 +45,31 @@ const FIRST_VISIT_WINDOW_DAYS = 7;
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-09-29-tidier-sidebar-and-project-shortcuts',
+    date: '2026-09-29',
+    category: 'improved',
+    title: {
+      en: 'A tidier sidebar with project shortcuts',
+      tr: 'Daha derli toplu sidebar ve proje kısayolları',
+      de: 'Eine aufgeräumtere Seitenleiste mit Projekt-Shortcuts',
+      es: 'Una barra lateral más ordenada con accesos directos por proyecto',
+      fr: 'Une barre latérale plus ordonnée avec des raccourcis par projet',
+      hi: 'ज़्यादा व्यवस्थित साइडबार और प्रोजेक्ट शॉर्टकट',
+      ru: 'Более аккуратная боковая панель и быстрые ссылки проекта',
+      zh: '更整洁的侧边栏和项目快捷入口',
+    },
+    summary: {
+      en: 'Every project now has its own Dashboard and Map buttons at the top, account options sit behind your avatar, and the tokens your agents saved show up as a clear card.',
+      tr: 'Her projenin en üstünde artık kendi Pano ve Harita butonları var, hesap seçenekleri avatarının arkasında toplandı ve ajanlarının kazandırdığı token\'lar net bir kart olarak görünüyor.',
+      de: 'Jedes Projekt hat jetzt oben eigene Dashboard- und Karten-Schaltflächen, die Kontooptionen liegen hinter deinem Avatar, und die von deinen Agenten gesparten Tokens erscheinen als übersichtliche Karte.',
+      es: 'Cada proyecto tiene ahora sus propios botones de Panel y Mapa arriba, las opciones de cuenta están tras tu avatar y los tokens que ahorran tus agentes aparecen en una tarjeta clara.',
+      fr: 'Chaque projet a désormais ses propres boutons Tableau de bord et Carte en haut, les options du compte se trouvent derrière votre avatar et les tokens économisés par vos agents s’affichent dans une carte claire.',
+      hi: 'हर प्रोजेक्ट के ऊपर अब उसके अपने डैशबोर्ड और नक्शा बटन हैं, खाते के विकल्प आपके अवतार के पीछे हैं, और आपके एजेंटों के बचाए टोकन साफ़ कार्ड में दिखते हैं।',
+      ru: 'У каждого проекта теперь вверху свои кнопки «Панель» и «Карта», параметры аккаунта собраны за аватаром, а сэкономленные вашими агентами токены показаны понятной карточкой.',
+      zh: '每个项目顶部现在都有自己的仪表盘和图谱按钮，账户选项收进了头像菜单，智能体为你节省的 token 也以清晰的卡片显示。',
+    },
+  },
+  {
     id: '2026-09-29-headings-visible-light-theme',
     date: '2026-09-29',
     category: 'fixed',

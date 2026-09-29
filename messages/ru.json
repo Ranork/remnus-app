@@ -242,6 +242,11 @@
     "widthFull": "Полная"
   },
   "Workspace": {
+    "savingsEmpty": "Когда ваши агенты начнут работать, здесь появится число токенов, которые сэкономил Remnus.",
+    "accountMenu": "Меню аккаунта",
+    "dashboardShort": "Панель",
+    "mapShort": "Карта",
+    "dashboardOpenFailed": "Не удалось открыть панель. Попробуйте ещё раз.",
     "planBilling": "Тариф и оплата",
     "saving": "Сохранение...",
     "save": "Сохранить",
@@ -842,6 +847,10 @@
     }
   },
   "Dashboard": {
+    "deleteDashboard": "Удалить панель",
+    "deleteDashboardTitle": "Удалить эту панель?",
+    "deleteDashboardBody": "Она попадёт в корзину, и её можно будет восстановить. Ваши данные не затрагиваются.",
+    "deleteDashboardConfirm": "Удалить",
     "untitled": "Дашборд без названия",
     "renameDashboard": "Название дашборда",
     "blockCount": "{count, plural, =0 {Пока нет блоков} one {# блок} few {# блока} other {# блоков}}",

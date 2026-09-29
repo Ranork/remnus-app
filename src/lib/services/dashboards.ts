@@ -25,7 +25,7 @@
  * later `get_page` of the dashboard longer.
  */
 import { db } from '@/db';
-import { dashboards, databases, workspaceItems } from '@/db/schema';
+import { dashboards, databases, workspaceItems, workspaces } from '@/db/schema';
 import { and, eq, inArray, or, sql } from 'drizzle-orm';
 import { z } from 'zod';
 import {
@@ -539,6 +539,56 @@ async function touchItem(itemId: string, meta: DashboardMeta, now: Date) {
       ...(meta.iconColor !== undefined ? { iconColor: meta.iconColor } : {}),
     })
     .where(eq(workspaceItems.id, itemId));
+}
+
+// ── Home dashboard ───────────────────────────────────────────────────────────
+
+/**
+ * The workspace's home dashboard id, or NULL. `workspaces.home_dashboard_item_id` is not
+ * a foreign key, so it is checked here every time it is read: the item must still exist,
+ * be a dashboard, and belong to the same workspace. A deleted home dashboard therefore
+ * reads as "none" and a restored one (same id) as "home" again. Use this fragment in any
+ * SELECT over `workspaces`; never read the raw column.
+ */
+export const HOME_DASHBOARD_SQL = sql<string | null>`(
+  SELECT wi.id FROM workspace_items wi
+  WHERE wi.id = workspaces.home_dashboard_item_id
+    AND wi.workspace_id = workspaces.id
+    AND wi.type = 'dashboard'
+)`;
+// Written out (not `${workspaces.id}`): in a single-table SELECT drizzle renders columns
+// without their table name, and inside this subquery a bare `id` would bind to `wi.id`.
+// The outer table is always `workspaces` — never alias it in a query that uses this.
+
+export async function getHomeDashboardItemId(workspaceId: string): Promise<string | null> {
+  const [row] = await db
+    .select({ id: HOME_DASHBOARD_SQL })
+    .from(workspaces)
+    .where(eq(workspaces.id, workspaceId))
+    .limit(1);
+  return row?.id ?? null;
+}
+
+/**
+ * Point the workspace's home dashboard at `itemId`, or clear it with null. The caller
+ * authorizes (workspace write access) first; this only refuses an item that is not a
+ * dashboard of this workspace.
+ */
+export async function setHomeDashboard(workspaceId: string, itemId: string | null): Promise<void> {
+  if (itemId !== null) {
+    const [item] = await db
+      .select({ workspaceId: workspaceItems.workspaceId, type: workspaceItems.type })
+      .from(workspaceItems)
+      .where(eq(workspaceItems.id, itemId))
+      .limit(1);
+    if (!item || item.workspaceId !== workspaceId || item.type !== 'dashboard') {
+      throw new DashboardInputError(`"${itemId}" is not a dashboard in this workspace`);
+    }
+  }
+  await db
+    .update(workspaces)
+    .set({ homeDashboardItemId: itemId, updatedAt: new Date() })
+    .where(eq(workspaces.id, workspaceId));
 }
 
 // ── Public API ───────────────────────────────────────────────────────────────

@@ -242,6 +242,11 @@
     "widthFull": "Full"
   },
   "Workspace": {
+    "savingsEmpty": "Once your agents start working, the tokens Remnus saves them will show up here.",
+    "accountMenu": "Account menu",
+    "dashboardShort": "Dashboard",
+    "mapShort": "Map",
+    "dashboardOpenFailed": "Couldn’t open the dashboard. Try again.",
     "planBilling": "Plan & Billing",
     "saving": "Saving...",
     "save": "Save",
@@ -842,6 +847,10 @@
     }
   },
   "Dashboard": {
+    "deleteDashboard": "Delete dashboard",
+    "deleteDashboardTitle": "Delete this dashboard?",
+    "deleteDashboardBody": "It moves to the trash and can be restored from there. Your data stays where it is.",
+    "deleteDashboardConfirm": "Delete",
     "untitled": "Untitled dashboard",
     "renameDashboard": "Dashboard name",
     "blockCount": "{count, plural, =0 {No blocks yet} one {# block} other {# blocks}}",

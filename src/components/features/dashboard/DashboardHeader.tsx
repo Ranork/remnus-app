@@ -1,10 +1,14 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { Trash2 } from 'lucide-react';
 import PageIcon from '@/components/features/PageIcon';
 import IconPicker from '@/components/features/IconPicker';
-import { updateWorkspaceItemIcon, updateWorkspaceItemTitle } from '@/lib/actions/workspace';
+import { updateWorkspaceItemIcon, updateWorkspaceItemTitle, deleteWorkspaceItem } from '@/lib/actions/workspace';
+import { ConfirmDialog } from '@/components/features/ConfirmDialog';
+import { Button } from '@/components/ui/button';
 
 /**
  * Icon + editable title for a dashboard, mirroring `StandalonePageEditor`'s
@@ -14,19 +18,26 @@ import { updateWorkspaceItemIcon, updateWorkspaceItemTitle } from '@/lib/actions
  */
 export default function DashboardHeader({
   itemId,
+  workspaceId,
   initialTitle,
   initialIcon,
   initialIconColor,
   blockCount,
+  isHome = false,
 }: {
   itemId: string;
+  workspaceId: string;
   initialTitle: string;
   initialIcon: string | null;
   initialIconColor: string | null;
   blockCount: number;
+  /** The workspace's pinned Pano. It is left out of the sidebar tree, so delete lives here. */
+  isHome?: boolean;
 }) {
   const t = useTranslations('Dashboard');
   const tPage = useTranslations('Page');
+  const router = useRouter();
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const [title, setTitle] = useState(initialTitle);
   const [icon, setIcon] = useState(initialIcon);
   const [iconColor, setIconColor] = useState(initialIconColor);
@@ -99,6 +110,34 @@ export default function DashboardHeader({
         />
         <p className="text-[11px] text-neutral-600">{t('blockCount', { count: blockCount })}</p>
       </div>
+
+      {isHome && (
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => setConfirmDelete(true)}
+          title={t('deleteDashboard')}
+          aria-label={t('deleteDashboard')}
+          className="shrink-0 hover:text-red-400"
+        >
+          <Trash2 />
+        </Button>
+      )}
+
+      {confirmDelete && (
+        <ConfirmDialog
+          title={t('deleteDashboardTitle')}
+          description={t('deleteDashboardBody')}
+          confirmLabel={t('deleteDashboardConfirm')}
+          cancelLabel={t('cancel')}
+          onCancel={() => setConfirmDelete(false)}
+          onConfirm={async () => {
+            // Stays busy until we have left the page; the Pano button then offers a fresh one.
+            await deleteWorkspaceItem(itemId);
+            router.push(`/w/${workspaceId}`);
+          }}
+        />
+      )}
     </div>
   );
 }

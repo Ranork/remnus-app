@@ -14,10 +14,11 @@ import {
   type ChangelogEntry,
 } from '@/lib/changelog';
 
-// Sidebar "What's New" entry point: a nav button carrying an unread badge, plus
-// the modal it opens. Self-contained on purpose — the sidebar is rendered twice
-// (desktop shell + mobile drawer), so keeping the seen-state inside the button
-// avoids threading a prop through both layouts. The seen marker is a plain
+// "What's New": the unread count and the modal it opens, as a hook. The account menu
+// (and the mobile user sheet) supply their own row and call `open()`; the caller must
+// render `modal` somewhere that stays mounted while the menu closes. Self-contained
+// on purpose — the sidebar is rendered twice (desktop shell + mobile drawer), so the
+// seen-state lives here rather than being threaded through both layouts. The seen marker is a plain
 // client-readable cookie (same `remnus_*` convention as the other UI
 // preferences in `lib/actions/preferences.ts`, which are also per-device).
 
@@ -54,7 +55,7 @@ const CATEGORY_STYLE: Record<ChangelogCategory, { chip: string; dot: string; ico
   },
 };
 
-export default function WhatsNewButton() {
+export function useWhatsNew() {
   const t = useTranslations('WhatsNew');
   const locale = useLocale();
 
@@ -113,23 +114,8 @@ export default function WhatsNewButton() {
     return Number.isNaN(d.getTime()) ? date : dateFormatter.format(d);
   };
 
-  return (
+  const modal = (
     <>
-      <div className="shrink-0 px-2">
-        <button
-          onClick={handleOpen}
-          className="w-full flex items-center gap-1.5 min-w-0 px-2 py-1.5 rounded-md text-sm text-neutral-300 hover:bg-neutral-800 hover:text-neutral-50 transition-all duration-200"
-        >
-          <Sparkles size={14} className="shrink-0 text-neutral-400" />
-          <span className="truncate">{t('title')}</span>
-          {unseenCount > 0 && (
-            <span className="ml-auto shrink-0 min-w-4 text-center text-[10px] font-bold text-white bg-red-500 px-1.5 py-0.5 rounded-full leading-none">
-              {unseenCount > 9 ? '9+' : unseenCount}
-            </span>
-          )}
-        </button>
-      </div>
-
       {open && mounted && createPortal(
         <div
           // z-300 (not the z-[100] most modals use): on mobile this button lives
@@ -235,4 +221,6 @@ export default function WhatsNewButton() {
       )}
     </>
   );
+
+  return { unseenCount, open: handleOpen, modal };
 }
