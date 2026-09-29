@@ -183,6 +183,7 @@ npm run mcpb:build
 - ESM import hoisting nedeniyle `dotenv.config()` DB importundan sonra çalışamaz; DB scriptlerinde ilk import olarak `dotenv/config` kullan.
 - PWA asset'leri ve bazı public endpoint'ler cookie olmadan çağrılır; matcher/auth whitelist eşleşmezse login redirect'i özelliği kırar.
 - Yerel `next build`, `.env` içindeki PostHog kişisel anahtarını yükler; source-map upload yalnız `VERCEL=1` veya açık `POSTHOG_SOURCEMAPS_UPLOAD=true` ile etkinleşmelidir. Credentials-only gate production PostHog'a beklenmedik yerel yazma yapar.
+- Vercel fonksiyonları `dub1`'de (`vercel.json` → `regions`), prod Turso `aws-eu-west-1` ile aynı yerde. Biri taşınırsa diğeri de taşınmalı; aksi halde her DB sorgusu okyanus aşırı round-trip öder.
 - `AGENTS.md` çok büyüktür ve Codex project-doc byte limitine takılabilir; dosyanın başındaki adapter her oturumda `AI.md` okumayı zorunlu kılar.
 - OneDrive/Google Drive ve Windows file lock/encoding davranışları nedeniyle edit sonrası dosyayı yeniden doğrula.
 

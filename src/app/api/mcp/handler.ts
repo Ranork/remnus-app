@@ -57,6 +57,20 @@ async function secretMatches(kind: string, rowId: string, tokenHash: string, sec
   return true;
 }
 
+// `lastUsedAt` is only ever shown as "last used 3 min ago", yet it was written on every
+// request — one extra database write per MCP call, a handful per session start. Once a
+// minute per token per instance is as precise as anything that reads it.
+const LAST_USED_WRITE_INTERVAL_MS = 60_000;
+const lastUsedWrittenAt = new Map<string, number>();
+
+function touchLastUsed(tokenId: string) {
+  const now = Date.now();
+  if (now - (lastUsedWrittenAt.get(tokenId) ?? 0) < LAST_USED_WRITE_INTERVAL_MS) return;
+  if (lastUsedWrittenAt.size >= VERIFIED_SECRETS_MAX) lastUsedWrittenAt.clear();
+  lastUsedWrittenAt.set(tokenId, now);
+  db.update(agentTokens).set({ lastUsedAt: new Date(now) }).where(eq(agentTokens.id, tokenId)).catch(() => {});
+}
+
 export async function verifyBearerToken(authHeader: string | null): Promise<TokenContext | AuthFailure> {
   console.log('[mcp/auth] enter', {
     hasHeader: !!authHeader,
@@ -131,7 +145,7 @@ export async function verifyBearerToken(authHeader: string | null): Promise<Toke
     return 'invalid_token';
   }
 
-  db.update(agentTokens).set({ lastUsedAt: new Date() }).where(eq(agentTokens.id, row.id)).catch(() => {});
+  touchLastUsed(row.id);
 
   return { tokenId: row.id, tokenKind: 'pat', workspaceId: row.workspaceId, scope, agentName: row.agentName ?? null, ownerUserId: row.createdBy ?? null };
 }
@@ -184,10 +198,7 @@ function withMcpHeader(res: Response): Response {
 // agent has no way to discover they exist. Kept short (well under the ~1-2KB that's reasonable
 // for a system-prompt addition); for the full workspace map, point at the digest resource
 // instead of inlining it here — that scales with workspace size and shouldn't ride on every request.
-async function buildInstructions(ctx: TokenContext): Promise<string> {
-  return renderInstructions(ctx, await getContextPolicy(ctx.workspaceId));
-}
-
+//
 // The text itself, separated from the policy lookup so it can be measured without a
 // database (scripts/mcp-token-budget). Every line here is a per-session token cost.
 export function renderInstructions(ctx: TokenContext, policy: Pick<ContextPolicy, 'mode' | 'autoMaxTokens'>): string {
@@ -289,15 +300,46 @@ export function handleMcpRequest(req: Request, endpoint: McpEndpoint = SHARED_EN
   return mcpCallTiming.run({ startedAt: performance.now() }, () => runMcpRequest(req, endpoint));
 }
 
+/** The JSON-RPC body of a POST, or undefined — then the transport parses it and answers the error. */
+async function readJsonBody(req: Request): Promise<unknown> {
+  if (req.method !== 'POST') return undefined;
+  try {
+    return await req.clone().json();
+  } catch {
+    return undefined;
+  }
+}
+
+function carriesInitialize(body: unknown): boolean {
+  const messages = Array.isArray(body) ? body : [body];
+  return messages.some((m) => (m as { method?: unknown } | null)?.method === 'initialize');
+}
+
 async function runMcpRequest(req: Request, endpoint: McpEndpoint): Promise<Response> {
+  const body = await readJsonBody(req);
+  // The context policy only feeds the instructions, and only an `initialize` reply carries
+  // them — so every other request (tool calls included) skips that query. On a
+  // workspace-pinned URL the workspace is known before auth, so the lookup runs alongside
+  // it instead of after; only when a credential was presented, so an anonymous probe costs
+  // no query. It is read only if auth then succeeds for that same workspace.
+  const initializing = carriesInitialize(body);
+  const earlyPolicy = initializing && endpoint.expectedWorkspaceId && req.headers.get('Authorization')
+    ? getContextPolicy(endpoint.expectedWorkspaceId)
+    : null;
+  earlyPolicy?.catch(() => {}); // awaited below when used; not an unhandled rejection when auth fails
+
   const authed = await authenticate(req, endpoint);
   if (authed instanceof Response) return authed;
   const ctx: TokenContext = { ...authed, appOrigin: new URL(req.url).origin };
 
   if (!checkRateLimit(ctx.tokenId)) return json({ error: 'Too many requests' }, 429);
 
+  const instructions = initializing
+    ? renderInstructions(ctx, await (earlyPolicy ?? getContextPolicy(ctx.workspaceId)))
+    : undefined;
+
   // Build and register server capabilities
-  const server = new McpServer({ name: 'remnus-mcp', version: '1.1.0' }, { instructions: await buildInstructions(ctx) });
+  const server = new McpServer({ name: 'remnus-mcp', version: '1.1.0' }, { instructions });
   registerResources(server, ctx);
   registerPrompts(server, ctx);
   registerReadTools(server, ctx);
@@ -319,5 +361,5 @@ async function runMcpRequest(req: Request, endpoint: McpEndpoint): Promise<Respo
     enableJsonResponse: true,
   });
   await server.connect(transport);
-  return withMcpHeader(await transport.handleRequest(req));
+  return withMcpHeader(await transport.handleRequest(req, body === undefined ? undefined : { parsedBody: body }));
 }

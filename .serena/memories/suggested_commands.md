@@ -34,6 +34,14 @@ npm run bench:mcp-budget # Per-session MCP context cost: tools/list per tool + p
 #                           Locally it dies on `Cannot find module 'server-only'` (analytics/server.ts imports it; the
 #                           package is not installed — Next bundles its own). Don't install it: point NODE_PATH at a
 #                           scratch dir holding server-only/{package.json,index.js (empty)} for the run (P13, 2026-09-24).
+npm run bench:mcp-request   # Server cost of the session-opening MCP requests (initialize, lists, digest) through the
+#                           real handler with a minted local PAT (deleted after): median ms + DB round trips per
+#                           method, per scope. BENCH_DB_RTT_MS=80 models a far DB. Local only. Redirects
+#                           `server-only` to Next's stub itself. DATABASE_URL="file:local.db" npm run bench:mcp-request
+npm run bench:mcp-handshake -- --project <dir> [--runs 5] [--bridge mcpjson|local]
+#                           Spawns the project's .mcp.json server like Claude Code and times initialize + lists.
+#                           Read-only; the bridge reads the token, the script never does. Rate limit: 60 req/min
+#                           per token, one run = 6 requests (incl. the bridge's map refresh) → ≤ 9 runs a minute.
 ```
 
 There is still no general unit/integration/e2e test runner or `test` script — do not invent one. The three commands above are targeted, self-contained checks, not a suite. Run `npm run build` only when build behavior changed, before release, or when explicitly requested.

@@ -18,6 +18,8 @@
     "bench:context": "npx tsx src/scripts/benchmark-context-pack.ts",
     "bench:graph": "npx tsx src/scripts/bench-graph.ts",
     "bench:mcp-budget": "npx tsx src/scripts/mcp-token-budget.ts",
+    "bench:mcp-request": "npx tsx src/scripts/bench-mcp-request.ts",
+    "bench:mcp-handshake": "node scripts/mcp-handshake-timing.mjs",
     "bench:tokens": "npx tsx src/scripts/bench-tokens.ts",
     "sync:accessibility-widget": "node scripts/sync-accessibility-widget.mjs",
     "db:migrate": "npx tsx src/db/migrate.ts",

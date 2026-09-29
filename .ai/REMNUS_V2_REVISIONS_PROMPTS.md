@@ -463,6 +463,58 @@ ama gerekçele).
 - update-handoff; commit yok; "Tamamlandı" notu.
 ```
 
+### ✅ R2 — Tamamlandı (2026-09-29, Claude; commit/push yok; prod ölçümü açık)
+
+**Ölçüm (Hakan'ın makinesi, Windows, 22 çekirdek, Türkiye):**
+
+| Segment | Süre |
+|---|---|
+| `npx -y remnus@0.1.10 --version`, önbellekli | 2,6–3,0 sn (`--prefer-offline` / `--offline` fark etmiyor: npm'in kendi açılışı) |
+| İlk oturum (init `remnus` spec'ini önbelleğe aldı, pin ayrı anahtar) | 3,3–3,7 sn; bridge + hook paralel, kilit çekişmesi yok |
+| Aynı paket doğrudan `node` | 0,2 sn |
+| 5 paralel npx (bridge, hook, playwright, context7, chrome-devtools) | ~3 sn, çekişme yok |
+| Prod sıcak istek, tokensız / sahte PAT (Türkiye → fra1 → **iad1**) | ~0,45 sn |
+| Prod 25 dk boşta sonra ilk istek (tokensız 401, tüm modüller yüklenir, DB yok) | 1,23 sn → soğuk başlangıç ≈ +0,8 sn |
+
+| Metot (süreç içi, DB RTT 80 ms modeli) | Önce | Sonra | DB round-trip |
+|---|---|---|---|
+| initialize | 205 ms | 117 ms | 3 → 2 (paralel) |
+| tools/list | 232 ms | 130 ms | 3 → 1 |
+| prompts/list | 206 ms | 119 ms | 3 → 1 |
+| resources/list | 398 ms | 298 ms | 6 → 4 |
+| digest read | 395 ms | 297 ms | 8 → 6 |
+
+Bağımlılık import'u düz node ile ~0,8 sn (MCP SDK 0,32, drizzle 0,28, zod 0,10, posthog 0,10);
+`initialize` zaten SDK + DB'ye ihtiyaç duyduğundan tembel import kazancı küçük → yapılmadı.
+
+**Yapılanlar (sunucu — herkese deploy anında):**
+- `src/app/api/mcp/handler.ts`: context policy yalnız `initialize`'da okunuyor (body `parsedBody`
+  olarak transport'a geçiyor); pinned URL'de auth ile paralel, yalnız credential varsa.
+  Tool çağrıları dahil her istek bir sorgu az. `lastUsedAt` token başına dakikada bir (`touchLastUsed`).
+- `vercel.json` → `"regions": ["dub1"]` (Hakan onayladı): fonksiyonlar Turso `aws-eu-west-1` yanında.
+  **Deploy sonrası etkili.**
+- Ölçüm araçları: `npm run bench:mcp-request`, `npm run bench:mcp-handshake`.
+- Changelog `2026-09-29-faster-agent-connection` (`improved`).
+- AGENTS.md (pinned endpoint invariants altı), AI.md gotcha, Serena `tech_stack` + `suggested_commands`.
+
+**Yapılmayan — CLI (npx yerine node yükleyici):** ~2,5 sn kazandırırdı ama commit'lenen
+`.mcp.json`'a `node -e "<ev dizininden kod yükle>"` koymak; hem Claude Code'un proje MCP onay
+ekranında hem repoyu okuyan AI ajanlarında/tarayıcılarda tedarik zinciri saldırısı gibi görünür,
+ve npm'in tarball bütünlük doğrulamasını devre dışı bırakır. `npx -y paket@sürüm` bütün MCP
+sunucularının kullandığı tanınmış kalıp → korundu. CLI'a dokunulmadı; R11'e satır yok.
+
+**Doğrulama:** eslint, tsc, `test:agent-access` 34/34, köprü üzerinden scope (write 27/16, read 11/0),
+fixture token'lar local.db'den silindi, dev durduruldu (port 3000 boş).
+
+**Açık / Hakan'da:**
+1. Deploy öncesi ve sonrası bağlı bir projede:
+   `node D:\Workspace\GitHub\remnus-app\scripts\mcp-handshake-timing.mjs --project . --runs 5`
+   (salt okuma, yalnız süre yazar). 15–20 sn'nin kalanı (hesaplanan: sıcak ~4–5, soğuk ~6–8 sn)
+   bu ölçümle bulunacak; hâlâ yavaşsa `claude --debug` MCP bağlantı satırları.
+2. Deploy sonrası sağlık: `/api/health`, tokensız MCP 401, `X-Vercel-Id` içinde `dub1`.
+3. Not: paylaşılan `/api/mcp` route'u `vercel.json`'da `memory: 256` — bu uçtaki eski/OAuth
+   istemcilerin bcrypt ve soğuk başlangıcı yavaş olabilir; maliyet kararı, R9'a.
+
 ---
 
 # R3 — Temel UI bileşenleri ve loading durumları

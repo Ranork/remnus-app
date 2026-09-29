@@ -45,6 +45,31 @@ const FIRST_VISIT_WINDOW_DAYS = 7;
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-09-29-faster-agent-connection',
+    date: '2026-09-29',
+    category: 'improved',
+    title: {
+      en: 'Faster pages and agent connections',
+      tr: 'Daha hızlı sayfalar ve ajan bağlantıları',
+      de: 'Schnellere Seiten und Agent-Verbindungen',
+      es: 'Páginas y conexiones de agentes más rápidas',
+      fr: 'Pages et connexions d’agents plus rapides',
+      hi: 'तेज़ पेज और एजेंट कनेक्शन',
+      ru: 'Страницы и подключение агентов работают быстрее',
+      zh: '页面和智能体连接更快了',
+    },
+    summary: {
+      en: 'Remnus now runs next to its data, so pages load faster and a new AI agent session connects to your workspace sooner.',
+      tr: 'Remnus artık verilerinin yanında çalışıyor; sayfalar daha hızlı açılıyor ve yeni bir AI ajanı oturumu workspace\'ine daha çabuk bağlanıyor.',
+      de: 'Remnus läuft jetzt direkt neben seinen Daten, daher laden Seiten schneller und eine neue KI-Agent-Sitzung verbindet sich früher mit deinem Workspace.',
+      es: 'Remnus ahora funciona junto a sus datos, así que las páginas cargan más rápido y una nueva sesión de agente de IA se conecta antes a tu espacio de trabajo.',
+      fr: 'Remnus fonctionne désormais à côté de ses données : les pages se chargent plus vite et une nouvelle session d’agent IA se connecte plus tôt à votre espace de travail.',
+      hi: 'Remnus अब अपने डेटा के पास चलता है, इसलिए पेज तेज़ी से खुलते हैं और नया AI एजेंट सत्र आपके वर्कस्पेस से जल्दी जुड़ता है।',
+      ru: 'Remnus теперь работает рядом со своими данными, поэтому страницы открываются быстрее, а новый сеанс ИИ-агента быстрее подключается к вашему рабочему пространству.',
+      zh: 'Remnus 现在与数据运行在同一地区，页面加载更快，新的 AI 智能体会话也能更快连接到你的工作区。',
+    },
+  },
+  {
     id: '2026-09-26-clearer-project-setup',
     date: '2026-09-26',
     category: 'improved',
