@@ -789,9 +789,7 @@ silindi): normal oturum, Pano oluştur/aç/sil/geri yükle, hesap menüsü, kili
 mobil 375 px (menü sheet'in önünde), tasarruf kartı sidebar+modal (geçici audit satırlarıyla), açık + 3 koyu tema.
 Eksik: çok çalışma alanlı hesapta yan yana Pano satırları, Tauri.
 
-**Deploy günü (Hakan):** (1) `npx tsx src/db/apply-0054-home-dashboard.ts` (prod = `.env`; hedefi çıktıdaki
-"Target:" satırından doğrula) **kod yayına girmeden ÖNCE** — çalışma alanı listesi sorgusu sütunu seçiyor,
-sütun yokken sidebar açılmaz; (2) `npm run db:drift`; (3) push. Migration geri alınabilir (sütun sadece okunur).
+**Deploy (2026-09-29, Claude, Hakan'ın onayıyla):** migration 0054 prod Turso'ya koddan ÖNCE uygulandı (180 workspace, backfill 1 ana pano), `db:drift` prod OK, `78ddf07` push → Vercel success; canlı `/api/health` 200, tokensız MCP 401, `/app` 307.
 
 ---
 
