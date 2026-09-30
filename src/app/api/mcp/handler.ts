@@ -26,6 +26,7 @@ import { registerReadTools } from './tools/read';
 import { registerWriteTools } from './tools/write';
 import { mcpCallTiming, type TokenContext } from './context';
 import { getContextPolicy, type ContextPolicy } from '@/lib/services/knowledge';
+import { getPublicOrigin } from '@/lib/mcp/publicOrigin';
 
 // ── Token verification ────────────────────────────────────────────────────────
 
@@ -254,8 +255,7 @@ export async function handleMcpGet(req: Request, endpoint: McpEndpoint = SHARED_
 }
 
 async function authenticate(req: Request, endpoint: McpEndpoint): Promise<TokenContext | Response> {
-  const reqUrl = new URL(req.url);
-  const base = `${reqUrl.protocol}//${reqUrl.host}`;
+  const base = getPublicOrigin(req);
 
   const result = await verifyBearerToken(req.headers.get('Authorization'));
   if (result === 'no_credential' || result === 'invalid_token') {
@@ -330,7 +330,7 @@ async function runMcpRequest(req: Request, endpoint: McpEndpoint): Promise<Respo
 
   const authed = await authenticate(req, endpoint);
   if (authed instanceof Response) return authed;
-  const ctx: TokenContext = { ...authed, appOrigin: new URL(req.url).origin };
+  const ctx: TokenContext = { ...authed, appOrigin: getPublicOrigin(req) };
 
   if (!checkRateLimit(ctx.tokenId)) return json({ error: 'Too many requests' }, 429);
 

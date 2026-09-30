@@ -1,8 +1,9 @@
 export const runtime = 'edge';
 
+import { getPublicOrigin } from '@/lib/mcp/publicOrigin';
+
 export function GET(req: Request) {
-  const url = new URL(req.url);
-  const base = `${url.protocol}//${url.host}`;
+  const base = getPublicOrigin(req);
   return Response.json(
     {
       issuer: base,
