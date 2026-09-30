@@ -44,8 +44,8 @@ const CATEGORY_STYLE: Record<ChangelogCategory, { chip: string; dot: string; ico
     icon: Plus,
   },
   improved: {
-    chip: 'text-blue-400 bg-blue-500/10 border-blue-500/20',
-    dot: 'bg-blue-400',
+    chip: 'text-signal-text bg-signal/10 border-signal/20',
+    dot: 'bg-signal',
     icon: ArrowUp,
   },
   fixed: {
@@ -138,8 +138,8 @@ export function useWhatsNew() {
             {/* Header */}
             <div className="flex items-start justify-between gap-3 px-5 py-4 border-b border-neutral-800 bg-neutral-900/30 shrink-0">
               <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-7 h-7 rounded-md bg-blue-500/10 border border-blue-500/20 flex items-center justify-center shrink-0">
-                  <Sparkles size={14} className="text-blue-400" />
+                <div className="w-7 h-7 rounded-md bg-signal/10 border border-signal/20 flex items-center justify-center shrink-0">
+                  <Sparkles size={14} className="text-signal-text" />
                 </div>
                 <div className="min-w-0">
                   <h2 className="m-0 text-sm font-semibold text-neutral-100 truncate">{t('title')}</h2>
@@ -182,13 +182,13 @@ export function useWhatsNew() {
                           key={entry.id}
                           className={`rounded-lg border px-3.5 py-3 transition-colors ${
                             isUnseen
-                              ? 'border-blue-500/25 bg-blue-500/[0.04]'
+                              ? 'border-signal/25 bg-signal/[0.04]'
                               : 'border-neutral-800 bg-neutral-900/30'
                           }`}
                         >
                           <div className="flex items-center gap-2 mb-1.5">
                             <span
-                              className={`inline-flex items-center gap-1 text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-full border leading-none ${style.chip}`}
+                              className={`inline-flex items-center gap-1 text-2xs font-medium px-1.5 py-0.5 rounded-full border leading-none ${style.chip}`}
                             >
                               <CategoryIcon size={9} />
                               {t(`category_${entry.category}` as 'category_new')}

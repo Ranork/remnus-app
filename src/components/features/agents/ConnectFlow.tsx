@@ -27,9 +27,9 @@ function WorkspacePicker({
   onChange: (id: string) => void;
   accent: 'blue' | 'emerald';
 }) {
-  const activeCls = accent === 'emerald' ? 'bg-emerald-500/10 border-emerald-500/40' : 'bg-blue-500/10 border-blue-500/40';
-  const activeText = accent === 'emerald' ? 'text-emerald-400' : 'text-blue-400';
-  const activeCheck = accent === 'emerald' ? 'text-emerald-400' : 'text-blue-400';
+  const activeCls = accent === 'emerald' ? 'bg-emerald-500/10 border-emerald-500/40' : 'bg-signal/10 border-signal/40';
+  const activeText = accent === 'emerald' ? 'text-emerald-400' : 'text-signal-text';
+  const activeCheck = accent === 'emerald' ? 'text-emerald-400' : 'text-signal-text';
   return (
     <div className="space-y-1 max-h-40 overflow-y-auto pr-0.5">
       {targets.map(w => {
@@ -62,7 +62,7 @@ function WorkspacePicker({
 
 function EditorMark({ id, size = 14 }: { id: EditorId; size?: number }) {
   const meta = EDITORS.find(e => e.id === id);
-  if (id === 'custom') return <Plug size={size} className="text-blue-400" />;
+  if (id === 'custom') return <Plug size={size} className="text-signal-text" />;
   if (id === 'vscode' || !meta?.aiMark) return <VscodeMark size={size} />;
   return <AIMark name={meta.aiMark} size={size} />;
 }
@@ -129,7 +129,7 @@ function StepChoose({
   return (
     <div className="space-y-4">
       <div className="space-y-0.5">
-        <p className="text-[10px] font-semibold text-neutral-500 uppercase tracking-widest">
+        <p className="text-2xs font-medium text-neutral-500">
           {t('connectStep', { current: 1, total: 3 })}
         </p>
         <h3 className="text-sm font-semibold text-neutral-100">{t('connectChooseTitle')}</h3>
@@ -146,14 +146,14 @@ function StepChoose({
               onClick={() => onSelect(id)}
               className={`group relative flex items-start gap-3 p-4 rounded-xl border text-left transition-all ${
                 selected
-                  ? 'bg-blue-500/15 border-blue-500/50 shadow-[0_0_18px_rgba(68,92,149,0.3)]'
+                  ? 'bg-signal/15 border-signal/50'
                   : 'bg-neutral-900 border-neutral-800 hover:bg-neutral-800 hover:border-neutral-700 hover:-translate-y-0.5'
               }`}
             >
               <span
                 className={`shrink-0 flex items-center justify-center w-10 h-10 rounded-lg border transition-colors ${
                   selected
-                    ? 'bg-blue-500/10 border-blue-500/30'
+                    ? 'bg-signal/10 border-signal/30'
                     : 'bg-neutral-950/60 border-neutral-800 group-hover:border-neutral-700'
                 }`}
               >
@@ -161,7 +161,7 @@ function StepChoose({
               </span>
               <span className="min-w-0 flex flex-col gap-0.5">
                 <span className="flex items-center gap-1.5">
-                  <span className={`text-sm font-semibold ${selected ? 'text-blue-400' : 'text-neutral-200 group-hover:text-neutral-50'}`}>
+                  <span className={`text-sm font-semibold ${selected ? 'text-signal-text' : 'text-neutral-200 group-hover:text-neutral-50'}`}>
                     {label}
                   </span>
                   {isDetected && (
@@ -175,7 +175,7 @@ function StepChoose({
                 </span>
               </span>
               {selected && (
-                <span className="absolute top-2.5 right-2.5 flex items-center justify-center w-5 h-5 rounded-full bg-blue-500 text-white">
+                <span className="absolute top-2.5 right-2.5 flex items-center justify-center w-5 h-5 rounded-full bg-ink text-ink-fg">
                   <Check size={12} />
                 </span>
               )}
@@ -330,7 +330,7 @@ function StepConnect({
         <>
           <CodeBlock code={buildClaudeCmd(mcpUrl)} isCmd hint={t('connectRunCommand')} t={t} />
           <p className="text-[11px] text-neutral-400 flex items-start gap-1.5">
-            <Globe size={12} className="text-blue-400 shrink-0 mt-0.5" />
+            <Globe size={12} className="text-signal-text shrink-0 mt-0.5" />
             {t('connectClaudeOAuthHint')}
           </p>
         </>
@@ -342,7 +342,7 @@ function StepConnect({
         <div className="space-y-2">
           <a
             href={href}
-            className="inline-flex items-center gap-2 text-xs font-semibold text-white bg-blue-500 hover:bg-blue-400 px-4 py-2.5 rounded-lg transition-colors"
+            className="inline-flex items-center gap-2 text-xs font-semibold text-ink-fg bg-ink hover:bg-ink/88 px-4 py-2.5 rounded-lg transition-colors"
           >
             <EditorMark id={editor} size={14} />
             {t('connectOpenIn', { tool: meta.label })}
@@ -473,7 +473,7 @@ function StepConnect({
         {/* Workspace picker (only when more than one) */}
         {mintTargets.length > 1 && (
           <div className="space-y-1">
-            <label className="block text-[10px] font-semibold text-neutral-500 uppercase tracking-widest">
+            <label className="block text-2xs font-medium text-neutral-500">
               {t('connectTokenWorkspaceLabel')}
             </label>
             <WorkspacePicker targets={mintTargets} value={selectedWs} onChange={setSelectedWs} accent="blue" />
@@ -482,7 +482,7 @@ function StepConnect({
 
         {/* Scope */}
         <div className="space-y-1">
-          <label className="block text-[10px] font-semibold text-neutral-500 uppercase tracking-widest">
+          <label className="block text-2xs font-medium text-neutral-500">
             {t('mcpCreateScopeLabel')}
           </label>
           <div className="flex gap-2">
@@ -494,7 +494,7 @@ function StepConnect({
                   scope === s
                     ? s === 'write'
                       ? 'bg-amber-500/10 border-amber-500/40 text-amber-300'
-                      : 'bg-blue-500/10 border-blue-500/40 text-blue-300'
+                      : 'bg-signal/10 border-signal/40 text-signal-text'
                     : 'bg-neutral-900 border-neutral-700 text-neutral-400 hover:text-neutral-200 hover:border-neutral-600'
                 }`}
               >
@@ -552,7 +552,7 @@ function StepConnect({
       {/* Animated walkthrough — Claude Code only, above Quick connect */}
       {editor === 'claude' && (
         <div className="space-y-1.5">
-          <p className="text-[10px] font-semibold text-neutral-500 uppercase tracking-widest">
+          <p className="text-2xs font-medium text-neutral-500">
             {t('connectAnimTitle')}
           </p>
           <ClaudeConnectAnimation mcpUrl={mcpUrl} />
@@ -560,14 +560,14 @@ function StepConnect({
       )}
 
       {/* Primary: OAuth */}
-      <div className="border border-blue-500/20 rounded-xl p-4 bg-blue-500/5 space-y-3">
+      <div className="border border-signal/20 rounded-xl p-4 bg-signal/5 space-y-3">
         <div className="flex items-center gap-2">
-          <Globe size={13} className="text-blue-400" />
+          <Globe size={13} className="text-signal-text" />
           <span className="text-xs font-semibold text-neutral-100">
             {oauthReady ? t('connectOAuthTitle') : t('connectConfigTitle')}
           </span>
           {oauthReady && (
-            <span className="text-[9px] font-bold text-blue-400 bg-blue-500/10 border border-blue-500/20 px-1.5 py-0.5 rounded-full">
+            <span className="text-[9px] font-bold text-signal-text bg-signal/10 border border-signal/20 px-1.5 py-0.5 rounded-full">
               {t('connectRecommended')}
             </span>
           )}
@@ -598,7 +598,7 @@ function StepConnect({
         <div className="flex justify-end">
           <button
             onClick={onNext}
-            className="flex items-center gap-2 text-xs font-semibold text-white bg-blue-500 hover:bg-blue-400 px-4 py-2 rounded-md transition-colors"
+            className="flex items-center gap-2 text-xs font-semibold text-ink-fg bg-ink hover:bg-ink/88 px-4 py-2 rounded-md transition-colors"
           >
             {t('connectNext')} <ArrowRight size={13} />
           </button>
@@ -610,7 +610,7 @@ function StepConnect({
   return (
     <div className="space-y-4">
       <div className="space-y-0.5">
-        <p className="text-[10px] font-semibold text-neutral-500 uppercase tracking-widest">
+        <p className="text-2xs font-medium text-neutral-500">
           {t('connectStep', { current: 2, total: 3 })}
         </p>
         <h3 className="text-sm font-semibold text-neutral-100 flex items-center gap-2">
@@ -640,7 +640,7 @@ function StepConnect({
             <>
               {mintTargets.length > 1 && (
                 <div className="space-y-1">
-                  <label className="block text-[10px] font-semibold text-neutral-500 uppercase tracking-widest">
+                  <label className="block text-2xs font-medium text-neutral-500">
                     {t('connectTokenWorkspaceLabel')}
                   </label>
                   <WorkspacePicker targets={mintTargets} value={selectedWs} onChange={setSelectedWs} accent="emerald" />
@@ -711,7 +711,7 @@ function StepConnect({
         {!autoAvailable && (
           <button
             onClick={onNext}
-            className="flex items-center gap-2 text-xs font-semibold text-white bg-blue-500 hover:bg-blue-400 px-4 py-2 rounded-md transition-colors"
+            className="flex items-center gap-2 text-xs font-semibold text-ink-fg bg-ink hover:bg-ink/88 px-4 py-2 rounded-md transition-colors"
           >
             {t('connectNext')} <ArrowRight size={13} />
           </button>
@@ -750,7 +750,7 @@ function StepTest({
   return (
     <div className="space-y-4">
       <div className="space-y-0.5">
-        <p className="text-[10px] font-semibold text-neutral-500 uppercase tracking-widest">
+        <p className="text-2xs font-medium text-neutral-500">
           {t('connectStep', { current: 3, total: 3 })}
         </p>
         <h3 className="text-sm font-semibold text-neutral-100">{t('connectTestTitle')}</h3>

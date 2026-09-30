@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getSessionAllowingWorkspaceLock } from '@/lib/auth/session';
 import { lockClaimsOf } from '@/lib/auth/workspaceLock';
-import { changeVersionForUser } from '@/lib/services/changeVersion';
+import { computeChangeVersion, signalExtras, visibleWorkspaceIds } from '@/lib/services/changeVersion';
 
 // The change signal, split out from the activity heartbeat.
 //
@@ -18,20 +18,23 @@ import { changeVersionForUser } from '@/lib/services/changeVersion';
 // where nothing changed must stay a few bytes. Don't grow this response.
 //
 // Project windows are served too — watching an agent work is the point of the
-// window — scoped by `changeVersionForUser` to the one workspace their lock
-// allows.
+// window — scoped by `visibleWorkspaceIds` to the one workspace their lock allows.
+// Besides `v`: `n` (visible workspace count) and, only while `v`'s second is still
+// open, `h: 1` — see `signalExtras`.
 export async function GET() {
   const session = await getSessionAllowingWorkspaceLock();
   const userId = session?.user?.id;
   if (!userId) return NextResponse.json({ v: 0 }, { status: 401 });
 
-  let v = 0;
+  let body: { v: number; n?: number; h?: 1 } = { v: 0 };
   try {
-    v = await changeVersionForUser(userId, lockClaimsOf(session.user).workspaceLock ?? null);
+    const ids = await visibleWorkspaceIds(userId, lockClaimsOf(session.user).workspaceLock ?? null);
+    const v = await computeChangeVersion(ids);
+    body = { v, ...signalExtras(v, ids.length) };
   } catch {
     // Best-effort: a failed tick means "no refresh this time", never an error
-    // the user sees. `v: 0` can only ever compare as "no advance".
+    // the user sees. `v: 0` (and no `n`) can only ever compare as "no advance".
   }
 
-  return NextResponse.json({ v }, { headers: { 'Cache-Control': 'no-store' } });
+  return NextResponse.json(body, { headers: { 'Cache-Control': 'no-store' } });
 }

@@ -53,15 +53,18 @@ select · `Severity` select (`Blocker`, `Friction`, `Polish`) · `Status` status
   Unit `/s` · Changed 2026-05-02. Body: "Raised from 12 so ranged builds can kite; watch
   melee dominance in Zone 3."
 
-## Status screen
+## Home dashboard
 
-`Build status`:
-- `metric` Enemies, filter Status equals `In game`
-- `chart` bar, Enemies grouped by Zone
-- `chart` donut, Zones grouped by Status
-- `list` Balance parameters, sort Changed descending, showColumns System, Value
-- `list` Playtest findings, filter Status equals `Open`, showColumns Severity, Area
-- `links` overview, Zones, Decisions
+The workspace's home (`home: true`), which opens on the **Pano** button:
+- `project` — summary: genre, what the player does, where the build stands; stack chips
+  (engine, language, target platforms).
+- Then, only for the databases you actually built, and only blocks that show something
+  today:
+  - Enemies / Items: `metric` filter Status equals `In game`; `chart` bar grouped by Zone.
+  - Zones: `chart` donut grouped by Status.
+  - Balance parameters: `list` sort Changed descending, showColumns System, Value.
+  - Playtest findings: `list` filter Status equals `Open`, showColumns Severity, Area.
+- `links` overview, Zones, Decisions · `activity` · `savings`
 
 ## Don't
 

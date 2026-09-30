@@ -15,6 +15,7 @@ import { getCurrentUser } from '@/lib/auth/session';
 import { LAST_PATH_COOKIE } from '@/lib/constants/cookies';
 import { deleteAssetByUrl } from '@/lib/services/assets';
 import { checkCanAddSeatForEmail } from '@/lib/services/billing';
+import { touchWorkspaces } from '@/lib/services/changeVersion';
 import { revokeAgentAccess, revokeAllAgentAccessOf, restrictAgentAccessToRead } from '@/lib/services/agentAccess';
 import { isPlanTier, type PlanTier } from '@/lib/billing/plans';
 
@@ -134,6 +135,8 @@ export async function inviteToWorkspace(
       role,
       createdAt: new Date(),
     });
+    // Their open tabs see the workspace appear without a reload.
+    await touchWorkspaces(workspaceId);
 
     revalidatePath('/');
     return { success: true };
@@ -380,6 +383,8 @@ export async function updateWorkspaceMemberRole(
     .set({ role })
     .where(eq(workspaceMembers.id, targetMember.id));
   if (role === 'viewer') await restrictAgentAccessToRead(workspaceId, userId);
+  // Their open tabs pick up the new role (a viewer's editors go read-only) without a reload.
+  await touchWorkspaces(workspaceId);
 
   revalidatePath('/');
   return { success: true };
@@ -459,7 +464,7 @@ export async function transferWorkspaceOwnership(
   // and is governed by their plan.
   await db
     .update(workspaces)
-    .set({ billingOwnerId: newOwnerUserId })
+    .set({ billingOwnerId: newOwnerUserId, updatedAt: new Date() })
     .where(eq(workspaces.id, workspaceId));
 
   revalidatePath('/');

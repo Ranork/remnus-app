@@ -50,7 +50,7 @@ function HeroTile({ label, value, unit, sub, children }: {
 }) {
   return (
     <div className="flex flex-col gap-2.5 rounded-xl border border-neutral-800 bg-neutral-900 px-5 py-4">
-      <span className="text-[10.5px] font-semibold uppercase tracking-wider text-neutral-500">{label}</span>
+      <span className="text-2xs font-medium text-neutral-500">{label}</span>
       <div className="flex items-baseline gap-1.5">
         <span className="text-3xl font-semibold leading-none tracking-tight tabular-nums text-neutral-100">{value}</span>
         {unit && <span className="text-sm font-medium text-neutral-500">{unit}</span>}

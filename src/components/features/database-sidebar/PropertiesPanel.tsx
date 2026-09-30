@@ -118,7 +118,7 @@ export default function PropertiesPanel({
             {(col.type === 'date' || col.type === 'datetime') && (
               <div className="pl-10 pr-3 py-2 bg-neutral-900/30 border-b border-neutral-800/50 flex flex-col gap-1.5">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-[10px] text-neutral-500 uppercase tracking-wider">{t('dateFormat')}</span>
+                  <span className="text-2xs text-neutral-500">{t('dateFormat')}</span>
                   <div className="flex items-center gap-2">
                     <SimpleSelect
                       value={col.dateFormat || 'default'}
@@ -321,7 +321,7 @@ export default function PropertiesPanel({
           <button onClick={onReset} disabled={isSavingSchema} className="text-xs text-neutral-500 hover:text-neutral-300 transition-colors cursor-pointer">
             {tWs('cancel')}
           </button>
-          <button onClick={onSave} disabled={isSavingSchema} className="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white text-xs font-medium disabled:opacity-50 transition-colors cursor-pointer">
+          <button onClick={onSave} disabled={isSavingSchema} className="px-3 py-1 bg-ink hover:bg-ink/88 text-ink-fg text-xs font-medium disabled:opacity-50 transition-colors cursor-pointer">
             {isSavingSchema ? tWs('saving') : tWs('save')}
           </button>
         </div>

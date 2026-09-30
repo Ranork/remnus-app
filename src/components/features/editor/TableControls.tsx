@@ -176,7 +176,7 @@ export default function TableControls({ editor }: Props) {
                     <button
                       key={c.value}
                       type="button"
-                      className="w-6 h-6 rounded-md border border-neutral-700 hover:ring-2 hover:ring-blue-500 transition-shadow"
+                      className="w-6 h-6 rounded-md border border-neutral-700 hover:ring-2 hover:ring-signal transition-shadow"
                       style={{ backgroundColor: c.value }}
                       title={c.label}
                       onClick={() => setCellBg(c.value)}

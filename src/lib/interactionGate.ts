@@ -78,6 +78,12 @@ export function createInteractionGate(onRelease: () => void): InteractionGate {
   };
   // Leaving an editable drops the longer editing window immediately.
   const onFocusOut = () => { if (!blocked()) onRelease(); };
+  // A press that ends outside the window (alt-tab mid-drag) may never deliver its
+  // pointerup; without this the gate would hold every refresh until the next click.
+  const onWindowBlur = () => {
+    pointerDown = false;
+    if (!blocked()) onRelease();
+  };
 
   window.addEventListener('keydown', onKeyDown, { passive: true });
   window.addEventListener('pointerdown', onPointerDown, { passive: true });
@@ -85,6 +91,7 @@ export function createInteractionGate(onRelease: () => void): InteractionGate {
   window.addEventListener('pointercancel', onPointerUp, { passive: true });
   // `focusout` bubbles where `blur` does not, so one window listener covers every field.
   window.addEventListener('focusout', onFocusOut, { passive: true });
+  window.addEventListener('blur', onWindowBlur, { passive: true });
 
   return {
     isBlocked: blocked,
@@ -94,6 +101,7 @@ export function createInteractionGate(onRelease: () => void): InteractionGate {
       window.removeEventListener('pointerup', onPointerUp);
       window.removeEventListener('pointercancel', onPointerUp);
       window.removeEventListener('focusout', onFocusOut);
+      window.removeEventListener('blur', onWindowBlur);
       if (releaseTimer) clearTimeout(releaseTimer);
     },
   };

@@ -56,17 +56,17 @@ export default function WelcomeModal({ onConnect, onExplore, onClose }: Props) {
           {/* Recommended: connect an AI agent */}
           <button
             onClick={onConnect}
-            className="group relative flex flex-col items-start gap-2 p-5 rounded-xl border border-blue-500/40 bg-blue-500/10 hover:bg-blue-500/15 hover:-translate-y-0.5 transition-all text-left"
+            className="group relative flex flex-col items-start gap-2 p-5 rounded-xl border border-signal/40 bg-signal/10 hover:bg-signal/15 hover:-translate-y-0.5 transition-all text-left"
           >
-            <span className="absolute top-2.5 right-2.5 text-[9px] font-bold text-blue-300 bg-blue-500/15 border border-blue-500/30 px-1.5 py-0.5 rounded-full uppercase tracking-wide">
+            <span className="absolute top-2.5 right-2.5 text-2xs font-medium text-signal-text bg-signal/15 border border-signal/30 px-1.5 py-0.5 rounded-full">
               {t('welcomeRecommended')}
             </span>
-            <span className="w-9 h-9 rounded-lg bg-blue-500/15 border border-blue-500/30 flex items-center justify-center">
-              <Plug size={18} className="text-blue-300" />
+            <span className="w-9 h-9 rounded-lg bg-signal/15 border border-signal/30 flex items-center justify-center">
+              <Plug size={18} className="text-signal-text" />
             </span>
-            <span className="text-sm font-semibold text-blue-400">{t('welcomeConnectTitle')}</span>
+            <span className="text-sm font-semibold text-signal-text">{t('welcomeConnectTitle')}</span>
             <span className="text-[11px] leading-snug text-neutral-400">{t('welcomeConnectDesc')}</span>
-            <span className="mt-1 inline-flex items-center gap-1 text-[11px] font-semibold text-blue-300 group-hover:gap-1.5 transition-all">
+            <span className="mt-1 inline-flex items-center gap-1 text-[11px] font-semibold text-signal-text group-hover:gap-1.5 transition-all">
               {t('welcomeConnectCta')} <ArrowRight size={12} />
             </span>
           </button>

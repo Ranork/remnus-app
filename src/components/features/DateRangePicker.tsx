@@ -166,13 +166,13 @@ export default function DateRangePicker({
     const base = 'w-8 h-8 flex items-center justify-center text-xs cursor-pointer select-none transition-colors';
 
     if (isStart || isEnd || (isHoverEnd && phase === 'picking-end' && !isStart)) {
-      return `${base} rounded-full bg-blue-500 text-white font-semibold`;
+      return `${base} rounded-full bg-ink text-ink-fg font-semibold`;
     }
     if (inRange) {
-      return `${base} rounded-none bg-blue-500/20 text-neutral-200`;
+      return `${base} rounded-none bg-signal/20 text-neutral-200`;
     }
     if (isToday) {
-      return `${base} rounded-full ring-1 ring-inset ring-blue-400/60 text-neutral-200 hover:bg-neutral-700`;
+      return `${base} rounded-full ring-1 ring-inset ring-signal/60 text-neutral-200 hover:bg-neutral-700`;
     }
     return `${base} rounded-full text-neutral-300 hover:bg-neutral-700`;
   };
@@ -238,7 +238,7 @@ export default function DateRangePicker({
         {/* Time input (datetime only) */}
         {showTime && (
           <div className="mt-3 pt-3 border-t border-neutral-800 flex items-center gap-2">
-            <span className="text-[10px] text-neutral-500 uppercase tracking-wider w-8">{t('time')}</span>
+            <span className="text-2xs text-neutral-500 w-8">{t('time')}</span>
             <input
               type="time"
               value={timeStr}
@@ -268,7 +268,7 @@ export default function DateRangePicker({
             {phase !== 'picking-end' && startStr && (
               <button
                 onClick={() => save(startStr, endStr, timeStr)}
-                className="text-[10px] text-blue-400 hover:text-blue-300 cursor-pointer px-2 py-0.5 hover:bg-neutral-800 rounded transition-colors"
+                className="text-[10px] text-signal-text hover:text-fg cursor-pointer px-2 py-0.5 hover:bg-neutral-800 rounded transition-colors"
               >
                 {t('done')}
               </button>

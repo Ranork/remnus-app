@@ -11,6 +11,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Badge } from '@/components/ui/badge';
 
 /**
  * The one place the sidebar keeps everything that isn't the workspace tree or the AI
@@ -66,7 +67,7 @@ export default function AccountMenu({
     <DropdownMenu>
       <DropdownMenuTrigger
         aria-label={t('accountMenu')}
-        className="group/account flex w-full min-w-0 cursor-pointer items-center gap-2.5 rounded-md px-1.5 py-1.5 text-left outline-none transition-colors hover:bg-neutral-800 focus-visible:ring-2 focus-visible:ring-blue-500/60 data-popup-open:bg-neutral-800"
+        className="group/account flex h-11 w-full min-w-0 cursor-pointer items-center gap-2.5 rounded-control px-1.5 text-left transition-[background-color,box-shadow] hover:bg-sheet/55 data-popup-open:bg-sheet data-popup-open:shadow-lift"
       >
         <span className="relative shrink-0">
           {showImage ? (
@@ -80,7 +81,7 @@ export default function AccountMenu({
           ) : (
             <span
               translate="no"
-              className="notranslate flex h-7 w-7 items-center justify-center rounded-full bg-neutral-700 text-xs font-semibold text-neutral-200"
+              className="notranslate flex h-7 w-7 items-center justify-center rounded-full bg-hover text-xs font-semibold text-fg-2"
             >
               {displayName.trim().charAt(0).toUpperCase()}
             </span>
@@ -88,17 +89,17 @@ export default function AccountMenu({
           {whatsNewUnseen > 0 && (
             <span
               aria-hidden
-              className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-neutral-900"
+              className="absolute -top-0.5 -right-0.5 h-2.5 w-2.5 rounded-full bg-red-500 ring-2 ring-desk"
             />
           )}
         </span>
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-xs font-medium text-neutral-200">{displayName}</span>
+          <span className="block truncate text-ui font-medium text-fg">{displayName}</span>
           {user.name && user.email && (
-            <span className="block truncate text-[10px] text-neutral-500">{user.email}</span>
+            <span className="block truncate text-2xs text-fg-3">{user.email}</span>
           )}
         </span>
-        <ChevronsUpDown size={13} className="shrink-0 text-neutral-500 group-hover/account:text-neutral-300" />
+        <ChevronsUpDown size={14} className="shrink-0 text-fg-4 group-hover/account:text-fg-2" />
       </DropdownMenuTrigger>
 
       <DropdownMenuContent side="top" align="start" sideOffset={6} className="w-(--anchor-width) min-w-56">
@@ -120,9 +121,7 @@ export default function AccountMenu({
           <Trash2 />
           <span className="truncate">{t('myTrash')}</span>
           {trashCount !== null && trashCount > 0 && (
-            <span className="ml-auto shrink-0 rounded-full border border-neutral-700 bg-neutral-800 px-1.5 py-0.5 text-[10px] leading-none font-bold text-neutral-400">
-              {trashCount}
-            </span>
+            <Badge variant="neutral" size="sm" className="ml-auto">{trashCount}</Badge>
           )}
         </DropdownMenuItem>
 
@@ -137,15 +136,13 @@ export default function AccountMenu({
           <Sparkles />
           <span className="truncate">{tNew('title')}</span>
           {whatsNewUnseen > 0 && (
-            <span className="ml-auto min-w-4 shrink-0 rounded-full bg-red-500 px-1.5 py-0.5 text-center text-[10px] leading-none font-bold text-white">
-              {whatsNewUnseen > 9 ? '9+' : whatsNewUnseen}
-            </span>
+            <Badge variant="count" size="sm" className="ml-auto">{whatsNewUnseen > 9 ? '9+' : whatsNewUnseen}</Badge>
           )}
         </DropdownMenuItem>
 
         {isAdmin && (
           <DropdownMenuItem render={<Link href="/admin" />}>
-            <Shield className="text-blue-400" />
+            <Shield />
             <span className="truncate">{t('adminLink')}</span>
           </DropdownMenuItem>
         )}

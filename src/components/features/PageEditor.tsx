@@ -2,7 +2,7 @@
 import { useState, useMemo, useEffect, useRef, useCallback, forwardRef, useImperativeHandle } from 'react';
 import { updatePageContent, updatePageProperties, duplicatePage, deletePage, updatePageIcon } from '@/lib/actions/page';
 import { updateDatabaseSchema } from '@/lib/actions/database';
-import { ArrowLeft, X, Check, ChevronDown, MoreHorizontal, Trash2, Copy, Smile, ArrowLeftRight, Globe, CheckSquare, Square, ExternalLink, Plus, FileCode2, History } from 'lucide-react';
+import { ArrowLeft, X, Check, ChevronDown, CheckSquare, Square, ExternalLink, Plus } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
@@ -13,6 +13,7 @@ import PageIcon from './PageIcon';
 import IconPicker from './IconPicker';
 import AgentEditBadge from './AgentEditBadge';
 import SaveStatus, { type SaveState } from './SaveStatus';
+import PageActionsMenu from './PageActionsMenu';
 import { ConfirmDialog } from './ConfirmDialog';
 import ShareModal from '@/components/share/ShareModal';
 import { PageMarkdownDialog } from './PageMarkdownDialog';
@@ -125,7 +126,6 @@ const PageEditor = forwardRef<PageEditorHandle, PageEditorProps>(function PageEd
   const t = useTranslations('Page');
   const tDb = useTranslations('Database');
   const tEditor = useTranslations('Editor');
-  const tSharing = useTranslations('Sharing');
   const members = useMembers();
   const statusGroupLabel = {
     todo: tDb('statusGroupTodo'),
@@ -158,18 +158,8 @@ const PageEditor = forwardRef<PageEditorHandle, PageEditorProps>(function PageEd
     else if (saved === 'true') setWidthMode('full'); // migrate old boolean
   }, [initialPage.id]);
 
-  const cycleWidth = () => {
-    const next: WidthMode = widthMode === 'narrow' ? 'wide' : widthMode === 'wide' ? 'full' : 'narrow';
-    setWidthMode(next);
-    localStorage.setItem(`page-width-${initialPage.id}`, next);
-  };
-
-  const widthLabels: Record<WidthMode, string> = { narrow: t('narrow'), wide: t('wide'), full: t('full') };
-
   const router = useRouter();
-  const [openMenu, setOpenMenu] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const menuDropdownRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<BlockEditorHandle>(null);
 
   useImperativeHandle(ref, () => ({
@@ -203,17 +193,6 @@ const PageEditor = forwardRef<PageEditorHandle, PageEditorProps>(function PageEd
     iconRef.current = icon;
     iconColorRef.current = iconColor;
   }, [properties, icon, iconColor]);
-
-  useEffect(() => {
-    if (!openMenu) return;
-    const handler = (e: MouseEvent) => {
-      if (menuDropdownRef.current && !menuDropdownRef.current.contains(e.target as Node)) {
-        setOpenMenu(false);
-      }
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [openMenu]);
 
   useEffect(() => {
     if (!openSelectId) return;
@@ -395,117 +374,50 @@ const PageEditor = forwardRef<PageEditorHandle, PageEditorProps>(function PageEd
   return (
     <div className={containerClass}>
       {!isPeek && (
-        <div className="flex items-center justify-between mb-10">
-          <Link href={`/db/${database.id}`} className="inline-flex items-center gap-2 text-neutral-400 hover:text-white transition-colors text-sm font-medium">
-            <ArrowLeft size={16} /> {t('back')} — {database.name}
+        <div className="mb-8 flex min-h-8 items-center justify-between gap-3">
+          <Link
+            href={`/db/${database.id}`}
+            className="-ml-2 inline-flex h-8 min-w-0 items-center gap-1.5 rounded-control px-2 text-ui text-fg-3 transition-colors hover:bg-hover hover:text-fg"
+          >
+            <ArrowLeft size={16} className="shrink-0" />
+            <span className="truncate">{database.name}</span>
           </Link>
-          <div className="flex items-center gap-3">
-            <SaveStatus state={saveState} />
-            <div className="relative" ref={menuDropdownRef}>
-              <button
-                onClick={() => setOpenMenu(!openMenu)}
-                className="flex items-center justify-center p-1.5 text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/40 border border-neutral-800 cursor-pointer rounded transition-colors"
-              >
-                <MoreHorizontal size={14} />
-              </button>
-              {openMenu && (
-                <div className="absolute right-0 top-full mt-1.5 z-50 bg-neutral-850 border border-neutral-800 shadow-xl py-1.5 w-44 rounded overflow-hidden text-left animate-fade-in animate-duration-100">
-                  {/* Width — desktop only; mobile rows are always full-bleed. */}
-                  <div className="hidden lg:block">
-                    <p className="px-3 pt-0.5 pb-1 text-[9px] font-semibold text-neutral-600 uppercase tracking-widest">
-                      {widthLabels[widthMode]}
-                    </p>
-                    {(['narrow', 'wide', 'full'] as WidthMode[]).map(w => (
-                      <button
-                        key={w}
-                        onClick={() => { setWidthMode(w); localStorage.setItem(`page-width-${initialPage.id}`, w); setOpenMenu(false); }}
-                        className={`w-full flex items-center gap-2 px-3 py-1.5 text-xs transition-colors cursor-pointer ${
-                          widthMode === w ? 'text-blue-400 bg-blue-500/8' : 'text-neutral-300 hover:bg-neutral-800'
-                        }`}
-                      >
-                        <ArrowLeftRight size={12} className={widthMode === w ? 'text-blue-400' : 'text-neutral-600'} />
-                        {widthLabels[w]}
-                        {widthMode === w && <span className="ml-auto text-[9px] text-blue-400">✓</span>}
-                      </button>
-                    ))}
-
-                    <div className="border-t border-neutral-800 my-1" />
-                  </div>
-
-                  {/* Share */}
-                  <button
-                    onClick={(e) => { e.stopPropagation(); setOpenMenu(false); setShowShareModal(true); }}
-                    className="w-full px-3 py-1.5 text-xs text-neutral-300 hover:bg-neutral-800 flex items-center gap-2 cursor-pointer transition-colors"
-                  >
-                    <Globe size={12} className="text-neutral-500" />
-                    {tSharing('shareButton')}
-                  </button>
-
-                  {/* Markdown — separate copy/edit surface for the whole page body */}
-                  <button
-                    onClick={(e) => { e.stopPropagation(); setOpenMenu(false); setMarkdownDraft(editorRef.current?.getMarkdown() ?? initialPage.content ?? ''); }}
-                    className="w-full px-3 py-1.5 text-xs text-neutral-300 hover:bg-neutral-800 flex items-center gap-2 cursor-pointer transition-colors"
-                  >
-                    <FileCode2 size={12} className="text-neutral-500" />
-                    {t('markdown.button')}
-                  </button>
-
-                  {/* History — earlier content versions, session+size debounced */}
-                  <button
-                    onClick={(e) => { e.stopPropagation(); setOpenMenu(false); setShowHistory(true); }}
-                    className="w-full px-3 py-1.5 text-xs text-neutral-300 hover:bg-neutral-800 flex items-center gap-2 cursor-pointer transition-colors"
-                  >
-                    <History size={12} className="text-neutral-500" />
-                    {t('history.button')}
-                  </button>
-
-                  <div className="border-t border-neutral-800 my-1" />
-
-                  {/* Duplicate / Delete */}
-                  <button
-                    onClick={async (e) => {
-                      e.stopPropagation();
-                      setOpenMenu(false);
-                      const newId = await duplicatePage(initialPage.id, database.id);
-                      if (newId) router.push(`/db/${database.id}/${newId}`);
-                    }}
-                    className="w-full px-3 py-1.5 text-xs text-neutral-300 hover:bg-neutral-800 flex items-center gap-2 cursor-pointer transition-colors"
-                  >
-                    <Copy size={12} className="text-neutral-500" />
-                    <span>Duplicate</span>
-                  </button>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); setOpenMenu(false); setShowDeleteConfirm(true); }}
-                    className="w-full px-3 py-1.5 text-xs text-red-400 hover:bg-neutral-800 flex items-center gap-2 cursor-pointer transition-colors"
-                  >
-                    <Trash2 size={12} />
-                    <span>{t('deletePage')}</span>
-                  </button>
-                </div>
-              )}
-            </div>
+          <div className="flex items-center gap-1">
+            <SaveStatus state={saveState} className="mr-1" />
+            <PageActionsMenu
+              widthMode={widthMode}
+              onWidthChange={(w) => { setWidthMode(w); localStorage.setItem(`page-width-${initialPage.id}`, w); }}
+              onShare={() => setShowShareModal(true)}
+              onMarkdown={() => setMarkdownDraft(editorRef.current?.getMarkdown() ?? initialPage.content ?? '')}
+              onHistory={() => setShowHistory(true)}
+              onDuplicate={async () => {
+                const newId = await duplicatePage(initialPage.id, database.id);
+                if (newId) router.push(`/db/${database.id}/${newId}`);
+              }}
+              onDelete={() => setShowDeleteConfirm(true)}
+            />
           </div>
         </div>
       )}
 
       {/* Unified Page Header: Icon + Title Input */}
-      <div className="flex items-center gap-3 mb-8 group/page-header relative select-none">
+      <div className="flex items-center gap-3 mb-6 group/page-header relative select-none">
         <div className="relative shrink-0 flex items-center group/icon-wrapper">
           <div className="relative flex items-center">
             <button
               ref={iconButtonRef}
               onClick={() => setShowIconPicker(!showIconPicker)}
-              className="p-1 hover:bg-neutral-800 rounded transition-colors duration-150 cursor-pointer flex items-center justify-center shrink-0"
+              className="p-1 hover:bg-hover rounded-surface transition-colors duration-150 cursor-pointer flex items-center justify-center shrink-0"
               title={icon ? t('changeIcon') : t('addIcon')}
             >
-              <PageIcon icon={icon} iconColor={iconColor} size={40} fallbackType="page" />
+              <PageIcon icon={icon} iconColor={iconColor} size={36} fallbackType="page" />
             </button>
             {icon && (
               <button
                 onClick={() => handleIconSelect(null, null)}
-                className="absolute -top-7 left-1/2 -translate-x-1/2 opacity-0 group-hover/icon-wrapper:opacity-100 px-1.5 py-0.5 text-[9px] bg-neutral-900 border border-neutral-800 text-neutral-400 hover:text-white rounded transition-all cursor-pointer font-medium whitespace-nowrap shadow-xl z-20"
+                className="absolute -top-7 left-1/2 -translate-x-1/2 opacity-0 group-hover/icon-wrapper:opacity-100 focus-visible:opacity-100 h-6 px-2 text-2xs bg-fg text-desk rounded-control transition-opacity cursor-pointer font-medium whitespace-nowrap shadow-float z-20"
               >
-                {t('changeIcon')}
+                {t('removeIcon')}
               </button>
             )}
           </div>
@@ -540,21 +452,21 @@ const PageEditor = forwardRef<PageEditorHandle, PageEditorProps>(function PageEd
               }
             }}
             placeholder={t('untitled')}
-            className="w-full bg-transparent text-neutral-100 font-bold text-2xl sm:text-4xl focus:outline-none placeholder:text-neutral-700 tracking-tight py-1 resize-none overflow-hidden block leading-tight"
+            className="w-full bg-transparent text-fg font-semibold text-[28px] sm:text-[34px] leading-tight tracking-[-0.025em] outline-none placeholder:text-fg-4 py-1 resize-none overflow-hidden block"
           />
         </div>
       </div>
 
       {/* Agent edit stamp */}
       {initialPage.agentEditedAt && (
-        <div className="flex items-center gap-2 mb-4 -mt-2">
+        <div className="flex items-center gap-2 mb-5 -mt-2">
           <AgentEditBadge
             agentName={initialPage.agentName ?? null}
             tokenName={initialPage.agentTokenName ?? null}
             editedAt={initialPage.agentEditedAt}
-            className="p-1 rounded-md"
+            className="p-1 rounded-control"
           />
-          <span className="text-[10px] text-neutral-600 select-none">{tDb('agentEditedLabel')}</span>
+          <span className="text-xs text-fg-3 select-none">{tDb('agentEditedLabel')}</span>
         </div>
       )}
 
@@ -741,7 +653,7 @@ const PageEditor = forwardRef<PageEditorHandle, PageEditorProps>(function PageEd
                         if (groupOpts.length === 0) return null;
                         return (
                           <div key={g}>
-                            <div className="px-3 pt-1.5 pb-0.5 text-[10px] text-neutral-500 font-semibold uppercase tracking-wider">{statusGroupLabel[g]}</div>
+                            <div className="px-3 pt-1.5 pb-0.5 text-2xs text-neutral-500 font-medium">{statusGroupLabel[g]}</div>
                             {groupOpts.map((opt: SelectOption) => {
                               const c = getOptionColor(opt);
                               return (
@@ -849,7 +761,7 @@ const PageEditor = forwardRef<PageEditorHandle, PageEditorProps>(function PageEd
                   className="flex items-center gap-1.5 text-sm cursor-pointer pt-1"
                 >
                   {val === true || val === 'true'
-                    ? <CheckSquare size={16} className="text-blue-400" />
+                    ? <CheckSquare size={16} className="text-signal-text" />
                     : <Square size={16} className="text-neutral-500" />
                   }
                 </button>
@@ -863,7 +775,7 @@ const PageEditor = forwardRef<PageEditorHandle, PageEditorProps>(function PageEd
                     className="bg-transparent text-neutral-100 focus:outline-none focus:ring-2 focus:ring-neutral-700 rounded p-1 -ml-1 flex-1 text-sm placeholder:text-neutral-700 transition-shadow"
                   />
                   {typeof val === 'string' && /^https?:\/\//i.test(val) && (
-                    <a href={val} target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:text-blue-300 shrink-0">
+                    <a href={val} target="_blank" rel="noopener noreferrer" className="text-signal-text hover:text-fg shrink-0">
                       <ExternalLink size={13} />
                     </a>
                   )}

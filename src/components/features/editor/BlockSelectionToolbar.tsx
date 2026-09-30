@@ -323,7 +323,7 @@ export default function BlockSelectionToolbar({ editor }: Props) {
               style={{ top: layout.top + TOOLBAR_H + 4, left: layout.left }}
               onMouseDown={(e) => e.preventDefault()}
             >
-              <div className="text-xs text-neutral-600 font-medium uppercase tracking-wider mb-2">{t('bubbleTextColor')}</div>
+              <div className="text-xs text-neutral-600 font-medium mb-2">{t('bubbleTextColor')}</div>
               <div className="flex items-center gap-1.5 flex-wrap mb-3">
                 <button
                   title={t('bubbleColorDefault')}
@@ -345,7 +345,7 @@ export default function BlockSelectionToolbar({ editor }: Props) {
 
               <div className="w-full h-px bg-neutral-800 mb-3" />
 
-              <div className="text-xs text-neutral-600 font-medium uppercase tracking-wider mb-2">{t('bubbleHighlight')}</div>
+              <div className="text-xs text-neutral-600 font-medium mb-2">{t('bubbleHighlight')}</div>
               <div className="flex items-center gap-1.5 flex-wrap">
                 <button
                   title={t('bubbleColorNone')}
@@ -375,7 +375,7 @@ export default function BlockSelectionToolbar({ editor }: Props) {
               style={{ top: layout.top + TOOLBAR_H + 4, left: layout.left }}
               onMouseDown={(e) => e.preventDefault()}
             >
-              <div className="px-3 py-1.5 text-xs text-neutral-600 font-medium uppercase tracking-wider">{t('bubbleTurnInto')}</div>
+              <div className="px-3 py-1.5 text-xs text-neutral-600 font-medium">{t('bubbleTurnInto')}</div>
               {BLOCK_TYPES.map(type => (
                 <button
                   key={type}

@@ -172,7 +172,7 @@ export function BulkRowsDialog({ databaseId, schema, onClose }: BulkRowsDialogPr
                 <button
                   onClick={() => setMode('add')}
                   className={`flex-1 px-3 py-2 text-xs font-medium rounded border transition-colors cursor-pointer ${
-                    mode === 'add' ? 'border-blue-500/40 bg-blue-500/10 text-blue-300' : 'border-neutral-800 text-neutral-400 hover:border-neutral-700'
+                    mode === 'add' ? 'border-signal/40 bg-signal/10 text-signal-text' : 'border-neutral-800 text-neutral-400 hover:border-neutral-700'
                   }`}
                 >
                   {t('bulkImport.modeAdd')}
@@ -180,7 +180,7 @@ export function BulkRowsDialog({ databaseId, schema, onClose }: BulkRowsDialogPr
                 <button
                   onClick={() => setMode('update')}
                   className={`flex-1 px-3 py-2 text-xs font-medium rounded border transition-colors cursor-pointer ${
-                    mode === 'update' ? 'border-blue-500/40 bg-blue-500/10 text-blue-300' : 'border-neutral-800 text-neutral-400 hover:border-neutral-700'
+                    mode === 'update' ? 'border-signal/40 bg-signal/10 text-signal-text' : 'border-neutral-800 text-neutral-400 hover:border-neutral-700'
                   }`}
                 >
                   {t('bulkImport.modeUpdate')}
@@ -207,7 +207,7 @@ export function BulkRowsDialog({ databaseId, schema, onClose }: BulkRowsDialogPr
                   onChange={(e) => setRaw(e.target.value)}
                   placeholder={t('bulkImport.textareaPlaceholder')}
                   rows={8}
-                  className="w-full bg-neutral-900 border border-neutral-800 rounded px-3 py-2 text-xs text-neutral-200 font-mono resize-y focus:outline-none focus:border-blue-500/50"
+                  className="w-full bg-neutral-900 border border-neutral-800 rounded px-3 py-2 text-xs text-neutral-200 font-mono resize-y focus:outline-none focus:border-signal/50"
                 />
                 {!raw.trim() && (
                   <>
@@ -293,7 +293,7 @@ export function BulkRowsDialog({ databaseId, schema, onClose }: BulkRowsDialogPr
               <button
                 onClick={handleCommit}
                 disabled={!canCommit || step === 'committing'}
-                className="px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed rounded-lg transition-colors cursor-pointer"
+                className="px-4 py-2 text-xs font-semibold text-ink-fg bg-ink hover:bg-ink/88 disabled:opacity-40 disabled:cursor-not-allowed rounded-lg transition-colors cursor-pointer"
               >
                 {mode === 'add'
                   ? t('bulkImport.confirmAdd', { count: parsed.rows.length })

@@ -293,7 +293,7 @@ function NotionImport({ onBack }: { onBack: () => void }) {
       {(step === 'idle' || step === 'error') && (
         <div
           className={`border-2 border-dashed p-8 text-center transition-colors cursor-pointer ${
-            file ? 'border-blue-500/50 bg-blue-500/5' : 'border-neutral-700 hover:border-neutral-500'
+            file ? 'border-signal/50 bg-signal/5' : 'border-neutral-700 hover:border-neutral-500'
           }`}
           onClick={() => inputRef.current?.click()}
           onDragOver={e => e.preventDefault()}
@@ -302,7 +302,7 @@ function NotionImport({ onBack }: { onBack: () => void }) {
           <input ref={inputRef} type="file" accept=".zip" className="hidden" onChange={handleFileChange} />
           {file ? (
             <div className="flex flex-col items-center gap-2">
-              <FileArchive size={24} className="text-blue-400" />
+              <FileArchive size={24} className="text-signal-text" />
               <p className="text-sm text-neutral-200 font-medium truncate max-w-xs">{file.name}</p>
               <p className="text-xs text-neutral-500">{formatBytes(file.size)}</p>
             </div>
@@ -344,12 +344,12 @@ function NotionImport({ onBack }: { onBack: () => void }) {
                   onClick={() => toggleSpace(space.name)}
                   className={`w-full flex items-center gap-3 px-3 py-2.5 border transition-colors text-left cursor-pointer ${
                     isSelected
-                      ? 'border-blue-500/40 bg-blue-500/5 text-neutral-100'
+                      ? 'border-signal/40 bg-signal/5 text-neutral-100'
                       : 'border-neutral-800 text-neutral-400 hover:border-neutral-700'
                   }`}
                 >
-                  <div className={`w-3.5 h-3.5 shrink-0 border rounded-sm flex items-center justify-center transition-colors ${isSelected ? 'bg-blue-500 border-blue-500' : 'border-neutral-600'}`}>
-                    {isSelected && <span className="text-white text-[8px] font-bold">✓</span>}
+                  <div className={`w-3.5 h-3.5 shrink-0 border rounded-sm flex items-center justify-center transition-colors ${isSelected ? 'bg-signal border-signal' : 'border-neutral-600'}`}>
+                    {isSelected && <span className="text-signal-fg text-2xs font-bold leading-none">✓</span>}
                   </div>
                   <Layers size={13} className="shrink-0 text-neutral-500" />
                   <span className="flex-1 text-sm font-medium truncate">{space.name}</span>
@@ -377,7 +377,7 @@ function NotionImport({ onBack }: { onBack: () => void }) {
             <div className="pt-3 mt-1 border-t border-neutral-800">
               <button onClick={() => setImportImages(v => !v)} className="w-full flex items-center gap-3 text-left cursor-pointer group">
                 <div className={`w-4 h-4 shrink-0 border rounded-sm flex items-center justify-center transition-colors ${importImages ? 'bg-amber-500 border-amber-500' : 'border-neutral-600 group-hover:border-neutral-400'}`}>
-                  {importImages && <span className="text-white text-[8px] font-bold">✓</span>}
+                  {importImages && <span className="text-white text-2xs font-bold leading-none">✓</span>}
                 </div>
                 <div className="flex-1 min-w-0">
                   <span className="text-xs font-medium text-neutral-300 group-hover:text-neutral-200 transition-colors">{t('importIncludeImages')}</span>
@@ -463,7 +463,7 @@ function NotionImport({ onBack }: { onBack: () => void }) {
           <button
             onClick={handleImport}
             disabled={selected.size === 0}
-            className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-semibold transition-colors cursor-pointer"
+            className="flex items-center gap-2 px-4 py-2 bg-ink hover:bg-ink/88 disabled:opacity-40 disabled:cursor-not-allowed text-ink-fg text-xs font-semibold transition-colors cursor-pointer"
           >
             {t('importStart')} ({selected.size})
           </button>
@@ -502,7 +502,7 @@ export default function ImportTab({ workspaceId: _workspaceId }: ImportTabProps)
   const sources: SourceCard[] = [
     {
       id: 'okf',
-      icon: <BookOpen size={32} className="text-blue-400" />,
+      icon: <BookOpen size={32} className="text-signal-text" />,
       name: t('importSourceOkfName'),
       description: t('importSourceOkfDesc'),
       available: true,

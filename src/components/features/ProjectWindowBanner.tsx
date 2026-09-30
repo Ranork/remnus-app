@@ -60,16 +60,17 @@ export default function ProjectWindowBanner({ workspaceName }: { workspaceName: 
   };
 
   const itemClass =
-    'flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs text-neutral-300 hover:bg-neutral-800 hover:text-neutral-100 transition-colors';
+    'flex w-full items-center gap-2 rounded-control px-2 py-1.5 text-left text-xs text-fg-2 hover:bg-hover hover:text-fg transition-colors';
 
   return (
     <div
       ref={rootRef}
-      className="relative shrink-0 flex items-center gap-2 h-8 px-4 bg-neutral-900 border-b border-neutral-800 text-xs"
+      className="relative shrink-0 flex items-center gap-2.5 h-10 lg:h-11 px-4 lg:pl-4 lg:pr-3 border-b border-line lg:border-0 text-xs"
     >
-      <span className="shrink-0 font-medium text-neutral-400">{t('projectWindowLabel')}</span>
-      <span className="shrink-0 text-neutral-600" aria-hidden>·</span>
-      <span className="min-w-0 truncate text-neutral-300">{workspaceName}</span>
+      <span className="shrink-0 inline-flex h-5 items-center rounded-full border border-line px-2 text-2xs font-medium text-fg-3">
+        {t('projectWindowLabel')}
+      </span>
+      <span className="min-w-0 truncate font-medium text-fg">{workspaceName}</span>
 
       <button
         ref={buttonRef}
@@ -79,8 +80,8 @@ export default function ProjectWindowBanner({ workspaceName }: { workspaceName: 
         aria-controls={panelId}
         aria-label={t('projectWindowAbout')}
         title={t('projectWindowAbout')}
-        className={`ml-auto shrink-0 flex items-center justify-center w-6 h-6 rounded transition-colors ${
-          open ? 'bg-neutral-800 text-neutral-200' : 'text-neutral-500 hover:bg-neutral-800 hover:text-neutral-300'
+        className={`ml-auto shrink-0 flex items-center justify-center w-7 h-7 rounded-control transition-colors ${
+          open ? 'bg-hover text-fg' : 'text-fg-3 hover:bg-hover hover:text-fg'
         }`}
       >
         <Info size={13} />
@@ -91,37 +92,37 @@ export default function ProjectWindowBanner({ workspaceName }: { workspaceName: 
           id={panelId}
           role="dialog"
           aria-label={t('projectWindowAbout')}
-          className="absolute right-3 top-full z-50 mt-1 w-72 max-w-[calc(100vw-1.5rem)] rounded-lg border border-neutral-800 bg-neutral-900 p-1 shadow-2xl animate-scale-in"
+          className="absolute right-3 top-full z-50 mt-1 w-72 max-w-[calc(100vw-1.5rem)] rounded-surface bg-float p-1 shadow-float animate-scale-in"
         >
-          <p className="px-2 pt-1.5 pb-2 text-xs leading-relaxed text-neutral-400">
+          <p className="px-2 pt-1.5 pb-2 text-xs leading-relaxed text-fg-3">
             {t('projectWindowExplain', { workspace: workspaceName })}
           </p>
 
           <a href="/download" target="_blank" rel="noopener noreferrer" className={itemClass}>
-            <ExternalLink size={13} className="shrink-0 text-neutral-500" />
+            <ExternalLink size={14} className="shrink-0 text-fg-3" />
             {t('projectWindowGetApp')}
           </a>
 
           <button type="button" onClick={copyAppLink} className={`${itemClass} items-start`}>
             {copied ? (
-              <Check size={13} className="shrink-0 mt-0.5 text-green-500" />
+              <Check size={14} className="shrink-0 mt-0.5 text-green-400" />
             ) : (
-              <Copy size={13} className="shrink-0 mt-0.5 text-neutral-500" />
+              <Copy size={14} className="shrink-0 mt-0.5 text-fg-3" />
             )}
             <span className="flex flex-col">
               <span>{copied ? t('projectWindowCopied') : t('projectWindowCopyLink')}</span>
-              <span className="text-[11px] leading-snug text-neutral-500">{t('projectWindowCopyHint')}</span>
+              <span className="text-2xs leading-snug text-fg-3">{t('projectWindowCopyHint')}</span>
             </span>
           </button>
 
-          <div className="my-1 border-t border-neutral-800" />
+          <div className="my-1 border-t border-line" />
 
           <button
             type="button"
             onClick={() => logout()}
-            className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-left text-xs text-neutral-500 hover:bg-neutral-800 hover:text-neutral-300 transition-colors"
+            className="flex w-full items-center gap-2 rounded-control px-2 py-1.5 text-left text-xs text-fg-3 hover:bg-hover hover:text-fg transition-colors"
           >
-            <LogOut size={13} className="shrink-0" />
+            <LogOut size={14} className="shrink-0" />
             {t('projectWindowEndSession')}
           </button>
         </div>

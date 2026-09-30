@@ -16,6 +16,7 @@ import { HOME_DASHBOARD_SQL } from '@/lib/services/dashboards';
 import { syncPageLinks, removeOutgoingPageLinks } from '@/lib/services/pageLinks';
 import { snapshotBeforeDelete, maybeSnapshotContentUpdate, type SnapshotActor } from '@/lib/services/snapshots';
 import { deleteWorkspaceData } from '@/lib/services/workspaceDeletion';
+import { touchWorkspaces } from '@/lib/services/changeVersion';
 
 export type { RelatedPageRef } from '@/lib/services/workspace';
 
@@ -133,6 +134,16 @@ export async function getWorkspaces() {
       updatedAt: workspaces.updatedAt,
       hidden:    workspaceMembers.hidden,
       homeDashboardItemId: HOME_DASHBOARD_SQL,
+      // Requests waiting on this caller. Counted server-side and only for owners (the
+      // role that can answer them — `assertOwner` in actions/accessRequests.ts), so no
+      // one else learns that anyone asked. A project window can't open the Members
+      // tab (workspace management is denied to a locked session), so it gets 0.
+      pendingAccessRequests: user.workspaceLock ? sql<number>`0` : sql<number>`(
+        CASE WHEN workspace_members.role = 'owner' THEN (
+          SELECT count(*) FROM workspace_access_requests war
+          WHERE war.workspace_id = workspaces.id AND war.status = 'pending'
+        ) ELSE 0 END
+      )`,
     })
     .from(workspaces)
     .innerJoin(
@@ -162,6 +173,9 @@ export async function createWorkspace(name: string) {
     name: name.trim() || 'Untitled',
     billingOwnerId: user.id,
     createdAt: new Date(),
+    // Explicit, not the column's CURRENT_TIMESTAMP default: that writes TEXT, which
+    // the change signal ignores — the new workspace would never reach other tabs.
+    updatedAt: new Date(),
   });
 
   // Creator becomes owner
@@ -887,6 +901,8 @@ export async function updateWorkspaceItemsOrder(itemIds: string[]) {
       await tx.update(workspaceItems).set({ sortOrder: i }).where(eq(workspaceItems.id, itemIds[i]));
     }
   });
+  // sortOrder is not a versioned column: without this, other open tabs keep the old order.
+  await touchWorkspaces(...checkedWorkspaces);
   revalidatePath('/', 'layout');
 }
 
@@ -936,7 +952,7 @@ export async function reparentWorkspaceItem(
 
   await db
     .update(workspaceItems)
-    .set({ parentId: newParentId, workspaceId: targetWorkspaceId })
+    .set({ parentId: newParentId, workspaceId: targetWorkspaceId, updatedAt: new Date() })
     .where(eq(workspaceItems.id, itemId));
 
   await db.transaction(async (tx) => {
@@ -950,6 +966,9 @@ export async function reparentWorkspaceItem(
     }
   });
 
+  // The source workspace too: a member who can't see the target would otherwise keep
+  // the moved item in their sidebar.
+  await touchWorkspaces(item.workspaceId, targetWorkspaceId);
   revalidatePath('/', 'layout');
 }
 
@@ -963,7 +982,7 @@ export async function moveWorkspaceItemToWorkspace(itemId: string, targetWorkspa
   await assertWorkspaceAccess(item[0].workspaceId);
   await assertWorkspaceAccess(targetWorkspaceId);
 
-  await db.update(workspaceItems).set({ workspaceId: targetWorkspaceId }).where(eq(workspaceItems.id, itemId));
+  await db.update(workspaceItems).set({ workspaceId: targetWorkspaceId, updatedAt: new Date() }).where(eq(workspaceItems.id, itemId));
 
   for (let i = 0; i < itemIdsOrder.length; i++) {
     const id = itemIdsOrder[i];
@@ -972,6 +991,7 @@ export async function moveWorkspaceItemToWorkspace(itemId: string, targetWorkspa
     await db.update(workspaceItems).set({ sortOrder: i }).where(and(eq(workspaceItems.id, id), eq(workspaceItems.workspaceId, targetWorkspaceId)));
   }
 
+  await touchWorkspaces(item[0].workspaceId, targetWorkspaceId);
   revalidatePath('/', 'layout');
 }
 

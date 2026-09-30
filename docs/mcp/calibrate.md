@@ -7,7 +7,7 @@ contains, and build that into the workspace. Treat it as real work — closer to
 the project's first design doc than to filling in a form. It is served live from this
 Remnus instance, never copied into the project, so what it says is always current.
 
-Guide version: **3**.
+Guide version: **4**.
 
 ## Before you start
 
@@ -59,9 +59,12 @@ how an interrupted run resumes and how the human watches the plan take shape. Ke
 - the sources you read (files, docs, history range);
 - **the plan, written before you build**: the tree, and for each concept page or database
   with its columns;
-- a checklist of build steps, created all unticked (`- [ ]`). Tick each with
-  `update_page` as soon as it lands, before starting the next, adding the ids from the
-  tool result — never an id you have not been given;
+- a checklist of build steps, created all unticked (`- [ ]`). Tick each as soon as it
+  lands, before starting the next, with `update_page` `tick` — never by resending the
+  body: `{"pageId": "<log>", "tick": [{"item": "Create Decisions", "note": "db 9b70…"}]}`
+  checks the open step whose text starts with `item` and adds the ids from the tool
+  result as its note — never an id you have not been given. Several steps that landed
+  together are one call with several entries;
 - what you skipped and why; open questions for the human.
 
 A log with unticked steps means you are resuming. Check each unticked step against the
@@ -123,8 +126,10 @@ Postgres for local dev because X; revisit if Y" is a decision. A Backlog row say
 the work is and why it matters; a Gotcha names the incident it came from.
 
 **Files already in the repo** (a decisions log, an architecture doc, a gotcha list) get
-converted into this structure, not skipped and not pasted whole. If you're unsure whether
-the file or Remnus should be the source of truth from now on, ask the human.
+converted into this structure, not skipped and not pasted whole. Leave the files where
+they are — this run edits no project file — and list them in the log as an open question:
+keep both, or point the file at Remnus from now on. That default stands until the human
+says otherwise; don't stop to ask.
 
 Scale with the material, not a target count: a fresh scaffold may deserve one honest
 overview page; an established project deserves several databases with real rows. Stop when
@@ -135,27 +140,47 @@ you run out of substance. Write the result into the log as the plan.
 The human reads this in a sidebar, so the shape is part of the work.
 
 - **Tree:** 4–9 top-level items — an **overview page** first that orients a newcomer and
-  links onward, then the main databases and one parent page per larger area. Nest with
-  `parentId`, or `ref`/`parentRef` inside one `bulk_create_pages` call; `create_database`
-  takes `parentId` too. Restructure an existing flat list with `bulk_move_items`.
+  links onward (it also links the home dashboard), then the main databases and one parent
+  page per larger area. Sidebar order is creation order; `move_item` with `position`
+  (`0` = first, same `newParentId` to stay put) changes it. Links need their targets'
+  ids, so write the overview once they exist, or create it early and add its links then.
+  Nest with `parentId`, or `ref`/`parentRef` inside one `bulk_create_pages` call (one call
+  may mix pages and the rows of several databases); `create_database` takes `parentId`
+  too. Restructure an existing flat list with `bulk_move_items`. The home dashboard sits
+  above the tree and doesn't count toward the 4–9.
 - **Icons on everything** — emoji or `lucide:Name` + `iconColor` (`blue`, `green`…),
-  consistent within a section, set at creation. Lucide names come from a curated set (an
-  unknown one is refused with the list); emoji always work.
+  consistent within a section, set at creation. Lucide names come from this curated set
+  (anything else is refused); emoji always work: {{LUCIDE_ICONS}}.
+- **Dates you only partly know** ("August 2025") stay out of date columns — a made-up day
+  is an invented date. Put the partial date in the body and leave the cell empty.
 - **Databases in one pass:** `create_database` with the designed schema, real options
   (`["Open", "Blocked"]`; a status one as `{"value": "Open", "group": "todo"}`, groups
-  `todo` / `in_progress` / `complete`), and its `views` — Kanban on the status column,
-  Calendar on the date column, an extra Table only for a slice people look at on its own.
+  `todo` / `in_progress` / `complete` — a lifecycle that isn't work, like a decision's
+  `Active` / `Superseded`, is a plain select), and its `views` — Kanban on a status column
+  whose rows actually spread across it, Calendar on a date column worth planning by, an
+  extra Table only for a slice people look at on its own.
   Then **all its rows in one `bulk_create_pages` call** (up to 100), each with a real body.
 - **Label concepts** so context packs find them: on every concept row, page and
   database pass `knowledge` with `conceptType`, `tags` — the words someone would search
   for, in the team's language *and* English — and `sources`, the repo files it rests on:
   `"knowledge": {"conceptType": "decision", "tags": ["davet", "invitation", "auth"], "sources": [{"resource": "src/auth.ts"}]}`.
   `bulk_create_pages`, `create_page` and `create_database` all take it.
-- **A status screen** when a database has a lifecycle or dates worth watching: read
-  `remnus://dashboard/catalog`, then one `create_dashboard` with 3–6 blocks over the
-  databases you just filled — open items (metric), status mix (donut), next due (list
-  sorted by date), links to the overview and main databases. None when nothing has a
-  status or date: a dashboard of zeros is noise.
+- **The home dashboard — every calibration builds one.** It is pinned above the tree in the
+  sidebar (the **Pano** button) and is the first screen a person opens, so it answers
+  "what is this project and where do I look" before any number. Read
+  `remnus://dashboard/catalog`, then **one** `create_dashboard` with `home: true`,
+  `icon` set, after the databases are filled:
+  - `project` first: `summary` — one or two sentences on what the project is, for whom,
+    at what stage, from what you read — and `stack` chips from the manifest.
+  - Status blocks **only where a database earns them**: open items (metric) and status mix
+    (donut) over a database with a lifecycle, next due (list sorted by date) over one with
+    dates. Pick them from what this project tracks — the playbook you read names its
+    usual ones — not from a fixed set.
+  - `links` to the overview and the main databases, `activity`, and `savings`.
+  No zeros: a block whose number is 0 or whose list is empty today is noise — leave it
+  out. A project with no lifecycle at all still gets its home: header, links, activity,
+  savings. If the map already marks a dashboard `home`, extend it with `update_dashboard`
+  instead of creating another.
 - Write in the team's language — the one its docs, commits and the human asking you use;
   code identifiers stay as they are. Titles are plain text (`Scene Flow & Bootstrap`,
   never `&amp;`). Cross-link where it explains something — the decision behind a system,
@@ -171,9 +196,13 @@ Read `.remnus/workspace-map.md` (the `remnus` bridge rewrites it after every wri
 without one, the digest resource) as the human would see the tree — in sidebar order, and
 what the next session starts from. Fix until every line holds:
 
-1. The root has 4–9 items, overview first; every page, database and dashboard has an icon.
-2. Every database has at least 3 real rows (fewer: make it a page, or say why in the log),
-   real select/status options, and the Kanban/Calendar view its columns call for.
+1. The root has 4–9 items, overview first; every page, database and dashboard has an icon
+   (the map doesn't show icons or labels — your write results do: a refused icon is an
+   error). The map marks exactly one dashboard `home`, opening with a `project` block.
+2. Every database has at least 3 real rows (fewer: make it a page, or, when more are
+   clearly coming, keep it and say why in the log),
+   real select/status options, and the Kanban/Calendar view its columns call for — none
+   where every row would sit in one column (say so in the log).
 3. Sample three rows per database with `get_page`: each body says more than its title.
 4. You can name the source of every item you built. Delete what you can't, or move it
    to the log as an open question.
@@ -183,10 +212,11 @@ what the next session starts from. Fix until every line holds:
 
 ## Finish
 
-- Set `"calibrated": true`, `"calibratedAt": "<ISO time>"` and `"calibrationGuide": 3`
+- Set `"calibrated": true`, `"calibratedAt": "<ISO time>"` and `"calibrationGuide": 4`
   in `.remnus/config.json` — the only local file this touches.
 - Tell the human in a few sentences what you modeled, why, and where to look (the
-  overview, the dashboard, the open questions in the log).
+  overview, the **Pano** button at the top of the workspace, the open questions in the
+  log).
 - Then do what you were actually asked to do — this was a detour, not the task.
 
 Ask the human only when sources contradict each other, when it is unclear whether a file
@@ -195,7 +225,8 @@ Don't ask for approval of the plan — it is in the log, where they can already 
 
 ## Running it again
 
-A calibrated workspace is extended, never rebuilt:
+A calibrated workspace is extended, never rebuilt. The human starts this by asking in any
+words — "refresh the Remnus calibration", "redo the Remnus setup":
 
 1. Read the Calibration Log: what was built, from which commit, with which guide version.
    No log means guide version 1: read the map instead and create the log now.
@@ -203,9 +234,14 @@ A calibrated workspace is extended, never rebuilt:
    what this guide added since the logged version (version 2: the log itself, `knowledge`
    labels, the status screen; version 3: real page links where an earlier run left
    `[[Title]]` text — swapping that text for its link is the one edit step 4 allows in a
-   body you didn't write).
+   body you didn't write; version 4: the home dashboard — if the map marks none, build it
+   as in Phase 3 and pin it with `home: true`; an earlier status screen can become the home
+   with `update_dashboard` `home: true` plus a `project` block, and a home Remnus composed
+   on its own — it opens with a note to recalibrate — is yours to rebuild: remove that note
+   and shape the rest).
 3. Add rows and pages for new material, and missing labels, views and icons. A concept
    that already has a database or page gets extended, never a second copy.
 4. Don't overwrite a body you didn't write in this run and never delete: `add_comment` on
    what looks wrong and list it in the log for the human.
-5. Append a dated section to the log; update `calibratedAt` and `calibrationGuide`.
+5. Add a dated section to the log with `update_page` `append` (and `tick` for its steps)
+   — not by resending the log; update `calibratedAt` and `calibrationGuide`.

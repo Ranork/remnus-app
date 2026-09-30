@@ -1,6 +1,6 @@
 # Remnus V2 Revizeleri — Chat Promptları
 
-> **Durum (2026-09-26): R1 tamamlandı (commit'lenmedi); R2–R10 başlamadı.** Her prompt bitince
+> **Durum (2026-09-30): R1–R4 tamamlandı ve canlıda; R5 + R6 + R7 + R8 tamamlandı (commit'siz); R8.1–R8.8 ve R9–R11 sırada.** Her prompt bitince
 > kendi bölümünün sonuna "Tamamlandı" notu düşer; bu satırı da güncelle.
 
 Hazırlanma tarihi: 2026-09-26. Kaynak: Hakan'ın "RemnusV2 Revizeler" listesi (18 madde +
@@ -883,6 +883,54 @@ gösterge çıkmalı ki istek geldiği anlaşılsın."
 - update-handoff; commit yok; "Tamamlandı" notu.
 ```
 
+### ✅ R5 — Tamamlandı (2026-09-30, Claude; commit/push yok, migration yok)
+
+**Hipotezler (yerel dev + local.db, Playwright + gerçek MCP HTTP çağrıları):**
+1. *Normal sekmede ilk değişiklik 30 sn'ye kadar* — **kanıtlandı.** Boşta sekmede MCP `create_page` 13,0 sn'de
+   (sonraki heartbeat'te) göründü (en kötü 30 sn).
+2. *Sürümü artırmayan yazmalar* — **kısmen kanıtlandı.** 16 MCP yazma aracının **hepsi** sürümü artırıyor (ajan
+   taraması, dosya:satır listesi). Açıklar web tarafındaydı: sidebar sıralama/sürükle-iç içe/başka workspace'e taşıma,
+   workspace adı/ikonu/ana pano, yeni üyelik (onay/davet/katılma), erişim isteği, satır sıralama, yorum silme,
+   `createWorkspace` (TEXT default). Knowledge metadata bilinçli olarak dışarıda (P10 ölçümü).
+3. *`localItems` props'la senkronlanmıyor* — **elendi.** İki senk efekti var; temp-öğe atlaması ikinci efektin tam
+   değiştirmesiyle telafi ediliyor. Önbellek (`unstable_cache`/`use cache`) yok.
+4. *Erteleme kapısı takılı* — **elendi** (15 sn tavanlı, release timer'lı). Tek kenar durum düzeltildi: pencere dışında
+   bırakılan basış `pointerup` almayabiliyordu → `blur` sıfırlıyor.
+5. *Legacy TEXT / saat* — **elendi** (`epochMax` koruması). **Ama asıl "bazen" nedeni bulundu:** sürüm **saniye**
+   çözünürlüklü; aynı saniyedeki ikinci yazma sürümü artırmıyor (ölçüldü: 0,8 sn arayla iki `create_page` → aynı `v`).
+   Poll iki yazmanın arasına düşerse ikinci öğe **bir sonraki yazmaya kadar hiç görünmüyordu**. Aynı açık SSR ile ilk
+   ping arasına düşen yazmada da vardı. Canlı testte 8 aynı-saniye çiftinden 2'sinde yarış oluştu, düzeltme ikinci
+   öğeyi 2,6 sn sonra getirdi.
+6. *(bulgu)* Mobil çekmece gizli ikinci bir `WorkspaceSidebar` bağlıyor → her değişiklikte **iki** RSC yenilemesi
+   (aynı milisaniyede çiftler ölçüldü). Artık tek sürücü.
+
+**Yapılan:** `changeVersion` 7. dal `workspaces.updated_at` + `touchWorkspaces()` (web açıkları + erişim istekleri +
+üyelik); `heartbeatSignals` (ping `agent: true` → normal sekme 3 dk boyunca 2,5 sn); pencere `focus`'unda anında kontrol;
+`renderedAt` + `mayPredateRender` ile "settle" yenilemesi; yalnız masaüstü sidebar yeniler. Görev B: `getWorkspaces`
+sahip için SQL'de `pendingAccessRequests` sayar (proje penceresinde 0), workspace satırında kırmızı sayı rozeti →
+Ayarlar/Üyeler sekmesi; yeni i18n anahtarı `Workspace.accessRequestsPending` (8 dil).
+
+**Canlı ölçüm (yazma bitişi → sidebar'da görünme, dev):** boşta sekme 13,0 sn (≤30) · boşta + pencereye dönüş
+(focus) 2,0 sn (focus'tan 0,8 sn) · ajan aktifken: oluştur 3,3 · yeniden adlandır 3,4 · taşı 2,3 · sil 3,5 · database
+oluştur 3,2 · şema değişikliği → yenileme 1,6 · pano oluştur 2,2 · pano düzenle 1,9 · workspace adı (başka yoldan)
+1,1 sn. Erişim isteği rozeti ≤5 sn'de belirdi, onayla kalktı; onaylanan ikinci kullanıcının sidebar'ına workspace
+3,8 sn'de geldi (sayfa yenilemesiz). Boşta 5 dk: 10 ping, 0 poll (değişmedi).
+
+**Maliyet:** boşta sekme aynı (saatte 120 ping); ping'e bir batch sorgusu eklendi (ajan probu index seek + LIMIT 1,
+workspaces dalı PK). Ajan son 3 dk'da çalıştıysa ve sekme görünürse: saatte ~1.440 `changes` çağrısı (proje
+penceresiyle aynı; ~20 bayt gövde) = kullanıcı başına ajan-saati başına +1.440 Vercel fonksiyon çağrısı. Turso okuması
+çağrı başına workspace'lerdeki satır sayısı kadar (`epochMax` indeks max optimizasyonunu kullanamıyor — 500 öğelik
+workspace'te ~1k satır → ajan-saati başına ~1,4 M satır okuma) → **R9 adayı**. RSC yenilemeleri: önce değişiklik başına 2
+(çift sidebar), şimdi 1 (+ aynı saniyeye düşerse 1 settle; ölçüm 9 patlamada 16 yenileme).
+
+**Bilinen açıklar:** üyelikten *çıkarılan* kişinin sekmesi canlı güncellenmez (sürüm yalnız dal kaybeder); Tauri
+`TabHost` settle yapmıyor; gizlenmiş workspace'in rozeti "gizlileri göster" kapalıyken görünmez. Proje penceresinde
+rozet: sunucu 0 döner + UI `!isProjectWindow` (koddan doğrulandı; kilitli pencere canlı test edilmedi).
+
+**Doğrulama:** tsc, eslint (0 hata), test:access 28/28, test:agent-access 34/34, Playwright canlı testler yukarıda.
+Test token'ları silindi; demo kullanıcılar 6 saatte temizlenir. Dokümantasyon: AGENTS.md → Live refresh + §5 rozet,
+Serena `conventions`/`core`. Changelog: `2026-09-30-live-sidebar-and-access-requests`. CLI/src-tauri'ye dokunulmadı.
+
 ---
 
 # R6 — Proje panosu: kalibrasyon kurar, projeye özel, güncel kalır
@@ -964,6 +1012,80 @@ H) Mevcut kalibre edilmiş workspace'ler (ör. Ford-Netsis-UI): ana pano yoksa
 - update-handoff; commit yok; "Tamamlandı" notu.
 ```
 
+### ✅ R6 — Tamamlandı (2026-09-30, Claude; commit/push yok, migration yok)
+
+**A — MCP.** `create_dashboard` `home?: boolean` (oluştur + sabitle), `update_dashboard` `home?: boolean` (sabitle /
+kaldır; tek başına gönderilebilir → `describeDashboard`, patch yok). Digest/harita satırı `, home` ile işaretli. Şema
+iki kısa alan büyüdü (token diyeti); katalog kuralı "tek ana pano, uzat — ikincisini kurma" + "sıfır yok".
+**B — Rehber v4.** Her kalibrasyon ana pano kurar: `project` başlığı → yalnız veritabanlarının hak ettiği durum blokları
+→ links / activity / savings; boş/0 blok yok; "Running it again" v4 geçişi (ana pano yoksa kur; eski durum ekranı
+`home: true` + `project` ile ana pano olabilir; Remnus'un otomatik kurduğu pano yeniden şekillendirilebilir);
+`calibrationGuide: 4`. Saha testinden sonra: overview stub'ı log'dan hemen sonra (sıra = oluşturma sırası), overview ana
+panoya link verir, Kanban/Calendar yalnız işe yarıyorsa, karar yaşam döngüsü düz select.
+**C — Playbook'lar.** 5 playbook'un "Status screen"i "Home dashboard" oldu: proje tipine göre başlık özeti + stack, sonra
+yalnız kurulan veritabanlarına göre seçilecek bloklar.
+**D — CLI şablonu** (`cli/templates/agents-section.md`): "kalibrasyonu yenile" → rehberin Running it again kısmı; izlenmeye
+değer yeni database/alan → ana panoya blok. Sürüm artırılmadı; R11 Birikenler'e satır eklendi.
+**E — Yeni bloklar (2).** `project` (summary ≤280 + stack ≤8 çip; workspace adı ve son ajan zamanı canlı) — her ana panonun
+başı, tek "gürültülü" öğe; `savings` (alan yok, workspace kapsamlı ölçüm, `AgentSavingsCard variant="dashboard"`) —
+madde 17. Katalog + `home` şablonu + insan editörü (özet/stack alanları) + docs.
+**F — Tasarım.** Karolar `rounded-lg bg-neutral-900 ring-1 ring-neutral-850` (yalnız palet sınıfları, R8 yeniden
+boyar), başlıklar büyük harf/izli değil cümle düzeni, başlıksız karo başlık satırı harcamaz, metrik sayısı karo tabanında
+(4xl), `sm` iki sütun (metrikler çiftlenir), proje başlığı karosuz + alt çizgi, savings kendi yüzeyi. Checkbox sütunu liste
+bloklarında "true/false" yerine sütun adı.
+**G — Kalibrasyonsuz workspace.** Pano butonu boş pano yerine `composeHomeDashboardBlocks` ile sunucuda kurar: yeniden
+kalibrasyon cümlesi (bilgi notu) + en büyük durumlu veritabanında açık iş metriği + durum donut'u (≥2 değer) + sıradaki
+tarih / hâlâ açık listesi, durum yoksa tarihli veritabanında "en yeni", üst düzey linkler, aktivite (varsa), tasarruf
+(>0 ise); `fillRows` masaüstü satır boşluklarını kapatır. Etiketler kullanıcının dilinde (`Dashboard.home.*`).
+**H — Yeniden tetikleme cümlesi:** otomatik panonun notu — "bağlı ajanınıza şunu yazın: “Remnus kalibrasyonunu yenile”".
+**Ek (Hakan'ın isteği):** Pano/Harita çerçeveli buton; Pano mavi, Harita mor ikon; açık olan kendi renginde çerçeve + ring.
+
+**Doğrulama:** tsc, eslint (0 hata), test:access 28, test:agent-access 34, test:workspace-deletion 13, test:trash-links 32;
+katalog render (4 şablon strict kapıdan geçti). **Gerçek kalibrasyon:** iki alt ajan, yalnız rehber + MCP (HTTP sarmalayıcı)
+ile repo dışı iki projeyi kalibre etti — web app (Tidewell: Features/Decisions/Feedback/Plans + "Tidewell Home": header,
+building/bugs metrikleri, donut, planned listesi, feedback, links, activity, savings) ve kütüphane (patiently: Public
+API/Decisions/Releases/Open Questions + "patiently Home": header, open/deprecated metrikleri, stability donut'u,
+experimental + releases + still-open listeleri, links, activity, savings). İki farklı pano, uyarısız; ekran görüntüleri
+`.playwright-mcp/r6/` (açık+koyu+nord+mobil). G yolu Playwright'ta: demo workspace'te 6 bloklu otomatik pano, silip yeniden
+oluşturma, mobil ve 3 tema.
+
+**Saha testinin açtığı, R6 dışı konular (sonraki R'ler için):** log tiklemek tüm gövdeyi yeniden yollatıyor (çağrıların
+~%30'u) → append/checkbox yazma yolu (R9 token); kardeş sıralama aracı yok; kürasyonlu Lucide listesi önden görünmüyor (her
+iki ajan da bir çağrı kaybetti); `bulk_create_pages.knowledge` `description/status` içermiyor, `bulk_update_pages`'ta
+`knowledge` yok; get_page/get_pages knowledge ve ikonları göstermiyor (Faz 4 kontrolü haritadan yapılamıyor); kısmi tarih
+("2025-08") için rehber kuralı yok; dosya ↔ Remnus kaynak-gerçeği için varsayılan yok.
+
+
+### ✅ R5/R6 açıkları kapatıldı (2026-09-30, Hakan: "hepsini şimdi yap, geri dönmeyelim")
+
+- **Üyelikten çıkarılan / eklenen kişinin sekmesi:** `changes`/`ping` artık `n` (görünür workspace sayısı) da
+  döndürüyor; `ActivityTracker` `n` değişince sürümü `max(v, son)+0.001` ile ilerletiyor. Rol değişimi `touchWorkspaces`,
+  sahiplik devri `workspaces.updatedAt` yazıyor. Canlı: doğrudan üyelik ekleme boşta sekmede 20 sn'de (heartbeat), çıkarma
+  pencereye dönüşten 1,75 sn sonra sidebar'dan düştü (önce hiç düşmüyordu).
+- **Masaüstü sekmeleri (TabHost) + bilgi haritası aynı-saniye:** sunucu `v`'nin saniyesi açıkken `h: 1` gönderiyor
+  (`signalExtras`); TabHost `changeIsHot()` ile, soğuyan ilk turda aktif paneli bir kez daha çekiyor; GraphScreen
+  `generatedAt` + `mayPredateRender` ile bir kez daha çekiyor. Tauri canlı test edilmedi (yerel masaüstü derlemesi yok);
+  harita akışı Playwright'ta doğrulandı (yazma → 2,4 sn'de harita yeniden çekildi, fazladan istek yok).
+- **Log tiklemesi:** `update_page` `tick` (metnin başıyla açık `- [ ]` görevi işaretler, `{item, note}` ile id notu ekler;
+  eşleşmeyen varsa tümü reddedilir ve açık görevler listelenir) + `append` (sona ekler). `services/bodyEdits.ts`,
+  `npm run test:body-edits` (8 kontrol, CRLF dahil). Rehber: tiklemek ve yeniden çalıştırma bölümü artık gövdeyi
+  yeniden yollamıyor. Canlı MCP: append, not ile tick, bilinmeyen tick hatası, content+tick hatası — hepsi beklendiği gibi.
+- **Kardeş sıralama:** `move_item` `position` (0 = ilk; aynı parent ile yerinde sıralama; kardeş grubu tek batch'te
+  yeniden numaralanır). Canlı: Releases 1. sıraya, sona (99 → 5) ve geri (3) taşındı.
+- **İkon listesi:** kürasyonlu Lucide adları rehbere ve write-tools'a `{{LUCIDE_ICONS}}` yer tutucusuyla sunulurken
+  koddan (`CURATED_ICON_NAMES`) basılıyor, dashboard kataloğunda da var; tool şemalarına eklenmedi (token).
+- **Saha testinin diğer maddeleri:** kısmi tarih kuralı, dosya ↔ Remnus varsayılanı (dosyaya dokunma, logda açık soru),
+  "yakında çoğalacak" veritabanı için 3 satır istisnası, ana pano 4–9 köke sayılmaz, overview sırası `position` ile,
+  Faz 4 ikon/etiket kontrolünün yazma sonuçlarından yapılması, `warnings` yoksa = sorun yok, links'te iki database id'si
+  de geçer, kütüphane playbook'unda Public API'nin kararlılığa göre bölünmesi. MCP hata metinlerindeki
+  "Error: Error:" tekrarı giderildi (write araçları).
+- **Token maliyeti (ölçüldü):** yeni alanlar yazma oturumlarında +590 B ≈ 148 token (`home`×2, `position`, `tick`,
+  `append`). `tick`/`append`/`knowledge`'ı `bulk_update_pages`'a da koymak +350 token ediyordu — koymadım, toplu işte
+  `update_page` kullanılır. `bench:mcp-budget` `server-only` yüzünden çalışmıyordu → `src/scripts/serverOnlyStub.ts`.
+- **Sonraki R bloklarına taşınanlar:** R7 (panoda erişilebilirlik butonu, harita settle'ını bozma), R8 (pano karoları /
+  tasarruf eyebrow'u / çift başlık / Pano-Harita renkleri), R9 (`epochMax` tam tarama maliyeti, tools/list ölçümü),
+  R10 (rozet, `n`/`h`/`agent`, `home`, `position`, `tick`/`append`, otomatik pano güvenlik testleri), R11 (SKILL.md
+  masaüstüne gömülü → Birikenler).
 ---
 
 # R7 — Bilgi haritası düzeltmeleri
@@ -1022,6 +1144,13 @@ R4 giriş noktasını her workspace'in içine taşıdı. Harita sayfasının ba�
 kimliği net olsun (ad/ikon) ve projeye/panoya dönüş kolay olsun. R4'ün yaptığıyla
 çelişme; eksik kaldıysa tamamla.
 
+## R5/R6'dan devreden (2026-09-30)
+
+- R6'nın pano sayfası `/dashboard/...` erişilebilirlik butonunu hâlâ gösteriyor (ekran
+  görüntülerinde görüldü) — Görev C'nin kapsamına dahil, doğrularken panoda da bak.
+- R6 GraphScreen'e aynı-saniye "settle" refetch'i ekledi (`mayPredateRender` +
+  `generatedAt`); harita değişikliklerinde bunu bozma.
+
 ## Doğrulama
 
 - lint + tsc; varsa `src/scripts/bench-graph.ts`.
@@ -1038,6 +1167,72 @@ kimliği net olsun (ad/ikon) ve projeye/panoya dönüş kolay olsun. R4'ün yapt
 - AGENTS.md graph bölümü + Serena (varsa gotcha: widget exclude paths).
 - update-handoff; commit yok; "Tamamlandı" notu.
 ```
+
+### ✅ R7 — Tamamlandı (2026-09-30, Claude; commit/push yok, migration yok, CLI/Tauri'ye dokunulmadı)
+
+İddialar koddan doğrulandı: `GraphScreen`'deki iki select R3'te zaten `SimpleSelect`'e taşınmıştı; `showRows` →
+`toggleDatabase` bekleme durumu yoktu; widget `data-exclude-paths="/app,/admin,/db,/page"` idi; R4 girişi
+her projeye taşımıştı ama harita başlığında proje kimliği yalnız soluk bir ad olarak vardı.
+
+- **A — Proje değiştirici:** başlıkta `SimpleSelect` (proje ikonu/baş harfi + ad; kullanıcının gizlediği
+  workspace'ler hariç, açık olan hep dahil) → `router.push('/graph/<id>')`, geçişte spinner.
+  `getGraphWorkspace` artık `{ workspace, switchable }` döner; kilitli oturumda `switchable = null` →
+  seçici yok, statik ad. `GraphScreen` workspace id'siyle key'li (geçiş yeni harita açar, eski haritaya
+  "canlı yenileme" gibi birleşmez); katman/görünüm tercihleri `localStorage`'dan korunur (test: Ağaç seçili
+  kaldı).
+- **B — Uzakta tıklanamama, kök neden kanıtlandı:** sigma 3.0.3 isabeti yarı çözünürlüklü bir picking
+  framebuffer'ından TEK piksel okuyarak yapıyor (`pickingDownSizingRatio = 2 × dpr`), düğüm orada tam
+  çizili diski kadar yer kaplıyor ve çizili boyut zoom'la size/√ratio küçülüyor. Büyük haritada/uzakta
+  düğüm 1–4 px; simülasyon: 0,8–1,5 px'lik diskin İÇİNE yapılan tıklamaların %33–56'sı bile boş piksel
+  okuyor (hedefin kendisi de imleç isabetinden küçük). `nodeReducer`/hidden veya dashed edge programı
+  neden değil. Çözüm: sigma ıskalayınca en yakın görünür düğüm (disk kenarına ≤ 6 px fare / 14 px
+  dokunma) — `clickStage`, `doubleClickStage` (sigma'nın zoom'u engellenir) ve hover (rAF ile kısılmış
+  kendi `mousemove` dinleyicisi) aynı yoldan.
+- **C — Erişilebilirlik butonu:** widget eşleşmesi kaynaktan doğrulandı (`matchesPath`: string = yolun
+  kendisi ya da `yol/…`; sonda `*` = ham önek; test edilen yol `pathname+search+hash`). Liste artık
+  `src/lib/accessibilityWidget.ts`'ten üretiliyor: `(app)`'in tüm üst klasörleri (`/app`, `/admin`,
+  `/dashboard`, `/db`, `/graph`, `/page`, `/w`) + her birinin `?*` ikizi. Sağlamlaştırma:
+  `(app)` layout'u `AccessibilityWidgetOff`'u mount ediyor (`configure({disabled:true})`, widget kendini
+  sonradan mount ederse tekrar; unmount'ta geri verir) → listeye eklenmemiş gelecekteki bir `(app)` rotası
+  da gizli kalır. `proxy.ts` matcher'ına dokunmak gerekmedi (script yolu değişmedi).
+- **D — Satırları getir:** tek seferde bir toggle (`rowsPending`), kartta `Button loading` (diğerleri
+  disabled), haritada "Satırlar yükleniyor…" status'u, istek düşerse `expanded` geri alınır. **Ölçüm**
+  (yerel, 5k sentetik workspace, 1.500 satır): servis sıcak ~33 ms (katlı da açık da), soğuk model
+  ~374 ms, payload 258 KB / 97 KB gzip — sunucu değil. Tarayıcı CPU profili: tıklama → satırlar haritada
+  1,8–2,2 sn, bunun ~1,3 sn'si sigma'nın her `nodeAdded`/`edgeAdded`/`nodeAttributesUpdated` olayını tek
+  tek indekslemesi. **Ucuz iyileştirme:** toplu senkron sırasında sigma boş bir grafa bağlanıp geri
+  alınıyor (public `setGraph`, tek tam refresh) → **~0,5 sn** (ağ ~0,25–0,3 sn, dev). Ayrıca yeni satırlar
+  veritabanının etrafına ±%2'lik yığın yerine altın açılı "ayçiçeği" olarak yerleşiyor.
+- **E — Başlık:** `[proje rozeti/seçici] / Bilgi haritası [Pano]`; Pano yoksa sidebar'daki gibi
+  `openOrCreateHomeDashboard` ile oluşturup açıyor (hata mesajı dahil). R4'ün Pano/Harita düğmeleriyle
+  çelişmez.
+- R6'nın aynı-saniye settle refetch'i (`mayPredateRender` + `generatedAt`) korunuyor; `load` yalnız
+  `rowsPending`/`rowsRevert` temizliği kazandı.
+- i18n: `Graph.switchWorkspace`, `Graph.openDashboard`, `Graph.loadingRows` (8 locale). Changelog:
+  `2026-09-30-knowledge-map-fixes` (`improved`). AGENTS.md (Knowledge Map: Header, Hit testing, Bulk sync,
+  Show/hide rows; root layout widget satırı; eski "sidebar'da global Knowledge map satırı" ifadesi
+  düzeltildi), Serena `core` + `conventions` güncellendi.
+
+**Doğrulama:** `npx tsc --noEmit` (canary ile tsc'nin gerçekten hata raporladığı teyit edildi), hedefli
+eslint temiz. Tarayıcı (Hakan onayıyla; MCP Chrome başka oturumda meşgul olduğu için `playwright-core` +
+sistem Chrome, ayrı geçici profil, `.playwright-mcp/r7-*.cjs`, local.db, demo kullanıcı + 5k bench
+workspace): widget /graph, /dashboard, /page, /db'de YOK, `/`, /pricing, /wiki'de VAR (uygulamadan çıkınca
+geri geliyor); en uzak zoom'da düğüme 0–5 px mesafedeki 12/12 tıklama seçim yaptı, hover imleci pointer,
+çift tıklama sayfayı açtı; 390 px'de dokunma 3/3 seçti, yatay taşma yok; satırlar: aria-busy + status
+anında, 1,8–2,2 sn → ~0,5 sn; değiştirici normal oturumda var (2 seçenek) ve proje penceresinde (yerel PAT
+→ `/api/window/ticket` → activate) yok, statik ad + Pano var; Pano yokken oluşturup açtı. Sayfa hatası yok.
+Test verisi temizlendi (token silindi, bench workspace `--cleanup`, geçici script'ler silindi).
+
+**Notlar / Hakan için:**
+- Doğrulama sırasında port 3000'deki (09:59'da başlatılmış) `next dev` 12:08'de kendi kendine yeniden
+  başlayıp her rotaya 404 vermeye başladı; Hakan'ın onayıyla durduruldu, `.next/dev` →
+  `.next/dev-stale-2026-09-30` olarak yeniden adlandırıldı (silinmedi, istenirse silinebilir), benim
+  açtığım dev de iş bitince durduruldu → **port 3000 şu an boş**, `npm run dev` ile yeniden başlat.
+- Demo kullanıcılarda alttaki çerez/demo çubuğu haritadaki seçim kartının alt kısmını örtüyor (R7
+  kapsamı dışı, R8'de bakılabilir).
+- Canlıda yavaşlığın sunucu payı (Vercel soğuk başlangıç + Turso'da model yeniden kurulumu) yerelde
+  ölçülemez; R9'un ölçüm listesine uygun.
+- Push/deploy yok; migration yok; R11 Birikenler'e satır yok (CLI/Tauri değişmedi).
 
 ---
 
@@ -1114,6 +1309,15 @@ formatla): editör, database görünümleri, panolar, harita, modallar/ayarlar, 
 pazarlama sitesi (ayrı değerlendir). Her biri seçilen yönü, tokenları ve bu oturumda
 kurulan primitifleri referans alsın.
 
+## R5/R6'dan devreden (2026-09-30)
+
+- Pano (R6): karolar yalnız palet sınıflarıyla yazıldı (`rounded-lg bg-neutral-900 ring-1
+  ring-neutral-850`) — R8 tokenlarına bağla. Tasarruf kartının büyük harfli izli eyebrow'u
+  ("AJANLARIN KAZANDIRDIKLARI") genel dile uymuyor; ajanların kurduğu panolarda pano başlığı
+  ("Tidewell Home") + proje bloğu başlığı (workspace adı) çift başlık gibi duruyor — tek
+  başlık kararı ver.
+- Pano/Harita butonları (R5/R6'da mavi/mor çerçeveli yapıldı): renkleri R8 paletine taşı.
+
 ## Bitirirken
 
 - AI.md "Critical conventions"daki UI kuralını, AGENTS.md'yi ve Serena conventions'ı
@@ -1121,6 +1325,462 @@ kurulan primitifleri referans alsın.
   üstüne ekleme).
 - changelog.ts: tek kayıt (`improved`) — yeni görünüm.
 - update-handoff; commit yok; "Tamamlandı" notu.
+```
+
+### ✅ R8 — Tamamlandı (2026-09-30, Claude; commit/push yok, migration yok, CLI/Tauri Rust'a dokunulmadı, paket eklenmedi)
+
+**Faz 1 — Denetim** (Playwright, Hakan onayıyla; demo kullanıcı + local.db; 14 ekran: koyu/açık/Nord/Dracula/Tokyo, 390 px, modallar;
+`.playwright-mcp/r8-audit/`) + kod taraması. Bulgular: 5 köşe değeri (4/6/8/12/16) + 11 yerde hiç (kural "rounded-none" diyordu);
+7+ gölge tarifi; 15 px altında 11 yazı boyutu, 51 yerde 8–9 px; 104 büyük harfli etiket (`lang="tr"` ile "TİTLE", "KATEGORİSİZ");
+547 elle buton / 7 `Button`; 33 elle modal / 1 `Dialog`; açık tema 55 seçici yamayla ayakta; 66 `outline-none`, 9 görünür odak;
+ajan aktivitesi kabukta yok. "Notion gibi" okunanlar: emoji + dev başlık, sayfa ağacı, eğik çizgi menüsü, veritabanı sekmeleri +
+renkli kanban sütunları + "Priority: High" satırları — asıl neden kabuğun hiçbir yerde "ajanlar burada çalışıyor" dememesi.
+Ek i18n açıkları: `SlashCommandList.tsx:136` "Divider", `StandalonePageEditor` "Remove", `PageEditor` "Duplicate", mobil "Language".
+
+**Faz 2 — Araştırma:** Linear (3 girdiden LCH tema, kabukta renk azaltma, ajan oturum durumları), Vercel Geist (ölçek adımı = rol),
+Raycast (yoğunluk + klavye), Warp (ajan işi tiplenmiş bloklar), Zed, Arc (alan başına renk kimliği). Kaynaklar yön sayfasında.
+
+**Faz 3 — Yön:** `.ai/R8_DESIGN_DIRECTIONS.html` (artifact https://claude.ai/artifact/PnW33rWD6iEabi5CfuD5Sf): A Sinyal, B Ortak
+Masa, C Kesik; aynı iki ekran (sidebar+sayfa, pano), koyu+açık. **Hakan'ın kararı:** B'nin tüm yapısı (kartlar, radiuslar,
+sayfayla bütünleşik sidebar) + A'nın tek renk anlayışı; iki renk (insan/ajan) yok; tek vurgu sarı, koyu/açıkta farklı ton; dalga/nabız
+efekti yok; C (oyun gibi) yok; varsayılan tema bugünkü gibi; Dracula/Tokyo/Nord kalır. Sayfanın en üstüne "Seçilen yön" eklendi.
+
+**Faz 4 — Temel (yapılan):**
+- **Tokenlar** (`globals.css` @theme): nötr rampa yeniden ayarlandı (950 masa · 850 kâğıt · 900 kalkık · 800 çizgi/hover · yeni 750 ·
+  700 güçlü çizgi …) ve rol tokenları: `desk sheet raised float hover line line-strong fg fg-2 fg-3 fg-4 ink ink-fg signal signal-fg
+  signal-text signal-soft focus link overlay`; köşe (`rounded-control` 8, `rounded-surface` 12; md=lg=8, xl=2xl=12, bare 6), gölge
+  (`shadow-lift/sheet/float/modal`, eski lg/xl/2xl aynı gölgelere), `text-2xs` (11) + `text-ui` (13), `ease-snappy`. Beş tema tek blok:
+  Dracula/Tokyo/Nord kendi sarısını sinyal olarak kullanıyor, kâğıt masadan bir kademe açık. Açık tema: sarı dolgu `#f5b300`, sarı
+  yazı yerine koyu altın `#5c4600`. Global `:focus-visible` halkası + `::selection` sarı (base layer), ince şeffaf scrollbar,
+  `.modal-shadow` = modal gölgesi, editör başlık/link/blok seçimi tokenlarda, reduced-motion'da giriş animasyonları anında.
+  **Pazarlama** `.marketing-site` altında eski rampa + Tailwind radiusları ile donduruldu (R8.7).
+- **`src/lib/cn.ts`:** tailwind-merge yeni tokenları tanıyor (bilinmezse `text-ui`'yi renk sanıp `text-ink-fg`'yi siliyordu).
+- **Primitifler:** Button (primary = mürekkep, secondary/outline/ghost/danger/signal), Dialog (float yüzey, modal gölgesi, overlay
+  tokenı), DropdownMenu (+`DropdownMenuShortcut`), Select/SimpleSelect yeniden boyandı; yeni: `tooltip`, `badge`, `tabs` (line/segmented,
+  kayan gösterge), `card` (masa/kâğıt), `empty-state`, `kbd`, `input`/`textarea`, `remnus-mark` (temaya uyan SVG R).
+- **Kabuk:** `AppShell` + `sidebarVisibility.ts` → masa + tek kâğıt (`getSheetClasses`, pano rotası `onDesk`); sidebar masada kenarsız,
+  seçili satır "kalkık" (`bg-sheet shadow-lift`), Pano/Harita tek renk çift (R5/R6 mavi/mor çerçeve kalktı), ajan paneli (tasarruf +
+  AI Ajanlarım) küçük bir kâğıt, hesap satırı; `ContextMenu`, `AccountMenu`, `TauriTitlebar` + `TabBar` (masada, etkin sekme kalkık),
+  `ProjectWindowBanner` ve demo şeridi masada (em dash ve "→" kalktı), `MobileNavWrapper` (float sheet, masa rengi alt çubuk, "Dil").
+  Sayfa başlığı: iki editörün elle yazılmış "⋯" menüleri tek `PageActionsMenu`'ya (DropdownMenu) indi, başlık 28/34 semibold,
+  `SaveStatus`/Yenile ghost; i18n `Page.removeIcon/pageOptions/widthLabel` (8 locale); "Duplicate" ve "Remove" artık çevrili.
+- **R5/R6 devreden:** pano kartları tokenlarda (masada kart, mobilde raised), tasarruf "AJANLARIN KAZANDIRDIKLARI" eyebrow'u cümle
+  düzeninde caption, **tek başlık kararı:** proje bloğu varsa pano başlığı küçük etikete iner (`DashboardHeader compact`), büyük başlık
+  proje bloğunda; proje bloğundaki nabız kalktı, yığın rozetleri + sabit sarı nokta; metin bloğu tonu ikonla (info = sinyal).
+- **Uygulama geneli mekanik geçiş** (TypeScript AST codemod, yalnız string/template literal): 112 büyük harfli etiket → cümle düzeni
+  (8–10.5 px → `text-2xs`, 11 → `text-xs`); mavi UI vurgusu → birincil eylemler `bg-ink text-ink-fg` (51), diğer vurgu (seçim, etkin,
+  odak, link rengi, tint) → `signal` (~160); sarı dolgu üstündeki beyaz yazı/tik `signal-fg`. Mavi yalnız veri/kullanıcı renginde kaldı
+  (callout rengi, ikon rengi, grafik serileri, harita düğüm türleri, seçenek renkleri, admin).
+  **Not:** ilk (regex) codemod JSX metnindeki kesme işaretlerinden taşıp ~80 dosyada girintiyi düzleştirmişti; hepsi HEAD'den geri
+  alınıp AST codemod'u yeniden uygulandı (R6'dan kirli `DashboardBlockEditor` girintisi HEAD'e hizalanarak onarıldı). Son durum:
+  bu dosyalarda eklenen/silinen satır sayıları eşit (yalnız token değişimi), tek boşluk girintili satır yok.
+- Changelog: `2026-09-30-new-look` (`improved`, 8 locale). `AI.md` UI kuralı, `AGENTS.md` (Color Theme + UI & Design Aesthetics baştan,
+  sidebar/Pano-Harita/sekme/AppShell satırları, i18n §8), Serena `conventions` (UI / Design baştan, primitifler, codemod dersi) +
+  `core` güncellendi.
+
+**Doğrulama:** `npx tsc --noEmit` temiz; değişen 160 TS dosyasında eslint **0 hata**, 25 uyarı (hepsi önceden vardı; bu işin
+kattığı kullanılmayan import/değişkenler temizlendi). Palet kontrastları betikle ölçüldü (tüm metin kademeleri ≥ 4.5:1, odak ≥ 3:1).
+Playwright (Hakan onaylı, dev + local.db, demo): sayfa/veritabanı/pano/harita/ayarlar/ajanlar/hesap menüsü koyu + açık, Nord/Dracula/
+Tokyo, 390 px mobil + kullanıcı sayfası, giriş sayfası (çıkış yapmış bağlam) — sayfa hatası yok, `.playwright-mcp/r8-impl/`.
+Build çalıştırılmadı (build davranışı değişmedi).
+
+**Hakan için / kalanlar:**
+- Görsel kontrolü birlikte yapacağız: `npm run dev` → koyu + açık tema, bir de Dracula/Nord; en çok değişen yerler kenar çubuğu,
+  sayfa başlığı ve pano.
+- Kasıtlı olarak bu oturumda yapılmayanlar R8.1–R8.8'de: 33 elle modalın `Dialog`'a taşınması, veritabanı görünümlerinin Notion kalıpları,
+  editör, harita, auth, pazarlama ve ajan varlık katmanı (canlı "Claude Code çalışıyor", ağaçta iz, köken satırı).
+- Demo kullanıcıda alttaki çerez bandı haritadaki seçim kartını örtüyor (R7 notu) → R8.4.
+- Push/deploy yok; migration yok; R11 Birikenler'e satır yok.
+
+## R8 alt promptları — sıra
+
+| #    | Prompt | Neden bu sırada |
+| ---- | ------ | --------------- |
+| R8.1 | Editör ve sayfa içi yüzeyler | Kullanıcının en çok baktığı yer; tipografi ölçeği burada oturur. |
+| R8.2 | Veritabanı görünümleri | En "Notion gibi" yüzey; Checkbox primitifi burada doğar. |
+| R8.3 | Panolar | R6 panoları masada kart; blok editörü modalı R8.5 kalıbını kullanabilir. |
+| R8.4 | Bilgi haritası | Araç çubuğu primitiflere; tema tokenlarıyla sigma renkleri. |
+| R8.5 | Modallar, ayarlar, bildirimler | 33 elle katman tek `Dialog`/`Sheet` kalıbına. |
+| R8.6 | Giriş, kurulum, onboarding | İlk 5 dakika; auth kartları ortak primitiflere. |
+| R8.8 | Ajan varlık katmanı | Yeni özellik; R8.1–R8.2 kabuğu oturduktan sonra. |
+| R8.7 | Pazarlama sitesi (son) | Ürün ekran görüntüleri yeni arayüzle yeniden alınır. |
+
+Her R8.x kendi başına yeterlidir; ortak referans bloğu her prompta gömülüdür.
+
+---
+
+# R8.1 — Editör ve sayfa içi yüzeyler
+
+> R8'in seçtiği dili editöre ve sayfanın içindeki panellere taşır. Tek oturum.
+
+```text
+Remnus projesinde çalışıyorsun (Next.js 16, React 19, TS strict, Tailwind v4, next-intl 8 locale). AI.md kuralları geçerli.
+`git status --short` ile başla; kullanıcının değişikliklerini ezme. Serena varsa core + conventions (UI / Design bölümü).
+frontend-design skill'ini kullan. Playwright'tan önce Hakan'a sor.
+
+## Ortak referans (R8)
+- Seçilen yön: `.ai/R8_DESIGN_DIRECTIONS.html` → "Seçilen yön: Ortak Masa, tek renk" (Hakan: B'nin yapısı + tek renk,
+  tek vurgu sarı, nabız/dalga efekti yok). Kurallar: `AGENTS.md` → UI & Design Aesthetics.
+- Tokenlar `src/app/globals.css` @theme: desk/sheet/raised/float/hover/line/line-strong, fg…fg-4, ink/ink-fg, signal/
+  signal-fg/signal-text/signal-soft, focus, link, overlay; `rounded-control/surface`; `shadow-lift/sheet/float/modal`;
+  `text-2xs` (11) + `text-ui` (13). Yeni token eklersen `src/lib/cn.ts` tailwind-merge listesine de ekle.
+- Primitifler `src/components/ui/`: Button, Dialog, DropdownMenu(+Shortcut), Select/SimpleSelect, Tooltip, Badge, Tabs,
+  Card, EmptyState, Kbd, Input/Textarea, RemnusMark; `features/PageActionsMenu`, `ConfirmDialog`.
+- Yasak: CSS `uppercase` etiket, orta noktayla meta birleştirme, 11 px altı yazı, "→" ekli etiket, döngüsel nabız; mavi yalnız
+  veri/kullanıcı rengi. Sınıf değişikliğini codemod'la yapacaksan TypeScript parser'ıyla yalnız literal'lerde ve boşluklara
+  dokunmadan (R8 dersi, conventions).
+
+## Kapsam
+BlockEditor ve eklentileri (`src/components/features/editor/*`: eğik çizgi menüsü, BubbleMenuBar, BlockSelectionToolbar,
+BlockDragHandle, FencedCodeBlock, TableControls, ImageBlock/FileBlock, CalloutBlockView, ChildBlockView, YouTube),
+`globals.css` içindeki `.prose-editor` kuralları, sayfa panelleri (PageCommentsPanel, PageBacklinksPanel,
+KnowledgeContextPanel, LocalGraphPanel, SubItemsPanel), PageHistoryModal, PageMarkdownDialog.
+
+## Görevler
+1. Tipografi: içerik H1 (2.25rem) sayfa başlığından (28/34) büyük — H1/H2/H3 ölçeğini sayfa başlığının altına indir,
+   gövde 15–16 px/1.7, liste/alıntı/kod aralıkları tek ritimde. Ölçü: 65–75 karakter satır.
+2. Eğik çizgi ve seçim menüleri `DropdownMenu` görünümünde (float yüzey, rounded-control satırlar, kısayol `Kbd`),
+   bölüm başlıkları cümle düzeninde; `SlashCommandList.tsx` "Divider" çevirisi (8 locale). Notion'dan ayrışma: menüye
+   ajana özgü girişleri öne alma fırsatını değerlendir (ör. "Ajandan iste" yoksa önerme, uydurma).
+3. Blok tutamakları, seçim (sarı `signal-soft`), kod bloğu, tablo kontrolleri, görsel/dosya blokları token + primitiflere.
+4. Yorumlar paneli başlığın hemen altında duruyor (Notion kalıbı): yerini ve varsayılan kapalı/açık halini öner, Hakan'a
+   sorarak karar ver; seçilen halini uygula.
+5. Callout renkleri kullanıcı verisidir (mavi dahil kalır) ama yüzeyleri (radius, padding, ikon) yeni dile.
+6. Sayfa panelleri (bağlantılar, bilgi bağlamı, yerel harita): kart yerine başlık + ince çizgi; boş durumlar `EmptyState sm`.
+7. Tüm `text-[8..11px]` değerlerini ölçeğe taşı; `neutral-*` sınıflarını gördüğün yerde rol tokenına çevir.
+
+## Doğrulama
+eslint (değişen dosyalar), `npx tsc --noEmit`; Hakan onayıyla Playwright: koyu + açık + bir koyu tema, 390 px, uzun bir
+sayfa, kod bloğu, tablo, görsel, eğik çizgi menüsü, blok seçimi.
+
+## Bitirirken
+changelog.ts tek kayıt (`improved`); AGENTS.md editör bölümü + Serena conventions; update-handoff; commit yok; bu bölümün
+sonuna "Tamamlandı" notu.
+```
+
+---
+
+# R8.2 — Veritabanı görünümleri
+
+> En "Notion gibi" yüzey. Tablo, kanban, takvim, satır sayfası, özellikler kenar çubuğu. Tek oturum (gerekirse iki).
+
+```text
+Remnus projesinde çalışıyorsun (Next.js 16, React 19, TS strict, Tailwind v4, next-intl 8 locale). AI.md kuralları geçerli.
+`git status --short` ile başla; kullanıcının değişikliklerini ezme. Serena varsa core + conventions. frontend-design skill'ini
+kullan. Playwright'tan önce Hakan'a sor.
+
+## Ortak referans (R8)
+- Seçilen yön: `.ai/R8_DESIGN_DIRECTIONS.html` → "Seçilen yön: Ortak Masa, tek renk" (Hakan: B'nin yapısı + tek renk,
+  tek vurgu sarı, nabız/dalga efekti yok). Kurallar: `AGENTS.md` → UI & Design Aesthetics.
+- Tokenlar `src/app/globals.css` @theme: desk/sheet/raised/float/hover/line/line-strong, fg…fg-4, ink/ink-fg, signal/
+  signal-fg/signal-text/signal-soft, focus, link, overlay; `rounded-control/surface`; `shadow-lift/sheet/float/modal`;
+  `text-2xs` (11) + `text-ui` (13). Yeni token eklersen `src/lib/cn.ts` tailwind-merge listesine de ekle.
+- Primitifler `src/components/ui/`: Button, Dialog, DropdownMenu(+Shortcut), Select/SimpleSelect, Tooltip, Badge, Tabs,
+  Card, EmptyState, Kbd, Input/Textarea, RemnusMark; `features/PageActionsMenu`, `ConfirmDialog`.
+- Yasak: CSS `uppercase` etiket, orta noktayla meta birleştirme, 11 px altı yazı, "→" ekli etiket, döngüsel nabız; mavi yalnız
+  veri/kullanıcı rengi. Sınıf değişikliğini codemod'la yapacaksan TypeScript parser'ıyla yalnız literal'lerde ve boşluklara
+  dokunmadan (R8 dersi, conventions).
+
+## Kapsam
+DatabaseView, ViewsBar, TableLayout, GroupedTableLayout, KanbanBoard, CalendarView, InlineCellEditor, PropertyTags
+(StatusChip/UserChip…), DatabasePropertiesSidebar + `database-sidebar/*`, PageEditor'ün özellik bölümü, BulkRowsDialog,
+DateRangePicker, recurrence/* diyalogları, AgentEditBadge.
+
+## Görevler
+1. Notion kalıplarından çık: renkli kanban sütun zeminleri ve karttaki sol renk şeritleri kalkar (durum/öncelik rozetle
+   ya da durum glifiyle — yön sayfasındaki halka glifleri); kart üstündeki "Priority: High" etiket satırları yerine
+   değerler (etiket ancak belirsizse); tablo satırı durum tinti (yeşil/kahve) yerine sade satır + durum glifi.
+2. Görünüm sekmeleri `Tabs` (line), araç çubuğu `Button ghost`/`Tooltip`; "Yeni" birincil (mürekkep).
+3. Özel onay kutuları (5+ kopya) için Base UI Checkbox üzerine `ui/checkbox.tsx` yaz ve hepsini ona taşı (işaretli = sinyal,
+   tik `signal-fg`).
+4. Özellik düzenleyicideki elle açılır listeler (`absolute … bg-neutral-900 border …`) → `DropdownMenu`/`Select` parçaları
+   (arama kutulu seçim için Base UI Combobox değerlendir, paket ekleme yok).
+5. Ajan dokunuşu: `AgentEditBadge` tek, tutarlı bir ajan işareti olsun (marka ikonu + tooltip); sarı yalnız "son X dakika"
+   ya da canlı durum için (R8.8 ile uyumlu, ama veri tarafına bu promptta girme).
+6. Yan kenar çubuğu (özellikler/filtre/sıralama) yüzeyleri raised + çizgi; tüm `text-[8..11px]` ölçeğe.
+7. Takvim: bugün işareti sinyal dolgu + `signal-fg`, hafta sonu/ay dışı günler fg-4; olay kartları kart dili.
+
+## Doğrulama
+eslint, tsc, `npm run test:recurrence`; Hakan onayıyla Playwright: tablo/kanban/takvim koyu + açık, 390 px, satır peek,
+özellik düzenleme, filtre/sıralama, sürükle-bırak.
+
+## Bitirirken
+changelog tek kayıt (`improved`: veritabanı görünümleri sadeleşti…); AGENTS.md + Serena; update-handoff; commit yok;
+"Tamamlandı" notu.
+```
+
+---
+
+# R8.3 — Panolar
+
+> R6/R8'in panosunu bitirir: bloklar, blok editörü, gömülü veritabanı, boş/hata durumları.
+
+```text
+Remnus projesinde çalışıyorsun. AI.md kuralları geçerli. `git status --short` ile başla. Serena varsa core + conventions
+(Dashboards bölümü dahil). frontend-design + dataviz skill'lerini kullan. Playwright'tan önce Hakan'a sor.
+
+## Ortak referans (R8)
+- Seçilen yön: `.ai/R8_DESIGN_DIRECTIONS.html` → "Seçilen yön: Ortak Masa, tek renk" (Hakan: B'nin yapısı + tek renk,
+  tek vurgu sarı, nabız/dalga efekti yok). Kurallar: `AGENTS.md` → UI & Design Aesthetics.
+- Tokenlar `src/app/globals.css` @theme: desk/sheet/raised/float/hover/line/line-strong, fg…fg-4, ink/ink-fg, signal/
+  signal-fg/signal-text/signal-soft, focus, link, overlay; `rounded-control/surface`; `shadow-lift/sheet/float/modal`;
+  `text-2xs` (11) + `text-ui` (13). Yeni token eklersen `src/lib/cn.ts` tailwind-merge listesine de ekle.
+- Primitifler `src/components/ui/`: Button, Dialog, DropdownMenu(+Shortcut), Select/SimpleSelect, Tooltip, Badge, Tabs,
+  Card, EmptyState, Kbd, Input/Textarea, RemnusMark; `features/PageActionsMenu`, `ConfirmDialog`.
+- Yasak: CSS `uppercase` etiket, orta noktayla meta birleştirme, 11 px altı yazı, "→" ekli etiket, döngüsel nabız; mavi yalnız
+  veri/kullanıcı rengi. Sınıf değişikliğini codemod'la yapacaksan TypeScript parser'ıyla yalnız literal'lerde ve boşluklara
+  dokunmadan (R8 dersi, conventions).
+- Pano rotası `onDesk`: bloklar masada kart (`rounded-surface bg-raised lg:bg-sheet shadow-sheet`).
+Proje bloğu varsa pano başlığı küçük etikettir (`DashboardHeader compact`) — tek başlık kararı R8'de verildi.
+
+## Kapsam
+`src/components/features/dashboard/*` (DashboardBlocks, DashboardBlockEditor, DashboardDatabaseEmbed, BlockActions,
+AddBlock), `src/lib/dashboard/*` yalnız görünümle ilgili yerler, `services/homeDashboard.ts` blok kompozisyonu gerekirse.
+
+## Görevler
+1. Grafik paleti (`PALETTE`) açık temada da ölç (dataviz skill doğrulayıcısı); halka izi `--color-hover`; eksen/etiketler
+   tokenlarda.
+2. Yön sayfasındaki "Ajan etkinliği" bloğunu değerlendir: çağrıları ajan oturumu başına gruplayan (başlık: ajan, çağrı ve
+   yazma sayısı, son zaman; liste açılır) görünüm — veri zaten `activity` bloğunda; yeni sorgu gerekirse maliyetini ölç.
+3. Durum dağılımı için donut yerine yatay yığın çubuk seçeneğini değerlendir (yön sayfasındaki gibi), metrik bloğunda
+   büyük sayı + küçük değişim.
+4. DashboardBlockEditor sağ çekmecesi: form alanları `Input/Textarea/SimpleSelect`, kaydet `Button primary`, alan etiketleri
+   cümle düzeninde; çekmece yüzeyi R8.5'in `Sheet` kalıbıyla hizalı.
+5. Boş/hata durumları `EmptyState`; `andMore` gibi küçük yazılar ölçekte.
+
+## Doğrulama
+eslint, tsc; Hakan onayıyla Playwright: kalibre edilmiş bir pano + otomatik kurulan pano, koyu/açık, 390 px, blok ekle/düzenle.
+
+## Bitirirken
+changelog (`improved`); AGENTS.md Dashboards + Serena; update-handoff; commit yok; "Tamamlandı" notu.
+```
+
+---
+
+# R8.4 — Bilgi haritası
+
+> Harita ekranını yeni dile taşır; sigma renkleri tema tokenlarından gelir.
+
+```text
+Remnus projesinde çalışıyorsun. AI.md kuralları geçerli. `git status --short` ile başla. Serena varsa core + conventions
+(Knowledge map bölümü: WebGL renkleri OPAK hex olmalı, `graphTheme.ts` `blend`). Playwright'tan önce Hakan'a sor.
+
+## Ortak referans (R8)
+- Seçilen yön: `.ai/R8_DESIGN_DIRECTIONS.html` → "Seçilen yön: Ortak Masa, tek renk" (Hakan: B'nin yapısı + tek renk,
+  tek vurgu sarı, nabız/dalga efekti yok). Kurallar: `AGENTS.md` → UI & Design Aesthetics.
+- Tokenlar `src/app/globals.css` @theme: desk/sheet/raised/float/hover/line/line-strong, fg…fg-4, ink/ink-fg, signal/
+  signal-fg/signal-text/signal-soft, focus, link, overlay; `rounded-control/surface`; `shadow-lift/sheet/float/modal`;
+  `text-2xs` (11) + `text-ui` (13). Yeni token eklersen `src/lib/cn.ts` tailwind-merge listesine de ekle.
+- Primitifler `src/components/ui/`: Button, Dialog, DropdownMenu(+Shortcut), Select/SimpleSelect, Tooltip, Badge, Tabs,
+  Card, EmptyState, Kbd, Input/Textarea, RemnusMark; `features/PageActionsMenu`, `ConfirmDialog`.
+- Yasak: CSS `uppercase` etiket, orta noktayla meta birleştirme, 11 px altı yazı, "→" ekli etiket, döngüsel nabız; mavi yalnız
+  veri/kullanıcı rengi. Sınıf değişikliğini codemod'la yapacaksan TypeScript parser'ıyla yalnız literal'lerde ve boşluklara
+  dokunmadan (R8 dersi, conventions).
+- Harita kâğıdın içinde yaşar. Mavi burada VERİDİR (düğüm türleri, güven renkleri) — sinyal sarısı
+seçim/hover/canlı için.
+
+## Kapsam
+`src/components/features/graph/*` (GraphScreen araç çubuğu, lejant, "Dikkat isteyenler" paneli, seçim kartı, LocalGraphPanel),
+`graphTheme.ts`.
+
+## Görevler
+1. Araç çubuğu: Ağ/Ağaç `Tabs segmented`, Renk/Katmanlar `SimpleSelect`/`DropdownMenu`, arama `Input`, ikon butonlar `Tooltip`'li.
+2. `graphTheme.ts` yeni rampayı ve `--color-signal`'i okusun (seçim halkası, hover, ajanın son dokunduğu düğüm); beş temada
+   kontrastı ölç (açık temada saydam renk görünmez — opak karışım kuralı).
+3. Sağ panel ve seçim kartı: başlık + ince çizgi, `EmptyState sm`, cümle düzeni.
+4. R7 notu: demo kullanıcıda alttaki çerez bandı seçim kartını örtüyor — kartı güvenli alana taşı ya da bandı kaldırdıktan
+   sonra konumla.
+
+## Doğrulama
+eslint, tsc, `npm run bench:graph` (render yolu değiştiyse); Hakan onayıyla Playwright: koyu/açık/Nord, zoom out tıklama,
+satırları getir, 390 px.
+
+## Bitirirken
+changelog (`improved`); AGENTS.md Knowledge Map + Serena; update-handoff; commit yok; "Tamamlandı" notu.
+```
+
+---
+
+# R8.5 — Modallar, ayarlar ve bildirimler
+
+> 33 elle kurulmuş katmanı tek kalıba indirir. Büyük; gerekirse iki oturum (önce kalıp + ayarlar, sonra geri kalanlar).
+
+```text
+Remnus projesinde çalışıyorsun. AI.md kuralları geçerli. `git status --short` ile başla. Serena varsa core + conventions.
+frontend-design skill'ini kullan. Playwright'tan önce Hakan'a sor.
+
+## Ortak referans (R8)
+- Seçilen yön: `.ai/R8_DESIGN_DIRECTIONS.html` → "Seçilen yön: Ortak Masa, tek renk" (Hakan: B'nin yapısı + tek renk,
+  tek vurgu sarı, nabız/dalga efekti yok). Kurallar: `AGENTS.md` → UI & Design Aesthetics.
+- Tokenlar `src/app/globals.css` @theme: desk/sheet/raised/float/hover/line/line-strong, fg…fg-4, ink/ink-fg, signal/
+  signal-fg/signal-text/signal-soft, focus, link, overlay; `rounded-control/surface`; `shadow-lift/sheet/float/modal`;
+  `text-2xs` (11) + `text-ui` (13). Yeni token eklersen `src/lib/cn.ts` tailwind-merge listesine de ekle.
+- Primitifler `src/components/ui/`: Button, Dialog, DropdownMenu(+Shortcut), Select/SimpleSelect, Tooltip, Badge, Tabs,
+  Card, EmptyState, Kbd, Input/Textarea, RemnusMark; `features/PageActionsMenu`, `ConfirmDialog`.
+- Yasak: CSS `uppercase` etiket, orta noktayla meta birleştirme, 11 px altı yazı, "→" ekli etiket, döngüsel nabız; mavi yalnız
+  veri/kullanıcı rengi. Sınıf değişikliğini codemod'la yapacaksan TypeScript parser'ıyla yalnız literal'lerde ve boşluklara
+  dokunmadan (R8 dersi, conventions).
+- `ui/dialog.tsx` zaten yeni dilde (float yüzey, modal gölgesi, overlay tokenı).
+
+## Kapsam
+`fixed inset-0` ile elle kurulmuş tüm katmanlar (R8 denetimi: 33 dosya): UserSettingsModal, WorkspaceSettingsModal + sekmeleri
+(`workspace-settings/*`), AgentsModal + `agents/*` (ConnectModal, ConnectFlow), TrashModal, WhatsNewButton modalı,
+TemplatePickerModal, BillingModal, PlanPickerModal, BillingSuccessModal, PwaInstallModal, ShareModal, AvatarCropModal,
+IconPicker, AgentDetectModal, WelcomeModal, BulkRowsDialog, RecurrenceDialog, PageHistoryModal, PageMarkdownDialog; bildirimler
+(DownloadToast, UpdateBanner, sidebar silme hatası, PwaInstallNudge, DemoFeedbackPrompt).
+
+## Görevler
+1. Kalıp: geniş/sekmeli modallar için `Dialog` üzerine `ui/dialog.tsx`'e boyut varyantları (sm/md/lg/full) ve kaydırılabilir
+   gövde + sabit başlık/ayak; mobilde alttan açılan `Sheet` (Base UI Drawer/Dialog) — tek bileşen ailesi.
+2. Ayarlar: sol sekmeler `Tabs` (dikey) ya da liste; form alanları Input/SimpleSelect/Checkbox (R8.2'nin primitifi), bölüm
+   başlıkları cümle düzeninde; tehlikeli bölge tek kalıp.
+3. AI Ajanlarım: token satırları kart değil liste; "PAT", "Okuma ve yazma", "Süresiz" gibi etiketler `Badge` varyantları
+   (tek renk dili: kapsam yazma = signal, okuma = neutral); bağlanma akışı adımları.
+4. Toast: tek `ui/toast` kalıbı (Base UI Toast değerlendir) — DownloadToast, silme hatası, güncelleme bandı aynı dil.
+5. Tüm `text-[8..11px]`, özel onay kutuları, elle butonlar primitiflere.
+6. Admin yüzeyleri (`features/admin/*`, `/admin`) R8 codemod'unda bilerek atlandı (mavi hâlâ orada): bu oturumda istersen
+   aynı kurallarla geçir, ama müşteri yüzeylerinden sonra.
+
+## Doğrulama
+eslint, tsc; Hakan onayıyla Playwright: her modalı koyu + açık + 390 px'de aç; Escape/odak tuzağı/odak dönüşü; uzun de/ru
+metinleri.
+
+## Bitirirken
+changelog tek kayıt (`improved`); AGENTS.md + Serena (yeni Dialog/Sheet/Toast kalıbı, "yeni modal nasıl yazılır"); update-handoff;
+commit yok; "Tamamlandı" notu.
+```
+
+---
+
+# R8.6 — Giriş, kurulum ve onboarding
+
+> Müşterinin ilk beş dakikası: giriş, kurulum/katılım bağlantıları, OAuth onayı, karşılama.
+
+```text
+Remnus projesinde çalışıyorsun. AI.md kuralları geçerli (kurulum linki ve OAuth güvenlik kurallarına dokunma — yalnız görünüm).
+`git status --short` ile başla. Serena varsa core + conventions. frontend-design skill'ini kullan. Playwright'tan önce Hakan'a sor.
+
+## Ortak referans (R8)
+- Seçilen yön: `.ai/R8_DESIGN_DIRECTIONS.html` → "Seçilen yön: Ortak Masa, tek renk" (Hakan: B'nin yapısı + tek renk,
+  tek vurgu sarı, nabız/dalga efekti yok). Kurallar: `AGENTS.md` → UI & Design Aesthetics.
+- Tokenlar `src/app/globals.css` @theme: desk/sheet/raised/float/hover/line/line-strong, fg…fg-4, ink/ink-fg, signal/
+  signal-fg/signal-text/signal-soft, focus, link, overlay; `rounded-control/surface`; `shadow-lift/sheet/float/modal`;
+  `text-2xs` (11) + `text-ui` (13). Yeni token eklersen `src/lib/cn.ts` tailwind-merge listesine de ekle.
+- Primitifler `src/components/ui/`: Button, Dialog, DropdownMenu(+Shortcut), Select/SimpleSelect, Tooltip, Badge, Tabs,
+  Card, EmptyState, Kbd, Input/Textarea, RemnusMark; `features/PageActionsMenu`, `ConfirmDialog`.
+- Yasak: CSS `uppercase` etiket, orta noktayla meta birleştirme, 11 px altı yazı, "→" ekli etiket, döngüsel nabız; mavi yalnız
+  veri/kullanıcı rengi. Sınıf değişikliğini codemod'la yapacaksan TypeScript parser'ıyla yalnız literal'lerde ve boşluklara
+  dokunmadan (R8 dersi, conventions).
+- Artık ayrı bir "auth kart istisnası" yok: auth sayfaları masa üstünde tek bir `Card` (on="desk").
+
+## Kapsam
+`/login`, `/client-login`, `/install` (InstallForm, JoinForm, used/expired ekranları), `/invite/[token]`, `/oauth/authorize`,
+`/welcome/[token]`, `/account-delete`, public `/share/*` sayfa kabuğu; onboarding (WelcomeModal, GettingStartedChecklist,
+AgentDetectGuide/Notice), CookieConsentBanner, PendingGiftToast.
+
+## Görevler
+1. Auth kartlarını `Card` + `Button` + `Input` ile yeniden kur; logo `RemnusMark` (PNG yerine, temaya uyar).
+2. OAuth onayı: kapsam seçimi `Badge`/radyo kartları; tehlikeli olmayan varsayılan net.
+3. Onboarding: kontrol listesi ve karşılama tek renk dilde; ajan bağlama adımı ürünün asıl vaadi — kopyayı ve hiyerarşiyi buna göre.
+4. Çerez bandı: masaya oturan ince bir şerit (alt kenar), demo kullanıcıda haritadaki kartı örtmesin.
+
+## Doğrulama
+eslint, tsc; Hakan onayıyla Playwright: çıkış yapmış bağlamda her sayfa koyu + açık + 390 px; tek kullanımlık kurulum linki
+akışı (yerel), OAuth onayı (yerel istemci).
+
+## Bitirirken
+changelog (`improved`); AGENTS.md + Serena; update-handoff; commit yok; "Tamamlandı" notu.
+```
+
+---
+
+# R8.8 — Ajan varlık katmanı
+
+> Seçilen yönün "ajan aktivitesi birinci sınıf görsel öğe" vaadini veriye bağlar. Yeni özellik; önce ölçüm ve maliyet.
+
+```text
+Remnus projesinde çalışıyorsun. AI.md kuralları geçerli; özellikle AGENTS.md → "Live refresh (the change signal)" maliyet
+kuralları (boştaki sekme 30 sn'de bir istek; hızlı yoklama yalnız ajan aktifken). `git status --short` ile başla. Serena varsa
+core + conventions (Live refresh, Agent savings, audit retention). Playwright'tan önce Hakan'a sor.
+
+## Ortak referans (R8)
+- Seçilen yön: `.ai/R8_DESIGN_DIRECTIONS.html` → "Seçilen yön: Ortak Masa, tek renk" (Hakan: B'nin yapısı + tek renk,
+  tek vurgu sarı, nabız/dalga efekti yok). Kurallar: `AGENTS.md` → UI & Design Aesthetics.
+- Tokenlar `src/app/globals.css` @theme: desk/sheet/raised/float/hover/line/line-strong, fg…fg-4, ink/ink-fg, signal/
+  signal-fg/signal-text/signal-soft, focus, link, overlay; `rounded-control/surface`; `shadow-lift/sheet/float/modal`;
+  `text-2xs` (11) + `text-ui` (13). Yeni token eklersen `src/lib/cn.ts` tailwind-merge listesine de ekle.
+- Primitifler `src/components/ui/`: Button, Dialog, DropdownMenu(+Shortcut), Select/SimpleSelect, Tooltip, Badge, Tabs,
+  Card, EmptyState, Kbd, Input/Textarea, RemnusMark; `features/PageActionsMenu`, `ConfirmDialog`.
+- Yasak: CSS `uppercase` etiket, orta noktayla meta birleştirme, 11 px altı yazı, "→" ekli etiket, döngüsel nabız; mavi yalnız
+  veri/kullanıcı rengi. Sınıf değişikliğini codemod'la yapacaksan TypeScript parser'ıyla yalnız literal'lerde ve boşluklara
+  dokunmadan (R8 dersi, conventions).
+- Hakan: insan/ajan için iki renk yok; canlı durum SABİT sarı nokta, nabız/dalga yok.
+
+## Hedef (yön sayfasındaki mock'lar)
+- Sidebar ajan panelinde: çalışan ajan ("Claude Code çalışıyor" + son araç çağrısı ve hedefi), son çalışan ajanlar.
+- Ağaçta: son N dakikada ajanın dokunduğu öğede küçük sarı işaret / "12 dk" (zamanla söner, animasyonsuz).
+- Sayfa başlığının altında köken satırı: "Claude Code 2 dk önce düzenledi · Sen dün" (orta nokta yerine ayrı öğeler) +
+  inceleme durumu (knowledge review: "Ajan yazdı, incelenmedi" + İncele).
+- (Opsiyonel, ayrı karar) sayfa üst çubuğunda varlık (sen + çalışan ajan avatarı).
+
+## Kurallar
+1. Önce ölç: hangi veri nereden (agent_activity hedef id'leri, pages.agent_edited_at, standalone sayfalar için karşılığı var
+   mı), audit görünürlük penceresi (`auditVisibleSince`) uygulanmalı, proje penceresi kilidi (`assertWorkspaceLockAllows`).
+2. Yeni istek türü eklemeden önce mevcut `GET /api/activity/changes` / heartbeat yanıtına sığdırmayı değerlendir (yanıt ~20 bayt
+   kuralı); ek maliyeti bench ile göster, Hakan'a sun, onay al.
+3. Migration gerekirse `ALTER TABLE ADD COLUMN`, apply script deseni, prod uygulaması deploy günü Hakan'da.
+
+## Doğrulama
+eslint, tsc, ilgili testler (`test:access`, `test:agent-access`); yerel MCP ile gerçek ajan yazması → sidebar/sayfa canlı
+güncelleniyor mu (Hakan onayıyla Playwright), boştaki sekme istek sayısı değişmedi mi.
+
+## Bitirirken
+changelog (`new`); AGENTS.md (Live refresh + yeni bölüm) + Serena; update-handoff; commit yok; "Tamamlandı" notu.
+```
+
+---
+
+# R8.7 — Pazarlama sitesi (ayrı değerlendirme, en son)
+
+> Uygulama yeni dile geçti; pazarlama sitesi `.marketing-site` altında eski palete kilitli. Burada karar verilir ve uygulanır.
+
+```text
+Remnus projesinde çalışıyorsun. AI.md kuralları geçerli. `git status --short` ile başla. Serena varsa core + conventions.
+frontend-design skill'ini kullan. Playwright'tan önce Hakan'a sor.
+
+## Ortak referans (R8)
+- Seçilen yön: `.ai/R8_DESIGN_DIRECTIONS.html` → "Seçilen yön: Ortak Masa, tek renk" (Hakan: B'nin yapısı + tek renk,
+  tek vurgu sarı, nabız/dalga efekti yok). Kurallar: `AGENTS.md` → UI & Design Aesthetics.
+- Tokenlar `src/app/globals.css` @theme: desk/sheet/raised/float/hover/line/line-strong, fg…fg-4, ink/ink-fg, signal/
+  signal-fg/signal-text/signal-soft, focus, link, overlay; `rounded-control/surface`; `shadow-lift/sheet/float/modal`;
+  `text-2xs` (11) + `text-ui` (13). Yeni token eklersen `src/lib/cn.ts` tailwind-merge listesine de ekle.
+- Primitifler `src/components/ui/`: Button, Dialog, DropdownMenu(+Shortcut), Select/SimpleSelect, Tooltip, Badge, Tabs,
+  Card, EmptyState, Kbd, Input/Textarea, RemnusMark; `features/PageActionsMenu`, `ConfirmDialog`.
+- Yasak: CSS `uppercase` etiket, orta noktayla meta birleştirme, 11 px altı yazı, "→" ekli etiket, döngüsel nabız; mavi yalnız
+  veri/kullanıcı rengi. Sınıf değişikliğini codemod'la yapacaksan TypeScript parser'ıyla yalnız literal'lerde ve boşluklara
+  dokunmadan (R8 dersi, conventions).
+- `globals.css`: `[data-theme="remnus"] .marketing-site` eski rampayı, `.marketing-site` eski
+radiusları geri yükler; açık tema pazarlama yamaları ayrıca duruyor.
+
+## Kapsam
+`src/components/marketing/*` (Landing*, next/NextLanding, MarketingShell, LandingBridgeSwitcher), `/pricing`, `/download`,
+`/contact`, `/privacy`, `/security`, `/brand` (renk tablosu eski hex'leri listeliyor), `/wiki` + `/docs` (docs bileşenleri,
+`.prose-doc`), OG görselleri, PWA `public/screenshots/*` ve manifest renkleri, Capacitor `android/.../colors.xml` (#1d1f23).
+
+## Görevler
+1. Önce karar (Hakan'a sor): pazarlama sitesi uygulamanın dilini mi alsın (öneri: evet — ürün ekran görüntüleri yeni arayüzü
+   gösterecek) yoksa kendi editoryal dilinde mi kalsın; iki kısa taslak göster.
+2. Seçime göre dondurmayı kaldır ya da daralt; mavi vurguları (hero, CTA, bağlantılar) tek vurgu kuralına taşı; ürün
+   ekran görüntülerini ve PWA/OG görsellerini yeni arayüzden yeniden al.
+3. `/brand` sayfasının token tablosunu yeni rollere göre yaz; e-posta şablonlarının (`src/lib/email/theme.ts`) renklerini
+   değerlendir (ayrı karar).
+
+## Doğrulama
+eslint, tsc; Hakan onayıyla Playwright: tüm pazarlama sayfaları koyu + açık + 390 px; Lighthouse (performans düşmesin).
+
+## Bitirirken
+changelog (`improved`, yalnız müşteri fark ederse); AGENTS.md (landing bölümü) + Serena; update-handoff; commit yok;
+"Tamamlandı" notu.
 ```
 
 ---
@@ -1170,6 +1830,17 @@ R9.x promptları olarak yaz.
   varsayılan-ret, assert*Access).
 - Önbellekleme eklersen invalidation'ı canlılık mekanizmasıyla (changeVersion) tutarlı
   kur; kullanıcıya bayat veri göstermesin.
+
+## R5/R6'dan devreden (2026-09-30)
+
+- **Değişiklik sürümü sorgusunun Turso okuma maliyeti:** `epochMax` (`typeof` korumalı
+  `max(case …)`) SQLite'ın indeksli min/max kısayolunu kullanamıyor; her poll ilgili
+  workspace'lerin tüm satırlarını tarıyor (500 öğelik workspace ≈ 1k satır/poll; ajan
+  çalışırken izlenen sekme saatte ~1.440 poll). Legacy TEXT `updated_at` satırlarını
+  INTEGER'a çeviren bir backfill + düz `max()` (ya da `(workspace_id, updated_at)`
+  indeksleri) ile ölç ve düşür. `n`/`h` alanları (R5 sonrası) korunmalı.
+- Kalibrasyon log tiklemesi artık `update_page` `tick`/`append` ile ucuz (R6 sonrası);
+  `bench:mcp-budget` ile tools/list'in ne kadar büyüdüğünü ölç (tick/append/position/home).
 
 ## Doğrulama
 
@@ -1253,6 +1924,17 @@ test:trash-links) genişletmek serbest.
 - Medium/Low: bu dosyaya R10.x promptları olarak yaz (sömürü ayrıntısı olmadan; ayrıntı
   gitignored raporda).
 
+## R5/R6'dan eklenen yüzeyler (2026-09-30) — mutlaka test et
+
+- Erişim isteği rozeti: sayı yalnız sahibe (`getWorkspaces` SQL'i); üye/viewer/kilitli
+  pencere 0 görmeli.
+- `/api/activity/changes` + `ping`: `n` (görünür workspace sayısı), `h`, `agent` alanları —
+  yalnız çağıranın kendi verisi olmalı; kilitli pencerede tek workspace.
+- MCP: `create_dashboard`/`update_dashboard` `home` (başka workspace'in panosu
+  sabitlenemez), `move_item` `position` (kardeş renumber yalnız aynı workspace),
+  `update_page`/`bulk_update_pages` `tick`/`append` (başka workspace'in sayfası).
+- `openOrCreateHomeDashboard` → `composeHomeDashboardBlocks` (kilitli pencere, üye olmayan).
+
 ## Bitirirken
 
 - changelog.ts: müşterinin gördüğü bir davranış değişmediyse güvenlik düzeltmeleri
@@ -1274,6 +1956,8 @@ test:trash-links) genişletmek serbest.
 | R  | CLI (`cli/`)                                                                 | Masaüstü (`src-tauri/`)                                              |
 | -- | ---------------------------------------------------------------------------- | -------------------------------------------------------------------- |
 | R1 | `cli/package.json` → **0.1.11** (link etiketi, "For the agent" bloğu, `open --hook`, `open --prefer`, masaüstü tespiti, proje başına tek pencere, `issued` damgası) | `remnus://open?workspace=<id>` rotası (lib.rs `handle_open_link`, cold start, tekrar engeli) — **0.1.19** gerektirir; CLI eşiği `DESKTOP_OPEN_MIN_VERSION = '0.1.19'` (`cli/src/lib/desktop.js`) |
+| R6 | `cli/templates/agents-section.md`: iki satır — "kalibrasyonu yenile" isteği → rehberin "Running it again" bölümü; izlenmeye değer yeni database/alan → ana panoya blok. Sürüm artırılmadı (0.1.11'de birleşir). Yalnız yeni `init`/`sync` ile yazılan AGENTS.md'ye girer | — |
+| R6+ | — | `skills/remnus/SKILL.md` değişti (`tick`/`append`, `move_item` `position`); masaüstü `install_remnus_skill` bunu `include_str!` ile gömüyor → sonraki masaüstü sürümüne girer |
 
 ```text
 Remnus projesinde çalışıyorsun. AI.md kuralları geçerli. Bu, V2 revizyonlarının son adımı:

@@ -57,7 +57,7 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
       <h1 className="m-0 text-base font-semibold text-neutral-100">{t('inviteJoinTitle', { workspace: invite.workspaceName })}</h1>
       <p className="m-0 text-[13px] text-neutral-400 leading-relaxed">{t('inviteJoinBody')}</p>
       <form action={signInToAccept} className="w-full">
-        <button type="submit" className="w-full px-5 py-2.5 rounded-lg text-[13.5px] font-semibold text-white bg-blue-500 hover:opacity-90 transition-opacity">
+        <button type="submit" className="w-full px-5 py-2.5 rounded-lg text-[13.5px] font-semibold text-ink-fg bg-ink hover:opacity-90 transition-opacity">
           {t('inviteSignIn')}
         </button>
       </form>

@@ -23,6 +23,7 @@
 import { db } from '@/db';
 import { users, workspaceAccessRequests, workspaceMembers, workspaces } from '@/db/schema';
 import { and, desc, eq } from 'drizzle-orm';
+import { touchWorkspaces } from './changeVersion';
 
 /** How long a refusal holds before the same person may ask again. Long enough that
  *  "no" is not a speed bump, short enough that a mistaken denial is not permanent. */
@@ -160,6 +161,8 @@ export async function createAccessRequest(input: {
         resolvedBy: null,
       },
     });
+  // Owners' open sidebars show the request badge without a reload (see touchWorkspaces).
+  await touchWorkspaces(workspaceId);
 
   return { state: 'pending' };
 }

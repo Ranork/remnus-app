@@ -1,11 +1,12 @@
 'use server';
 import { db } from '@/db';
 import { workspaceMembers, workspaces } from '@/db/schema';
-import { and, eq } from 'drizzle-orm';
+import { and, asc, eq } from 'drizzle-orm';
 import { getTranslations } from 'next-intl/server';
 import { getCurrentUserAllowingWorkspaceLock } from '@/lib/auth/session';
 import { assertWorkspaceLockAllows } from '@/lib/auth/workspaceLock';
 import { getLocalGraph, getWorkspaceGraph } from '@/lib/services/graph';
+import { HOME_DASHBOARD_SQL } from '@/lib/services/dashboards';
 import { MAX_EXPANDED_DATABASES, type GraphPayload } from '@/lib/graph/types';
 
 /**
@@ -38,8 +39,18 @@ async function assertWorkspaceAccess(workspaceId: string): Promise<void> {
 const cleanId = (value: unknown): string | null =>
   typeof value === 'string' && value.length > 0 && value.length <= 64 ? value : null;
 
-/** The graph route's gate: the workspace's name, or null when this session may not read it. */
-export async function getGraphWorkspace(workspaceId: string): Promise<{ id: string; name: string } | null> {
+export type GraphWorkspace = { id: string; name: string; icon: string | null; iconColor: string | null };
+
+/**
+ * The graph route's gate, or null when this session may not read the workspace.
+ * Besides the workspace itself (its identity heads the map, its home dashboard is
+ * the way back) it lists the workspaces the map can switch to — null in a project
+ * window, which is confined to its one workspace and gets no switcher.
+ */
+export async function getGraphWorkspace(workspaceId: string): Promise<{
+  workspace: GraphWorkspace & { homeDashboardItemId: string | null };
+  switchable: GraphWorkspace[] | null;
+} | null> {
   const id = cleanId(workspaceId);
   if (!id) return null;
   try {
@@ -47,8 +58,27 @@ export async function getGraphWorkspace(workspaceId: string): Promise<{ id: stri
   } catch {
     return null;
   }
-  const [row] = await db.select({ id: workspaces.id, name: workspaces.name }).from(workspaces).where(eq(workspaces.id, id)).limit(1);
-  return row ?? null;
+  const user = await getCurrentUserAllowingWorkspaceLock();
+  const [[row], choices] = await Promise.all([
+    db
+      .select({ id: workspaces.id, name: workspaces.name, icon: workspaces.icon, iconColor: workspaces.iconColor, homeDashboardItemId: HOME_DASHBOARD_SQL })
+      .from(workspaces)
+      .where(eq(workspaces.id, id))
+      .limit(1),
+    user.workspaceLock
+      ? Promise.resolve(null)
+      : db
+          .select({ id: workspaces.id, name: workspaces.name, icon: workspaces.icon, iconColor: workspaces.iconColor, hidden: workspaceMembers.hidden })
+          .from(workspaces)
+          .innerJoin(workspaceMembers, and(eq(workspaceMembers.workspaceId, workspaces.id), eq(workspaceMembers.userId, user.id)))
+          .orderBy(asc(workspaces.sortOrder), asc(workspaces.createdAt)),
+  ]);
+  if (!row) return null;
+  // Same list as the sidebar: workspaces the user hid stay out, the open one always in.
+  const switchable = choices
+    ? choices.filter((w) => !w.hidden || w.id === id).map((w) => ({ id: w.id, name: w.name, icon: w.icon, iconColor: w.iconColor }))
+    : null;
+  return { workspace: row, switchable };
 }
 
 export async function getWorkspaceGraphData(

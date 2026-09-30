@@ -89,7 +89,7 @@ function ThemePicker({ value, onChange }: { value: AppTheme; onChange: (v: AppTh
             <div
               className={`flex h-8 w-16 overflow-hidden border rounded-md transition-all ${
                 value === theme.value
-                  ? 'border-blue-500 ring-1 ring-blue-500/50'
+                  ? 'border-signal ring-1 ring-signal/50'
                   : 'border-neutral-700 group-hover:border-neutral-500'
               }`}
               style={theme.dark ? undefined : { outline: '1px solid #d1d5db', outlineOffset: '-1px' }}
@@ -154,7 +154,7 @@ function LocaleSelect({ value, onChange }: { value: string; onChange: (v: string
         aria-haspopup="listbox"
         aria-expanded={open}
         className={`w-full flex items-center gap-2.5 bg-neutral-950 border rounded-md px-3 py-2 text-sm text-neutral-100 transition-colors cursor-pointer ${
-          open ? 'border-blue-500/60' : 'border-neutral-700 hover:border-neutral-600'
+          open ? 'border-signal/60' : 'border-neutral-700 hover:border-neutral-600'
         }`}
       >
         <FlagIcon code={current.value} size={18} />
@@ -177,7 +177,7 @@ function LocaleSelect({ value, onChange }: { value: string; onChange: (v: string
                 aria-selected={selected}
                 onClick={() => { onChange(lang.value); setOpen(false); }}
                 className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left transition-colors cursor-pointer ${
-                  selected ? 'text-blue-400 bg-blue-500/10' : 'text-neutral-300 hover:bg-neutral-800/60'
+                  selected ? 'text-signal-text bg-signal/10' : 'text-neutral-300 hover:bg-neutral-800/60'
                 }`}
               >
                 <FlagIcon code={lang.value} size={18} />
@@ -374,7 +374,7 @@ function ProfileSection({ currentUser }: { currentUser: CurrentUser }) {
 
       {/* Display name */}
       <div>
-        <label className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5">
+        <label className="block text-xs font-medium text-neutral-500 mb-1.5">
           {t('profileName')}
         </label>
         <div className="flex gap-2">
@@ -384,12 +384,12 @@ function ProfileSection({ currentUser }: { currentUser: CurrentUser }) {
             onKeyDown={e => { if (e.key === 'Enter') onSaveName(); }}
             maxLength={80}
             placeholder={t('profileNamePlaceholder')}
-            className="flex-1 min-w-0 bg-neutral-950 border border-neutral-700 rounded-md text-neutral-100 px-3 py-2 text-sm outline-none focus:border-blue-500/60 transition-colors"
+            className="flex-1 min-w-0 bg-neutral-950 border border-neutral-700 rounded-md text-neutral-100 px-3 py-2 text-sm outline-none focus:border-signal/60 transition-colors"
           />
           <button
             onClick={onSaveName}
             disabled={!nameChanged || savingName}
-            className="shrink-0 text-xs font-semibold px-4 py-2 rounded-md bg-blue-500 hover:bg-blue-400 text-white disabled:opacity-40 disabled:hover:bg-blue-500 transition-colors cursor-pointer"
+            className="shrink-0 text-xs font-semibold px-4 py-2 rounded-md bg-ink hover:bg-ink/88 text-ink-fg disabled:opacity-40 disabled:hover:bg-ink transition-colors cursor-pointer"
           >
             {savingName ? t('profileSaving') : t('profileSave')}
           </button>
@@ -399,7 +399,7 @@ function ProfileSection({ currentUser }: { currentUser: CurrentUser }) {
       {/* Email (read-only) */}
       {currentUser.email && (
         <div>
-          <label className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5">
+          <label className="block text-xs font-medium text-neutral-500 mb-1.5">
             {t('profileEmail')}
           </label>
           <p className="text-sm text-neutral-400 truncate">{currentUser.email}</p>
@@ -446,7 +446,7 @@ function DeleteAccountSection({ email }: { email?: string | null }) {
 
   return (
     <div className="border border-red-500/20 bg-red-500/5 p-4 rounded-lg space-y-3">
-      <h4 className="text-xs font-semibold text-red-400 uppercase tracking-wider">{t('dangerZoneTitle')}</h4>
+      <h4 className="text-xs font-medium text-red-400">{t('dangerZoneTitle')}</h4>
       <p className="text-xs text-neutral-400 leading-relaxed">{t('deleteAccountHint')}</p>
       <button
         onClick={() => setShowConfirm(true)}
@@ -462,7 +462,7 @@ function DeleteAccountSection({ email }: { email?: string | null }) {
             {sent ? (
               <>
                 <div className="flex items-start gap-2.5">
-                  <Mail size={16} className="text-blue-400 shrink-0 mt-0.5" />
+                  <Mail size={16} className="text-signal-text shrink-0 mt-0.5" />
                   <div>
                     <p className="text-sm font-semibold text-neutral-100 mb-1.5">{t('deleteAccountEmailSentTitle')}</p>
                     <p className="text-xs text-neutral-400 leading-relaxed">{t('deleteAccountEmailSentBody', { email: email || '' })}</p>
@@ -487,7 +487,7 @@ function DeleteAccountSection({ email }: { email?: string | null }) {
                   </div>
                 </div>
                 <div>
-                  <label className="block text-[11px] font-semibold text-neutral-500 uppercase tracking-wider mb-1.5">
+                  <label className="block text-xs font-medium text-neutral-500 mb-1.5">
                     {t('deleteAccountConfirmInputLabel')}
                   </label>
                   <input
@@ -634,7 +634,7 @@ export default function UserSettingsModal({ currentUser, onClose }: UserSettings
               onClick={() => setActiveTab(tab.id)}
               className={`flex items-center gap-1.5 px-4 py-3 text-xs whitespace-nowrap border-b-2 transition-colors cursor-pointer shrink-0 ${
                 activeTab === tab.id
-                  ? 'border-blue-500 text-neutral-100 font-medium'
+                  ? 'border-signal text-neutral-100 font-medium'
                   : 'border-transparent text-neutral-500 hover:text-neutral-300'
               }`}
             >
@@ -676,7 +676,7 @@ export default function UserSettingsModal({ currentUser, onClose }: UserSettings
                 <ProfileSection currentUser={currentUser} />
 
                 <div className="border-t border-neutral-800 pt-5 space-y-4">
-                  <p className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wider">{t('planTitle')}</p>
+                  <p className="text-xs font-medium text-neutral-500">{t('planTitle')}</p>
                   <div className="py-3 border-b border-neutral-800 space-y-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2.5">
@@ -705,7 +705,7 @@ export default function UserSettingsModal({ currentUser, onClose }: UserSettings
                       {planTier !== 'enterprise' && (
                         <button
                           onClick={() => setBilling('upgrade')}
-                          className="text-xs font-semibold px-3 py-1.5 rounded-md bg-blue-500 hover:bg-blue-400 text-white transition-colors cursor-pointer"
+                          className="text-xs font-semibold px-3 py-1.5 rounded-md bg-ink hover:bg-ink/88 text-ink-fg transition-colors cursor-pointer"
                         >
                           {tBilling('upgrade')}
                         </button>
@@ -713,7 +713,7 @@ export default function UserSettingsModal({ currentUser, onClose }: UserSettings
                     </div>
                   </div>
 
-                  <p className="text-[11px] font-semibold text-neutral-500 uppercase tracking-wider pt-1">{t('storageTitle')}</p>
+                  <p className="text-xs font-medium text-neutral-500 pt-1">{t('storageTitle')}</p>
                   <div className="flex items-center gap-3 py-3 border-b border-neutral-800">
                     <HardDrive size={14} className="text-neutral-500 shrink-0" />
                     <div className="flex-1 min-w-0">

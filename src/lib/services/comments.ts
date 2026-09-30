@@ -8,6 +8,7 @@ import { db } from '@/db';
 import { pageComments, users } from '@/db/schema';
 import { and, asc, eq, inArray, sql } from 'drizzle-orm';
 import { getAnyPageById } from './workspace';
+import { touchWorkspaces } from './changeVersion';
 
 export const MAX_COMMENT_LENGTH = 4_000;
 
@@ -127,5 +128,8 @@ export async function deletePageComment(
   }
 
   await db.delete(pageComments).where(and(eq(pageComments.id, commentId), eq(pageComments.workspaceId, workspaceId)));
+  // A hard delete leaves no versioned timestamp behind; bump the workspace instead so a
+  // viewer on the page stops seeing the comment.
+  await touchWorkspaces(comment.workspaceId);
   return { pageId: comment.pageId, workspaceId: comment.workspaceId };
 }

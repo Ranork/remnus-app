@@ -103,7 +103,7 @@ const BUCKET_COLORS: Record<DemoDurationBucket, string> = {
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex flex-col gap-0.5">
-      <span className="text-[10px] font-medium uppercase tracking-wider text-neutral-600">{label}</span>
+      <span className="text-2xs font-medium text-neutral-600">{label}</span>
       <span className="text-sm font-semibold tabular-nums text-neutral-200">{value}</span>
     </div>
   );
@@ -173,7 +173,7 @@ export function DemoUsageChart({ data }: { data: DemoUsageOverview }) {
 
       {bucketTotal > 0 && (
         <div className="flex flex-col gap-2">
-          <span className="text-[10px] font-medium uppercase tracking-wider text-neutral-600">
+          <span className="text-2xs font-medium text-neutral-600">
             {t('demoUsageDistributionLabel')}
           </span>
           <div className="flex h-1.5 overflow-hidden rounded-full bg-neutral-850">

@@ -12,6 +12,7 @@ import {
   getSidebarAnimationClasses,
   getMainContentClasses,
   getSidebarRestoreButtonClassName,
+  getSheetClasses,
   getSidebarVisibleServerSnapshot,
   readSidebarVisible,
   subscribeSidebarVisibility,
@@ -84,6 +85,8 @@ export default function AppShell({
   // it keeps rendering through the normal server-rendered `{children}`.
   const isKeepAlivePath = /^\/(db|page)\//.test(pathname);
   const showTabHost = isTauri && isKeepAlivePath;
+  // The project dashboard is a set of cards on the desk rather than one sheet.
+  const onDesk = /^\/dashboard\//.test(pathname);
 
   if (isMarketing) {
     return <>{children}</>;
@@ -155,10 +158,14 @@ export default function AppShell({
                 <img src="/logo-square-dark.png" alt="Remnus" className="w-5 h-5 opacity-70" />
               </button>
             )}
-            {/* TauriTitlebar renders the browser-style TabBar inline in its row (Tauri only). */}
+            {/* TauriTitlebar renders the browser-style TabBar inline in its row (Tauri only).
+                It and the banner sit on the desk, above the sheet. */}
             <TauriTitlebar key="tauri-titlebar" />
             {demoBanner}
             {/*
+              The sheet — always rendered, only its classes change, so the tree keeps
+              its shape across the isTauri flip (see above).
+
               Keep-alive content area. `{children}` (the server-rendered route)
               shows on web and on non-tabbable in-app routes (/admin) via
               `display:contents`. On a /db|/page route in Tauri it's hidden (those
@@ -168,11 +175,13 @@ export default function AppShell({
               mount/unmount — so the isTauri false→true flip can't remount the
               route subtree (the Router-crash hazard noted above).
             */}
-            <div className={showTabHost ? undefined : 'contents'} style={showTabHost ? { display: 'none' } : undefined}>
-              {children}
-            </div>
-            <div className="flex-1 min-h-0 flex flex-col" style={showTabHost ? undefined : { display: 'none' }}>
-              <TabHost isAdmin={isAdmin} currentUserId={currentUserId} />
+            <div className={getSheetClasses({ onDesk, underChrome: isTauri || hasDemoBanner })}>
+              <div className={showTabHost ? undefined : 'contents'} style={showTabHost ? { display: 'none' } : undefined}>
+                {children}
+              </div>
+              <div className="flex-1 min-h-0 flex flex-col" style={showTabHost ? undefined : { display: 'none' }}>
+                <TabHost isAdmin={isAdmin} currentUserId={currentUserId} />
+              </div>
             </div>
           </main>
         </div>

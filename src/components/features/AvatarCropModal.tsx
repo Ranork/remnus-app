@@ -240,7 +240,7 @@ export default function AvatarCropModal({ objectUrl, onConfirm, onCancel }: Avat
               setPanX(clamped.x);
               setPanY(clamped.y);
             }}
-            className="flex-1 accent-blue-500 cursor-pointer"
+            className="flex-1 accent-signal cursor-pointer"
           />
           <button
             onClick={() => applyZoom(0.2)}
@@ -261,7 +261,7 @@ export default function AvatarCropModal({ objectUrl, onConfirm, onCancel }: Avat
           <button
             onClick={handleConfirm}
             disabled={!imgLoaded}
-            className="text-xs font-semibold px-4 py-2 rounded-md bg-blue-500 hover:bg-blue-400 text-white disabled:opacity-40 transition-colors cursor-pointer flex items-center gap-1.5"
+            className="text-xs font-semibold px-4 py-2 rounded-md bg-ink hover:bg-ink/88 text-ink-fg disabled:opacity-40 transition-colors cursor-pointer flex items-center gap-1.5"
           >
             <Check size={12} />
             {t('cropApply')}

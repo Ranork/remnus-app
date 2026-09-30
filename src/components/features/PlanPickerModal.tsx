@@ -93,7 +93,7 @@ export default function PlanPickerModal({ currentTier, isDemo = false, onClose }
                   <div className="flex items-center justify-between mb-2">
                     <span className="font-semibold text-neutral-100 text-[15px]">{tl(def.titleKey)}</span>
                     {isCurrent && (
-                      <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-full" style={{ color: a.color, border: `1px solid ${a.color}` }}>
+                      <span className="text-2xs font-medium px-1.5 py-0.5 rounded-full" style={{ color: a.color, border: `1px solid ${a.color}` }}>
                         {t('current')}
                       </span>
                     )}

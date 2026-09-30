@@ -170,7 +170,7 @@ export default function ViewsBar({
                       <Icon size={13} />
                     )}
                     <span>{view.name}</span>
-                    {isActive && <span className="ml-auto text-blue-400 text-[10px]">✓</span>}
+                    {isActive && <span className="ml-auto text-signal-text text-[10px]">✓</span>}
                   </button>
                 );
               })}
@@ -224,7 +224,7 @@ export default function ViewsBar({
             key={view.id}
             className={`relative shrink-0 flex items-end group cursor-grab active:cursor-grabbing transition-all
               ${draggedViewId === view.id ? 'opacity-25' : ''}
-              ${dragOverViewId === view.id ? 'border-l-2 border-l-blue-500/60' : ''}
+              ${dragOverViewId === view.id ? 'border-l-2 border-l-signal/60' : ''}
             `}
             ref={menuOpenId === view.id ? menuRef : undefined}
             draggable={!isRenaming}
@@ -290,7 +290,7 @@ export default function ViewsBar({
                 <span>{view.name}</span>
               )}
               {isActive && (
-                <span className="absolute bottom-0 left-0 right-0 h-0.75 bg-blue-500 rounded-t-sm" />
+                <span className="absolute bottom-0 left-0 right-0 h-0.75 bg-signal rounded-t-sm" />
               )}
             </button>
 

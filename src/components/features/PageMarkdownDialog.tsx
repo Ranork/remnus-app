@@ -60,7 +60,7 @@ export function PageMarkdownDialog({ initialMarkdown, onApply, onClose }: PageMa
             onChange={(e) => setValue(e.target.value)}
             rows={18}
             spellCheck={false}
-            className="w-full min-h-[320px] bg-neutral-900 border border-neutral-800 rounded px-3 py-2 text-xs text-neutral-200 font-mono resize-y focus:outline-none focus:border-blue-500/50"
+            className="w-full min-h-[320px] bg-neutral-900 border border-neutral-800 rounded px-3 py-2 text-xs text-neutral-200 font-mono resize-y focus:outline-none focus:border-signal/50"
           />
         </div>
 
@@ -82,7 +82,7 @@ export function PageMarkdownDialog({ initialMarkdown, onApply, onClose }: PageMa
             <button
               onClick={handleApply}
               disabled={!dirty}
-              className="px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed rounded-lg transition-colors cursor-pointer"
+              className="px-4 py-2 text-xs font-semibold text-ink-fg bg-ink hover:bg-ink/88 disabled:opacity-40 disabled:cursor-not-allowed rounded-lg transition-colors cursor-pointer"
             >
               {t('markdown.apply')}
             </button>

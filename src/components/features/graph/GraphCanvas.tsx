@@ -167,19 +167,60 @@ function extent(graph: KnowledgeGraph, skip?: Set<string>) {
   return { cx: (minX + maxX) / 2, cy: (minY + maxY) / 2, span: Math.max(maxX - minX, maxY - minY, 1) };
 }
 
-/** Put each new node next to the neighbours it already has (or near the middle). */
+const GOLDEN_ANGLE = 2.39996;
+
+/**
+ * Put each new node next to the neighbours it already has (or near the middle).
+ *
+ * Newcomers gathering around the same point — a database's rows arriving together
+ * when "show rows" expands it — are laid out as a sunflower (golden-angle spiral)
+ * around it, spaced like the rest of the map. They used to land within ±2% of the
+ * database node, so 1,500 rows arrived as one blot that the 1.2 s pinned force pass
+ * could not untangle (R7).
+ */
 function placeNewNodes(graph: KnowledgeGraph, added: string[]) {
   const fresh = new Set(added);
   const { cx, cy, span } = extent(graph, fresh);
-  const jitter = () => (Math.random() - 0.5) * span * 0.04;
-  for (const id of added) {
+  const anchorOf = (id: string) => {
     let sx = 0, sy = 0, n = 0;
     graph.forEachNeighbor(id, (neighbour, attrs) => {
       if (fresh.has(neighbour)) return;
       sx += attrs.x; sy += attrs.y; n++;
     });
-    graph.mergeNodeAttributes(id, n > 0
-      ? { x: sx / n + jitter(), y: sy / n + jitter() }
+    return n > 0 ? { x: sx / n, y: sy / n } : null;
+  };
+
+  // Newcomers next to nodes already on the map, grouped by the point they gather around.
+  const groups = new Map<string, { x: number; y: number; ids: string[] }>();
+  const later: string[] = [];
+  for (const id of added) {
+    const anchor = anchorOf(id);
+    if (!anchor) {
+      later.push(id);
+      continue;
+    }
+    const key = `${anchor.x}:${anchor.y}`;
+    const group = groups.get(key);
+    if (group) group.ids.push(id);
+    else groups.set(key, { ...anchor, ids: [id] });
+  }
+  // The map's own spacing, but one group never spreads wider than about a third of it.
+  const spacing = (span / Math.sqrt(Math.max(1, graph.order - added.length))) * 0.5;
+  for (const { x, y, ids } of groups.values()) {
+    const step = Math.min(spacing, (span * 0.35) / Math.sqrt(ids.length));
+    ids.forEach((id, k) => {
+      const r = step * Math.sqrt(k + 1);
+      graph.mergeNodeAttributes(id, { x: x + r * Math.cos(k * GOLDEN_ANGLE), y: y + r * Math.sin(k * GOLDEN_ANGLE) });
+      fresh.delete(id);
+    });
+  }
+
+  // Newcomers related only to other newcomers sit next to them; unrelated ones near the middle.
+  const jitter = () => (Math.random() - 0.5) * span * 0.04;
+  for (const id of later) {
+    const anchor = anchorOf(id);
+    graph.mergeNodeAttributes(id, anchor
+      ? { x: anchor.x + jitter(), y: anchor.y + jitter() }
       : { x: cx + (Math.random() - 0.5) * span * 0.6, y: cy + (Math.random() - 0.5) * span * 0.6 });
     fresh.delete(id); // later newcomers may sit next to this one
   }
@@ -337,6 +378,49 @@ function applyScaleSettings(renderer: Sigma<NodeAttrs, EdgeAttrs>, order: number
   renderer.setSetting('stagePadding', Math.round(padding));
 }
 
+// ── Hit testing ──────────────────────────────────────────────────────────────
+
+/**
+ * Screen pixels beyond a node's drawn disk that still count as hitting it.
+ *
+ * Sigma picks by reading ONE pixel of an id framebuffer drawn at half the canvas
+ * resolution (`pickingDownSizingRatio` = 2 × devicePixelRatio), in which a node
+ * covers exactly its drawn disk. Drawn sizes shrink as the camera zooms out
+ * (size / √ratio), so on a zoomed-out or large map a node is 1–4 px across: the
+ * pointer has to land on that disk, and even inside it the half-resolution pixel
+ * it reads may belong to nothing (simulated: 33–56% of clicks inside a 0.8–1.5 px
+ * disk miss). That was "nodes cannot be clicked when zoomed out" (R7). Whenever
+ * sigma's own pick misses, the nearest node within this reach is taken — for
+ * click, double-click, tap and hover alike.
+ */
+const HIT_SLOP = { mouse: 6, touch: 14 } as const;
+
+function isTouch(event: Event | undefined): boolean {
+  return typeof TouchEvent !== 'undefined' && event instanceof TouchEvent;
+}
+
+/** The visible node whose drawn disk is closest to a viewport point, within `slop` px. */
+function nodeNear(renderer: Sigma<NodeAttrs, EdgeAttrs>, graph: KnowledgeGraph, x: number, y: number, slop: number): string | null {
+  let best: string | null = null;
+  let bestGap = slop;
+  graph.forEachNode((node) => {
+    const data = renderer.getNodeDisplayData(node);
+    if (!data || data.hidden) return;
+    const radius = renderer.scaleSize(data.size);
+    const reach = radius + bestGap;
+    const p = renderer.framedGraphToViewport(data);
+    const dx = p.x - x;
+    const dy = p.y - y;
+    if (Math.abs(dx) > reach || Math.abs(dy) > reach) return;
+    const gap = Math.max(0, Math.hypot(dx, dy) - radius);
+    if (gap <= bestGap && (best === null || gap < bestGap)) {
+      best = node;
+      bestGap = gap;
+    }
+  });
+  return best;
+}
+
 // ── Canvas drawing (labels) ──────────────────────────────────────────────────
 
 type LabelData = Partial<NodeDisplayData> & { x: number; y: number; size: number; label: string | null; color: string; badge?: string };
@@ -418,6 +502,8 @@ export default function GraphCanvas({
   const layoutRef = useRef<{ fa2: FA2Layout | null; timer: ReturnType<typeof setTimeout> | null }>({ fa2: null, timer: null });
   const clustersRef = useRef<Map<string, number>>(new Map());
   const hoveredRef = useRef<string | null>(null);
+  /** The hover came from sigma's own pick (enter/leaveNode), not from the reach. */
+  const sigmaHoverRef = useRef(false);
   const focusRef = useRef<{ id: string | null; set: Set<string> | null }>({ id: null, set: null });
   const view = useRef({ layout, colorMode, layers, highlightId, selectedId, clickBehavior, subject: null as string | null });
   view.current = { ...view.current, layout, colorMode, layers, highlightId, selectedId, clickBehavior };
@@ -587,27 +673,64 @@ export default function GraphCanvas({
     });
     rendererRef.current = renderer;
 
-    renderer.on('clickNode', ({ node }) => {
+    const clickNode = (node: string) => {
       if (view.current.clickBehavior === 'open') callbacks.current.onOpen?.(node);
       else callbacks.current.onSelect?.(node);
-    });
+    };
+    // Sigma's pick missed: the pointer may still be meant for a node drawn too small to hit.
+    const near = (event: { x: number; y: number; original?: Event }) =>
+      nodeNear(renderer, graph, event.x, event.y, isTouch(event.original) ? HIT_SLOP.touch : HIT_SLOP.mouse);
+
+    renderer.on('clickNode', ({ node }) => clickNode(node));
     renderer.on('doubleClickNode', (event) => {
       event.preventSigmaDefault();
       callbacks.current.onOpen?.(event.node);
     });
-    renderer.on('clickStage', () => callbacks.current.onSelect?.(null));
-    renderer.on('enterNode', ({ node }) => {
+    renderer.on('clickStage', ({ event }) => {
+      const node = near(event);
+      if (node) clickNode(node);
+      else callbacks.current.onSelect?.(null);
+    });
+    renderer.on('doubleClickStage', (event) => {
+      const node = near(event.event);
+      if (!node) return; // empty stage: sigma's own double-click zoom
+      event.preventSigmaDefault();
+      callbacks.current.onOpen?.(node);
+    });
+
+    // Hover: sigma's own pick first (enter/leaveNode), the reach only while it has nothing.
+    const setHover = (node: string | null) => {
+      if (hoveredRef.current === node) return;
       hoveredRef.current = node;
-      container.style.cursor = 'pointer';
+      container.style.cursor = node ? 'pointer' : '';
       refreshFocus();
       renderer.refresh({ skipIndexation: true });
+    };
+    renderer.on('enterNode', ({ node }) => {
+      sigmaHoverRef.current = true;
+      setHover(node);
     });
     renderer.on('leaveNode', () => {
-      hoveredRef.current = null;
-      container.style.cursor = '';
-      refreshFocus();
-      renderer.refresh({ skipIndexation: true });
+      sigmaHoverRef.current = false;
+      setHover(null);
     });
+    let hoverFrame = 0;
+    const onPointerMove = (event: MouseEvent) => {
+      // Not while panning, and at most once a frame: the scan visits every node.
+      if (sigmaHoverRef.current || event.buttons !== 0 || hoverFrame) return;
+      const rect = container.getBoundingClientRect();
+      const x = event.clientX - rect.left;
+      const y = event.clientY - rect.top;
+      hoverFrame = requestAnimationFrame(() => {
+        hoverFrame = 0;
+        if (!sigmaHoverRef.current) setHover(nodeNear(renderer, graph, x, y, HIT_SLOP.mouse));
+      });
+    };
+    const onPointerLeave = () => {
+      if (!sigmaHoverRef.current) setHover(null);
+    };
+    container.addEventListener('mousemove', onPointerMove);
+    container.addEventListener('mouseleave', onPointerLeave);
 
     const unwatch = watchTheme(() => {
       themeRef.current = readGraphTheme();
@@ -622,6 +745,9 @@ export default function GraphCanvas({
     resize.observe(container);
 
     return () => {
+      container.removeEventListener('mousemove', onPointerMove);
+      container.removeEventListener('mouseleave', onPointerLeave);
+      if (hoverFrame) cancelAnimationFrame(hoverFrame);
       unwatch();
       resize.disconnect();
       stopForce();
@@ -637,30 +763,52 @@ export default function GraphCanvas({
     const renderer = rendererRef.current;
     if (!graph || !renderer) return;
     view.current.subject = payload.focus !== undefined ? payload.nodes[payload.focus]?.[0] ?? null : null;
-    const added = syncGraph(graph, payload);
-    applySizes(graph, view.current.layers);
+    const first = firstSync.current;
+    firstSync.current = false;
+
+    // Sigma is detached while the graph changes: attached, it indexes every added
+    // node, added edge and merged attribute one event at a time (reducer, label
+    // grid, a scheduled partial refresh each). On "show rows" for 1,500 rows that
+    // was ~1.3 s of a ~1.9 s wait (CPU profile, R7), and the full refresh below
+    // re-indexes everything anyway. `setGraph` is the public way to pause it: an
+    // empty stand-in in, then the real graph back, which refreshes once. Nothing
+    // paints in between (same task).
+    renderer.setGraph(new Graph<NodeAttrs, EdgeAttrs>({ type: 'undirected', multi: false, allowSelfLoops: false }));
+    let added: string[];
+    try {
+      added = syncGraph(graph, payload);
+      applySizes(graph, view.current.layers);
+      if (first) {
+        // The radial tree is a good seed for the force layout too: related nodes
+        // start close, so ForceAtlas2 converges instead of untangling noise.
+        const seed = treePositions(graph);
+        graph.updateEachNodeAttributes((node, attrs) => ({ ...attrs, ...(seed.get(node) ?? {}) }));
+      } else if (added.length > 0 && view.current.layout === 'network') {
+        placeNewNodes(graph, added);
+      }
+      computeClusters();
+      // Detaching dropped sigma's hovered node; start hover over from the next pointer move.
+      hoveredRef.current = null;
+      sigmaHoverRef.current = false;
+      if (containerRef.current) containerRef.current.style.cursor = '';
+      refreshFocus();
+    } finally {
+      renderer.setGraph(graph);
+    }
     if (containerRef.current) applyScaleSettings(renderer, graph.order, containerRef.current);
 
-    if (firstSync.current) {
-      firstSync.current = false;
-      // The radial tree is a good seed for the force layout too: related nodes
-      // start close, so ForceAtlas2 converges instead of untangling noise.
-      const seed = treePositions(graph);
-      graph.updateEachNodeAttributes((node, attrs) => ({ ...attrs, ...(seed.get(node) ?? {}) }));
+    // Movement starts once sigma is listening again.
+    if (first) {
       if (view.current.layout === 'network') runForce(forceBudget(graph.order));
     } else if (added.length > 0) {
       if (view.current.layout === 'tree') animateTo(treePositions(graph));
       else {
-        placeNewNodes(graph, added);
         const pinned = new Set<string>();
         const fresh = new Set(added);
         graph.forEachNode((node) => { if (!fresh.has(node)) pinned.add(node); });
         runForce(1_200, pinned);
       }
     }
-    computeClusters();
-    refreshFocus();
-    renderer.refresh();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [payload]);
 

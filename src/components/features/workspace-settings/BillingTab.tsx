@@ -16,10 +16,10 @@ export default function BillingTab({ onOpenBilling }: BillingTabProps) {
 
   return (
     <div className="space-y-6">
-      <div className="border border-blue-500/20 rounded-xl p-5 space-y-4 bg-blue-500/5">
+      <div className="border border-signal/20 rounded-xl p-5 space-y-4 bg-signal/5">
         <div className="flex items-start gap-3">
-          <div className="w-9 h-9 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center shrink-0 mt-0.5">
-            <CreditCard size={16} className="text-blue-400" />
+          <div className="w-9 h-9 rounded-lg bg-signal/10 border border-signal/20 flex items-center justify-center shrink-0 mt-0.5">
+            <CreditCard size={16} className="text-signal-text" />
           </div>
           <div className="space-y-1">
             <h3 className="text-sm font-semibold text-neutral-100">{t('tabHeroTitle')}</h3>
@@ -29,7 +29,7 @@ export default function BillingTab({ onOpenBilling }: BillingTabProps) {
 
         <button
           onClick={onOpenBilling}
-          className="w-full sm:w-auto flex items-center justify-center gap-2 text-sm font-semibold text-white bg-blue-500 hover:bg-blue-400 px-5 py-3 rounded-lg shadow-[0_0_20px_-6px_rgba(68,92,149,0.6)] transition-colors"
+          className="w-full sm:w-auto flex items-center justify-center gap-2 text-sm font-semibold text-ink-fg bg-ink hover:bg-ink/88 px-5 py-3 rounded-lg transition-colors"
         >
           <CreditCard size={16} />
           {t('openBilling')}

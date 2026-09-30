@@ -62,7 +62,7 @@ export default function SharingTab({ workspaceId, isAdmin, onNavigateToMembers }
   return (
     <div className="space-y-4">
       <div className="space-y-1">
-        <p className="text-[10px] font-semibold text-neutral-500 uppercase tracking-widest">{t('sharePageTitle')}</p>
+        <p className="text-2xs font-medium text-neutral-500">{t('sharePageTitle')}</p>
         <p className="text-[11px] text-neutral-400">{t('sharePageHint')}</p>
       </div>
 
@@ -140,12 +140,12 @@ export default function SharingTab({ workspaceId, isAdmin, onNavigateToMembers }
       )}
 
       <div className="flex items-start gap-2 text-[11px] text-neutral-500 border border-neutral-800 rounded-md px-3 py-2.5 bg-neutral-900/50">
-        <Users size={12} className="mt-0.5 shrink-0 text-blue-400/70" />
+        <Users size={12} className="mt-0.5 shrink-0 text-signal-text/70" />
         <span className="flex-1">{t('privateSharingHint')}</span>
         {onNavigateToMembers && (
           <button
             onClick={onNavigateToMembers}
-            className="shrink-0 text-blue-400 hover:text-blue-300 transition-colors font-medium"
+            className="shrink-0 text-signal-text hover:text-fg transition-colors font-medium"
           >
             {t('goToMembers')} →
           </button>

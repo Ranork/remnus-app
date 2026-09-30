@@ -5,6 +5,8 @@
  */
 import { db } from '@/db';
 import { exdateOccurrenceForPage, getOccurrenceInfo } from '@/lib/services/recurrence';
+import { getHomeDashboardItemId } from '@/lib/services/dashboards';
+import { applyBodyEdits, BodyEditError, type TickRequest } from '@/lib/services/bodyEdits';
 import {
   workspaceItems,
   standalonePages,
@@ -22,7 +24,7 @@ import {
   pageComments,
   knowledgeMetadata,
 } from '@/db/schema';
-import { eq, ne, and, or, asc, desc, gte, lte, sql, inArray } from 'drizzle-orm';
+import { eq, ne, and, or, asc, desc, gte, lte, sql, inArray, isNull } from 'drizzle-orm';
 import type { SQLiteColumn } from 'drizzle-orm/sqlite-core';
 import { syncPageLinks, syncPageLinksBulk, removeOutgoingPageLinks } from './pageLinks';
 import { snapshotBeforeDelete, maybeSnapshotContentUpdate, type SnapshotActor } from './snapshots';
@@ -862,7 +864,7 @@ export async function getWorkspaceDigest(workspaceId: string): Promise<{ text: s
   // digest is being assembled has a timestamp at or after it and shows up in the
   // next get_changes_since(cursor) call rather than falling between the two.
   const cursor = await getChangeHeadCursor(workspaceId);
-  const [items, rowCounts] = await Promise.all([
+  const [items, rowCounts, homeId] = await Promise.all([
     db
       .select({
         id: workspaceItems.id,
@@ -893,6 +895,9 @@ export async function getWorkspaceDigest(workspaceId: string): Promise<{ text: s
       .innerJoin(workspaceItems, eq(databases.itemId, workspaceItems.id))
       .where(eq(workspaceItems.workspaceId, workspaceId))
       .groupBy(pages.databaseId),
+    // Marked in the tree below, so an agent extends the pinned dashboard rather
+    // than building a second one.
+    getHomeDashboardItemId(workspaceId),
   ]);
 
   const counts = new Map(rowCounts.map(r => [r.databaseId, Number(r.c ?? 0)]));
@@ -917,7 +922,7 @@ export async function getWorkspaceDigest(workspaceId: string): Promise<{ text: s
         // A dashboard has no markdown body, so a char count would always read 0
         // and invite a pointless get_page for it.
         : item.type === 'dashboard'
-          ? ''
+          ? (item.id === homeId ? ', home' : '')
           : `, ${formatChars(item.contentChars ?? 0)}`;
       lines.push(`${'  '.repeat(depth)}- [${item.type}] ${item.title || 'Untitled'} (id: ${item.id}${extra}${updated})`);
       walk(item.id, depth + 1);
@@ -2129,6 +2134,9 @@ export async function moveItemInWorkspace(
   workspaceId: string,
   itemId: string,
   newParentId: string | null,
+  /** 0-based place among its new siblings (sidebar order); omitted = order unchanged.
+   *  Past the end = last. Pass the current parent to reorder in place. */
+  position?: number,
 ) {
   await assertItemInWorkspace(itemId, workspaceId);
 
@@ -2151,7 +2159,26 @@ export async function moveItemInWorkspace(
     .set({ parentId: newParentId, updatedAt: new Date() })
     .where(eq(workspaceItems.id, itemId));
 
-  return { moved: true };
+  if (position === undefined) return { moved: true };
+
+  // Sidebar order is (sortOrder, createdAt, id), and new items all start at 0 — so a
+  // place is only expressible by renumbering the whole sibling group. One batch. The
+  // moved item's own updatedAt above is what advances the live change signal.
+  const siblings = await db
+    .select({ id: workspaceItems.id })
+    .from(workspaceItems)
+    .where(and(
+      eq(workspaceItems.workspaceId, workspaceId),
+      newParentId === null ? isNull(workspaceItems.parentId) : eq(workspaceItems.parentId, newParentId),
+    ))
+    .orderBy(asc(workspaceItems.sortOrder), asc(workspaceItems.createdAt), asc(workspaceItems.id));
+  const order = siblings.map((s) => s.id).filter((id) => id !== itemId);
+  const at = Math.max(0, Math.min(Math.trunc(position), order.length));
+  order.splice(at, 0, itemId);
+  await db.batch(order.map((id, i) =>
+    db.update(workspaceItems).set({ sortOrder: i }).where(eq(workspaceItems.id, id)),
+  ) as unknown as Parameters<typeof db.batch>[0]);
+  return { moved: true, position: at };
 }
 
 // Batch counterpart for the MCP `bulk_move_items` tool, sidebar-reparent mode
@@ -2589,6 +2616,10 @@ export async function updatePageById(
     /** `null` clears; omitted leaves the current icon as it is. */
     icon?: string | null;
     iconColor?: string | null;
+    /** Check open task items by their text (`bodyEdits.ts`) — no need to resend the body. */
+    tick?: TickRequest[];
+    /** Markdown added to the end of the body. */
+    append?: string;
   },
   agentCtx?: { tokenId: string },
   /** Versioning-only actor — separate from `agentCtx` (which only feeds the
@@ -2605,8 +2636,22 @@ export async function updatePageById(
     .where(eq(workspaceItems.id, itemId))
     .limit(1);
 
+  const bodyEdit = !!(patch.tick?.length || patch.append?.trim());
+  if (bodyEdit && patch.content !== undefined) {
+    throw new BodyEditError('`content` replaces the whole body — send it alone, or use `tick` / `append` without it');
+  }
+
   if (item) {
     if (item.workspaceId !== workspaceId) throw new Error('Access denied');
+    if (bodyEdit) {
+      if (item.type !== 'page') throw new BodyEditError(`A ${item.type} has no body to tick or append to`);
+      const [current] = await db
+        .select({ content: standalonePages.content })
+        .from(standalonePages)
+        .where(eq(standalonePages.itemId, itemId))
+        .limit(1);
+      patch = { ...patch, content: applyBodyEdits(current?.content ?? '', patch).body };
+    }
 
     if (patch.title !== undefined) {
       await db
@@ -2666,6 +2711,7 @@ export async function updatePageById(
 
   if (!page) throw new Error('Page not found');
   await assertDatabaseInWorkspace(page.databaseId, workspaceId);
+  if (bodyEdit) patch = { ...patch, content: applyBodyEdits(page.content ?? '', patch).body };
 
   if (patch.content !== undefined && actor) {
     await maybeSnapshotContentUpdate({

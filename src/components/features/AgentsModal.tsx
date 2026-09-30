@@ -118,7 +118,7 @@ function AgentTypePicker({
         disabled={!canEdit}
         title={canEdit ? t('agentSetType') : undefined}
         className={`w-7 h-7 rounded-md flex items-center justify-center border transition-colors ${
-          fallback === 'zap' || override ? 'bg-neutral-800 border-neutral-700' : 'bg-blue-500/10 border-blue-500/20'
+          fallback === 'zap' || override ? 'bg-neutral-800 border-neutral-700' : 'bg-signal/10 border-signal/20'
         } ${canEdit ? 'hover:border-neutral-500 cursor-pointer' : ''}`}
       >
         <AgentMark override={override} hint={hint} size={14} fallback={fallback} />
@@ -130,7 +130,7 @@ function AgentTypePicker({
             style={{ top: coords.top, left: coords.left }}
             className="fixed z-201 w-44 bg-neutral-900 border border-neutral-700 rounded-lg shadow-[0_8px_30px_rgba(0,0,0,0.6)] py-1 max-h-64 overflow-y-auto"
           >
-            <p className="px-2.5 py-1 text-[9px] font-semibold text-neutral-500 uppercase tracking-widest">{t('agentSetType')}</p>
+            <p className="px-2.5 py-1 text-2xs font-medium text-neutral-500">{t('agentSetType')}</p>
             {AGENT_MARKS.map(a => (
               <button
                 key={a.id}
@@ -255,14 +255,14 @@ function TokenRow({
           <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full border shrink-0 ${
             isPat
               ? 'text-neutral-400 bg-neutral-800 border-neutral-700'
-              : 'text-blue-400 bg-blue-500/10 border-blue-500/20'
+              : 'text-signal-text bg-signal/10 border-signal/20'
           }`}>
             {isPat ? 'PAT' : 'OAuth'}
           </span>
           <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full border shrink-0 ${
             scope === 'write'
               ? 'text-amber-400 bg-amber-500/10 border-amber-500/20'
-              : 'text-blue-400 bg-blue-500/10 border-blue-500/20'
+              : 'text-signal-text bg-signal/10 border-signal/20'
           }`}>
             {scope === 'write' ? t('tokenScopeWrite') : t('tokenScopeRead')}
           </span>
@@ -336,7 +336,7 @@ function WorkspaceSection({
               {ws.name.charAt(0).toUpperCase()}
             </div>
         }
-        <span className="text-[10px] font-semibold text-neutral-400 uppercase tracking-widest truncate flex-1">
+        <span className="text-2xs font-medium text-neutral-400 truncate flex-1">
           {ws.name}
         </span>
       </div>
@@ -433,7 +433,7 @@ export default function AgentsModal({ onClose }: Props) {
           <div className="flex items-center gap-1.5">
             <button
               onClick={() => setShowConnect(true)}
-              className="flex items-center gap-1.5 text-[11px] font-semibold text-white bg-blue-500 hover:bg-blue-400 px-3 py-1.5 rounded-md transition-colors"
+              className="flex items-center gap-1.5 text-[11px] font-semibold text-ink-fg bg-ink hover:bg-ink/88 px-3 py-1.5 rounded-md transition-colors"
             >
               <Link2 size={12} />
               {t('connectButton')}
@@ -468,7 +468,7 @@ export default function AgentsModal({ onClose }: Props) {
               </div>
               <button
                 onClick={() => setShowConnect(true)}
-                className="flex items-center gap-2 text-sm font-semibold text-white bg-blue-500 hover:bg-blue-400 px-5 py-2.5 rounded-lg shadow-[0_0_20px_-6px_rgba(68,92,149,0.6)] transition-colors"
+                className="flex items-center gap-2 text-sm font-semibold text-ink-fg bg-ink hover:bg-ink/88 px-5 py-2.5 rounded-lg transition-colors"
               >
                 <Link2 size={15} />
                 {t('connectButton')}
@@ -489,7 +489,7 @@ export default function AgentsModal({ onClose }: Props) {
           {/* Usage summary — last 30 days, by token owner (response payload → ~tokens) */}
           {!loading && totalTokens > 0 && usage && usage.calls > 0 && (
             <div className="flex items-center justify-between border-t border-neutral-800 pt-4">
-              <span className="text-[11px] font-semibold text-neutral-300 uppercase tracking-widest">
+              <span className="text-xs font-medium text-neutral-300">
                 {t('agentsUsageLabel')}
               </span>
               <span className="text-[11px] text-neutral-400">
@@ -506,7 +506,7 @@ export default function AgentsModal({ onClose }: Props) {
                 className="w-full flex items-center justify-between group py-1"
               >
                 <div className="flex items-center gap-2">
-                  <span className="text-[11px] font-semibold text-neutral-300 group-hover:text-white transition-colors uppercase tracking-widest">
+                  <span className="text-xs font-medium text-neutral-300 group-hover:text-white transition-colors">
                     {t('agentsActivity')}
                   </span>
                   {activity.length > 0 && (

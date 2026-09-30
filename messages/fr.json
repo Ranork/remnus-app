@@ -2,7 +2,7 @@
   "Layout": {
     "demoMode": "Mode Démo",
     "demoChangesNote": "Les modifications sont temporaires et réinitialisées pour chaque visiteur.",
-    "createFreeAccount": "Créer un compte gratuit →",
+    "createFreeAccount": "Créer un compte gratuit",
     "projectWindowLabel": "Fenêtre de projet",
     "projectWindowExplain": "Cette fenêtre n’affiche que {workspace}. Votre compte, vos autres espaces et vos paramètres sont dans l’app Remnus complète.",
     "projectWindowAbout": "À propos de cette fenêtre",
@@ -261,6 +261,7 @@
     "showHiddenWorkspaces": "Afficher masqués ({count})",
     "hideHiddenWorkspaces": "Masquer masqués",
     "workspaceSettings": "Paramètres de l'espace",
+    "accessRequestsPending": "{count, plural, one {# demande d'accès en attente — l'examiner} other {# demandes d'accès en attente — les examiner}}",
     "importNotion": "Importer depuis Notion",
     "changeIcon": "Changer l'icône",
     "addSubPage": "Ajouter une sous-page",
@@ -880,6 +881,21 @@
     "cancel": "Annuler",
     "addBlock": "Ajouter un bloc",
     "editBlock": "Modifier le bloc",
+    "project": {
+      "lastAgent": "Un agent a travaillé ici pour la dernière fois {when}",
+      "noAgent": "Aucun agent n’a encore travaillé ici"
+    },
+    "home": {
+      "badge": "Accueil",
+      "note": "Ce tableau de bord a été assemblé à partir de vos bases de données. Pour un tableau pensé pour votre projet, demandez à votre agent connecté : « Rafraîchis la calibration Remnus ».",
+      "open": "{name} : ouverts",
+      "byStatus": "{name} par statut",
+      "nextDue": "{name} : prochaines échéances",
+      "stillOpen": "{name} : encore ouverts",
+      "latest": "{name} : les plus récents",
+      "whereToLook": "Où regarder",
+      "agentActivity": "Activité des agents"
+    },
     "blockTypes": {
       "metric": "Indicateur",
       "chart": "Graphique",
@@ -887,7 +903,9 @@
       "list": "Liste",
       "text": "Texte",
       "links": "Liens",
-      "activity": "Activité des agents"
+      "activity": "Activité des agents",
+      "project": "En-tête du projet",
+      "savings": "Économies des agents"
     },
     "editor": {
       "addTitle": "Ajouter un bloc",
@@ -953,7 +971,10 @@
       "requiredHint": "Remplissez les champs marqués * pour enregistrer.",
       "saveFailed": "Ce bloc n'a pas pu être enregistré. Vérifiez ses réglages et réessayez.",
       "save": "Enregistrer",
-      "saving": "Enregistrement…"
+      "saving": "Enregistrement…",
+      "summary": "Résumé",
+      "stack": "Technologies",
+      "stackPlaceholder": "ex. Next.js, Postgres, Stripe"
     }
   },
   "Editor": {
@@ -1073,6 +1094,9 @@
     "untitled": "Sans titre",
     "addIcon": "Ajouter une icône",
     "changeIcon": "Changer l'icône",
+    "removeIcon": "Retirer l’icône",
+    "pageOptions": "Options de la page",
+    "widthLabel": "Largeur de la page",
     "deletePage": "Supprimer la page",
     "deleteConfirm": "Supprimer \"{title}\" ?",
     "delete": "Supprimer",
@@ -2257,6 +2281,9 @@
   },
   "Graph": {
     "title": "Carte des connaissances",
+    "switchWorkspace": "Changer d'espace de travail",
+    "openDashboard": "Ouvrir le tableau de bord de cet espace de travail",
+    "loadingRows": "Chargement des lignes…",
     "layoutLabel": "Disposition",
     "layoutNetwork": "Réseau",
     "layoutTree": "Arbre",

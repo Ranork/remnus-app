@@ -127,7 +127,7 @@ export default function PortabilityTab({ workspaceId, workspaceName }: Portabili
 
       <div className="border-y border-neutral-800 py-4 space-y-4">
         <div className="flex items-start gap-3">
-          <Archive size={17} className="text-blue-400 mt-0.5 shrink-0" />
+          <Archive size={17} className="text-signal-text mt-0.5 shrink-0" />
           <div>
             <p className="text-sm font-semibold text-neutral-200">{t('portabilityFormatTitle')}</p>
             <p className="text-xs text-neutral-500 mt-1">{t('portabilityFormatDesc')}</p>
@@ -170,7 +170,7 @@ export default function PortabilityTab({ workspaceId, workspaceName }: Portabili
         {health && (
           <div className="grid grid-cols-2 gap-px overflow-hidden border border-neutral-800 bg-neutral-800 sm:grid-cols-4">
             <div className="bg-neutral-900 p-3">
-              <p className="text-[10px] uppercase tracking-wide text-neutral-500">{t('portabilityHealthScore')}</p>
+              <p className="text-2xs text-neutral-500">{t('portabilityHealthScore')}</p>
               <p className="mt-1 text-xl font-semibold text-green-300">{health.score}<span className="text-xs text-neutral-600">/100</span></p>
             </div>
             <div className="bg-neutral-900 p-3"><p className="text-[10px] text-neutral-500">{t('portabilityHealthReviewed')}</p><p className="mt-1 text-sm text-neutral-200">{health.humanReviewedConcepts}/{health.governedConcepts}</p></div>
@@ -187,7 +187,7 @@ export default function PortabilityTab({ workspaceId, workspaceName }: Portabili
 
       <div className="space-y-4 border-b border-neutral-800 pb-5">
         <div className="flex items-start gap-3">
-          <BrainCircuit size={17} className="mt-0.5 shrink-0 text-blue-400" />
+          <BrainCircuit size={17} className="mt-0.5 shrink-0 text-signal-text" />
           <div>
             <p className="text-sm font-semibold text-neutral-200">{t('contextPolicyTitle')}</p>
             <p className="mt-1 text-xs text-neutral-500">{t('contextPolicyDesc')}</p>
@@ -197,7 +197,7 @@ export default function PortabilityTab({ workspaceId, workspaceName }: Portabili
           <>
             <div className="grid gap-px border border-neutral-800 bg-neutral-800 sm:grid-cols-3">
               {(['manual', 'smart', 'strict'] as const).map(mode => (
-                <button key={mode} type="button" onClick={() => { setPolicySaved(false); setContextPolicy(current => ({ ...current, mode })); }} className={`bg-neutral-900 p-3 text-left transition-colors hover:bg-neutral-850 cursor-pointer ${contextPolicy.mode === mode ? 'text-blue-300 ring-1 ring-inset ring-blue-500' : 'text-neutral-400'}`}>
+                <button key={mode} type="button" onClick={() => { setPolicySaved(false); setContextPolicy(current => ({ ...current, mode })); }} className={`bg-neutral-900 p-3 text-left transition-colors hover:bg-neutral-850 cursor-pointer ${contextPolicy.mode === mode ? 'text-signal-text ring-1 ring-inset ring-signal' : 'text-neutral-400'}`}>
                   <span className="block text-xs font-semibold">{t(`contextPolicyMode.${mode}.title`)}</span>
                   <span className="mt-1 block text-[10px] leading-relaxed text-neutral-500">{t(`contextPolicyMode.${mode}.desc`)}</span>
                 </button>
@@ -230,7 +230,7 @@ export default function PortabilityTab({ workspaceId, workspaceName }: Portabili
               </label>
             </div>
             <div className="flex items-center gap-3">
-              <button type="button" onClick={saveContextPolicy} disabled={!!policyBusy} className="inline-flex items-center gap-1.5 bg-blue-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-blue-500 disabled:opacity-50 cursor-pointer">
+              <button type="button" onClick={saveContextPolicy} disabled={!!policyBusy} className="inline-flex items-center gap-1.5 bg-ink px-3 py-1.5 text-xs font-medium text-ink-fg hover:bg-ink/88 disabled:opacity-50 cursor-pointer">
                 {policyBusy === 'save' ? <Loader2 size={12} className="animate-spin" /> : <CheckCircle size={12} />}{t('contextPolicySave')}
               </button>
               {policySaved && <span className="text-[10px] text-green-300">{t('contextPolicySaved')}</span>}
@@ -244,7 +244,7 @@ export default function PortabilityTab({ workspaceId, workspaceName }: Portabili
         <button
           onClick={handleExport}
           disabled={isExporting}
-          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-semibold transition-colors cursor-pointer"
+          className="inline-flex items-center gap-2 px-4 py-2 bg-ink hover:bg-ink/88 disabled:opacity-50 disabled:cursor-not-allowed text-ink-fg text-xs font-semibold transition-colors cursor-pointer"
         >
           {isExporting ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
           {isExporting ? t('portabilityExporting') : t('portabilityExport')}

@@ -1,7 +1,8 @@
-import { eq, inArray, sql } from 'drizzle-orm';
+import { and, eq, gte, inArray, sql } from 'drizzle-orm';
 import { unionAll, type SQLiteColumn } from 'drizzle-orm/sqlite-core';
 import { db } from '@/db';
 import {
+  workspaces,
   workspaceMembers,
   workspaceItems,
   standalonePages,
@@ -9,6 +10,7 @@ import {
   pages,
   pageComments,
   deletedItems,
+  agentActivity,
 } from '@/db/schema';
 
 /**
@@ -59,7 +61,7 @@ export async function visibleWorkspaceIds(
 /**
  * Highest change timestamp (epoch seconds) across everything the caller can see:
  * workspace items, standalone-page content, database schema/views, database rows,
- * comments, and deletions.
+ * comments, deletions, and the workspace rows themselves.
  *
  * **Deletions matter.** Without the `deleted_items` tombstone aggregate this is a
  * `max(updatedAt)` over surviving rows only — and removing the newest row lowers
@@ -68,7 +70,7 @@ export async function visibleWorkspaceIds(
  * writes them, nothing deletes them), so folding `max(deleted_at)` in keeps the
  * number monotonic as well as correct.
  *
- * Emitted as ONE `UNION ALL` statement rather than six awaited queries: this runs
+ * Emitted as ONE `UNION ALL` statement rather than seven awaited queries: this runs
  * on every poll — as often as every few seconds in a project window watching an
  * agent write — and against Turso the round-trips, not the aggregates, are the
  * cost. Every branch is an indexed aggregate.
@@ -125,13 +127,76 @@ export function changeVersionQuery(ids: string[]) {
       .select({ m: epochMax(deletedItems.deletedAt) })
       .from(deletedItems)
       .where(inArray(deletedItems.workspaceId, ids)),
+    // The workspace row itself: rename, icon and home dashboard write it, and
+    // `touchWorkspaces` bumps it for every change that has no versioned column
+    // of its own (sidebar order, membership, access requests …). A primary-key
+    // lookup over a handful of rows, so it costs the poll next to nothing.
+    db
+      .select({ m: epochMax(workspaces.updatedAt) })
+      .from(workspaces)
+      .where(inArray(workspaces.id, ids)),
   );
 }
 
-/** Convenience wrapper: resolve the caller's visible workspaces, then version them. */
-export async function changeVersionForUser(
-  userId: string,
-  workspaceLock: string | null,
-): Promise<number> {
-  return computeChangeVersion(await visibleWorkspaceIds(userId, workspaceLock));
+/**
+ * Advance the change signal for these workspaces without claiming any item
+ * changed. For writes that land in no versioned column — reordering the
+ * sidebar, a membership or access request, a deleted comment — and would
+ * otherwise never reach another open tab. Deliberately NOT a bump of the items'
+ * own `updatedAt`: that would report a reorder of thirty siblings as thirty
+ * edits to `get_changes_since` and the "recently updated" lists.
+ *
+ * Also the joiner's signal: a workspace that just became visible to someone
+ * carries a fresh `updatedAt`, so their version advances and it appears.
+ */
+export async function touchWorkspaces(...ids: Array<string | null | undefined>): Promise<void> {
+  const unique = [...new Set(ids.filter((id): id is string => !!id))];
+  if (unique.length === 0) return;
+  await db.update(workspaces).set({ updatedAt: new Date() }).where(inArray(workspaces.id, unique));
+}
+
+/**
+ * The two small fields that ride with every change version:
+ *
+ * - `n` — how many workspaces the caller can see. A member REMOVED from a workspace
+ *   never sees the version advance (their set only loses a branch), so the client
+ *   treats a change in `n` as a change (`ActivityTracker`). Adds are caught too.
+ * - `h: 1` — only while the version's second can still receive writes (+250 ms for
+ *   clock skew). A consumer that refetches on its own clock and has no render time to
+ *   compare (Tauri's `TabHost`) refetches once more after a hot version cools — the
+ *   same-second write it may have missed. Absent otherwise, to keep the body tiny.
+ */
+export function signalExtras(version: number, visibleCount: number, now = Date.now()): { n: number; h?: 1 } {
+  return now < (version + 1) * 1000 + 250 ? { n: visibleCount, h: 1 } : { n: visibleCount };
+}
+
+/** How recently an agent must have called Remnus for a normal tab to watch closely. */
+export const AGENT_ACTIVE_WINDOW_MS = 3 * 60 * 1000;
+
+/**
+ * The heartbeat's answer: the change version plus whether an agent has called
+ * Remnus in any of these workspaces within `AGENT_ACTIVE_WINDOW_MS` — the cue for a
+ * normal tab to poll as closely as a project window while it lasts (see
+ * `ActivityTracker`). One batch, one round trip. The agent probe is an index seek on
+ * `agent_activity (workspace_id, created_at)` stopped at the first hit, so it reads
+ * a row or none however large the audit log grows. Every MCP call logs a row, reads
+ * included, so an agent usually "arrives" before its first write does.
+ */
+export async function heartbeatSignals(
+  ids: string[],
+  now = Date.now(),
+): Promise<{ version: number; agentActive: boolean }> {
+  if (ids.length === 0) return { version: 0, agentActive: false };
+  const [versionRows, agentRows] = await db.batch([
+    changeVersionQuery(ids),
+    db
+      .select({ one: sql<number>`1` })
+      .from(agentActivity)
+      .where(and(
+        inArray(agentActivity.workspaceId, ids),
+        gte(agentActivity.createdAt, new Date(now - AGENT_ACTIVE_WINDOW_MS)),
+      ))
+      .limit(1),
+  ]);
+  return { version: changeVersionFromRows(versionRows), agentActive: agentRows.length > 0 };
 }

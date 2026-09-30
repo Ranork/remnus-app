@@ -2,7 +2,7 @@
   "Layout": {
     "demoMode": "डेमो मोड",
     "demoChangesNote": "परिवर्तन अस्थायी हैं और प्रत्येक विज़िटर के लिए रीसेट होते हैं।",
-    "createFreeAccount": "निःशुल्क खाता बनाएं →",
+    "createFreeAccount": "निःशुल्क खाता बनाएं",
     "projectWindowLabel": "प्रोजेक्ट विंडो",
     "projectWindowExplain": "यह विंडो केवल {workspace} दिखाती है। आपका खाता, दूसरे workspace और सेटिंग्स पूरे Remnus ऐप में हैं।",
     "projectWindowAbout": "इस विंडो के बारे में",
@@ -261,6 +261,7 @@
     "showHiddenWorkspaces": "छिपे हुए दिखाएँ ({count})",
     "hideHiddenWorkspaces": "छिपे हुए छिपाएँ",
     "workspaceSettings": "कार्यक्षेत्र सेटिंग",
+    "accessRequestsPending": "{count, plural, one {# एक्सेस अनुरोध प्रतीक्षा में है — देखें} other {# एक्सेस अनुरोध प्रतीक्षा में हैं — देखें}}",
     "importNotion": "Notion से आयात करें",
     "changeIcon": "आइकन बदलें",
     "addSubPage": "उप-पेज जोड़ें",
@@ -880,6 +881,21 @@
     "cancel": "रद्द करें",
     "addBlock": "ब्लॉक जोड़ें",
     "editBlock": "ब्लॉक बदलें",
+    "project": {
+      "lastAgent": "किसी एजेंट ने आख़िरी बार यहाँ {when} काम किया",
+      "noAgent": "अभी तक किसी एजेंट ने यहाँ काम नहीं किया"
+    },
+    "home": {
+      "badge": "होम",
+      "note": "यह डैशबोर्ड आपके डेटाबेस से बनाया गया है। अपने प्रोजेक्ट के हिसाब से बना डैशबोर्ड पाने के लिए अपने जुड़े एजेंट से कहें: “Remnus कैलिब्रेशन रिफ़्रेश करो”।",
+      "open": "{name}: खुले",
+      "byStatus": "{name} — स्थिति के अनुसार",
+      "nextDue": "{name}: अगली तारीख़",
+      "stillOpen": "{name}: अभी भी खुले",
+      "latest": "{name}: सबसे नए",
+      "whereToLook": "कहाँ देखें",
+      "agentActivity": "एजेंट गतिविधि"
+    },
     "blockTypes": {
       "metric": "मीट्रिक",
       "chart": "चार्ट",
@@ -887,7 +903,9 @@
       "list": "सूची",
       "text": "टेक्स्ट",
       "links": "लिंक",
-      "activity": "एजेंट गतिविधि"
+      "activity": "एजेंट गतिविधि",
+      "project": "प्रोजेक्ट हेडर",
+      "savings": "एजेंट बचत"
     },
     "editor": {
       "addTitle": "ब्लॉक जोड़ें",
@@ -953,7 +971,10 @@
       "requiredHint": "सहेजने के लिए * वाले फ़ील्ड भरें।",
       "saveFailed": "यह ब्लॉक सहेजा नहीं जा सका। इसकी सेटिंग्स जाँचें और फिर से कोशिश करें।",
       "save": "सहेजें",
-      "saving": "सहेजा जा रहा है…"
+      "saving": "सहेजा जा रहा है…",
+      "summary": "सारांश",
+      "stack": "टेक स्टैक",
+      "stackPlaceholder": "जैसे Next.js, Postgres, Stripe"
     }
   },
   "Editor": {
@@ -1073,6 +1094,9 @@
     "untitled": "शीर्षकहीन",
     "addIcon": "आइकन जोड़ें",
     "changeIcon": "आइकन बदलें",
+    "removeIcon": "आइकन हटाएं",
+    "pageOptions": "पेज विकल्प",
+    "widthLabel": "पेज की चौड़ाई",
     "deletePage": "पेज हटाएं",
     "deleteConfirm": "\"{title}\" हटाएं?",
     "delete": "हटाएं",
@@ -2257,6 +2281,9 @@
   },
   "Graph": {
     "title": "नॉलेज मैप",
+    "switchWorkspace": "कार्यस्थान बदलें",
+    "openDashboard": "इस कार्यस्थान का डैशबोर्ड खोलें",
+    "loadingRows": "पंक्तियाँ लोड हो रही हैं…",
     "layoutLabel": "लेआउट",
     "layoutNetwork": "नेटवर्क",
     "layoutTree": "ट्री",

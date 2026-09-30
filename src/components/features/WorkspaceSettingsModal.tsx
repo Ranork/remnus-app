@@ -121,7 +121,7 @@ export default function WorkspaceSettingsModal({
                     ? 'border-amber-400 text-amber-300 font-medium'
                     : tab.accent === 'green'
                       ? 'border-green-400 text-green-300 font-medium'
-                      : 'border-blue-500 text-neutral-100 font-medium'
+                      : 'border-signal text-neutral-100 font-medium'
                   : tab.accent === 'amber'
                     ? 'border-transparent text-amber-500/70 hover:text-amber-400'
                     : 'border-transparent text-neutral-500 hover:text-neutral-300'

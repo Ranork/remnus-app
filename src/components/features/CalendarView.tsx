@@ -428,7 +428,7 @@ export default function CalendarView({
 
         {/* Small badge of dateCol binding — desktop only; on mobile it collides
             with the nav row and is secondary info (set in Layout settings). */}
-        <div className="hidden lg:flex items-center gap-1.5 text-[10px] text-neutral-500 bg-neutral-900/30 border border-neutral-850 px-2 py-0.5 uppercase tracking-wider rounded">
+        <div className="hidden lg:flex items-center gap-1.5 text-2xs text-neutral-500 bg-neutral-900/30 border border-neutral-850 px-2 py-0.5 rounded">
           <Clock size={10} />
           <span>Mapped to: {dateProperty?.name || 'Unknown'}</span>
         </div>
@@ -505,11 +505,11 @@ export default function CalendarView({
                   isDragOver
                     ? 'bg-neutral-800/15'
                     : isToday
-                    ? 'bg-blue-500/12'
+                    ? 'bg-signal/12'
                     : !isCurrentMonth && viewMode === 'month'
                     ? 'bg-neutral-950/20'
                     : 'bg-transparent'
-                } ${isToday ? 'ring-1 ring-inset ring-blue-500/70 z-10' : ''}`}
+                } ${isToday ? 'ring-1 ring-inset ring-signal/70 z-10' : ''}`}
               >
                 {/* Day Number / Indicator */}
                 <div className="flex items-center justify-between gap-1 mb-1.5 shrink-0 select-none">
@@ -517,7 +517,7 @@ export default function CalendarView({
                     <span
                       className={`shrink-0 text-xs font-semibold py-0.5 px-1.5 ${
                         isToday
-                          ? 'bg-blue-600 text-white font-bold'
+                          ? 'bg-ink text-ink-fg font-bold'
                           : isCurrentMonth
                           ? 'text-neutral-200'
                           : 'text-neutral-500'
@@ -528,7 +528,7 @@ export default function CalendarView({
                     {/* Spells out what the blue square means, so "today" reads as
                         today instead of just "the highlighted one". */}
                     {isToday && (
-                      <span className="truncate rounded border border-blue-500/40 bg-blue-500/15 px-1 py-px text-[9px] font-bold uppercase tracking-wider text-blue-300">
+                      <span className="truncate rounded border border-signal/40 bg-signal/15 px-1 py-px text-2xs font-medium text-signal-text">
                         {t('today')}
                       </span>
                     )}
@@ -638,8 +638,8 @@ export default function CalendarView({
                       onDragEnd={resetDragState}
                       className={`database-card relative cursor-pointer transition-colors group flex flex-col select-none overflow-hidden rounded ${
                         draggedCardId === page.id ? 'opacity-25' : ''
-                      } ${dragOverCardId === page.id && dragOverPosition === 'before' ? 'border-t-2 border-t-blue-500/60' : ''} ${
-                        dragOverCardId === page.id && dragOverPosition === 'after' ? 'border-b-2 border-b-blue-500/60' : ''
+                      } ${dragOverCardId === page.id && dragOverPosition === 'before' ? 'border-t-2 border-t-signal/60' : ''} ${
+                        dragOverCardId === page.id && dragOverPosition === 'after' ? 'border-b-2 border-b-signal/60' : ''
                       }`}
                       style={{ backgroundColor: bgColor ?? 'var(--database-card-bg, rgba(64,68,75,0.55))' }}
                     >

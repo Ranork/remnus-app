@@ -116,7 +116,7 @@ function LoginForm() {
           <button
             type="button"
             onClick={handleTauriSignIn}
-            className="px-10 py-2.5 bg-blue-500 hover:bg-blue-600 active:bg-blue-700 text-white font-medium text-sm rounded-lg transition-colors"
+            className="px-10 py-2.5 bg-ink hover:bg-ink/88 active:bg-ink/80 text-ink-fg font-medium text-sm rounded-lg transition-colors"
           >
             {t('signIn')}
           </button>
@@ -156,7 +156,7 @@ function LoginForm() {
             <button
               type="button"
               onClick={() => { deviceIdRef.current = null; setOpenUrlError(null); setTauriState('idle'); }}
-              className="px-10 py-2.5 bg-blue-500 hover:bg-blue-600 text-white font-medium text-sm rounded-lg transition-colors"
+              className="px-10 py-2.5 bg-ink hover:bg-ink/88 text-ink-fg font-medium text-sm rounded-lg transition-colors"
             >
               {t('signIn')}
             </button>

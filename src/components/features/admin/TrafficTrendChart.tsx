@@ -596,7 +596,7 @@ function SourceSelect({
           {campaignTags.length > 0 && (
             <>
               <div className="my-1 border-t border-neutral-800" />
-              <div className="px-3 py-1 text-[10px] font-medium uppercase tracking-wide text-neutral-600">
+              <div className="px-3 py-1 text-2xs font-medium text-neutral-600">
                 {t('trafficSourceCampaignsGroup')}
               </div>
               <SourceOption

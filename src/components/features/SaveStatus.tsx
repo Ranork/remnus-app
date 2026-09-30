@@ -30,8 +30,8 @@ export default function SaveStatus({ state, className = '' }: SaveStatusProps) {
 
   if (state === 'saving') {
     return (
-      <div className={`flex items-center gap-1.5 text-[11px] text-neutral-500 select-none ${className}`}>
-        <div className="w-2.5 h-2.5 rounded-full border border-neutral-600 border-t-transparent animate-spin shrink-0" />
+      <div className={`flex items-center gap-1.5 text-xs text-fg-3 select-none ${className}`}>
+        <div className="w-2.5 h-2.5 rounded-full border-[1.5px] border-fg-4 border-t-transparent animate-spin shrink-0" />
         <span>{t('saving')}</span>
       </div>
     );
@@ -39,8 +39,8 @@ export default function SaveStatus({ state, className = '' }: SaveStatusProps) {
 
   if (state === 'saved') {
     return (
-      <div className={`flex items-center gap-1 text-[11px] text-green-400 select-none ${className}`}>
-        <Check size={11} strokeWidth={2.5} />
+      <div className={`flex items-center gap-1 text-xs text-green-400 select-none ${className}`}>
+        <Check size={13} strokeWidth={2.5} />
         <span>{t('saved')}</span>
       </div>
     );
@@ -48,8 +48,8 @@ export default function SaveStatus({ state, className = '' }: SaveStatusProps) {
 
   if (state === 'error') {
     return (
-      <div className={`flex items-center gap-1 text-[11px] text-red-400 select-none ${className}`}>
-        <AlertCircle size={11} />
+      <div className={`flex items-center gap-1 text-xs text-red-400 select-none ${className}`}>
+        <AlertCircle size={13} />
         <span>{t('savingError')}</span>
       </div>
     );

@@ -2,7 +2,7 @@
   "Layout": {
     "demoMode": "Демо-режим",
     "demoChangesNote": "Изменения временные и сбрасываются для каждого посетителя.",
-    "createFreeAccount": "Создать бесплатный аккаунт →",
+    "createFreeAccount": "Создать бесплатный аккаунт",
     "projectWindowLabel": "Окно проекта",
     "projectWindowExplain": "В этом окне открыто только {workspace}. Аккаунт, другие пространства и настройки — в полном приложении Remnus.",
     "projectWindowAbout": "Об этом окне",
@@ -261,6 +261,7 @@
     "showHiddenWorkspaces": "Показать скрытые ({count})",
     "hideHiddenWorkspaces": "Скрыть скрытые",
     "workspaceSettings": "Настройки пространства",
+    "accessRequestsPending": "{count, plural, one {# запрос на доступ ждёт ответа — посмотреть} few {# запроса на доступ ждут ответа — посмотреть} many {# запросов на доступ ждут ответа — посмотреть} other {# запроса на доступ ждут ответа — посмотреть}}",
     "importNotion": "Импорт из Notion",
     "changeIcon": "Сменить значок",
     "addSubPage": "Добавить подстраницу",
@@ -880,6 +881,21 @@
     "cancel": "Отмена",
     "addBlock": "Добавить блок",
     "editBlock": "Изменить блок",
+    "project": {
+      "lastAgent": "Агент последний раз работал здесь {when}",
+      "noAgent": "Здесь ещё не работал ни один агент"
+    },
+    "home": {
+      "badge": "Главная",
+      "note": "Эта панель собрана из ваших баз данных. Чтобы получить панель под ваш проект, попросите подключённого агента: «Обнови калибровку Remnus».",
+      "open": "{name}: открытые",
+      "byStatus": "{name} по статусу",
+      "nextDue": "{name}: ближайшие сроки",
+      "stillOpen": "{name}: ещё открыты",
+      "latest": "{name}: последние",
+      "whereToLook": "Куда смотреть",
+      "agentActivity": "Активность агентов"
+    },
     "blockTypes": {
       "metric": "Показатель",
       "chart": "Диаграмма",
@@ -887,7 +903,9 @@
       "list": "Список",
       "text": "Текст",
       "links": "Ссылки",
-      "activity": "Активность агентов"
+      "activity": "Активность агентов",
+      "project": "Шапка проекта",
+      "savings": "Экономия агентов"
     },
     "editor": {
       "addTitle": "Добавить блок",
@@ -953,7 +971,10 @@
       "requiredHint": "Заполните поля со звёздочкой *, чтобы сохранить.",
       "saveFailed": "Не удалось сохранить блок. Проверьте его настройки и попробуйте ещё раз.",
       "save": "Сохранить",
-      "saving": "Сохраняем…"
+      "saving": "Сохраняем…",
+      "summary": "Кратко",
+      "stack": "Стек",
+      "stackPlaceholder": "напр. Next.js, Postgres, Stripe"
     }
   },
   "Editor": {
@@ -1073,6 +1094,9 @@
     "untitled": "Без названия",
     "addIcon": "Добавить значок",
     "changeIcon": "Сменить значок",
+    "removeIcon": "Удалить значок",
+    "pageOptions": "Параметры страницы",
+    "widthLabel": "Ширина страницы",
     "deletePage": "Удалить страницу",
     "deleteConfirm": "Удалить «{title}»?",
     "delete": "Удалить",
@@ -2257,6 +2281,9 @@
   },
   "Graph": {
     "title": "Карта знаний",
+    "switchWorkspace": "Сменить пространство",
+    "openDashboard": "Открыть панель этого пространства",
+    "loadingRows": "Загрузка строк…",
     "layoutLabel": "Раскладка",
     "layoutNetwork": "Сеть",
     "layoutTree": "Дерево",

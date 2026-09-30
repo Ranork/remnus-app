@@ -85,7 +85,7 @@ export default function PwaInstallNudge() {
             <div className="mt-2.5 flex items-center gap-2">
               <button
                 onClick={handleInstall}
-                className="px-3 py-1.5 text-[12px] font-semibold bg-blue-500 hover:bg-accent-strong text-white rounded-md transition-colors duration-150"
+                className="px-3 py-1.5 text-[12px] font-semibold bg-ink hover:bg-accent-strong text-ink-fg rounded-md transition-colors duration-150"
               >
                 {t('pwaInstallCta')}
               </button>

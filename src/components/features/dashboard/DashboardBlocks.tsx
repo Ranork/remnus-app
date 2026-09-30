@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { getLocale, getTranslations } from 'next-intl/server';
-import { ArrowDownRight, ArrowRight, ArrowUpRight, CircleAlert, Minus } from 'lucide-react';
+import { ArrowDownRight, ArrowRight, ArrowUpRight, CircleAlert, Info, Minus, TriangleAlert } from 'lucide-react';
 import PageIcon from '@/components/features/PageIcon';
 import type { ChartPoint, ResolvedBlock } from '@/lib/dashboard/data';
 
@@ -56,8 +56,8 @@ export async function BlockUnavailable({ reason }: { reason: 'database_missing' 
   const text =
     reason === 'database_missing' ? t('sourceRemoved') : reason === 'view_missing' ? t('viewRemoved') : t('columnRemoved');
   return (
-    <div className="flex items-center gap-2 py-4 text-xs text-neutral-500">
-      <CircleAlert size={13} className="shrink-0 text-amber-500/70" />
+    <div className="flex items-center gap-2 py-4 text-ui text-fg-3">
+      <CircleAlert size={16} className="shrink-0 text-amber-400" />
       <span>{text}</span>
     </div>
   );
@@ -67,18 +67,18 @@ export async function BlockInvalid({ id, error }: { id: string | null; error: st
   const t = await getTranslations('Dashboard');
   return (
     <div className="py-4">
-      <div className="flex items-center gap-2 text-xs text-neutral-400">
-        <CircleAlert size={13} className="shrink-0 text-amber-500/70" />
+      <div className="flex items-center gap-2 text-ui text-fg-2">
+        <CircleAlert size={16} className="shrink-0 text-amber-400" />
         <span>{id ? t('blockUnreadableWithId', { id }) : t('blockUnreadable')}</span>
       </div>
-      <p className="mt-1.5 pl-[21px] font-mono text-[10px] leading-relaxed text-neutral-600 break-words">{error}</p>
+      <p className="mt-1.5 pl-6 font-mono text-2xs leading-relaxed text-fg-4 break-words">{error}</p>
     </div>
   );
 }
 
 async function NoData() {
   const t = await getTranslations('Dashboard');
-  return <p className="py-4 text-xs text-neutral-500">{t('noData')}</p>;
+  return <p className="py-4 text-ui text-fg-3">{t('noData')}</p>;
 }
 
 // -- metric -------------------------------------------------------------------
@@ -92,21 +92,23 @@ export async function MetricBlockView({ data }: { data: Extract<ResolvedBlock, {
 
   const TrendIcon = trend?.direction === 'up' ? ArrowUpRight : trend?.direction === 'down' ? ArrowDownRight : Minus;
   const trendClass =
-    trend?.direction === 'up' ? 'text-green-400' : trend?.direction === 'down' ? 'text-red-400' : 'text-neutral-500';
+    trend?.direction === 'up' ? 'text-green-400' : trend?.direction === 'down' ? 'text-red-400' : 'text-fg-3';
 
+  // Pinned to the foot of the tile: in a row stretched by a taller neighbour the number
+  // sits on the baseline the eye expects, not floating under the title.
   return (
-    <div>
+    <div className="mt-auto">
       <div className="flex items-baseline gap-1.5">
-        <span className="text-3xl font-semibold tabular-nums text-neutral-100">{formatNumber(value, locale)}</span>
-        {block.unit && <span className="text-xs text-neutral-500">{block.unit}</span>}
+        <span className="text-4xl font-semibold tracking-tight text-fg">{formatNumber(value, locale)}</span>
+        {block.unit && <span className="text-xs text-fg-3">{block.unit}</span>}
       </div>
       {trend && (
-        <div className={`mt-2 flex items-center gap-1 text-[11px] ${trendClass}`}>
-          <TrendIcon size={12} className="shrink-0" />
+        <div className={`mt-2 flex items-center gap-1 text-xs ${trendClass}`}>
+          <TrendIcon size={14} className="shrink-0" />
           <span className="tabular-nums">
             {trend.percent == null ? formatNumber(trend.current - trend.previous, locale) : `${formatNumber(Math.abs(trend.percent), locale)}%`}
           </span>
-          <span className="text-neutral-500">{t('trendVsPrevious', { days: block.trend?.days ?? 0 })}</span>
+          <span className="text-fg-3">{t('trendVsPrevious', { days: block.trend?.days ?? 0 })}</span>
         </div>
       )}
     </div>
@@ -134,16 +136,16 @@ function BarChart({ points, locale, t }: { points: ChartPoint[]; locale: string;
     <ul className="space-y-2">
       {points.map((point, i) => (
         <li key={`${point.label}-${i}`} className="flex items-center gap-2.5">
-          <span className="w-24 shrink-0 truncate text-[11px] text-neutral-400" title={labels[i]}>
+          <span className="w-24 shrink-0 truncate text-xs text-fg-3" title={labels[i]}>
             {labels[i]}
           </span>
-          <span className="h-2.5 flex-1 overflow-hidden rounded-sm bg-neutral-800/60">
+          <span className="h-2.5 flex-1 overflow-hidden rounded-sm bg-hover">
             <span
               className="block h-full rounded-sm"
               style={{ width: `${Math.max((point.value / max) * 100, 2)}%`, backgroundColor: colorAt(i, point) }}
             />
           </span>
-          <span className="w-10 shrink-0 text-right text-[11px] tabular-nums text-neutral-300">
+          <span className="w-10 shrink-0 text-right text-xs tabular-nums text-fg-2">
             {formatNumber(point.value, locale)}
           </span>
         </li>
@@ -177,9 +179,9 @@ function LineChart({ points, locale, t }: { points: ChartPoint[]; locale: string
       </svg>
       {/* The middle figure is the series peak. It carries a label because a bare
           number sitting between two date labels reads as a third category. */}
-      <div className="mt-1.5 flex justify-between text-[10px] text-neutral-500">
+      <div className="mt-1.5 flex justify-between text-2xs text-fg-3">
         <span>{first}</span>
-        <span className="tabular-nums text-neutral-400">{t('chartPeak', { value: formatNumber(max, locale) })}</span>
+        <span className="text-fg-2">{t('chartPeak', { value: formatNumber(max, locale) })}</span>
         <span>{last}</span>
       </div>
     </div>
@@ -204,7 +206,7 @@ function DonutChart({ points, locale, total, t }: { points: ChartPoint[]; locale
   return (
     <div className="flex items-center gap-4">
       <svg viewBox="0 0 110 110" className="h-24 w-24 shrink-0 -rotate-90" role="img">
-        <circle cx={55} cy={55} r={R} fill="none" stroke="#2f333a" strokeWidth={STROKE} />
+        <circle cx={55} cy={55} r={R} fill="none" style={{ stroke: 'var(--color-hover)' }} strokeWidth={STROKE} />
         {arcs.map((arc, i) => (
           <circle
             key={i}
@@ -221,12 +223,12 @@ function DonutChart({ points, locale, total, t }: { points: ChartPoint[]; locale
       </svg>
       <ul className="min-w-0 flex-1 space-y-1">
         {points.slice(0, 6).map((point, i) => (
-          <li key={`${point.label}-${i}`} className="flex items-center gap-2 text-[11px]">
+          <li key={`${point.label}-${i}`} className="flex items-center gap-2 text-xs">
             <span className="h-2 w-2 shrink-0 rounded-sm" style={{ backgroundColor: colorAt(i, point) }} />
-            <span className="min-w-0 flex-1 truncate text-neutral-400" title={labels[i]}>
+            <span className="min-w-0 flex-1 truncate text-fg-3" title={labels[i]}>
               {labels[i]}
             </span>
-            <span className="shrink-0 tabular-nums text-neutral-300">{formatNumber(point.value, locale)}</span>
+            <span className="shrink-0 text-fg-2">{formatNumber(point.value, locale)}</span>
           </li>
         ))}
       </ul>
@@ -246,18 +248,24 @@ export async function ListBlockView({ data }: { data: Extract<ResolvedBlock, { k
     <div>
       <ul>
         {data.rows.map((row) => (
-          <li key={row.id} className="border-b border-neutral-850 last:border-b-0">
+          <li key={row.id} className="border-b border-line last:border-b-0">
             <Link
               href={`/db/${row.databaseId}/${row.id}`}
-              className="flex items-center gap-2 py-1.5 text-xs text-neutral-300 transition-colors hover:bg-neutral-800/10 hover:text-neutral-100"
+              className="-mx-1.5 flex items-center gap-2 rounded-sm px-1.5 py-2 text-ui text-fg-2 transition-colors hover:bg-hover/60 hover:text-fg"
             >
-              <PageIcon icon={row.icon} iconColor={row.iconColor} size={13} />
+              <PageIcon icon={row.icon} iconColor={row.iconColor} size={14} />
               <span className="min-w-0 flex-1 truncate">{row.title || t('untitled')}</span>
               {data.columns.map((col) => {
                 const value = row.properties[col.id];
-                if (value == null || value === '') return null;
+                if (value == null || value === '' || value === false) return null;
+                // A ticked checkbox reads as its column's name ("Breaking"), not "true".
+                if (value === true) {
+                  return (
+                    <span key={col.id} className="shrink-0 truncate text-2xs text-fg-3">{col.name}</span>
+                  );
+                }
                 return (
-                  <span key={col.id} className="shrink-0 truncate text-[10px] text-neutral-500" title={col.name}>
+                  <span key={col.id} className="shrink-0 truncate text-2xs text-fg-3" title={col.name}>
                     {Array.isArray(value) ? value.join(', ') : String(value)}
                   </span>
                 );
@@ -266,17 +274,19 @@ export async function ListBlockView({ data }: { data: Extract<ResolvedBlock, { k
           </li>
         ))}
       </ul>
-      {hidden > 0 && <p className="pt-2 text-[10px] text-neutral-600">{t('andMore', { count: hidden })}</p>}
+      {hidden > 0 && <p className="pt-2 text-2xs text-fg-4">{t('andMore', { count: hidden })}</p>}
     </div>
   );
 }
 
 // -- text ---------------------------------------------------------------------
 
-const TONE_CLASS = {
-  default: 'text-neutral-300',
-  info: 'text-blue-400/90',
-  warning: 'text-amber-400/90',
+// Tone changes the leading icon, not the text colour: body copy stays readable in every
+// tone, and "info" is marked the way the rest of the app marks attention (the signal).
+const TONE_ICON = {
+  default: null,
+  info: <Info size={16} className="mt-px shrink-0 text-signal-text" aria-hidden />,
+  warning: <TriangleAlert size={16} className="mt-px shrink-0 text-amber-400" aria-hidden />,
 } as const;
 
 /**
@@ -296,14 +306,14 @@ function renderInline(text: string, keyPrefix: string): React.ReactNode[] {
     if (match.index > last) nodes.push(text.slice(last, match.index));
     const token = match[0];
     const key = `${keyPrefix}-${i++}`;
-    if (token.startsWith('**')) nodes.push(<strong key={key} className="font-semibold text-neutral-100">{token.slice(2, -2)}</strong>);
-    else if (token.startsWith('`')) nodes.push(<code key={key} className="rounded bg-neutral-800/70 px-1 py-0.5 font-mono text-[11px]">{token.slice(1, -1)}</code>);
+    if (token.startsWith('**')) nodes.push(<strong key={key} className="font-semibold text-fg">{token.slice(2, -2)}</strong>);
+    else if (token.startsWith('`')) nodes.push(<code key={key} className="rounded-sm bg-hover px-1 py-0.5 font-mono text-2xs text-fg">{token.slice(1, -1)}</code>);
     else if (token.startsWith('[')) {
       const [, label, href] = /\[([^\]]+)\]\(([^)\s]+)\)/.exec(token) ?? [];
       const safe = href && (href.startsWith('/') || href.startsWith('https://') || href.startsWith('http://'));
       nodes.push(
         safe ? (
-          <Link key={key} href={href} className="text-blue-400 hover:underline">{label}</Link>
+          <Link key={key} href={href} className="text-fg underline decoration-signal decoration-[1.5px] underline-offset-[3px] hover:decoration-2">{label}</Link>
         ) : (
           <span key={key}>{label ?? token}</span>
         ),
@@ -317,7 +327,7 @@ function renderInline(text: string, keyPrefix: string): React.ReactNode[] {
 
 export function TextBlockView({ data }: { data: Extract<ResolvedBlock, { kind: 'text' }> }) {
   const lines = data.block.markdown.split('\n');
-  const tone = TONE_CLASS[data.block.tone];
+  const icon = TONE_ICON[data.block.tone];
   const nodes: React.ReactNode[] = [];
   let bullets: string[] = [];
 
@@ -344,7 +354,7 @@ export function TextBlockView({ data }: { data: Extract<ResolvedBlock, { kind: '
     const heading = /^(#{1,3})\s+(.*)$/.exec(trimmed);
     if (heading) {
       nodes.push(
-        <p key={index} className="mb-1 mt-2 text-xs font-semibold text-neutral-100 first:mt-0">
+        <p key={index} className="mb-1 mt-2 text-ui font-semibold text-fg first:mt-0">
           {renderInline(heading[2], `h-${index}`)}
         </p>,
       );
@@ -358,7 +368,15 @@ export function TextBlockView({ data }: { data: Extract<ResolvedBlock, { kind: '
   });
   flushBullets('ul-end');
 
-  return <div className={`text-xs ${tone}`}>{nodes}</div>;
+  const body = <div className="min-w-0 flex-1 text-ui text-fg-2">{nodes}</div>;
+  return icon ? (
+    <div className="flex gap-2.5">
+      {icon}
+      {body}
+    </div>
+  ) : (
+    body
+  );
 }
 
 // -- links --------------------------------------------------------------------
@@ -368,26 +386,26 @@ export async function LinksBlockView({ data }: { data: Extract<ResolvedBlock, { 
   return (
     <ul>
       {data.links.map((link) => (
-        <li key={link.itemId} className="border-b border-neutral-850 last:border-b-0">
+        <li key={link.itemId} className="border-b border-line last:border-b-0">
           {link.href ? (
             <Link
               href={link.href}
-              className="group flex items-center gap-2 py-1.5 text-xs text-neutral-300 transition-colors hover:bg-neutral-800/10 hover:text-neutral-100"
+              className="group -mx-1.5 flex items-center gap-2 rounded-sm px-1.5 py-2 text-ui text-fg-2 transition-colors hover:bg-hover/60 hover:text-fg"
             >
               <PageIcon
                 icon={link.icon}
                 iconColor={link.iconColor}
-                size={13}
+                size={14}
                 fallbackType={link.type === 'database' ? 'database' : link.type === 'dashboard' ? 'dashboard' : 'page'}
               />
               <span className="min-w-0 flex-1 truncate">{link.label}</span>
-              <ArrowRight size={12} className="shrink-0 text-neutral-700 transition-colors group-hover:text-neutral-400" />
+              <ArrowRight size={14} className="shrink-0 text-fg-4 transition-colors group-hover:text-fg-2" />
             </Link>
           ) : (
-            <span className="flex items-center gap-2 py-1.5 text-xs text-neutral-600">
-              <CircleAlert size={13} className="shrink-0 text-amber-500/50" />
+            <span className="flex items-center gap-2 py-2 text-ui text-fg-4">
+              <CircleAlert size={14} className="shrink-0 text-amber-400/70" />
               <span className="min-w-0 flex-1 truncate line-through">{link.label}</span>
-              <span className="shrink-0 text-[10px]">{t('linkRemoved')}</span>
+              <span className="shrink-0 text-2xs">{t('linkRemoved')}</span>
             </span>
           )}
         </li>
@@ -397,6 +415,8 @@ export async function LinksBlockView({ data }: { data: Extract<ResolvedBlock, { 
 }
 
 // -- activity -----------------------------------------------------------------
+
+const WRITE_TOOL = /^(create|update|delete|bulk|move|add)_/;
 
 export async function ActivityBlockView({ data }: { data: Extract<ResolvedBlock, { kind: 'activity' }> }) {
   const t = await getTranslations('Dashboard');
@@ -408,16 +428,58 @@ export async function ActivityBlockView({ data }: { data: Extract<ResolvedBlock,
   return (
     <ul>
       {data.entries.map((entry) => (
-        <li key={entry.id} className="flex items-center gap-2 border-b border-neutral-850 py-1.5 text-xs last:border-b-0">
+        <li key={entry.id} className="flex items-center gap-2 border-b border-line py-2 text-ui last:border-b-0">
           <span
             className={`h-1.5 w-1.5 shrink-0 rounded-full ${entry.status === 'error' ? 'bg-red-400' : 'bg-green-400/70'}`}
             aria-hidden
           />
-          <span className="shrink-0 font-mono text-[11px] text-neutral-300">{entry.tool}</span>
-          <span className="min-w-0 flex-1 truncate text-neutral-500">{entry.actor ?? t('unknownAgent')}</span>
-          <span className="shrink-0 text-[10px] tabular-nums text-neutral-600">{fmt.format(entry.createdAt)}</span>
+          {/* Writes carry the accent: what an agent CHANGED is what a human scans for. */}
+          <span className={`shrink-0 font-mono text-2xs ${WRITE_TOOL.test(entry.tool) ? 'font-semibold text-signal-text' : 'text-fg-2'}`}>{entry.tool}</span>
+          <span className="min-w-0 flex-1 truncate text-fg-3">{entry.actor ?? t('unknownAgent')}</span>
+          <span className="shrink-0 text-2xs text-fg-4">{fmt.format(entry.createdAt)}</span>
         </li>
       ))}
     </ul>
+  );
+}
+
+// -- project ------------------------------------------------------------------
+
+/**
+ * The head of a home dashboard, and the one loud thing on it: the workspace's name
+ * set large, the agent's summary of the project under it, the stack as chips. The
+ * last line is live — when an agent last called Remnus here — so the header says
+ * whether this workspace is being worked in, not just what it is about.
+ */
+export async function ProjectBlockView({ data }: { data: Extract<ResolvedBlock, { kind: 'project' }> }) {
+  const t = await getTranslations('Dashboard');
+  const locale = await getLocale();
+  const { block, workspaceName, lastAgentAt, agentRecent: recent } = data;
+  const when = lastAgentAt
+    ? new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }).format(lastAgentAt)
+    : null;
+
+  return (
+    <div className="max-w-3xl">
+      <p className="text-[28px] font-semibold leading-tight tracking-tight text-fg sm:text-[32px]">
+        {block.title || workspaceName}
+      </p>
+      <p className="mt-2 text-sm leading-relaxed text-fg-2">{block.summary}</p>
+      <div className="mt-3 flex flex-wrap items-center gap-1.5">
+        {block.stack?.map((chip) => (
+          <span key={chip} className="inline-flex h-6 items-center rounded-full px-2.5 text-xs text-fg-2 shadow-[inset_0_0_0_1px_var(--color-line-strong)]">
+            {chip}
+          </span>
+        ))}
+        {/* Live: when an agent last worked here. A steady dot, never a pulse. */}
+        <span className={`inline-flex items-center gap-2 text-xs text-fg-3 ${block.stack?.length ? 'ml-2' : ''}`}>
+          <span
+            aria-hidden
+            className={`h-1.5 w-1.5 shrink-0 rounded-full ${recent ? 'bg-signal' : lastAgentAt ? 'bg-fg-4' : 'bg-line-strong'}`}
+          />
+          {when ? t('project.lastAgent', { when }) : t('project.noAgent')}
+        </span>
+      </div>
+    </div>
   );
 }

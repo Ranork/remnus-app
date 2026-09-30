@@ -206,7 +206,7 @@ export default function IconPicker({
       className={`z-50 bg-neutral-850 border border-neutral-800 shadow-2xl p-4 w-72 rounded-lg text-left text-neutral-200 animate-fade-in animate-duration-150 ${coords ? '' : 'absolute'}`}
     >
       <div className="flex items-center justify-between pb-3 border-b border-neutral-800 mb-3">
-        <span className="text-xs font-semibold text-neutral-400 uppercase tracking-wider">{t('title')}</span>
+        <span className="text-xs font-medium text-neutral-400">{t('title')}</span>
         <div className="flex items-center gap-1.5">
           {currentIcon && (
             <button
@@ -232,7 +232,7 @@ export default function IconPicker({
           onClick={() => setActiveTab('emoji')}
           className={`flex-1 pb-2 flex items-center justify-center gap-1.5 transition-colors font-medium border-b-2 cursor-pointer ${
             activeTab === 'emoji'
-              ? 'border-blue-500 text-white'
+              ? 'border-signal text-fg'
               : 'border-transparent text-neutral-500 hover:text-neutral-300'
           }`}
         >
@@ -243,7 +243,7 @@ export default function IconPicker({
           onClick={() => setActiveTab('lucide')}
           className={`flex-1 pb-2 flex items-center justify-center gap-1.5 transition-colors font-medium border-b-2 cursor-pointer ${
             activeTab === 'lucide'
-              ? 'border-blue-500 text-white'
+              ? 'border-signal text-fg'
               : 'border-transparent text-neutral-500 hover:text-neutral-300'
           }`}
         >
@@ -254,7 +254,7 @@ export default function IconPicker({
           onClick={() => setActiveTab('upload')}
           className={`flex-1 pb-2 flex items-center justify-center gap-1.5 transition-colors font-medium border-b-2 cursor-pointer ${
             activeTab === 'upload'
-              ? 'border-blue-500 text-white'
+              ? 'border-signal text-fg'
               : 'border-transparent text-neutral-500 hover:text-neutral-300'
           }`}
         >
@@ -361,7 +361,7 @@ export default function IconPicker({
             )}
             {isUploading && (
               <div className="absolute inset-0 bg-neutral-900/70 flex items-center justify-center rounded-lg">
-                <Loader2 size={20} className="text-blue-400 animate-spin" />
+                <Loader2 size={20} className="text-signal-text animate-spin" />
               </div>
             )}
           </button>

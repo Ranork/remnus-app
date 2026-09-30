@@ -518,7 +518,7 @@ export default function BubbleMenuBar({ editor }: Props) {
           onMouseDown={(e) => e.preventDefault()}
           className="min-w-49 bg-neutral-900 border border-neutral-800 shadow-xl py-1 rounded-md overflow-hidden"
         >
-          <div className="px-3 py-1.5 text-xs text-neutral-600 font-medium uppercase tracking-wider">{t('bubbleTurnInto')}</div>
+          <div className="px-3 py-1.5 text-xs text-neutral-600 font-medium">{t('bubbleTurnInto')}</div>
           {BLOCK_OPTIONS.map((opt) => (
             <button
               key={opt.type}
@@ -542,7 +542,7 @@ export default function BubbleMenuBar({ editor }: Props) {
           onMouseDown={(e) => e.preventDefault()}
           className="bg-neutral-900 border border-neutral-800 shadow-xl rounded-md overflow-hidden p-3 min-w-50"
         >
-          <div className="text-xs text-neutral-600 font-medium uppercase tracking-wider mb-2">{t('bubbleTextColor')}</div>
+          <div className="text-xs text-neutral-600 font-medium mb-2">{t('bubbleTextColor')}</div>
           <div className="flex items-center gap-1.5 flex-wrap mb-3">
             <RemoveSwatch
               title={t('bubbleColorDefault')}
@@ -561,7 +561,7 @@ export default function BubbleMenuBar({ editor }: Props) {
 
           <div className="w-full h-px bg-neutral-800 mb-3" />
 
-          <div className="text-xs text-neutral-600 font-medium uppercase tracking-wider mb-2">{t('bubbleHighlight')}</div>
+          <div className="text-xs text-neutral-600 font-medium mb-2">{t('bubbleHighlight')}</div>
           <div className="flex items-center gap-1.5 flex-wrap">
             <RemoveSwatch
               title={t('bubbleColorNone')}

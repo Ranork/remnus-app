@@ -28,7 +28,7 @@ import type { DashboardBlockType } from '@/lib/dashboard/schema';
 type Draft = Record<string, any>;
 type Filter = { columnId: string; operator: string; value?: string };
 
-const BLOCK_TYPES: DashboardBlockType[] = ['metric', 'chart', 'database_embed', 'list', 'text', 'links', 'activity'];
+const BLOCK_TYPES: DashboardBlockType[] = ['metric', 'chart', 'database_embed', 'list', 'text', 'links', 'activity', 'project', 'savings'];
 /** Filter operators, labelled with the database view's own wording (`Database` namespace). */
 const OPERATOR_LABELS = {
   equals: 'operatorIs',
@@ -66,6 +66,10 @@ function emptyDraft(type: DashboardBlockType): Draft {
       return { type, items: [{ itemId: '' }] };
     case 'activity':
       return { type };
+    case 'project':
+      return { type, summary: '' };
+    case 'savings':
+      return { type };
   }
 }
 
@@ -88,6 +92,11 @@ function cleanDraft(draft: Draft): Draft {
   if (out.type === 'metric' && !out.aggregate) delete out.columnId;
   if (out.type === 'chart' && out.aggregate !== 'sum') delete out.valueColumnId;
   if (Array.isArray(out.showColumns) && !out.showColumns.length) delete out.showColumns;
+  if (out.type === 'project') {
+    const stack = ((out.stack ?? []) as string[]).map((s) => s.trim()).filter(Boolean);
+    if (stack.length) out.stack = stack;
+    else delete out.stack;
+  }
   if (out.type === 'links') {
     out.items = (out.items as { itemId: string; label?: string }[])
       .filter((i) => i.itemId)
@@ -109,6 +118,8 @@ function isComplete(d: Draft): boolean {
       return !!String(d.markdown ?? '').trim();
     case 'links':
       return (d.items ?? []).some((i: { itemId?: string }) => !!i.itemId);
+    case 'project':
+      return !!String(d.summary ?? '').trim();
     default:
       return true;
   }
@@ -444,6 +455,28 @@ export default function DashboardBlockEditor({
           {type === 'activity' && (
             <LimitField value={draft.limit} fallback={6} min={1} max={20} onChange={(limit) => set({ limit })} />
           )}
+
+          {type === 'project' && (
+            <>
+              <Field label={`${t('editor.summary')} *`}>
+                <textarea
+                  className={`${inputCls} min-h-[88px] resize-y border border-neutral-800 bg-neutral-850 px-2 leading-relaxed`}
+                  value={draft.summary ?? ''}
+                  maxLength={280}
+                  onChange={(e) => set({ summary: e.target.value })}
+                />
+              </Field>
+              <Field label={t('editor.stack')}>
+                <input
+                  className={inputCls}
+                  placeholder={t('editor.stackPlaceholder')}
+                  // Kept as typed while editing; split into chips (≤ 8 × 24 chars) on save.
+                  value={Array.isArray(draft.stack) ? draft.stack.join(', ') : ''}
+                  onChange={(e) => set({ stack: e.target.value.split(',').map((s) => s.trimStart().slice(0, 24)).slice(0, 8) })}
+                />
+              </Field>
+            </>
+          )}
         </div>
 
         <footer className="shrink-0 space-y-2 border-t border-neutral-800 px-5 py-3">
@@ -457,7 +490,7 @@ export default function DashboardBlockEditor({
               type="button"
               onClick={save}
               disabled={!complete || pending || !options}
-              className="bg-blue-500 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-blue-500/85 disabled:opacity-40"
+              className="bg-ink px-3 py-1.5 text-xs font-medium text-ink-fg transition-colors hover:bg-ink/88 disabled:opacity-40"
             >
               {pending ? t('editor.saving') : t('editor.save')}
             </button>
@@ -485,7 +518,7 @@ function clamp(raw: string, min: number, max: number): number {
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <p className="mb-1 text-[10px] font-semibold uppercase tracking-widest text-neutral-500">{label}</p>
+      <p className="mb-1 text-2xs font-medium text-neutral-500">{label}</p>
       {children}
     </div>
   );

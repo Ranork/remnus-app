@@ -112,7 +112,7 @@ export default function KanbanLayoutSection({
                 onDragOver={(e) => { e.preventDefault(); if (draggingCardProp && draggingCardProp !== col.id) setDragOverCardProp(col.id); }}
                 onDrop={() => handleDrop(col.id)}
                 onDragEnd={() => { setDraggingCardProp(null); setDragOverCardProp(null); }}
-                className={`flex items-center gap-2 px-4 py-2 border-b border-neutral-800/30 hover:bg-neutral-800/10 transition-colors cursor-default ${draggingCardProp === col.id ? 'opacity-30' : ''} ${dragOverCardProp === col.id ? 'border-t-2 border-t-blue-500/50' : ''}`}
+                className={`flex items-center gap-2 px-4 py-2 border-b border-neutral-800/30 hover:bg-neutral-800/10 transition-colors cursor-default ${draggingCardProp === col.id ? 'opacity-30' : ''} ${dragOverCardProp === col.id ? 'border-t-2 border-t-signal/50' : ''}`}
               >
                 <GripVertical size={11} className="text-neutral-600 cursor-grab shrink-0" />
                 {getPropertyIcon(col.type)}
@@ -183,7 +183,7 @@ export default function KanbanLayoutSection({
                     onClick={() => onCardBorderSideChange?.(side)}
                     className={`w-7 h-7 flex items-center justify-center border rounded transition-colors cursor-pointer ${
                       cardBorderSide === side
-                        ? 'border-blue-500/60 text-blue-400 bg-blue-500/10'
+                        ? 'border-signal/60 text-signal-text bg-signal/10'
                         : 'border-neutral-700 text-neutral-500 hover:border-neutral-600 hover:text-neutral-400'
                     }`}
                   >

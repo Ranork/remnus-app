@@ -26,9 +26,9 @@ export function getPropertyIcon(type: string) {
 export function Checkbox({ checked }: { checked: boolean }) {
   return (
     <span className={`w-3.5 h-3.5 border flex items-center justify-center shrink-0 transition-colors rounded-sm ${
-      checked ? 'bg-blue-500 border-blue-500' : 'border-neutral-700'
+      checked ? 'bg-signal border-signal' : 'border-neutral-700'
     }`}>
-      {checked && <span className="text-[8px] font-bold text-white leading-none">✓</span>}
+      {checked && <span className="text-2xs font-bold text-signal-fg leading-none">✓</span>}
     </span>
   );
 }
@@ -51,7 +51,7 @@ export function CollapsibleSection({
         onClick={() => setOpen((o) => !o)}
         className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-neutral-800/10 transition-colors cursor-pointer"
       >
-        <span className="text-[10px] text-neutral-500 uppercase tracking-wider">{label}</span>
+        <span className="text-2xs text-neutral-500">{label}</span>
         <ChevronDown
           size={12}
           className={`text-neutral-600 transition-transform duration-150 ${open ? '' : '-rotate-90'}`}

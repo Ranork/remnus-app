@@ -2,7 +2,7 @@
   "Layout": {
     "demoMode": "Modo Demo",
     "demoChangesNote": "Los cambios son temporales y se restablecen para cada visitante.",
-    "createFreeAccount": "Crear una cuenta gratuita →",
+    "createFreeAccount": "Crear una cuenta gratuita",
     "projectWindowLabel": "Ventana de proyecto",
     "projectWindowExplain": "Esta ventana solo muestra {workspace}. Tu cuenta, tus otros espacios y los ajustes están en la app completa de Remnus.",
     "projectWindowAbout": "Acerca de esta ventana",
@@ -261,6 +261,7 @@
     "showHiddenWorkspaces": "Mostrar ocultos ({count})",
     "hideHiddenWorkspaces": "Ocultar ocultos",
     "workspaceSettings": "Configuración del espacio",
+    "accessRequestsPending": "{count, plural, one {# solicitud de acceso en espera — revísala} other {# solicitudes de acceso en espera — revísalas}}",
     "importNotion": "Importar desde Notion",
     "changeIcon": "Cambiar ícono",
     "addSubPage": "Agregar subpágina",
@@ -880,6 +881,21 @@
     "cancel": "Cancelar",
     "addBlock": "Añadir bloque",
     "editBlock": "Editar bloque",
+    "project": {
+      "lastAgent": "Un agente trabajó aquí por última vez {when}",
+      "noAgent": "Ningún agente ha trabajado aquí todavía"
+    },
+    "home": {
+      "badge": "Inicio",
+      "note": "Este panel se armó a partir de tus bases de datos. Para uno hecho a la medida de tu proyecto, pídele a tu agente conectado: «Actualiza la calibración de Remnus».",
+      "open": "{name}: abiertos",
+      "byStatus": "{name} por estado",
+      "nextDue": "{name}: próximos vencimientos",
+      "stillOpen": "{name}: aún abiertos",
+      "latest": "{name}: lo más reciente",
+      "whereToLook": "Dónde mirar",
+      "agentActivity": "Actividad de agentes"
+    },
     "blockTypes": {
       "metric": "Métrica",
       "chart": "Gráfico",
@@ -887,7 +903,9 @@
       "list": "Lista",
       "text": "Texto",
       "links": "Enlaces",
-      "activity": "Actividad de agentes"
+      "activity": "Actividad de agentes",
+      "project": "Cabecera del proyecto",
+      "savings": "Ahorro de agentes"
     },
     "editor": {
       "addTitle": "Añadir un bloque",
@@ -953,7 +971,10 @@
       "requiredHint": "Rellena los campos marcados con * para guardar.",
       "saveFailed": "No se pudo guardar este bloque. Revisa sus ajustes y vuelve a intentarlo.",
       "save": "Guardar",
-      "saving": "Guardando…"
+      "saving": "Guardando…",
+      "summary": "Resumen",
+      "stack": "Tecnologías",
+      "stackPlaceholder": "p. ej. Next.js, Postgres, Stripe"
     }
   },
   "Editor": {
@@ -1073,6 +1094,9 @@
     "untitled": "Sin título",
     "addIcon": "Agregar ícono",
     "changeIcon": "Cambiar ícono",
+    "removeIcon": "Quitar icono",
+    "pageOptions": "Opciones de página",
+    "widthLabel": "Ancho de página",
     "deletePage": "Eliminar página",
     "deleteConfirm": "¿Eliminar \"{title}\"?",
     "delete": "Eliminar",
@@ -2257,6 +2281,9 @@
   },
   "Graph": {
     "title": "Mapa de conocimiento",
+    "switchWorkspace": "Cambiar de espacio de trabajo",
+    "openDashboard": "Abrir el panel de este espacio de trabajo",
+    "loadingRows": "Cargando filas…",
     "layoutLabel": "Disposición",
     "layoutNetwork": "Red",
     "layoutTree": "Árbol",

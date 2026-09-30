@@ -194,7 +194,7 @@ export default function InlineCellEditor({
                   className="mx-2 mb-1 px-2 py-1 text-xs bg-neutral-900 border border-neutral-800 rounded focus:outline-none focus:border-neutral-700 text-neutral-200 placeholder-neutral-600"
                 />
               ) : (
-                <div className="px-3 py-1 text-[10px] text-neutral-500 font-semibold uppercase tracking-wider border-b border-neutral-850 mb-1">
+                <div className="px-3 py-1 text-2xs text-neutral-500 font-medium border-b border-neutral-850 mb-1">
                   {t('toggleOptions')}
                 </div>
               )}
@@ -255,7 +255,7 @@ export default function InlineCellEditor({
               </button>
               {STATUS_GROUP_ORDER.map((g) => grouped[g].length > 0 && (
                 <div key={g}>
-                  <div className="px-3 pt-1.5 pb-0.5 text-[10px] text-neutral-500 font-semibold uppercase tracking-wider">{groupLabel[g]}</div>
+                  <div className="px-3 pt-1.5 pb-0.5 text-2xs text-neutral-500 font-medium">{groupLabel[g]}</div>
                   {grouped[g].map((opt) => {
                     const c = getOptionColor(opt);
                     const isSelected = value === opt.value;
@@ -365,7 +365,7 @@ export default function InlineCellEditor({
       <div className="relative w-full flex items-center cursor-pointer"
         onClick={(e) => { e.stopPropagation(); onSave(!isChecked); onClose(); }}>
         {isChecked
-          ? <CheckSquare size={14} className="text-blue-400" />
+          ? <CheckSquare size={14} className="text-signal-text" />
           : <Square size={14} className="text-neutral-500" />
         }
       </div>

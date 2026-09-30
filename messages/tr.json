@@ -2,7 +2,7 @@
   "Layout": {
     "demoMode": "Demo Modu",
     "demoChangesNote": "Değişiklikler geçicidir ve her ziyaretçi için sıfırlanır.",
-    "createFreeAccount": "Ücretsiz hesap oluştur →",
+    "createFreeAccount": "Ücretsiz hesap oluştur",
     "projectWindowLabel": "Proje penceresi",
     "projectWindowExplain": "Bu pencere yalnızca {workspace} alanını gösterir. Hesabınız, diğer çalışma alanlarınız ve ayarlarınız tam Remnus uygulamasında.",
     "projectWindowAbout": "Bu pencere hakkında",
@@ -261,6 +261,7 @@
     "showHiddenWorkspaces": "Gizlenenleri göster ({count})",
     "hideHiddenWorkspaces": "Gizlenenleri sakla",
     "workspaceSettings": "Çalışma alanı ayarları",
+    "accessRequestsPending": "{count, plural, one {# erişim isteği bekliyor — incele} other {# erişim isteği bekliyor — incele}}",
     "importNotion": "Notion'dan içe aktar",
     "changeIcon": "Simgeyi değiştir",
     "addSubPage": "Alt sayfa ekle",
@@ -880,6 +881,21 @@
     "cancel": "İptal",
     "addBlock": "Blok ekle",
     "editBlock": "Bloğu düzenle",
+    "project": {
+      "lastAgent": "Bir ajan en son {when} burada çalıştı",
+      "noAgent": "Henüz burada çalışan bir ajan yok"
+    },
+    "home": {
+      "badge": "Ana pano",
+      "note": "Bu pano veritabanlarınızdan otomatik oluşturuldu. Projenize göre kurulmuş bir pano için bağlı ajanınıza şunu yazın: “Remnus kalibrasyonunu yenile”.",
+      "open": "{name}: açık",
+      "byStatus": "{name} — duruma göre",
+      "nextDue": "{name}: sıradaki tarih",
+      "stillOpen": "{name}: hâlâ açık",
+      "latest": "{name}: en yeni",
+      "whereToLook": "Nereye bakmalı",
+      "agentActivity": "Ajan etkinliği"
+    },
     "blockTypes": {
       "metric": "Sayı",
       "chart": "Grafik",
@@ -887,7 +903,9 @@
       "list": "Liste",
       "text": "Metin",
       "links": "Bağlantılar",
-      "activity": "Ajan etkinliği"
+      "activity": "Ajan etkinliği",
+      "project": "Proje başlığı",
+      "savings": "Ajan tasarrufu"
     },
     "editor": {
       "addTitle": "Blok ekle",
@@ -953,7 +971,10 @@
       "requiredHint": "Kaydetmek için * ile işaretli alanları doldurun.",
       "saveFailed": "Bu blok kaydedilemedi. Ayarlarını kontrol edip tekrar deneyin.",
       "save": "Kaydet",
-      "saving": "Kaydediliyor…"
+      "saving": "Kaydediliyor…",
+      "summary": "Özet",
+      "stack": "Teknoloji",
+      "stackPlaceholder": "ör. Next.js, Postgres, Stripe"
     }
   },
   "Editor": {
@@ -1073,6 +1094,9 @@
     "untitled": "Başlıksız",
     "addIcon": "Simge ekle",
     "changeIcon": "Simgeyi değiştir",
+    "removeIcon": "Simgeyi kaldır",
+    "pageOptions": "Sayfa seçenekleri",
+    "widthLabel": "Sayfa genişliği",
     "deletePage": "Sayfayı sil",
     "deleteConfirm": "\"{title}\" silinsin mi?",
     "delete": "Sil",
@@ -2281,6 +2305,9 @@
   },
   "Graph": {
     "title": "Bilgi haritası",
+    "switchWorkspace": "Çalışma alanını değiştir",
+    "openDashboard": "Bu çalışma alanının panosunu aç",
+    "loadingRows": "Satırlar yükleniyor…",
     "layoutLabel": "Yerleşim",
     "layoutNetwork": "Ağ",
     "layoutTree": "Ağaç",

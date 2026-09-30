@@ -121,16 +121,16 @@ export function JoinForm({ projectName, userName, authMode, access, error, onJoi
 
           {isMember && authMode === 'oauth' ? (
             <div className="px-6 pt-5 pb-4 border-b border-neutral-800">
-              <p className="text-xs text-neutral-500 uppercase tracking-wider mb-2.5">{t('accessLevel')}</p>
+              <p className="text-xs text-neutral-500 mb-2.5">{t('accessLevel')}</p>
               <p className="text-sm text-neutral-400 leading-relaxed">{t('oauthScopeHint')}</p>
             </div>
           ) : (
             <div className="px-6 pt-5 pb-4 border-b border-neutral-800">
-              <p className="text-xs text-neutral-500 uppercase tracking-wider mb-2.5">{t('accessLevel')}</p>
+              <p className="text-xs text-neutral-500 mb-2.5">{t('accessLevel')}</p>
 
               {viewerOnly ? (
                 <p className="text-sm text-neutral-400 leading-relaxed flex gap-2.5">
-                  <Eye size={15} className="text-blue-400/80 shrink-0 mt-0.5" />
+                  <Eye size={15} className="text-signal-text/80 shrink-0 mt-0.5" />
                   <span>{t('viewerScopeHint')}</span>
                 </p>
               ) : (
@@ -144,7 +144,7 @@ export function JoinForm({ projectName, userName, authMode, access, error, onJoi
                         scope === s
                           ? s === 'write'
                             ? 'bg-amber-500/10 border-amber-500/40 text-amber-300'
-                            : 'bg-blue-500/10 border-blue-500/40 text-blue-300'
+                            : 'bg-signal/10 border-signal/40 text-signal-text'
                           : 'bg-neutral-800 border-neutral-700 text-neutral-400 hover:text-neutral-200 hover:border-neutral-600'
                       }`}
                     >
@@ -174,7 +174,7 @@ export function JoinForm({ projectName, userName, authMode, access, error, onJoi
 
             {!isMember && access.state !== 'denied' && (
               <>
-                <label className="text-xs text-neutral-500 uppercase tracking-wider mb-2 block">
+                <label className="text-xs text-neutral-500 mb-2 block">
                   {t('noteLabel')}
                 </label>
                 <textarea
@@ -184,7 +184,7 @@ export function JoinForm({ projectName, userName, authMode, access, error, onJoi
                   value={note}
                   onChange={(e) => setNote(e.target.value)}
                   placeholder={t('notePlaceholder')}
-                  className="w-full bg-neutral-800 border border-neutral-700 text-neutral-100 text-sm px-3 py-2.5 rounded-lg focus:outline-none focus:border-blue-500 mb-4 placeholder:text-neutral-600 resize-none"
+                  className="w-full bg-neutral-800 border border-neutral-700 text-neutral-100 text-sm px-3 py-2.5 rounded-lg focus:outline-none focus:border-signal mb-4 placeholder:text-neutral-600 resize-none"
                 />
               </>
             )}
@@ -194,7 +194,7 @@ export function JoinForm({ projectName, userName, authMode, access, error, onJoi
               className={`w-full font-medium text-sm py-2.5 rounded-lg transition-colors ${
                 access.state === 'denied'
                   ? 'bg-neutral-800 hover:bg-neutral-700 text-neutral-300 border border-neutral-700'
-                  : 'bg-blue-500 hover:bg-blue-600 active:bg-blue-700 text-white'
+                  : 'bg-ink hover:bg-ink/88 active:bg-ink/80 text-ink-fg'
               }`}
             >
               {submitLabel}

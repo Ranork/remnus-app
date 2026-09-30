@@ -92,7 +92,7 @@ export default function KnowledgeContextPanel({ workspaceId, pageId }: { workspa
               <div className="grid gap-3 sm:grid-cols-2">
                 <label className="space-y-1 text-[11px] text-neutral-500">
                   <span>{t('knowledgeType')}</span>
-                  <input value={form.conceptType} onChange={event => setForm(current => ({ ...current, conceptType: event.target.value }))} className="w-full border-b border-neutral-700 bg-transparent px-1 py-1.5 text-xs text-neutral-200 outline-none focus:border-blue-500" />
+                  <input value={form.conceptType} onChange={event => setForm(current => ({ ...current, conceptType: event.target.value }))} className="w-full border-b border-neutral-700 bg-transparent px-1 py-1.5 text-xs text-neutral-200 outline-none focus:border-signal" />
                 </label>
                 <label className="space-y-1 text-[11px] text-neutral-500">
                   <span>{t('knowledgeStatus')}</span>
@@ -111,24 +111,24 @@ export default function KnowledgeContextPanel({ workspaceId, pageId }: { workspa
               </div>
               <label className="block space-y-1 text-[11px] text-neutral-500">
                 <span>{t('knowledgeDescription')}</span>
-                <textarea value={form.description} onChange={event => setForm(current => ({ ...current, description: event.target.value }))} rows={2} className="w-full resize-y border-b border-neutral-700 bg-transparent px-1 py-1.5 text-xs text-neutral-200 outline-none focus:border-blue-500" />
+                <textarea value={form.description} onChange={event => setForm(current => ({ ...current, description: event.target.value }))} rows={2} className="w-full resize-y border-b border-neutral-700 bg-transparent px-1 py-1.5 text-xs text-neutral-200 outline-none focus:border-signal" />
               </label>
               <div className="grid gap-3 sm:grid-cols-2">
                 <label className="space-y-1 text-[11px] text-neutral-500">
                   <span>{t('knowledgeTags')}</span>
-                  <input value={form.tags} onChange={event => setForm(current => ({ ...current, tags: event.target.value }))} placeholder={t('knowledgeTagsHint')} className="w-full border-b border-neutral-700 bg-transparent px-1 py-1.5 text-xs text-neutral-200 outline-none focus:border-blue-500" />
+                  <input value={form.tags} onChange={event => setForm(current => ({ ...current, tags: event.target.value }))} placeholder={t('knowledgeTagsHint')} className="w-full border-b border-neutral-700 bg-transparent px-1 py-1.5 text-xs text-neutral-200 outline-none focus:border-signal" />
                 </label>
                 <label className="space-y-1 text-[11px] text-neutral-500">
                   <span>{t('knowledgeStaleAfter')}</span>
-                  <input type="date" value={form.staleAfter} onChange={event => setForm(current => ({ ...current, staleAfter: event.target.value }))} className="w-full border-b border-neutral-700 bg-transparent px-1 py-1.5 text-xs text-neutral-200 outline-none focus:border-blue-500" />
+                  <input type="date" value={form.staleAfter} onChange={event => setForm(current => ({ ...current, staleAfter: event.target.value }))} className="w-full border-b border-neutral-700 bg-transparent px-1 py-1.5 text-xs text-neutral-200 outline-none focus:border-signal" />
                 </label>
               </div>
               <label className="block space-y-1 text-[11px] text-neutral-500">
                 <span>{t('knowledgeSources')}</span>
-                <textarea value={form.sources} onChange={event => setForm(current => ({ ...current, sources: event.target.value }))} rows={2} placeholder={t('knowledgeSourcesHint')} className="w-full resize-y border-b border-neutral-700 bg-transparent px-1 py-1.5 text-xs text-neutral-200 outline-none focus:border-blue-500" />
+                <textarea value={form.sources} onChange={event => setForm(current => ({ ...current, sources: event.target.value }))} rows={2} placeholder={t('knowledgeSourcesHint')} className="w-full resize-y border-b border-neutral-700 bg-transparent px-1 py-1.5 text-xs text-neutral-200 outline-none focus:border-signal" />
               </label>
               <div className="flex flex-wrap items-center gap-2">
-                <button type="button" onClick={save} disabled={!!busy} className="inline-flex items-center gap-1.5 bg-blue-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-blue-500 disabled:opacity-50 cursor-pointer">
+                <button type="button" onClick={save} disabled={!!busy} className="inline-flex items-center gap-1.5 bg-ink px-3 py-1.5 text-xs font-medium text-ink-fg transition-colors hover:bg-ink/88 disabled:opacity-50 cursor-pointer">
                   {busy === 'save' ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />}{t('knowledgeSave')}
                 </button>
                 <button type="button" onClick={review} disabled={!!busy} className="inline-flex items-center gap-1.5 border border-neutral-700 px-3 py-1.5 text-xs text-neutral-300 transition-colors hover:bg-neutral-800 disabled:opacity-50 cursor-pointer">

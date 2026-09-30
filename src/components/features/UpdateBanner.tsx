@@ -133,7 +133,7 @@ export default function UpdateBanner() {
       {state.phase === 'downloading' && (
         <div className="h-1 w-full bg-neutral-800 overflow-hidden">
           <div
-            className="h-full bg-blue-500 transition-all duration-300"
+            className="h-full bg-signal transition-all duration-300"
             style={{ width: `${state.progress}%` }}
           />
         </div>
@@ -142,7 +142,7 @@ export default function UpdateBanner() {
       {state.phase === 'available' && (
         <button
           onClick={handleInstall}
-          className="flex items-center justify-center gap-2 px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white text-xs font-medium transition-colors"
+          className="flex items-center justify-center gap-2 px-3 py-1.5 bg-ink hover:bg-ink/88 text-ink-fg text-xs font-medium transition-colors"
         >
           <Download size={13} />
           {t('installButton')}
@@ -152,7 +152,7 @@ export default function UpdateBanner() {
       {state.phase === 'error' && (
         <button
           onClick={handleInstall}
-          className="flex items-center justify-center gap-2 px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white text-xs font-medium transition-colors"
+          className="flex items-center justify-center gap-2 px-3 py-1.5 bg-ink hover:bg-ink/88 text-ink-fg text-xs font-medium transition-colors"
         >
           <RefreshCw size={13} />
           {t('retryButton')}

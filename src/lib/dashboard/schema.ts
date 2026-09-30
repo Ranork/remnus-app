@@ -153,6 +153,27 @@ export const activityBlockSchema = z.strictObject({
   limit: z.number().int().min(1).max(20).default(6),
 });
 
+// -- project ------------------------------------------------------------------
+// The header of a project's home dashboard: what this workspace is for, in the
+// agent's own words, plus the stack. Everything live — the workspace name, when an
+// agent last worked here — is read at render time, never stored.
+export const projectBlockSchema = z.strictObject({
+  ...baseFields,
+  type: z.literal('project'),
+  /** One or two sentences: what the project is, for whom, what stage. */
+  summary: z.string().min(1).max(280),
+  /** Short chips: languages, frameworks, platforms. */
+  stack: z.array(z.string().min(1).max(24)).max(8).optional(),
+});
+
+// -- savings ------------------------------------------------------------------
+// What agents saved in THIS workspace — the same measured figures as the AI Agents
+// panel, scoped to the dashboard's workspace. No fields: there is nothing to choose.
+export const savingsBlockSchema = z.strictObject({
+  ...baseFields,
+  type: z.literal('savings'),
+});
+
 export const dashboardBlockSchema = z.discriminatedUnion('type', [
   metricBlockSchema,
   chartBlockSchema,
@@ -161,6 +182,8 @@ export const dashboardBlockSchema = z.discriminatedUnion('type', [
   textBlockSchema,
   linksBlockSchema,
   activityBlockSchema,
+  projectBlockSchema,
+  savingsBlockSchema,
 ]);
 
 export type DashboardBlock = z.infer<typeof dashboardBlockSchema>;
@@ -172,6 +195,8 @@ export type ListBlock = z.infer<typeof listBlockSchema>;
 export type TextBlock = z.infer<typeof textBlockSchema>;
 export type LinksBlock = z.infer<typeof linksBlockSchema>;
 export type ActivityBlock = z.infer<typeof activityBlockSchema>;
+export type ProjectBlock = z.infer<typeof projectBlockSchema>;
+export type SavingsBlock = z.infer<typeof savingsBlockSchema>;
 
 export const MAX_DASHBOARD_BLOCKS = 40;
 
@@ -208,6 +233,8 @@ const DEFAULT_WIDTH: Record<DashboardBlockType, DashboardWidth> = {
   text: 'half',
   links: 'quarter',
   activity: 'half',
+  project: 'full',
+  savings: 'half',
 };
 
 export function blockWidth(block: DashboardBlock): DashboardWidth {
@@ -330,5 +357,15 @@ export const DASHBOARD_BLOCK_CATALOG: { type: DashboardBlockType; summary: strin
     type: 'activity',
     summary: 'The most recent agent activity in this workspace.',
     use: 'Showing what the agents have been doing, and when they last touched the workspace.',
+  },
+  {
+    type: 'project',
+    summary: 'The header of a home dashboard: the workspace name, your one-or-two-sentence summary of the project and its stack as chips, plus when an agent last worked here (live).',
+    use: 'First block of a project home dashboard, full width. `summary` says what the project is, for whom and at what stage - from what you read, never a guess.',
+  },
+  {
+    type: 'savings',
+    summary: 'The tokens agents did not have to spend in this workspace, with what the figure is based on - measured, live, no fields.',
+    use: 'On a home dashboard, beside activity. Shows an honest "after the first session" note until there is a number.',
   },
 ];

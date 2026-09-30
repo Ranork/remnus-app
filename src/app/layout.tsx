@@ -6,6 +6,7 @@ import { getLocale } from 'next-intl/server';
 import Script from 'next/script';
 import DebugConsole from '@/components/providers/DebugConsole';
 import AccessibilityWidgetTheme from '@/components/providers/AccessibilityWidgetTheme';
+import { WIDGET_EXCLUDE_PATHS } from '@/lib/accessibilityWidget';
 
 const onest = Onest({
   subsets: ['latin'],
@@ -68,7 +69,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           data-position="bottom-left"
           data-offset-x="1.25rem"
           data-offset-y="1.25rem"
-          data-exclude-paths="/app,/admin,/db,/page"
+          data-exclude-paths={WIDGET_EXCLUDE_PATHS}
         />
         <AccessibilityWidgetTheme />
       </body>

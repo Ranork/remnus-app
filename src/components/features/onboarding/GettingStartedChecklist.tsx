@@ -74,9 +74,9 @@ export default function GettingStartedChecklist({
           onClick={onToggleCollapse}
           className="w-full flex items-center gap-1.5 min-w-0 px-2 py-1.5 rounded-md text-sm text-neutral-300 hover:bg-neutral-800 hover:text-neutral-50 transition-all duration-200"
         >
-          <ListChecks size={14} className="shrink-0 text-blue-400" />
+          <ListChecks size={14} className="shrink-0 text-signal-text" />
           <span className="truncate">{t('checklistTitle')}</span>
-          <span className="ml-auto shrink-0 text-[10px] font-bold text-blue-400 bg-blue-500/10 border border-blue-500/20 px-1.5 py-0.5 rounded-full leading-none">
+          <span className="ml-auto shrink-0 text-[10px] font-bold text-signal-text bg-signal/10 border border-signal/20 px-1.5 py-0.5 rounded-full leading-none">
             {doneCount}/{steps.length}
           </span>
         </button>
@@ -88,7 +88,7 @@ export default function GettingStartedChecklist({
     <div className="mx-2 mt-1 rounded-lg border border-neutral-800 bg-neutral-950/40 overflow-hidden">
       <div className="flex items-center gap-2 px-3 pt-2.5 pb-1.5">
         <span className="text-[11px] font-semibold text-neutral-200">{t('checklistTitle')}</span>
-        <span className="text-[10px] font-bold text-blue-400 bg-blue-500/10 border border-blue-500/20 px-1.5 py-0.5 rounded-full leading-none">
+        <span className="text-[10px] font-bold text-signal-text bg-signal/10 border border-signal/20 px-1.5 py-0.5 rounded-full leading-none">
           {doneCount}/{steps.length}
         </span>
         <button
@@ -113,7 +113,7 @@ export default function GettingStartedChecklist({
                   step.done
                     ? 'bg-green-500/15 border-green-500/40 text-green-400'
                     : isActive
-                      ? 'border-blue-500/50 text-blue-400'
+                      ? 'border-signal/50 text-signal-text'
                       : 'border-neutral-700 text-neutral-600'
                 }`}
               >
@@ -129,7 +129,7 @@ export default function GettingStartedChecklist({
               {isActive && (
                 <button
                   onClick={onConnect}
-                  className="ml-auto shrink-0 inline-flex items-center gap-0.5 text-[10px] font-semibold text-blue-300 hover:text-blue-400 bg-blue-500/10 hover:bg-blue-500/15 border border-blue-500/20 px-1.5 py-0.5 rounded transition-colors"
+                  className="ml-auto shrink-0 inline-flex items-center gap-0.5 text-[10px] font-semibold text-signal-text hover:text-fg bg-signal/10 hover:bg-signal/15 border border-signal/20 px-1.5 py-0.5 rounded transition-colors"
                 >
                   {t('checklistGo')} <ArrowRight size={10} />
                 </button>

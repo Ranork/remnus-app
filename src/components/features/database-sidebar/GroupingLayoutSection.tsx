@@ -36,7 +36,7 @@ export default function GroupingLayoutSection({
       <div className="px-4 pb-3 flex flex-col gap-2">
         {selectColumns.length > 0 ? (
           <div>
-            <span className="block text-[10px] text-neutral-500 uppercase tracking-wider mb-1.5">{t('groupBy')}</span>
+            <span className="block text-2xs text-neutral-500 mb-1.5">{t('groupBy')}</span>
             <SimpleSelect
               value={groupByCol ?? ''}
               onValueChange={(v) => onGroupByColChange?.(v)}

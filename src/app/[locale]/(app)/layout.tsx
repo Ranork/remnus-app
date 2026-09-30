@@ -18,6 +18,7 @@ import DownloadToast from '@/components/features/DownloadToast';
 import DemoFeedbackPrompt from '@/components/features/DemoFeedbackPrompt';
 import PwaInstallNudge from '@/components/features/PwaInstallNudge';
 import ProjectWindowBanner from '@/components/features/ProjectWindowBanner';
+import AccessibilityWidgetOff from '@/components/providers/AccessibilityWidgetOff';
 
 // Layout for the authenticated in-app routes (app / db / page / admin). Lives in the
 // (app) route group so it is NOT shared with public routes (share, marketing, auth) —
@@ -34,6 +35,14 @@ export default async function AppGroupLayout({
   if (!session?.user) redirect('/login');
 
   const t = await getTranslations('Layout');
+
+  // When this render reads the database, by the server's clock — taken before the
+  // reads, so it never claims more than they saw. Live refresh compares it with the
+  // change version to tell whether a write in the same second may be missing from
+  // what the user sees (see `mayPredateRender`). `router.refresh()` re-renders this
+  // layout, so every refresh brings a new value.
+  // eslint-disable-next-line react-hooks/purity -- a per-request server timestamp, by design
+  const renderedAt = Date.now();
 
   const [workspacesList, items, cookieStore] = await Promise.all([
     getWorkspaces(),
@@ -59,11 +68,12 @@ export default async function AppGroupLayout({
   };
 
   const demoBanner = session.user.role === 'demo' ? (
-    <div key="demo-banner" className="shrink-0 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-4 px-4 py-2 bg-amber-500/10 border-b border-amber-500/20">
-      <div className="flex items-center gap-1.5 text-xs text-amber-400 min-w-0">
-        <span className="font-semibold shrink-0">{t('demoMode')}</span>
-        <span className="text-amber-500/70 shrink-0">—</span>
-        <span className="text-amber-400/80 truncate">{t('demoChangesNote')}</span>
+    // Sits on the desk above the sheet (desktop); a strip over the content on mobile.
+    <div key="demo-banner" className="shrink-0 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1.5 sm:gap-4 px-4 py-2 lg:h-11 lg:py-0 lg:pl-4 lg:pr-2 border-b border-line lg:border-0 text-xs">
+      <div className="flex items-center gap-2 min-w-0">
+        <span className="size-1.5 shrink-0 rounded-full bg-signal" aria-hidden />
+        <span className="font-semibold text-fg shrink-0">{t('demoMode')}</span>
+        <span className="text-fg-3 truncate">{t('demoChangesNote')}</span>
       </div>
       <form
         action={async () => {
@@ -73,7 +83,7 @@ export default async function AppGroupLayout({
       >
         <button
           type="submit"
-          className="shrink-0 text-xs font-medium text-amber-300 hover:text-amber-100 transition-colors self-start sm:self-auto"
+          className="shrink-0 inline-flex h-7 items-center rounded-control bg-ink px-3 font-semibold text-ink-fg transition-colors hover:bg-ink/90 self-start sm:self-auto"
         >
           {t('createFreeAccount')}
         </button>
@@ -89,8 +99,9 @@ export default async function AppGroupLayout({
 
   return (
     <>
-      <ActivityTracker isProjectWindow={isProjectWindow} />
+      <ActivityTracker isProjectWindow={isProjectWindow} renderedAt={renderedAt} />
       <LastPathTracker ownerTag={lastPathOwnerTag(session.user.id)} />
+      <AccessibilityWidgetOff />
       {session.user.role === 'demo' && <DemoFeedbackPrompt />}
       {session.user.role !== 'demo' && <PwaInstallNudge />}
       <BillingSuccessModal />
@@ -112,6 +123,7 @@ export default async function AppGroupLayout({
               density={sidebarDensity}
               showOnboarding
               isProjectWindow={isProjectWindow}
+              renderedAt={renderedAt}
             />
           }
           mobileNav={

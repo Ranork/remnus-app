@@ -28,10 +28,10 @@ export default function SortsSection({ sorts, schema, onSortsChange }: SortsSect
   return (
     <div>
       <div className="flex items-center justify-between px-4 py-2.5">
-        <span className="text-[10px] text-neutral-500 uppercase tracking-wider">
+        <span className="text-2xs text-neutral-500">
           {t('sorts')}{sorts.length > 0 && ` (${sorts.length})`}
         </span>
-        <button onClick={addSort} className="flex items-center gap-1 text-[10px] text-blue-400 hover:text-blue-300 cursor-pointer">
+        <button onClick={addSort} className="flex items-center gap-1 text-[10px] text-signal-text hover:text-fg cursor-pointer">
           <Plus size={10} /> Add
         </button>
       </div>

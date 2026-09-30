@@ -74,7 +74,7 @@ export function OptionTile({
 }) {
   const accent = tone === 'red'
     ? { border: 'border-red-500/40 bg-red-500/10', dot: 'bg-red-500' }
-    : { border: 'border-blue-500/40 bg-blue-500/10', dot: 'bg-blue-500' };
+    : { border: 'border-signal/40 bg-signal/10', dot: 'bg-signal' };
 
   return (
     <button

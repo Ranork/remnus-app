@@ -1,9 +1,10 @@
 import { db } from '@/db';
-import { agentActivity, agentTokens, databases, dashboards, oauthAccessTokens, pages, workspaceItems } from '@/db/schema';
+import { agentActivity, agentTokens, databases, dashboards, oauthAccessTokens, pages, workspaceItems, workspaces } from '@/db/schema';
 import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm';
 import type { DatabaseView } from '@/lib/types/views';
 import { applyFilters, applySorts, type FilterSpec, type SortSpec } from '@/lib/tableFilters';
 import { activityAtOrAfter, auditVisibleSince } from '@/lib/services/auditRetention';
+import { getAgentMetrics, type AgentMetrics } from '@/lib/services/agentMetrics';
 import {
   parseDashboardSpec,
   type ActivityBlock,
@@ -13,6 +14,8 @@ import {
   type LinksBlock,
   type ListBlock,
   type MetricBlock,
+  type ProjectBlock,
+  type SavingsBlock,
   type TextBlock,
 } from './schema';
 
@@ -75,6 +78,9 @@ export type ResolvedBlock =
   | { kind: 'text'; block: TextBlock }
   | { kind: 'links'; block: LinksBlock; links: { itemId: string; label: string; href: string | null; icon: string | null; iconColor: string | null; type: 'page' | 'database' | 'dashboard' | null }[] }
   | { kind: 'activity'; block: ActivityBlock; entries: { id: string; tool: string; status: 'success' | 'error'; actor: string | null; createdAt: Date }[] }
+  /** `agentRecent`: an agent called Remnus here in the last 15 minutes. */
+  | { kind: 'project'; block: ProjectBlock; workspaceName: string; lastAgentAt: Date | null; agentRecent: boolean }
+  | { kind: 'savings'; block: SavingsBlock; metrics: AgentMetrics }
   /** The block is well-formed, but what it points at is gone or unreachable. */
   | { kind: 'unavailable'; block: DashboardBlock; reason: 'database_missing' | 'view_missing' | 'column_missing' }
   /** The block itself could not be read — see `parseDashboardSpec`. */
@@ -259,7 +265,26 @@ export async function resolveDashboard(workspaceId: string, rawSpec: unknown): P
       .limit(activityLimit);
   }
 
-  // 5. Per-block computation over the already-loaded data.
+  // 5. The home-dashboard blocks: the workspace's own name, when an agent last
+  //    worked here, and the measured savings — each read only if a block asks.
+  const wantsProject = goodBlocks.some((b) => b.type === 'project');
+  const wantsSavings = goodBlocks.some((b) => b.type === 'savings');
+  const [projectInfo, savings] = await Promise.all([
+    wantsProject
+      ? Promise.all([
+          db.select({ name: workspaces.name }).from(workspaces).where(eq(workspaces.id, workspaceId)).limit(1),
+          db
+            .select({ at: agentActivity.createdAt })
+            .from(agentActivity)
+            .where(eq(agentActivity.workspaceId, workspaceId))
+            .orderBy(desc(agentActivity.createdAt))
+            .limit(1),
+        ]).then(([[ws], [last]]) => ({ name: ws?.name ?? '', lastAgentAt: last?.at ?? null }))
+      : null,
+    wantsSavings ? getAgentMetrics({ workspaceId }) : null,
+  ]);
+
+  // 6. Per-block computation over the already-loaded data.
   const blocks: ResolvedBlock[] = parsed.blocks.map((entry) => {
     if (!entry.ok) return { kind: 'invalid', id: entry.id, error: entry.error };
     const block = entry.block;
@@ -296,6 +321,18 @@ export async function resolveDashboard(workspaceId: string, rawSpec: unknown): P
 
       case 'activity':
         return { kind: 'activity', block, entries: activityRows.slice(0, block.limit) };
+
+      case 'project':
+        return {
+          kind: 'project',
+          block,
+          workspaceName: projectInfo?.name ?? '',
+          lastAgentAt: projectInfo?.lastAgentAt ?? null,
+          agentRecent: !!projectInfo?.lastAgentAt && Date.now() - projectInfo.lastAgentAt.getTime() < 15 * 60 * 1000,
+        };
+
+      case 'savings':
+        return { kind: 'savings', block, metrics: savings! };
 
       case 'metric': {
         const database = dbById.get(block.source.databaseId);

@@ -130,7 +130,7 @@ export default function GroupedTableLayout({
             key={groupName}
             onDragOver={(e) => handleGroupDragOver(e, groupName)}
             onDrop={(e) => handleGroupDrop(e, groupName)}
-            className={`transition-opacity ${groupColBg ? 'p-3 rounded' : ''} ${isDraggingThis ? 'opacity-30' : ''} ${isOver ? 'ring-1 ring-blue-500/40' : ''}`}
+            className={`transition-opacity ${groupColBg ? 'p-3 rounded' : ''} ${isDraggingThis ? 'opacity-30' : ''} ${isOver ? 'ring-1 ring-signal/40' : ''}`}
             style={groupBgStyle}
           >
             <div

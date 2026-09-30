@@ -205,7 +205,7 @@ export function PageHistoryModal({ workspaceId, pageId, currentContent, onRestor
                 <button
                   onClick={() => selected && handleRestore(selected.id)}
                   disabled={!selected || restoringId !== null}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-500 disabled:opacity-40 disabled:cursor-not-allowed rounded-lg transition-colors cursor-pointer"
+                  className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-ink-fg bg-ink hover:bg-ink/88 disabled:opacity-40 disabled:cursor-not-allowed rounded-lg transition-colors cursor-pointer"
                 >
                   {restoringId === selected?.id ? <Loader2 size={13} className="animate-spin" /> : <RotateCcw size={13} />}
                   {t('history.restore')}

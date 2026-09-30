@@ -78,7 +78,7 @@ export default function ProspectInviteClaimClient({ token, alreadyClaimed = fals
         </div>
         <button
           onClick={goToApp}
-          className="w-full px-5 py-2.5 rounded-lg text-[13.5px] font-semibold text-white bg-blue-500 hover:opacity-90 transition-opacity"
+          className="w-full px-5 py-2.5 rounded-lg text-[13.5px] font-semibold text-ink-fg bg-ink hover:opacity-90 transition-opacity"
         >
           {t('continueCta')}
         </button>

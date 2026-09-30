@@ -14,7 +14,7 @@
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import {
   AlertTriangle,
@@ -35,8 +35,9 @@ import {
   Waypoints,
   X,
 } from 'lucide-react';
-import { getWorkspaceGraphData } from '@/lib/actions/graph';
-import { CHANGE_EVENT } from '@/components/providers/ActivityTracker';
+import { getWorkspaceGraphData, type GraphWorkspace } from '@/lib/actions/graph';
+import { openOrCreateHomeDashboard } from '@/lib/actions/dashboard';
+import { CHANGE_EVENT, mayPredateRender } from '@/components/providers/ActivityTracker';
 import { createInteractionGate } from '@/lib/interactionGate';
 import { foldText } from '@/lib/services/textFold';
 import {
@@ -56,6 +57,8 @@ import {
 } from '@/lib/graph/types';
 import type { GraphCanvasHandle, GraphColorMode, GraphLayers, GraphLayoutMode } from './GraphCanvas';
 import { SimpleSelect } from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
+import PageIcon from '@/components/features/PageIcon';
 
 const GraphCanvas = dynamic(() => import('./GraphCanvas'), { ssr: false });
 
@@ -123,7 +126,9 @@ function clustersAvailable(payload: GraphPayload): boolean {
  * gone by, and the first value heard can be 30s later — a write in between
  * would be taken as the baseline and never shown (found in P12 verification).
  * So the baseline is the payload's own `generatedAt`: a version at or after it
- * may not be on the map yet.
+ * may not be on the map yet. The same rule settles same-second writes: a version
+ * the shown payload may predate (`mayPredateRender`) gets one more refetch on a
+ * later tick, even though it did not advance.
  */
 function useChangeSignal(onChange: () => void, shownAt: React.RefObject<number | null>) {
   const callback = useRef(onChange);
@@ -133,6 +138,7 @@ function useChangeSignal(onChange: () => void, shownAt: React.RefObject<number |
   useEffect(() => {
     let handled: number | null = null;
     let pending = false;
+    let settled: number | null = null; // the version a settle refetch already ran for
     const flush = () => {
       if (!pending || gate.isBlocked()) return;
       pending = false;
@@ -141,7 +147,17 @@ function useChangeSignal(onChange: () => void, shownAt: React.RefObject<number |
     const gate = createInteractionGate(flush);
     const listener = (event: Event) => {
       const value = (event as CustomEvent<number>).detail;
-      if (!Number.isFinite(value) || (handled !== null && value <= handled)) return;
+      if (!Number.isFinite(value)) return;
+      if (handled !== null && value <= handled) {
+        // Unchanged version: refetch once if the map may have been generated before
+        // the last write of that second landed (`shownAt` is epoch seconds).
+        if (value === handled && settled !== value && shownAt.current !== null && mayPredateRender(value, shownAt.current * 1000)) {
+          settled = value;
+          pending = true;
+          flush();
+        }
+        return;
+      }
       const firstHeard = handled === null;
       handled = value;
       // Same-second writes may or may not be in the snapshot: refetching once is cheaper than missing one.
@@ -171,9 +187,20 @@ function useRelativeTime() {
   }, [locale]);
 }
 
-export default function GraphScreen({ workspace }: { workspace: { id: string; name: string } }) {
+export default function GraphScreen({
+  workspace,
+  switchable,
+}: {
+  workspace: GraphWorkspace & { homeDashboardItemId: string | null };
+  /** Workspaces the map can switch to; null in a project window (one workspace only). */
+  switchable: GraphWorkspace[] | null;
+}) {
   const t = useTranslations('Graph');
+  const tWorkspace = useTranslations('Workspace');
   const router = useRouter();
+  const [switching, startSwitch] = useTransition();
+  const [openingHome, startOpenHome] = useTransition();
+  const [homeFailed, setHomeFailed] = useState(false);
   const relative = useRelativeTime();
   const canvas = useRef<GraphCanvasHandle>(null);
 
@@ -187,6 +214,10 @@ export default function GraphScreen({ workspace }: { workspace: { id: string; na
   const [attentionOpen, setAttentionOpen] = useState(false);
   const [layersOpen, setLayersOpen] = useState(false);
   const [query, setQuery] = useState('');
+  // The database whose rows are on their way (show/hide rows), and the list to go
+  // back to if that request fails — one toggle at a time.
+  const [rowsPending, setRowsPending] = useState<string | null>(null);
+  const rowsRevert = useRef<string[] | null>(null);
   const pendingFocus = useRef<string | null>(null);
   const request = useRef(0);
   const shownAt = useRef<number | null>(null);
@@ -206,10 +237,18 @@ export default function GraphScreen({ workspace }: { workspace: { id: string; na
       const data = await getWorkspaceGraphData(workspace.id, { expanded, activityDays: prefs.activityDays, code: showCode });
       if (id !== request.current) return;
       shownAt.current = data.generatedAt;
+      rowsRevert.current = null;
+      setRowsPending(null);
       setPayload(data);
       setFailed(false);
     } catch {
-      if (id === request.current) setFailed(true);
+      if (id !== request.current) return;
+      // A rows toggle that could not load goes back, so its button offers it again.
+      const previous = rowsRevert.current;
+      rowsRevert.current = null;
+      setRowsPending(null);
+      if (previous) setExpanded(previous);
+      setFailed(true);
     }
   }, [workspace.id, expanded, prefs.activityDays, showCode]);
 
@@ -249,8 +288,32 @@ export default function GraphScreen({ workspace }: { workspace: { id: string; na
   };
 
   const toggleDatabase = (id: string) => {
-    setExpanded((list) => (list.includes(id) ? list.filter((x) => x !== id) : [...list, id]));
+    if (rowsPending) return;
+    rowsRevert.current = expanded;
+    setRowsPending(id);
+    setExpanded(expanded.includes(id) ? expanded.filter((x) => x !== id) : [...expanded, id]);
   };
+
+  const switchWorkspace = (id: string) => {
+    if (id !== workspace.id) startSwitch(() => router.push(`/graph/${id}`));
+  };
+
+  // Like the sidebar's Pano button: no home dashboard yet → create it, then open it.
+  const openHome = () => {
+    if (openingHome) return;
+    setHomeFailed(false);
+    startOpenHome(async () => {
+      try {
+        const { itemId } = await openOrCreateHomeDashboard(workspace.id, tWorkspace('dashboardShort'));
+        router.push(`/dashboard/${itemId}`);
+      } catch (err) {
+        console.error('[Remnus] could not open the workspace dashboard:', err);
+        setHomeFailed(true);
+      }
+    });
+  };
+  const homeClass =
+    'flex shrink-0 items-center gap-1.5 border border-neutral-800 px-2 py-1 text-xs text-neutral-300 transition-colors hover:border-blue-500/40 hover:bg-blue-500/5 hover:text-neutral-100 disabled:opacity-60';
 
   const pickEntry = (entry: AttentionEntry) => {
     const [id, , , databaseItemId] = entry;
@@ -262,7 +325,10 @@ export default function GraphScreen({ workspace }: { workspace: { id: string; na
     }
     if (databaseItemId) {
       pendingFocus.current = id;
-      setExpanded((list) => (list.includes(databaseItemId) ? list : [...list, databaseItemId]));
+      if (expanded.includes(databaseItemId) || rowsPending) return;
+      rowsRevert.current = expanded;
+      setRowsPending(databaseItemId);
+      setExpanded([...expanded, databaseItemId]);
     }
   };
 
@@ -293,9 +359,46 @@ export default function GraphScreen({ workspace }: { workspace: { id: string; na
     <div className="flex h-full min-h-0 w-full flex-col bg-neutral-850">
       {/* Toolbar */}
       <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-neutral-800 bg-neutral-900 px-3 py-2">
-        <div className="mr-1 flex min-w-0 items-baseline gap-2">
-          <h1 className="text-sm font-medium text-neutral-100">{t('title')}</h1>
-          <span className="hidden truncate text-xs text-neutral-500 sm:inline">{workspace.name}</span>
+        {/* Whose map this is, and the way back to that project's dashboard. */}
+        <div className="mr-1 flex min-w-0 items-center gap-2">
+          {switchable && switchable.length > 1 ? (
+            <SimpleSelect
+              aria-label={t('switchWorkspace')}
+              value={workspace.id}
+              onValueChange={switchWorkspace}
+              disabled={switching}
+              size="sm"
+              className="max-w-52"
+              options={switchable.map((w) => ({ value: w.id, label: w.name, icon: <WorkspaceBadge workspace={w} /> }))}
+            />
+          ) : (
+            <span className="flex min-w-0 items-center gap-1.5 text-xs font-medium text-neutral-200">
+              <WorkspaceBadge workspace={workspace} />
+              <span className="max-w-52 truncate">{workspace.name}</span>
+            </span>
+          )}
+          {switching ? (
+            <Loader2 size={12} className="shrink-0 animate-spin text-neutral-500 motion-reduce:animate-none" aria-hidden />
+          ) : (
+            <span aria-hidden className="text-neutral-700">/</span>
+          )}
+          <h1 className="shrink-0 text-sm font-medium text-neutral-100">{t('title')}</h1>
+          {workspace.homeDashboardItemId ? (
+            <Link href={`/dashboard/${workspace.homeDashboardItemId}`} title={t('openDashboard')} className={homeClass}>
+              <LayoutDashboard size={13} className="text-blue-400" />
+              {tWorkspace('dashboardShort')}
+            </Link>
+          ) : (
+            <button type="button" onClick={openHome} disabled={openingHome} aria-busy={openingHome} title={t('openDashboard')} className={homeClass}>
+              {openingHome ? (
+                <Loader2 size={13} className="animate-spin text-blue-400 motion-reduce:animate-none" aria-hidden />
+              ) : (
+                <LayoutDashboard size={13} className="text-blue-400" />
+              )}
+              {tWorkspace('dashboardShort')}
+            </button>
+          )}
+          {homeFailed && <span role="alert" className="text-[11px] text-red-400">{tWorkspace('dashboardOpenFailed')}</span>}
         </div>
 
         <div className="flex border border-neutral-800" role="group" aria-label={t('layoutLabel')}>
@@ -476,11 +579,19 @@ export default function GraphScreen({ workspace }: { workspace: { id: string; na
                 handleRef={canvas}
               />
               <Legend colorMode={colorMode} auditLimited={!!payload.auditLimited} showCode={showCode && codePaths > 0} />
+              {rowsPending && (
+                <div role="status" className="pointer-events-none absolute left-1/2 top-3 z-10 flex -translate-x-1/2 items-center gap-1.5 border border-neutral-800 bg-neutral-900 px-2.5 py-1 text-xs text-neutral-300">
+                  <Loader2 size={12} className="animate-spin motion-reduce:animate-none" aria-hidden />
+                  {t('loadingRows')}
+                </div>
+              )}
               {selected && (
                 <SelectionCard
                   node={selected}
                   payload={payload}
                   expanded={expanded.includes(selected[0])}
+                  rowsLoading={rowsPending === selected[0]}
+                  rowsBusy={rowsPending !== null}
                   relative={relative}
                   onClose={() => setSelectedId(null)}
                   onToggleRows={() => toggleDatabase(selected[0])}
@@ -535,6 +646,16 @@ export default function GraphScreen({ workspace }: { workspace: { id: string; na
         )}
       </div>
     </div>
+  );
+}
+
+/** A workspace's own icon, or its initial — the same mark the sidebar shows. */
+function WorkspaceBadge({ workspace }: { workspace: GraphWorkspace }) {
+  if (workspace.icon) return <PageIcon icon={workspace.icon} iconColor={workspace.iconColor} size={14} hideFallback={false} className="shrink-0 rounded" />;
+  return (
+    <span translate="no" className="notranslate flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-sm bg-neutral-700 text-[9px] font-bold text-neutral-200">
+      {(workspace.name || 'W').trim().charAt(0).toUpperCase()}
+    </span>
   );
 }
 
@@ -606,6 +727,8 @@ function SelectionCard({
   node,
   payload,
   expanded,
+  rowsLoading,
+  rowsBusy,
   relative,
   onClose,
   onToggleRows,
@@ -613,6 +736,10 @@ function SelectionCard({
   node: GraphNodeTuple;
   payload: GraphPayload;
   expanded: boolean;
+  /** This database's rows are being fetched. */
+  rowsLoading: boolean;
+  /** Some database's rows are being fetched (one toggle at a time). */
+  rowsBusy: boolean;
   relative: (epochSeconds: number) => string;
   onClose: () => void;
   onToggleRows: () => void;
@@ -673,9 +800,16 @@ function SelectionCard({
           </Link>
         )}
         {kind === NODE_KIND.database && (count ?? 0) > 0 && (
-          <button type="button" onClick={onToggleRows} className="px-2.5 py-1 text-xs text-neutral-300 hover:text-neutral-50">
+          <Button
+            variant="ghost"
+            size="xs"
+            onClick={onToggleRows}
+            loading={rowsLoading}
+            disabled={rowsBusy}
+            className="h-auto rounded-none px-2.5 py-1 text-xs text-neutral-300"
+          >
             {expanded ? t('hideRows') : t('showRows', { count: count ?? 0 })}
-          </button>
+          </Button>
         )}
       </div>
     </div>

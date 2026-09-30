@@ -56,19 +56,19 @@ function BottomSheet({
       }`}
     >
       <div
-        className={`absolute inset-0 bg-black/60 transition-opacity duration-300 ${
+        className={`absolute inset-0 bg-overlay transition-opacity duration-300 ${
           isOpen ? 'opacity-100' : 'opacity-0'
         }`}
         onClick={onClose}
       />
       <div
-        className={`absolute inset-x-0 bottom-0 bg-neutral-900 border-t border-neutral-800 rounded-t-2xl flex flex-col transition-transform duration-300 ease-in-out ${
+        className={`absolute inset-x-0 bottom-0 bg-float rounded-t-2xl shadow-modal flex flex-col transition-transform duration-300 ease-in-out ${
           isOpen ? 'translate-y-0' : 'translate-y-full'
         }`}
         style={topOffset ? { top: topOffset } : { maxHeight }}
       >
         <div className="flex justify-center pt-3 pb-1 shrink-0">
-          <div className="w-10 h-1 rounded-full bg-neutral-700" />
+          <div className="w-10 h-1 rounded-full bg-line-strong" />
         </div>
         {children}
       </div>
@@ -92,6 +92,7 @@ export default function MobileNavWrapper({
   isProjectWindow?: boolean;
 }) {
   const t = useTranslations('MobileNav');
+  const tLang = useTranslations('LanguageSwitcher');
   const tw = useTranslations('Workspace');
   const tNew = useTranslations('WhatsNew');
   const locale = useLocale();
@@ -160,11 +161,11 @@ export default function MobileNavWrapper({
     <>
       {/* Workspace bottom sheet */}
       <BottomSheet isOpen={openSheet === 'workspace'} onClose={closeSheet} topOffset="72px">
-        <div className="flex items-center justify-between px-4 py-2 shrink-0 border-b border-neutral-800">
-          <span className="text-sm font-semibold text-neutral-200">{activeWorkspace.name}</span>
+        <div className="flex items-center justify-between px-4 py-2 shrink-0 border-b border-line">
+          <span className="text-sm font-semibold text-fg">{activeWorkspace.name}</span>
           <button
             onClick={closeSheet}
-            className="p-1.5 text-neutral-400 hover:text-neutral-100 hover:bg-neutral-800 rounded transition-colors"
+            className="p-1.5 text-fg-3 hover:text-fg hover:bg-hover rounded-control transition-colors"
           >
             <X size={16} />
           </button>
@@ -186,48 +187,48 @@ export default function MobileNavWrapper({
         <div className="flex flex-col px-4 pt-2 pb-8 gap-4 overflow-y-auto">
           {/* User info */}
           <div className="flex items-center gap-3 py-1">
-            <div className="shrink-0 w-10 h-10 rounded-full bg-neutral-700 flex items-center justify-center text-sm font-semibold text-neutral-200">
+            <div className="shrink-0 w-10 h-10 rounded-full bg-hover flex items-center justify-center text-sm font-semibold text-fg-2">
               {(currentUser.name || currentUser.email || 'U').trim().charAt(0).toUpperCase()}
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2">
-                <span className="text-sm font-medium text-neutral-100 truncate">
+                <span className="text-sm font-medium text-fg truncate">
                   {currentUser.name ?? currentUser.email ?? 'User'}
                 </span>
                 {currentUser.role === 'admin' && !isProjectWindow && (
-                  <span className="shrink-0 flex items-center gap-0.5 text-[10px] font-semibold text-blue-400 bg-blue-500/10 px-1.5 py-0.5 rounded">
+                  <span className="shrink-0 flex items-center gap-0.5 text-[10px] font-semibold text-signal-text bg-signal/10 px-1.5 py-0.5 rounded">
                     <Shield size={9} /> Admin
                   </span>
                 )}
               </div>
               {currentUser.name && currentUser.email && (
-                <p className="text-xs text-neutral-500 truncate">{currentUser.email}</p>
+                <p className="text-xs text-fg-3 truncate">{currentUser.email}</p>
               )}
             </div>
           </div>
 
           {/* Account actions — every one of these is denied to a locked session */}
           {!isProjectWindow && (
-          <div className="border-t border-neutral-800 pt-3 flex flex-col gap-1">
+          <div className="border-t border-line pt-3 flex flex-col gap-1">
             <button
               onClick={() => { setOpenSheet(null); setUserSettingsOpen(true); }}
-              className="flex items-center gap-3 w-full px-3 py-3 rounded-lg text-neutral-300 hover:bg-neutral-800 hover:text-white transition-colors text-sm font-medium"
+              className="flex items-center gap-3 w-full px-3 py-3 rounded-control text-fg-2 hover:bg-hover hover:text-fg transition-colors text-sm font-medium"
             >
-              <Settings size={16} className="shrink-0 text-neutral-400" />
+              <Settings size={16} className="shrink-0 text-fg-3" />
               <span>{tw('settings')}</span>
             </button>
             <button
               onClick={() => { setOpenSheet(null); setAgentsModalOpen(true); }}
-              className="flex items-center gap-3 w-full px-3 py-3 rounded-lg text-neutral-300 hover:bg-neutral-800 hover:text-white transition-colors text-sm font-medium"
+              className="flex items-center gap-3 w-full px-3 py-3 rounded-control text-fg-2 hover:bg-hover hover:text-fg transition-colors text-sm font-medium"
             >
-              <Bot size={16} className="shrink-0 text-amber-400" />
+              <Bot size={16} className="shrink-0 text-fg-3" />
               <span>{tw('myAgents')}</span>
             </button>
             <button
               onClick={() => { setOpenSheet(null); setBillingModalOpen(true); }}
-              className="flex items-center gap-3 w-full px-3 py-3 rounded-lg text-neutral-300 hover:bg-neutral-800 hover:text-white transition-colors text-sm font-medium"
+              className="flex items-center gap-3 w-full px-3 py-3 rounded-control text-fg-2 hover:bg-hover hover:text-fg transition-colors text-sm font-medium"
             >
-              <CreditCard size={16} className="shrink-0 text-neutral-400" />
+              <CreditCard size={16} className="shrink-0 text-fg-3" />
               <span>{tw('planBilling')}</span>
             </button>
           </div>
@@ -235,22 +236,22 @@ export default function MobileNavWrapper({
 
           {/* Trash and what's new: workspace content / product news, so a project window keeps
               them — same split as the desktop account menu. */}
-          <div className="border-t border-neutral-800 pt-3 flex flex-col gap-1">
+          <div className="border-t border-line pt-3 flex flex-col gap-1">
             <button
               onClick={() => { setOpenSheet(null); setTrashModalOpen(true); }}
-              className="flex items-center gap-3 w-full px-3 py-3 rounded-lg text-neutral-300 hover:bg-neutral-800 hover:text-white transition-colors text-sm font-medium"
+              className="flex items-center gap-3 w-full px-3 py-3 rounded-control text-fg-2 hover:bg-hover hover:text-fg transition-colors text-sm font-medium"
             >
-              <Trash2 size={16} className="shrink-0 text-neutral-400" />
+              <Trash2 size={16} className="shrink-0 text-fg-3" />
               <span>{tw('myTrash')}</span>
             </button>
             <button
               onClick={() => { setOpenSheet(null); whatsNew.open(); }}
-              className="flex items-center gap-3 w-full px-3 py-3 rounded-lg text-neutral-300 hover:bg-neutral-800 hover:text-white transition-colors text-sm font-medium"
+              className="flex items-center gap-3 w-full px-3 py-3 rounded-control text-fg-2 hover:bg-hover hover:text-fg transition-colors text-sm font-medium"
             >
-              <Sparkles size={16} className="shrink-0 text-neutral-400" />
+              <Sparkles size={16} className="shrink-0 text-fg-3" />
               <span>{tNew('title')}</span>
               {whatsNew.unseenCount > 0 && (
-                <span className="ml-auto min-w-4 shrink-0 rounded-full bg-red-500 px-1.5 py-0.5 text-center text-[10px] font-bold leading-none text-white">
+                <span className="ml-auto min-w-4 h-4 shrink-0 rounded-full bg-red-500 px-1 text-center text-2xs font-semibold leading-4 text-white">
                   {whatsNew.unseenCount > 9 ? '9+' : whatsNew.unseenCount}
                 </span>
               )}
@@ -258,21 +259,21 @@ export default function MobileNavWrapper({
           </div>
 
           {/* Language grid */}
-          <div className="border-t border-neutral-800 pt-4">
-            <p className="text-[10px] font-semibold text-neutral-500 uppercase tracking-widest mb-3">Language</p>
+          <div className="border-t border-line pt-4">
+            <p className="text-xs font-medium text-fg-3 mb-3">{tLang('label')}</p>
             <div className="grid grid-cols-3 gap-2">
               {LANGUAGES.map((lang) => (
                 <button
                   key={lang.code}
                   onClick={() => handleLangSelect(lang.code)}
-                  className={`flex flex-col items-center gap-1 py-2.5 rounded-lg border transition-colors text-xs font-medium ${
+                  className={`flex flex-col items-center gap-1 py-2.5 rounded-control border transition-colors text-xs font-medium ${
                     lang.code === locale
-                      ? 'border-blue-500/50 bg-blue-500/10 text-blue-300'
-                      : 'border-neutral-800 bg-neutral-850 text-neutral-400 hover:border-neutral-700 hover:text-neutral-200'
+                      ? 'border-signal/60 bg-signal-soft text-fg'
+                      : 'border-line bg-sheet text-fg-3 hover:border-line-strong hover:text-fg'
                   }`}
                 >
                   <FlagIcon code={lang.code} size={22} />
-                  <span className="text-[10px] truncate w-full text-center">{lang.label}</span>
+                  <span className="text-2xs truncate w-full text-center">{lang.label}</span>
                 </button>
               ))}
             </div>
@@ -283,7 +284,7 @@ export default function MobileNavWrapper({
           {!isProjectWindow && (
             <button
               onClick={() => logout()}
-              className="flex items-center gap-3 w-full px-4 py-3 rounded-lg bg-neutral-800 hover:bg-neutral-700 text-neutral-300 hover:text-white transition-colors text-sm font-medium"
+              className="flex items-center gap-3 w-full px-4 py-3 rounded-control bg-raised shadow-[inset_0_0_0_1px_var(--color-line)] hover:bg-hover text-fg-2 hover:text-fg transition-colors text-sm font-medium"
             >
               <LogOut size={16} />
               <span>{t('signOut')}</span>
@@ -324,11 +325,11 @@ export default function MobileNavWrapper({
       )}
 
       {/* Bottom navigation bar — icon-only, uniform buttons */}
-      <nav className="fixed bottom-0 left-0 right-0 z-40 lg:hidden h-14 bg-neutral-900 border-t border-neutral-800 flex items-stretch">
+      <nav className="fixed bottom-0 left-0 right-0 z-40 lg:hidden h-14 bg-desk border-t border-line flex items-stretch">
         <button
           onClick={() => setOpenSheet(openSheet === 'workspace' ? null : 'workspace')}
-          className={`flex-1 flex items-center justify-center transition-colors active:bg-neutral-800 ${
-            openSheet === 'workspace' ? 'text-blue-400' : 'text-neutral-500 hover:text-neutral-200'
+          className={`flex-1 flex items-center justify-center transition-colors active:bg-hover ${
+            openSheet === 'workspace' ? 'text-fg' : 'text-fg-3 hover:text-fg'
           }`}
           aria-label={t('workspace')}
         >
@@ -339,7 +340,7 @@ export default function MobileNavWrapper({
           <button
             onClick={handleNew}
             disabled={isAdding}
-            className="flex-1 flex items-center justify-center text-neutral-500 hover:text-neutral-200 transition-colors active:bg-neutral-800 disabled:opacity-40"
+            className="flex-1 flex items-center justify-center text-fg-3 hover:text-fg transition-colors active:bg-hover disabled:opacity-40"
             aria-label={t('new')}
           >
             <Plus size={22} />
@@ -348,8 +349,8 @@ export default function MobileNavWrapper({
 
         <button
           onClick={() => setOpenSheet(openSheet === 'user' ? null : 'user')}
-          className={`flex-1 flex items-center justify-center transition-colors active:bg-neutral-800 ${
-            openSheet === 'user' ? 'text-blue-400' : 'text-neutral-500 hover:text-neutral-200'
+          className={`flex-1 flex items-center justify-center transition-colors active:bg-hover ${
+            openSheet === 'user' ? 'text-fg' : 'text-fg-3 hover:text-fg'
           }`}
           aria-label={t('user')}
         >

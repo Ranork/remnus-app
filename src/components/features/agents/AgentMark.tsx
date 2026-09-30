@@ -22,7 +22,7 @@ export { AGENT_MARKS, markForId, resolveAgentMark, type AgentMarkName };
 // VS Code has no AIMark glyph — its own mark lives here (also reused by ConnectFlow).
 export function VscodeMark({ size = 14 }: { size?: number }) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className="text-blue-400">
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" className="text-signal-text">
       <path d="M17.583.063L9.963 7.087 4.19 2.383 2 3.436v17.125l2.19 1.054 5.773-4.704 7.62 7.026L22 22.564V1.436L17.583.063zM20 19.437l-6-5.453v-3.97l6-5.451v14.874zM4 19.204V4.797l4 3.26v7.888L4 19.204z" />
     </svg>
   );
@@ -48,5 +48,5 @@ export default function AgentMark({ override, hint, size = 14, fallback = 'globe
   if (mark) return <MarkIcon mark={mark} size={size} />;
   return fallback === 'zap'
     ? <Zap size={Math.max(10, size - 2)} className="text-amber-400/60" />
-    : <Globe size={Math.max(10, size - 2)} className="text-blue-400" />;
+    : <Globe size={Math.max(10, size - 2)} className="text-signal-text" />;
 }

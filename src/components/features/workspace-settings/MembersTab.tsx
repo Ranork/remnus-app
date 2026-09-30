@@ -195,7 +195,7 @@ export default function MembersTab({
       {hasPrivilegedAccess && (
         <form onSubmit={handleInvite} className="space-y-2">
           <div className="flex items-center justify-between">
-            <label className="block text-[10px] font-semibold text-neutral-500 uppercase tracking-widest">
+            <label className="block text-2xs font-medium text-neutral-500">
               {t('inviteNewMember')}
             </label>
             {seatUsage && (
@@ -211,7 +211,7 @@ export default function MembersTab({
               onChange={(e) => setInviteEmail(e.target.value)}
               placeholder={t('emailPlaceholder')}
               disabled={isInviting}
-              className="flex-1 bg-neutral-900 border border-neutral-700 rounded-md text-neutral-100 placeholder-neutral-600 px-3 py-1.5 text-sm outline-none focus:border-blue-500/60 transition-colors disabled:opacity-50"
+              className="flex-1 bg-neutral-900 border border-neutral-700 rounded-md text-neutral-100 placeholder-neutral-600 px-3 py-1.5 text-sm outline-none focus:border-signal/60 transition-colors disabled:opacity-50"
             />
             <SimpleSelect
               value={inviteRole}
@@ -224,7 +224,7 @@ export default function MembersTab({
             <button
               type="submit"
               disabled={isInviting || !inviteEmail.trim() || atSeatLimit}
-              className="text-xs bg-blue-500 hover:bg-blue-400 disabled:opacity-50 disabled:cursor-not-allowed text-white px-3.5 py-1.5 rounded-md font-medium transition-colors flex items-center gap-1"
+              className="text-xs bg-ink hover:bg-ink/88 disabled:opacity-50 disabled:cursor-not-allowed text-ink-fg px-3.5 py-1.5 rounded-md font-medium transition-colors flex items-center gap-1"
             >
               <UserPlus size={13} />
               {isInviting ? t('inviting') : t('invite')}
@@ -250,9 +250,9 @@ export default function MembersTab({
 
       {/* Invite link for a not-yet-registered person */}
       {inviteLink && (
-        <div className="rounded-lg border border-blue-500/25 bg-blue-500/5 p-3 space-y-2">
+        <div className="rounded-lg border border-signal/25 bg-signal/5 p-3 space-y-2">
           <p className="m-0 text-[11px] text-neutral-300 flex items-center gap-1.5">
-            <Mail size={12} className="text-blue-400" /> {tBilling('inviteLinkReady')}
+            <Mail size={12} className="text-signal-text" /> {tBilling('inviteLinkReady')}
           </p>
           <div className="flex gap-1.5">
             <input
@@ -263,7 +263,7 @@ export default function MembersTab({
             />
             <button
               onClick={() => copyLink(inviteLink)}
-              className="shrink-0 inline-flex items-center gap-1 text-xs bg-blue-500 hover:bg-blue-400 text-white px-2.5 py-1.5 rounded-md font-medium transition-colors"
+              className="shrink-0 inline-flex items-center gap-1 text-xs bg-ink hover:bg-ink/88 text-ink-fg px-2.5 py-1.5 rounded-md font-medium transition-colors"
             >
               <Copy size={12} /> {copied ? tBilling('copied') : tBilling('copy')}
             </button>
@@ -274,7 +274,7 @@ export default function MembersTab({
       {/* Access requests — someone asked to be let in (npx remnus join) */}
       {hasPrivilegedAccess && accessRequests.length > 0 && (
         <div className="space-y-2">
-          <label className="block text-[10px] font-semibold text-neutral-500 uppercase tracking-widest">
+          <label className="block text-2xs font-medium text-neutral-500">
             {t('accessRequestsTitle')}
           </label>
           <div className="divide-y divide-neutral-800 border border-amber-500/25 rounded-lg overflow-hidden bg-amber-500/[0.03]">
@@ -309,7 +309,7 @@ export default function MembersTab({
                         onClick={() => answerRequest(req.id, true)}
                         disabled={atSeatLimit}
                         title={atSeatLimit ? tBilling('seatLimitHint') : undefined}
-                        className="text-[10px] font-semibold text-white bg-blue-500 hover:bg-blue-400 disabled:opacity-40 disabled:cursor-not-allowed px-2 py-0.5 rounded transition-colors"
+                        className="text-[10px] font-semibold text-ink-fg bg-ink hover:bg-ink/88 disabled:opacity-40 disabled:cursor-not-allowed px-2 py-0.5 rounded transition-colors"
                       >
                         {t('approveRequest')}
                       </button>
@@ -332,7 +332,7 @@ export default function MembersTab({
       {/* Pending invites */}
       {hasPrivilegedAccess && invites.length > 0 && (
         <div className="space-y-2">
-          <label className="block text-[10px] font-semibold text-neutral-500 uppercase tracking-widest">
+          <label className="block text-2xs font-medium text-neutral-500">
             {tBilling('pendingInvites')}
           </label>
           <div className="divide-y divide-neutral-800 border border-neutral-800 rounded-lg overflow-hidden bg-neutral-900/20">
@@ -354,7 +354,7 @@ export default function MembersTab({
       )}
 
       <div className="space-y-3">
-        <label className="block text-[10px] font-semibold text-neutral-500 uppercase tracking-widest">
+        <label className="block text-2xs font-medium text-neutral-500">
           {t('membersCount', { count: members.length })}
         </label>
         {isLoadingMembers ? (
@@ -421,7 +421,7 @@ export default function MembersTab({
                     ) : (
                       <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full border ${
                         member.role === 'viewer'
-                          ? 'text-blue-400 bg-blue-500/10 border-blue-500/20'
+                          ? 'text-signal-text bg-signal/10 border-signal/20'
                           : 'text-neutral-300 bg-neutral-800 border-neutral-700'
                       }`}>
                         {member.role.charAt(0).toUpperCase() + member.role.slice(1)}

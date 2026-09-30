@@ -2,7 +2,7 @@
 import { memo, useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTabs, isKeepAlivePane } from './TabsContext';
-import { CHANGE_EVENT } from './ActivityTracker';
+import { CHANGE_EVENT, changeIsHot } from './ActivityTracker';
 import TabPane from '@/components/features/tabs/TabPane';
 import { invalidateTabHref } from '@/components/features/tabs/keys';
 import { createInteractionGate } from '@/lib/interactionGate';
@@ -95,6 +95,11 @@ export default function TabHost({ isAdmin, currentUserId }: { isAdmin: boolean; 
  * `createInteractionGate` — moving the mouse is not a reason to wait),
  * invalidates the active pane's queries. Hidden panes are never touched, so a
  * background refresh can't wipe a kept-alive tab's in-memory state.
+ *
+ * Versions are whole seconds, so a refetch made while its version's second is
+ * still open (`changeIsHot()`) can miss a write stamped with the same second. The
+ * pane is refetched once more on the first tick after that second has closed —
+ * the Tauri counterpart of `useWorkspaceEvents`' `renderedAt` settle.
  */
 function useActivePaneAutoRefresh(activeHref: string | null, enabled: boolean) {
   const queryClient = useQueryClient();
@@ -107,6 +112,7 @@ function useActivePaneAutoRefresh(activeHref: string | null, enabled: boolean) {
     if (!enabled) return; // web build: no in-app tabs, nothing to refresh
     const pendingRef = { current: false };
     let lastVersion: number | null = null;
+    let settleFor: number | null = null; // refetched while this version was hot
 
     const flush = () => {
       if (!pendingRef.current || gate.isBlocked()) return;
@@ -118,8 +124,18 @@ function useActivePaneAutoRefresh(activeHref: string | null, enabled: boolean) {
     const onChange = (e: Event) => {
       const v = (e as CustomEvent<number>).detail;
       if (!Number.isFinite(v)) return;
-      if (lastVersion === null) { lastVersion = v; return; } // baseline
-      if (v > lastVersion) { lastVersion = v; pendingRef.current = true; flush(); }
+      const hot = changeIsHot();
+      if (lastVersion === null) { lastVersion = v; settleFor = hot ? v : null; return; } // baseline
+      if (v > lastVersion) {
+        lastVersion = v;
+        settleFor = hot ? v : null;
+        pendingRef.current = true;
+        flush();
+      } else if (settleFor !== null && v === settleFor && !hot) {
+        settleFor = null;
+        pendingRef.current = true;
+        flush();
+      }
     };
 
     window.addEventListener(CHANGE_EVENT, onChange);

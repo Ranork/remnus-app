@@ -175,16 +175,16 @@ export default function CampaignManager({
         <div className="flex flex-col gap-3 rounded-xl border border-neutral-800 bg-neutral-900 px-5 py-4">
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             <div>
-              <label className="mb-1 block text-[11px] font-medium uppercase tracking-wider text-neutral-500">{t('subjectLabel')}</label>
+              <label className="mb-1 block text-xs font-medium text-neutral-500">{t('subjectLabel')}</label>
               <input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder={t('subjectPlaceholder')} className={inputCls} />
             </div>
             <div>
-              <label className="mb-1 block text-[11px] font-medium uppercase tracking-wider text-neutral-500">{t('preheaderLabel')}</label>
+              <label className="mb-1 block text-xs font-medium text-neutral-500">{t('preheaderLabel')}</label>
               <input value={preheader} onChange={(e) => setPreheader(e.target.value)} placeholder={t('preheaderPlaceholder')} className={inputCls} />
             </div>
           </div>
           <div>
-            <label className="mb-1 block text-[11px] font-medium uppercase tracking-wider text-neutral-500">{t('bodyLabel')}</label>
+            <label className="mb-1 block text-xs font-medium text-neutral-500">{t('bodyLabel')}</label>
             <textarea
               value={bodyMd}
               onChange={(e) => setBodyMd(e.target.value)}

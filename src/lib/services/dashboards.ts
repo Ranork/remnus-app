@@ -38,6 +38,8 @@ import {
   linksBlockSchema,
   listBlockSchema,
   metricBlockSchema,
+  projectBlockSchema,
+  savingsBlockSchema,
   textBlockSchema,
   type DashboardBlockType,
 } from '@/lib/dashboard/schema';
@@ -56,6 +58,8 @@ const BLOCK_SCHEMAS: Record<DashboardBlockType, z.ZodObject> = {
   text: textBlockSchema,
   links: linksBlockSchema,
   activity: activityBlockSchema,
+  project: projectBlockSchema,
+  savings: savingsBlockSchema,
 };
 
 /** Where the full field reference lives; appended once to a refused write. */
@@ -700,6 +704,12 @@ export async function patchDashboard(
     warnings.push(...await renderWarnings(workspaceId, spec, touchedIds, warned));
     return { id: itemId, blocks: blocks.map((b) => blockIdOf(b) ?? '?'), ...(warnings.length ? { warnings } : {}) };
   }
+}
+
+/** The write result for a dashboard left as it is — for a call that only (un)pins it. */
+export async function describeDashboard(workspaceId: string, itemId: string): Promise<DashboardWriteResult> {
+  const stored = await loadStored(workspaceId, itemId);
+  return { id: itemId, blocks: stored.blocks.map((b) => blockIdOf(b) ?? '?') };
 }
 
 function applyPatch(current: unknown[], patch: DashboardPatch): { blocks: unknown[]; touched: Touched[] } {

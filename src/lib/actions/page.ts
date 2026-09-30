@@ -11,6 +11,7 @@ import { recordDeletionTombstone } from '@/lib/services/workspace';
 import { snapshotBeforeDelete, maybeSnapshotContentUpdate } from '@/lib/services/snapshots';
 import { exdateOccurrenceForPage } from '@/lib/services/recurrence';
 import { syncPageLinks, removeOutgoingPageLinks } from '@/lib/services/pageLinks';
+import { touchWorkspaces } from '@/lib/services/changeVersion';
 import { coerceRowValues, extractRowContent, assignOptionColors, type DatabaseColumn } from '@/lib/utils/propertyCoercion';
 
 const MAX_BULK_ROWS = 500;
@@ -275,7 +276,7 @@ export async function duplicatePage(id: string, databaseId: string) {
 }
 
 export async function reorderPages(databaseId: string, orderedIds: string[]) {
-  await assertDatabaseAccess(databaseId);
+  const { workspaceId } = await assertDatabaseAccess(databaseId);
 
   // A single Kanban/Calendar/Table drag only actually moves one card, but
   // `orderedIds` is the full page list re-expressed in its new order — most
@@ -297,6 +298,8 @@ export async function reorderPages(databaseId: string, orderedIds: string[]) {
       await tx.update(pages).set({ sortOrder: i }).where(and(eq(pages.id, orderedIds[i]), eq(pages.databaseId, databaseId)));
     }
   });
+  // Row order is not a versioned column; without this another open board keeps the old order.
+  await touchWorkspaces(workspaceId);
   revalidatePath(`/db/${databaseId}`);
 }
 

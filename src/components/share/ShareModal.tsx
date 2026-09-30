@@ -166,7 +166,7 @@ export default function ShareModal({ pageId, workspaceId, isAdmin, onClose }: Pr
                       <button key={p} onClick={() => setEditPermission(p)}
                         className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded border text-[11px] font-semibold transition-colors ${
                           editPermission === p
-                            ? p === 'write' ? 'bg-green-500/15 border-green-500/40 text-green-300' : 'bg-blue-500/15 border-blue-500/40 text-blue-300'
+                            ? p === 'write' ? 'bg-green-500/15 border-green-500/40 text-green-300' : 'bg-signal/15 border-signal/40 text-signal-text'
                             : 'border-neutral-700 text-neutral-400 hover:border-neutral-600 hover:text-neutral-200'
                         }`}
                       >
@@ -180,7 +180,7 @@ export default function ShareModal({ pageId, workspaceId, isAdmin, onClose }: Pr
                     {(['narrow', 'wide', 'full'] as ShareWidth[]).map(w => (
                       <button key={w} onClick={() => setEditWidth(w)}
                         className={`flex-1 px-2 py-1.5 rounded border text-[10px] font-semibold transition-colors ${
-                          editWidth === w ? 'bg-blue-500/15 border-blue-500/40 text-blue-300' : 'border-neutral-700 text-neutral-500 hover:border-neutral-600 hover:text-neutral-300'
+                          editWidth === w ? 'bg-signal/15 border-signal/40 text-signal-text' : 'border-neutral-700 text-neutral-500 hover:border-neutral-600 hover:text-neutral-300'
                         }`}
                       >
                         {t(`width${w.charAt(0).toUpperCase() + w.slice(1)}` as any)}
@@ -196,15 +196,15 @@ export default function ShareModal({ pageId, workspaceId, isAdmin, onClose }: Pr
                       <div className={`w-3.5 h-3.5 rounded border flex items-center justify-center shrink-0 transition-colors ${
                         editInSitemap ? 'bg-green-500 border-green-500' : 'border-neutral-600'
                       }`}>
-                        {editInSitemap && <Check size={9} className="text-white" />}
+                        {editInSitemap && <Check size={10} strokeWidth={3} className="text-white" />}
                       </div>
                       <span className="text-[11px] text-neutral-300">{t('addToSitemap')}</span>
-                      <span className="ml-auto text-[9px] text-neutral-600 uppercase tracking-wide">SEO</span>
+                      <span className="ml-auto text-2xs text-neutral-600">SEO</span>
                     </button>
                   )}
 
                   <button onClick={handleSaveEdit} disabled={isPending}
-                    className="w-full text-[11px] font-semibold bg-blue-500 hover:bg-blue-400 disabled:opacity-60 text-white py-1.5 rounded transition-colors"
+                    className="w-full text-[11px] font-semibold bg-ink hover:bg-ink/88 disabled:opacity-60 text-ink-fg py-1.5 rounded transition-colors"
                   >
                     {isPending ? '…' : t('saveChanges')}
                   </button>
@@ -220,7 +220,7 @@ export default function ShareModal({ pageId, workspaceId, isAdmin, onClose }: Pr
 
               <div className="flex gap-2">
                 <button onClick={handleCopy}
-                  className="flex-1 flex items-center justify-center gap-1.5 text-xs font-semibold bg-blue-500 hover:bg-blue-400 text-white px-3 py-2 rounded-md transition-colors"
+                  className="flex-1 flex items-center justify-center gap-1.5 text-xs font-semibold bg-ink hover:bg-ink/88 text-ink-fg px-3 py-2 rounded-md transition-colors"
                 >
                   {copied ? <Check size={12} /> : <Copy size={12} />}
                   {copied ? t('linkCopied') : t('copyLink')}
@@ -240,7 +240,7 @@ export default function ShareModal({ pageId, workspaceId, isAdmin, onClose }: Pr
 
               {/* Permission */}
               <div className="space-y-1.5">
-                <label className="text-[10px] font-semibold text-neutral-500 uppercase tracking-widest">
+                <label className="text-2xs font-medium text-neutral-500">
                   {t('permissionLabel')}
                 </label>
                 <div className="flex gap-2">
@@ -252,7 +252,7 @@ export default function ShareModal({ pageId, workspaceId, isAdmin, onClose }: Pr
                         permission === p
                           ? p === 'write'
                             ? 'bg-green-500/15 border-green-500/40 text-green-300'
-                            : 'bg-blue-500/15 border-blue-500/40 text-blue-300'
+                            : 'bg-signal/15 border-signal/40 text-signal-text'
                           : 'border-neutral-700 text-neutral-400 hover:border-neutral-600 hover:text-neutral-200'
                       }`}
                     >
@@ -265,14 +265,14 @@ export default function ShareModal({ pageId, workspaceId, isAdmin, onClose }: Pr
 
               {/* Width */}
               <div className="space-y-1.5">
-                <label className="text-[10px] font-semibold text-neutral-500 uppercase tracking-widest">
+                <label className="text-2xs font-medium text-neutral-500">
                   {t('widthLabel')}
                 </label>
                 <div className="flex gap-1.5">
                   {(['narrow', 'wide', 'full'] as ShareWidth[]).map(w => (
                     <button key={w} onClick={() => setWidth(w)}
                       className={`flex-1 px-2 py-1.5 rounded border text-[11px] font-semibold transition-colors ${
-                        width === w ? 'bg-blue-500/15 border-blue-500/40 text-blue-300' : 'border-neutral-700 text-neutral-500 hover:border-neutral-600 hover:text-neutral-300'
+                        width === w ? 'bg-signal/15 border-signal/40 text-signal-text' : 'border-neutral-700 text-neutral-500 hover:border-neutral-600 hover:text-neutral-300'
                       }`}
                     >
                       {t(`width${w.charAt(0).toUpperCase() + w.slice(1)}` as any)}
@@ -288,9 +288,9 @@ export default function ShareModal({ pageId, workspaceId, isAdmin, onClose }: Pr
               >
                 <div className="flex items-center gap-2.5">
                   <div className={`w-3.5 h-3.5 rounded border flex items-center justify-center transition-colors shrink-0 ${
-                    includeChildren ? 'bg-blue-500 border-blue-500' : 'border-neutral-600 group-hover:border-neutral-500'
+                    includeChildren ? 'bg-signal border-signal' : 'border-neutral-600 group-hover:border-neutral-500'
                   }`}>
-                    {includeChildren && <Check size={9} className="text-white" />}
+                    {includeChildren && <Check size={10} strokeWidth={3} className="text-signal-fg" />}
                   </div>
                   <span className="text-[11px] text-neutral-300">{t('includeChildren')}</span>
                 </div>
@@ -307,10 +307,10 @@ export default function ShareModal({ pageId, workspaceId, isAdmin, onClose }: Pr
               {/* Custom slug — admin only */}
               {isAdmin && (
                 <div className="space-y-1.5">
-                  <label className="text-[10px] font-semibold text-neutral-500 uppercase tracking-widest">
+                  <label className="text-2xs font-medium text-neutral-500">
                     {t('slugLabel')}
                   </label>
-                  <div className="flex items-center bg-neutral-900 border border-neutral-700 rounded-md focus-within:border-blue-500/60 transition-colors">
+                  <div className="flex items-center bg-neutral-900 border border-neutral-700 rounded-md focus-within:border-signal/60 transition-colors">
                     <span className="pl-3 text-[11px] text-neutral-600 font-mono shrink-0">/share/</span>
                     <input
                       type="text"
@@ -333,7 +333,7 @@ export default function ShareModal({ pageId, workspaceId, isAdmin, onClose }: Pr
               <button
                 onClick={handleCreate}
                 disabled={isPending}
-                className="w-full flex items-center justify-center gap-2 text-xs font-semibold bg-blue-500 hover:bg-blue-400 disabled:opacity-60 text-white px-4 py-2.5 rounded-md transition-colors"
+                className="w-full flex items-center justify-center gap-2 text-xs font-semibold bg-ink hover:bg-ink/88 disabled:opacity-60 text-ink-fg px-4 py-2.5 rounded-md transition-colors"
               >
                 <Globe size={13} />
                 {isPending ? '…' : t('createShare')}

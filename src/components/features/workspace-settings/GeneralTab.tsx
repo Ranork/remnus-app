@@ -110,7 +110,7 @@ export default function GeneralTab({
     <div className="space-y-6">
       {/* Workspace Icon */}
       <div className="space-y-2">
-        <label className="block text-[10px] font-semibold text-neutral-500 uppercase tracking-widest">
+        <label className="block text-2xs font-medium text-neutral-500">
           {t('workspaceIcon')}
         </label>
         <div className="flex items-center gap-3">
@@ -149,7 +149,7 @@ export default function GeneralTab({
 
       {/* Workspace Name */}
       <div className="space-y-2">
-        <label className="block text-[10px] font-semibold text-neutral-500 uppercase tracking-widest">
+        <label className="block text-2xs font-medium text-neutral-500">
           {t('workspaceName')}
         </label>
         <div className="flex gap-2">
@@ -158,13 +158,13 @@ export default function GeneralTab({
             value={newName}
             onChange={(e) => setNewName(e.target.value)}
             disabled={isRenaming || !hasPrivilegedAccess}
-            className="flex-1 bg-neutral-950 border border-neutral-700 rounded-md text-neutral-100 placeholder-neutral-600 px-3 py-1.5 text-sm outline-none focus:border-blue-500/60 transition-colors disabled:opacity-50"
+            className="flex-1 bg-neutral-950 border border-neutral-700 rounded-md text-neutral-100 placeholder-neutral-600 px-3 py-1.5 text-sm outline-none focus:border-signal/60 transition-colors disabled:opacity-50"
           />
           {hasPrivilegedAccess && (
             <button
               onClick={handleRename}
               disabled={isRenaming || newName.trim() === workspaceName}
-              className="text-xs bg-blue-500 hover:bg-blue-400 disabled:opacity-50 disabled:cursor-not-allowed text-white px-4 py-1.5 rounded-md font-medium transition-colors"
+              className="text-xs bg-ink hover:bg-ink/88 disabled:opacity-50 disabled:cursor-not-allowed text-ink-fg px-4 py-1.5 rounded-md font-medium transition-colors"
             >
               {isRenaming ? t('saving') : t('save')}
             </button>
@@ -187,7 +187,7 @@ export default function GeneralTab({
 
       {/* Storage usage */}
       <div className="space-y-2">
-        <label className="block text-[10px] font-semibold text-neutral-500 uppercase tracking-widest">
+        <label className="block text-2xs font-medium text-neutral-500">
           {t('storageTitle')}
         </label>
         <div className="flex items-center gap-2.5 bg-neutral-950 border border-neutral-700 rounded-md px-3 py-2">
@@ -202,7 +202,7 @@ export default function GeneralTab({
       {/* Danger Zone */}
       {hasPrivilegedAccess && (
         <div className="border border-red-500/20 bg-red-500/5 p-4 rounded-lg space-y-3">
-          <h4 className="text-xs font-semibold text-red-400 uppercase tracking-wider">
+          <h4 className="text-xs font-medium text-red-400">
             {t('dangerZone')}
           </h4>
           <p className="text-xs text-neutral-400 leading-relaxed">{t('deleteWarning')}</p>

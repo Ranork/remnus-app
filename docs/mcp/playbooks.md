@@ -5,7 +5,7 @@ What the agent that sets up your Remnus workspace builds for a web app, an API, 
 [Calibration](calibrate.md) is deliberately general: it gives an agent a way of thinking
 that fits any project. But a game and a payments API do not need the same workspace. A
 playbook adds what one kind of project actually tracks — the databases and columns, what
-a well-filled row looks like, and the status screen that fits — so the agent starts from
+a well-filled row looks like, and what its home dashboard shows — so the agent starts from
 what that field already knows, not from a blank page.
 
 Playbooks are hints, never templates. Every one of them says the same thing first:
@@ -34,9 +34,10 @@ enemy data gets no Enemies database, whatever the playbook lists.
 ## Reading a playbook
 
 Every playbook has the same six parts: when to pick it, the concepts to model (each with
-its columns and the `conceptType` to label it with), example rows with bodies, a status
-screen built from the [dashboard](dashboards.md) block catalog, what not to do in that
-field, and the evidence rule above.
+its columns and the `conceptType` to label it with), example rows with bodies, the home
+dashboard built from the [dashboard](dashboards.md) block catalog — a header every project
+gets, plus the status blocks each of its databases earns — what not to do in that field,
+and the evidence rule above.
 
 Columns are written `Name` type — the types are the ones `create_database` accepts. A
 status column lists its options as `to do` → `in progress` → `done`, the three groups a

@@ -102,7 +102,7 @@ function WorkspaceSection({
               {ws.name.charAt(0).toUpperCase()}
             </div>
         }
-        <span className="flex-1 truncate text-[10px] font-semibold uppercase tracking-widest text-neutral-400">
+        <span className="flex-1 truncate text-2xs font-medium text-neutral-400">
           {ws.name}
         </span>
       </div>

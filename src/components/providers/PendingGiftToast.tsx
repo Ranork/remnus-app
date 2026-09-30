@@ -94,7 +94,7 @@ export default function PendingGiftToast() {
           </p>
           <Link
             href={`/welcome/${gift.token}`}
-            className="shrink-0 rounded-lg bg-blue-500 px-3 py-1.5 text-[12px] font-semibold text-white transition-opacity hover:opacity-90"
+            className="shrink-0 rounded-lg bg-ink px-3 py-1.5 text-[12px] font-semibold text-ink-fg transition-opacity hover:opacity-90"
           >
             {t('toastCta')}
           </Link>
@@ -120,7 +120,7 @@ export default function PendingGiftToast() {
                   // eslint-disable-next-line @next/next/no-img-element -- external Scout Forge asset
                   <img src={gift.appLogoUrl} alt={gift.appName} className="h-7 w-7 rounded-lg object-cover" />
                 ) : (
-                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-500/15 text-[11px] font-semibold text-blue-300">
+                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-signal/15 text-[11px] font-semibold text-signal-text">
                     {gift.appName.charAt(0).toUpperCase()}
                   </div>
                 )}

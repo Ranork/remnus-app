@@ -431,7 +431,7 @@ async function InstallDoneView({
         <h1 className="text-lg font-semibold text-white mb-2">{title}</h1>
         <p className="text-sm text-neutral-500 leading-relaxed">{hint}</p>
         {settled && (
-          <Link href="/app" className="inline-block mt-6 text-sm text-blue-400 hover:text-blue-300 transition-colors">
+          <Link href="/app" className="inline-block mt-6 text-sm text-signal-text hover:text-fg transition-colors">
             {t('openWorkspace')}
           </Link>
         )}

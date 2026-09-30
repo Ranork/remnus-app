@@ -28,7 +28,7 @@ export default async function DashboardRoute(props: { params: Promise<{ itemId: 
   const members = needsMembers ? await getWorkspaceMembers(data.item.workspaceId) : [];
 
   return (
-    <div className="flex-1 overflow-auto bg-neutral-850">
+    <div className="flex-1 overflow-auto bg-sheet lg:bg-transparent">
       <DashboardView item={data.item} resolved={data.resolved} members={members} />
     </div>
   );

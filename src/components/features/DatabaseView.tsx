@@ -1106,7 +1106,7 @@ export default function DatabaseView({
             className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-neutral-500 hover:text-neutral-200 transition-colors cursor-pointer rounded"
             title={tWs('refresh') || 'Refresh'}
           >
-            <RefreshCw size={13} className={isRefreshing ? 'animate-spin text-blue-400' : ''} />
+            <RefreshCw size={13} className={isRefreshing ? 'animate-spin text-signal-text' : ''} />
             {tWs('refresh')}
           </button>
 
@@ -1124,7 +1124,7 @@ export default function DatabaseView({
             onClick={() => handleToggleSidebar(sidebarTab)}
             className={`flex items-center gap-1.5 px-3 py-1.5 text-xs transition-colors cursor-pointer rounded ${
               sidebarOpen
-                ? 'text-blue-400 font-semibold'
+                ? 'text-signal-text font-semibold'
                 : 'text-neutral-500 hover:text-neutral-200'
             }`}
           >
@@ -1393,7 +1393,7 @@ export default function DatabaseView({
                     >
                       <X size={16} />
                     </button>
-                    <span className={`hidden sm:inline-block text-[11px] bg-neutral-800 text-neutral-400 font-medium py-0.5 px-2 border border-neutral-700/40 uppercase tracking-wider rounded transition-opacity ${peekScrolled ? 'opacity-0 sm:hidden' : ''}`}>
+                    <span className={`hidden sm:inline-block text-xs bg-neutral-800 text-neutral-400 font-medium py-0.5 px-2 border border-neutral-700/40 rounded transition-opacity ${peekScrolled ? 'opacity-0 sm:hidden' : ''}`}>
                       {t('openCenter')}
                     </span>
                     {peekScrolled && peekPage && (
@@ -1531,7 +1531,7 @@ export default function DatabaseView({
                 <div
                   data-no-block-marquee
                   onMouseDown={handleSidePeekResizeStart}
-                  className="absolute left-0 top-0 bottom-0 w-1.5 -ml-0.5 cursor-col-resize hover:bg-blue-500/50 active:bg-blue-500/70 transition-colors z-20"
+                  className="absolute left-0 top-0 bottom-0 w-1.5 -ml-0.5 cursor-col-resize hover:bg-signal/50 active:bg-signal/70 transition-colors z-20"
                   title={t('resizePanel')}
                 />
               )}
@@ -1544,7 +1544,7 @@ export default function DatabaseView({
                   >
                     <X size={16} />
                   </button>
-                  <span className={`text-[11px] bg-neutral-800 text-neutral-400 font-medium py-0.5 px-2 border border-neutral-700/40 uppercase tracking-wider rounded transition-opacity ${peekScrolled ? 'hidden' : ''}`}>
+                  <span className={`text-xs bg-neutral-800 text-neutral-400 font-medium py-0.5 px-2 border border-neutral-700/40 rounded transition-opacity ${peekScrolled ? 'hidden' : ''}`}>
                     {t('openSide')}
                   </span>
                   {peekScrolled && peekPage && (

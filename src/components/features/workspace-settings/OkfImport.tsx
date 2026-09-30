@@ -113,7 +113,7 @@ export default function OkfImport({ onBack }: { onBack: () => void }) {
         >
           <ArrowLeft size={14} />
         </button>
-        <BookOpen size={18} className="text-blue-400" />
+        <BookOpen size={18} className="text-signal-text" />
         <div>
           <h3 className="text-sm font-semibold text-neutral-100">{t('okfImportTitle')}</h3>
           <p className="text-xs text-neutral-400">{t('okfImportHint')}</p>
@@ -123,7 +123,7 @@ export default function OkfImport({ onBack }: { onBack: () => void }) {
       {(step === 'idle' || step === 'error') && (
         <div
           className={`border-2 border-dashed p-8 text-center transition-colors cursor-pointer ${
-            file ? 'border-blue-500/50 bg-blue-500/5' : 'border-neutral-700 hover:border-neutral-500'
+            file ? 'border-signal/50 bg-signal/5' : 'border-neutral-700 hover:border-neutral-500'
           }`}
           onClick={() => inputRef.current?.click()}
           onDragOver={event => event.preventDefault()}
@@ -141,7 +141,7 @@ export default function OkfImport({ onBack }: { onBack: () => void }) {
           />
           {file ? (
             <div className="flex flex-col items-center gap-2">
-              <FileArchive size={24} className="text-blue-400" />
+              <FileArchive size={24} className="text-signal-text" />
               <p className="max-w-xs truncate text-sm font-medium text-neutral-200">{file.name}</p>
               <p className="text-xs text-neutral-500">{formatBytes(file.size)}</p>
             </div>
@@ -172,7 +172,7 @@ export default function OkfImport({ onBack }: { onBack: () => void }) {
               [t('okfImportVersion'), preview.version ?? t('okfImportUnknown')],
             ].map(([label, value]) => (
               <div key={label} className="bg-neutral-900 px-3 py-2">
-                <p className="text-[10px] uppercase tracking-wide text-neutral-500">{label}</p>
+                <p className="text-2xs text-neutral-500">{label}</p>
                 <p className="mt-1 text-sm font-semibold text-neutral-200">{value}</p>
               </div>
             ))}
@@ -258,7 +258,7 @@ export default function OkfImport({ onBack }: { onBack: () => void }) {
             type="button"
             onClick={startImport}
             disabled={!isSafeOkfImportPayload(preview)}
-            className="bg-blue-600 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer"
+            className="bg-ink px-4 py-2 text-xs font-semibold text-ink-fg transition-colors hover:bg-ink/88 disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer"
           >
             {t('okfImportStart')}
           </button>

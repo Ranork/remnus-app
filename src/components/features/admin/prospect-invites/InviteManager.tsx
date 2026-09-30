@@ -14,7 +14,7 @@ type Busy = 'fetch' | 'save' | null;
 
 const inputCls =
   'w-full rounded-lg border border-neutral-800 bg-neutral-850 px-3 py-2 text-sm text-neutral-100 placeholder-neutral-600 outline-none focus:border-neutral-600';
-const labelCls = 'mb-1 block text-[11px] font-medium uppercase tracking-wider text-neutral-500';
+const labelCls = 'mb-1 block text-xs font-medium text-neutral-500';
 
 export default function InviteManager({ onChanged }: { onChanged: () => Promise<void> }) {
   const t = useTranslations('ProspectInvites');

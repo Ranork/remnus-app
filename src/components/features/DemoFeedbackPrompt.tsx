@@ -89,7 +89,7 @@ export default function DemoFeedbackPrompt() {
               <form action={logout}>
                 <button
                   type="submit"
-                  className="px-3 py-1.5 text-xs font-medium rounded-lg bg-blue-600 hover:bg-blue-500 text-white transition-colors cursor-pointer"
+                  className="px-3 py-1.5 text-xs font-medium rounded-lg bg-ink hover:bg-ink/88 text-ink-fg transition-colors cursor-pointer"
                 >
                   {t('ctaSignup')}
                 </button>
@@ -116,7 +116,7 @@ export default function DemoFeedbackPrompt() {
                   onClick={() => setSentiment(o.sentiment)}
                   className={`flex-1 py-2 text-2xl rounded-lg border transition-colors cursor-pointer ${
                     sentiment === o.sentiment
-                      ? 'border-blue-500 bg-blue-500/10'
+                      ? 'border-signal bg-signal/10'
                       : 'border-neutral-800 bg-neutral-850 hover:border-neutral-700'
                   }`}
                   aria-label={t(`sentiment_${o.sentiment}`)}
@@ -141,7 +141,7 @@ export default function DemoFeedbackPrompt() {
                   <button
                     onClick={submit}
                     disabled={busy}
-                    className="px-3 py-1.5 text-xs font-medium rounded-lg bg-blue-600 hover:bg-blue-500 text-white transition-colors cursor-pointer disabled:opacity-60"
+                    className="px-3 py-1.5 text-xs font-medium rounded-lg bg-ink hover:bg-ink/88 text-ink-fg transition-colors cursor-pointer disabled:opacity-60"
                   >
                     {busy ? t('sending') : t('submit')}
                   </button>

@@ -59,13 +59,15 @@ export default function TauriTitlebar() {
   }
 
   return (
-    <div className="shrink-0 h-10 flex items-stretch bg-neutral-900 border-b border-neutral-800 select-none">
+    // On the desk, above the sheet: no fill and no rule of its own — the tabs and the
+    // window controls are the only things drawn.
+    <div className="shrink-0 h-11 flex items-center gap-1 pl-2 lg:pl-1 select-none">
       {/* App logo — visible when sidebar is hidden; clicking it reveals the sidebar */}
       {!sidebarVisible && (
         <button
           type="button"
           onClick={() => writeSidebarVisible(true)}
-          className="flex items-center justify-center w-10 shrink-0 border-r border-neutral-800 hover:bg-neutral-800/60 transition-colors cursor-default"
+          className="flex items-center justify-center size-8 shrink-0 rounded-control hover:bg-hover transition-colors cursor-default"
           tabIndex={-1}
           title="Show sidebar"
         >
@@ -93,10 +95,10 @@ export default function TauriTitlebar() {
       />
 
       {/* Window controls */}
-      <div className="flex items-center px-1 gap-0.5">
+      <div className="flex items-center pr-2 gap-0.5">
         <button
           onClick={minimize}
-          className="w-7 h-5 flex items-center justify-center rounded text-neutral-600 hover:text-neutral-300 hover:bg-neutral-800/60 transition-colors cursor-default"
+          className="w-8 h-7 flex items-center justify-center rounded-control text-fg-3 hover:text-fg hover:bg-hover transition-colors cursor-default"
           tabIndex={-1}
         >
           <svg width="10" height="1" viewBox="0 0 10 1" fill="currentColor">
@@ -106,7 +108,7 @@ export default function TauriTitlebar() {
 
         <button
           onClick={toggleMaximize}
-          className="w-7 h-5 flex items-center justify-center rounded text-neutral-600 hover:text-neutral-300 hover:bg-neutral-800/60 transition-colors cursor-default"
+          className="w-8 h-7 flex items-center justify-center rounded-control text-fg-3 hover:text-fg hover:bg-hover transition-colors cursor-default"
           tabIndex={-1}
         >
           {isMaximized ? (
@@ -123,7 +125,7 @@ export default function TauriTitlebar() {
 
         <button
           onClick={closeWindow}
-          className="w-7 h-5 flex items-center justify-center rounded text-neutral-600 hover:text-white hover:bg-red-500/80 transition-colors cursor-default"
+          className="w-8 h-7 flex items-center justify-center rounded-control text-fg-3 hover:text-white hover:bg-red-500/85 transition-colors cursor-default"
           tabIndex={-1}
         >
           <svg width="10" height="10" viewBox="0 0 10 10" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round">

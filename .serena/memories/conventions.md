@@ -33,12 +33,14 @@ Primary sources: `AI.md`, `AGENTS.md`, `messages/`, `src/auth.config.ts`, `src/l
 - `useActionState`-compatible signature: `(_prevState, formData)` for form actions
 - Revalidate with `revalidatePath('/')` ONLY for structural sidebar mutations (create/delete items); NOT for content edits
 
-## UI / Design
-- Flat, shadowless, `rounded-none` everywhere in workspace (no cards, no shadows)
-- 3-tier bg: `bg-neutral-950` (outermost body), `bg-neutral-900` (sidebars/panels), `bg-neutral-850` (content/canvas)
-- Borders: `border-neutral-800` single lines; no chunky cards
-- Auth pages exception: `rounded-xl` card, `rounded-lg` inputs (deliberate contrast)
-- All colors via `@theme` tokens in `globals.css` — use Tailwind tokens, not hex
+## UI / Design (V2 R8, 2026-09-30 — "Ortak Masa, tek renk", Hakan's pick)
+- Desk + sheet: sidebar on the desk (`bg-desk`, no edge), content on ONE sheet (`getSheetClasses` in `src/lib/sidebarVisibility.ts`: `bg-sheet rounded-surface shadow-sheet`, lg+ only). Titlebar + demo/project banner sit on the desk; the project dashboard route is `onDesk` (cards on the desk).
+- Colour = role tokens in `globals.css` @theme (`desk sheet raised float hover line line-strong fg fg-2 fg-3 fg-4 ink ink-fg signal signal-fg signal-text signal-soft focus link overlay`). Themes (remnus dark, catppuccin = our light, dracula, tokyo-night, nord) redefine the neutral ramp + signal set; roles derive. The ramp keeps its meaning (950 desk · 850 sheet · 900 raised · 800 line/hover · 750 · 700 strong line · 600…50 text).
+- Monochrome chrome: primary = INK (`bg-ink text-ink-fg`), the ONE accent = SIGNAL yellow (live/active/selection/focus). No second colour for agents vs humans. Light theme: signal stays a fill (#f5b300); signal-coloured text is `text-signal-text` (dark gold). Blue is data/user colour only.
+- Shape: 4 (`rounded-sm`) · 6 (`rounded`) · 8 controls (`rounded-control`; md/lg pinned to 8) · 12 surfaces (`rounded-surface`; xl/2xl pinned to 12). Elevation only `shadow-lift/sheet/float/modal` (`.modal-shadow` = modal). Marketing (`.marketing-site`) keeps the pre-R8 ramp + Tailwind radii until R8.7.
+- Type: Onest; 11 floor (`text-2xs`) · 12 · 13 (`text-ui`) · 14 · 16 body · page title 28/34. Mono only for literal machine text. NO CSS `uppercase` labels (Turkish İ: "TİTLE"), no "A · B" meta joins, no trailing "→"; big numbers without `tabular-nums` (Onest's tabular 1 gaps).
+- Motion: short, answers an action; no looping pulse/ripple on status dots (Hakan). Global `:focus-visible` ring (base layer, `--color-focus`).
+- Decision page: `.ai/R8_DESIGN_DIRECTIONS.html` (artifact https://claude.ai/artifact/PnW33rWD6iEabi5CfuD5Sf). Remaining surfaces: R8.1–R8.8 prompts in `.ai/REMNUS_V2_REVISIONS_PROMPTS.md`.
 
 ## Data Patterns
 - JSON column pattern for dynamic properties (no EAV, no extra tables)
@@ -64,6 +66,9 @@ Primary sources: `AI.md`, `AGENTS.md`, `messages/`, `src/auth.config.ts`, `src/l
 - WebGL (sigma) colours must be OPAQUE hex from theme tokens (`blend(color, canvas, alpha)` in `graphTheme.ts`): translucent light colours render invisible on light themes. Tailwind `oklch()` defaults are unreadable to sigma.
 - A client screen that fetches after mount must not take the first `remnus:change` broadcast as its baseline — compare with its payload's `generatedAt` (`useChangeSignal` in `GraphScreen`). Live refresh keeps existing node positions (new nodes at neighbour centroid, short FA2 with old nodes `fixed`).
 - Keep sigma/graphology out of every other bundle: import them only from `GraphCanvas`, reached through `next/dynamic` (`ssr:false` only inside a client component).
+- Sigma click/hover on tiny nodes (R7): sigma's own pick reads one half-resolution pixel, so zoomed-out nodes (1–4 px) miss. Keep the `nodeNear` fallback (`HIT_SLOP` 6 px mouse / 14 px touch) wired to clickStage, doubleClickStage and the rAF-throttled hover listener; a new interaction on the map goes through it too.
+- Bulk graph mutations happen with sigma detached (`renderer.setGraph(empty)` → mutate → `setGraph(graph)`); attached, sigma indexes every add/merge event one by one (1,500 rows: ~1.3 s). Start force passes/animations only after re-attaching.
+- The public accessibility widget must stay out of the app: a new top-level `(app)` route goes into `APP_ROUTE_PREFIXES` (`src/lib/accessibilityWidget.ts`); `AccessibilityWidgetOff` in the `(app)` layout is the safety net, not a replacement (it cannot stop a pre-hydration flash).
 - Code layer (P13): read a knowledge source as a repo path ONLY through `normalizeSourcePath` / `matchSource` (`src/lib/graph/codePaths.ts`) — URLs and drive paths are never nodes, anchors/globs/`./` normalize away. A code node's tree parent is a `folder` edge: never let the page-tree (`hierarchy`) loop claim a code node (priority 0 beats 6 and silently turns folder edges into page-tree edges — the first version did). Code nodes carry no trust/agent state and stay out of mentions and "Needs attention". Nodes placed outside the radial tree (tags, files, folders) need the deterministic golden-angle nudge, or siblings with one neighbour coincide and FA2 cannot separate them.
 - The agent side of the map stays inside existing tools (P4 schema-cost rule): file → pages is `get_related_pages` with `resource`, not a new tool. A digest/map line must prove it changes agent behaviour before it is added (the "most connected N" line was measured and left out).
 
@@ -148,8 +153,24 @@ Primary sources: `AI.md`, `AGENTS.md`, `messages/`, `src/auth.config.ts`, `src/l
   response ~20 bytes — the whole mechanism exists because a 10s `router.refresh()` poll
   (~100 KB RSC payload per tick) was the dominant Vercel Fast Origin Transfer cost.
 - Cadence invariant: an IDLE normal tab still costs exactly one request per 30s. Fast polling
-  is only for a project window (flat 2.5s while visible) or a normal tab within ~90s of an
-  observed change (1.6× backoff, then it stands down entirely).
+  is only for a project window (flat 2.5s while visible), a normal tab while the heartbeat
+  says `agent: true` (agent_activity in the caller's workspaces within 3 min, R5), or within
+  ~90s of an observed change (1.6× backoff, then it stands down entirely). A window `focus`
+  checks once (throttled 2s).
+- (R5, 2026-09-30) The version is in whole SECONDS: a second write in the same second does not
+  advance it. The `(app)` layout passes `renderedAt` (server ms, taken before its reads);
+  `mayPredateRender` → one extra "settle" refresh on a later tick. Only the desktop sidebar
+  (the one given `renderedAt`) drives `router.refresh()` — the hidden mobile-drawer copy made
+  every refresh fetch twice.
+- (R5) `workspaces.updated_at` is the 7th branch. A write that changes what a sidebar/open page
+  shows but touches none of the versioned columns (reorder, reparent, membership, access
+  request, comment delete …) must call `touchWorkspaces(...ids)` — not bump items' updatedAt.
+- (R5 follow-up) The change signal carries `n` (visible workspace count → a removal/add counts as a change) and
+  `h: 1` while `v`'s second is open (`signalExtras`); `TabHost` settles via `changeIsHot()`, `GraphScreen` via its
+  payload's `generatedAt`. Keep all consumers settling — whole-second versions lose same-second writes otherwise.
+- MCP body edits: `update_page` `tick` / `append` (`services/bodyEdits.ts`) — never resend a body just to tick a task.
+  `move_item` `position` renumbers siblings. Curated Lucide names reach agents only via `{{LUCIDE_ICONS}}` in docs and the
+  dashboard catalog (not tool schemas).
 - Deferring a refresh is about not resetting a caret/selection, nothing else. Use the shared
   `src/lib/interactionGate.ts` (held pointer / keystroke <1.5s / editable focused with a
   keystroke <15s). Never gate on `mousemove`: the 10s idle timer it replaced meant a human
@@ -228,7 +249,8 @@ Primary sources: `AI.md`, `AGENTS.md`, `messages/`, `src/auth.config.ts`, `src/l
   page builds `/w/<id>` on its own origin.
 
 ## UI primitives (R3, 2026-09-29)
-- **`src/components/ui/`** holds shadcn/ui components on **Base UI** (`@base-ui/react`, `class-variance-authority`; `components.json` style `base-nova`, `cn` = `src/lib/cn.ts`). Colours come from the app's own neutral/blue/red palette (never shadcn's `bg-popover`-style tokens: they are not defined in `globals.css` and a missing token renders transparent).
+- **`src/components/ui/`** holds shadcn/ui components on **Base UI** (`@base-ui/react`, `class-variance-authority`; `components.json` style `base-nova`, `cn` = `src/lib/cn.ts`): button (primary=ink, secondary, outline, ghost, danger, signal), dialog, dropdown-menu (+Shortcut), select/SimpleSelect, and since R8 tooltip, badge, tabs (line/segmented), card (on desk/sheet), empty-state, kbd, input/textarea, remnus-mark. Colours come from the R8 role tokens (never shadcn's `bg-popover`/`bg-accent` tokens: undefined here, a missing token renders transparent). **A new theme token must also go into the tailwind-merge list in `src/lib/cn.ts`** — without it `cn('text-ink-fg','text-ui')` read `text-ui` as a colour and dropped `text-ink-fg`.
+- Class codemods: run them through the TypeScript parser (string/template literals only) and never reflow whitespace — a regex over "quoted spans" in R8 swallowed JSX text apostrophes and flattened indentation in ~80 files (repaired from HEAD).
 - **No native `<select>` in new UI**: use `SimpleSelect` (`options`, `size`, `className`, `aria-label`); the popup portals to `<body>` at z-9999 so it opens in front of z-300 modals. Grouped/custom lists: compose `Select*` parts.
 - **Async buttons**: `Button` `loading` (spinner, disabled, `aria-busy`, width kept). **`ConfirmDialog.onConfirm` may return a promise**: dialog stays open with a spinner, buttons/Escape held, rejection shown inside; on success it stays busy, so the caller must unmount it (setState false / navigate). A sync `onConfirm` still closes itself.
 - `UI` i18n namespace (close, actionFailed) is for these primitives. Add keys as text inserts, not by re-serialising a locale file (hand formatting would churn).
@@ -236,6 +258,7 @@ Primary sources: `AI.md`, `AGENTS.md`, `messages/`, `src/auth.config.ts`, `src/l
 ## Sidebar, account menu, home dashboard (V2 R4, 2026-09-29)
 - Account-level sidebar entries live in `AccountMenu.tsx` (avatar row → menu), not as new nav rows. Only AI Agents stays outside. A project window renders just Trash + What's New there (conditional render, not CSS).
 - `WhatsNewButton`/`PwaInstallButton` are hooks now (`useWhatsNew`, `usePwaInstall`): render the returned `modal` outside the menu so it outlives it.
-- Each expanded workspace starts with `WorkspaceQuickLinks` (Pano + Map). `workspaces.home_dashboard_item_id` (migration 0054, applied by `src/db/apply-0054-home-dashboard.ts`) is NOT a foreign key: always read it through `HOME_DASHBOARD_SQL` / `getHomeDashboardItemId` (validates existence + type + workspace, so delete/restore need no bookkeeping). That fragment hand-writes `workspaces.…` — never alias `workspaces` around it. The home dashboard is hidden from the tree; its header carries delete.
+- Each expanded workspace starts with `WorkspaceQuickLinks` (Pano + Map; monochrome pair since R8, the open one lifted). `workspaces.home_dashboard_item_id` (migration 0054, applied by `src/db/apply-0054-home-dashboard.ts`) is NOT a foreign key: always read it through `HOME_DASHBOARD_SQL` / `getHomeDashboardItemId` (validates existence + type + workspace, so delete/restore need no bookkeeping). That fragment hand-writes `workspaces.…` — never alias `workspaces` around it. The home dashboard is hidden from the tree; its header carries delete.
+- (V2 R6) A home dashboard is built by every calibration (guide v4): `create_dashboard` `home: true` / `update_dashboard` `home`, digest marks `, home`. Block types `project` (summary + stack; name + last agent time are live) and `savings` (no fields). The Pano button on an uncalibrated workspace composes one from its databases (`services/homeDashboard.ts`). Rule for agents AND the composer: **no zeros** — a block that would show 0 / an empty list today is left out.
 - `AgentSavingsCard` has `variant` sidebar/modal/dashboard; numbers use `compactDisplay: 'long'` (never the "98,1 B" shorthand).
 - shadcn CLI gotchas: `npx shadcn add …` re-adds a bogus `cn` npm package and writes token classes (`bg-popover`…) that are undefined here — run `npm uninstall cn`, and rewrite with palette classes (see `ui/dropdown-menu.tsx`).

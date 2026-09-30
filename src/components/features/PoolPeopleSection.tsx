@@ -41,7 +41,7 @@ export default function PoolPeopleSection() {
   return (
     <div>
       <div className="flex items-center justify-between mb-2">
-        <span className="flex items-center gap-1.5 text-[11px] uppercase tracking-wider text-neutral-500">
+        <span className="flex items-center gap-1.5 text-xs text-neutral-500">
           <Users size={12} /> {t('peopleTitle')}
         </span>
         <span className="text-[11px] text-neutral-500">{pool.usage.used} / {isFinite(pool.usage.limit) ? pool.usage.limit : '∞'}</span>
@@ -75,8 +75,8 @@ export default function PoolPeopleSection() {
         ))}
 
         {pool.invites.map((inv) => (
-          <div key={inv.id} className="flex items-center gap-2.5 px-3 py-2 bg-blue-500/5">
-            <Mail size={13} className="text-blue-400 shrink-0 ml-1" />
+          <div key={inv.id} className="flex items-center gap-2.5 px-3 py-2 bg-signal/5">
+            <Mail size={13} className="text-signal-text shrink-0 ml-1" />
             <div className="min-w-0 flex-1">
               <p className="m-0 text-[12.5px] text-neutral-200 truncate">{inv.email}</p>
               <p className="m-0 text-[10.5px] text-neutral-500 truncate">{t('pendingIn', { workspace: inv.workspaceName })}</p>

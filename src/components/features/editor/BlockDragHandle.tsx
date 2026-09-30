@@ -918,7 +918,7 @@ export default function BlockDragHandle({ editor }: Props) {
               ? dropIndicator.width - 24
               : dropIndicator.width,
             height: 2,
-            background: '#445c95',
+            background: 'var(--color-signal)',
             borderRadius: '1px',
             pointerEvents: 'none',
             zIndex: 99,

@@ -164,7 +164,7 @@ export default function InviteStatusTable({
     <div className="overflow-x-auto rounded-xl border border-neutral-800 bg-neutral-900">
       <table className="w-full min-w-[860px] text-left text-xs">
         <thead>
-          <tr className="border-b border-neutral-800 text-[10.5px] uppercase tracking-wider text-neutral-500">
+          <tr className="border-b border-neutral-800 text-2xs text-neutral-500">
             <th className="px-4 py-2.5 font-medium">{t('colApp')}</th>
             <th className="px-4 py-2.5 font-medium">{t('colStatus')}</th>
             <th className="px-4 py-2.5 font-medium">{t('colOpened')}</th>

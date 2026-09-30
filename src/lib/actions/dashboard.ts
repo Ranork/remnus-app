@@ -15,6 +15,7 @@ import {
   setHomeDashboard,
   type DashboardPatch,
 } from '@/lib/services/dashboards';
+import { composeHomeDashboardBlocks } from '@/lib/services/homeDashboard';
 
 /**
  * Session-aware actions for dashboard items. The cookie-free half (spec
@@ -314,8 +315,10 @@ export async function getDashboardEditorOptions(itemId: string): Promise<Dashboa
 
 /**
  * The sidebar's pinned "Pano" button. Returns the workspace's home dashboard, creating
- * an empty one (and pointing the workspace at it) the first time. Workspace content, so
- * it works in a project window like every other action in this file.
+ * one (and pointing the workspace at it) the first time — composed from the databases
+ * the workspace already has (`composeHomeDashboardBlocks`), with a note saying how to
+ * get one built for the project. Workspace content, so it works in a project window
+ * like every other action in this file.
  */
 export async function openOrCreateHomeDashboard(workspaceId: string, title: string): Promise<{ itemId: string; created: boolean }> {
   await assertWorkspaceAccess(workspaceId);
@@ -323,7 +326,22 @@ export async function openOrCreateHomeDashboard(workspaceId: string, title: stri
   const existing = await getHomeDashboardItemId(workspaceId);
   if (existing) return { itemId: existing, created: false };
 
-  const { itemId } = await createDashboard(workspaceId, title);
+  const t = await getTranslations('Dashboard.home');
+  const blocks = await composeHomeDashboardBlocks(workspaceId, {
+    note: t('note'),
+    open: (name) => t('open', { name }),
+    byStatus: (name) => t('byStatus', { name }),
+    nextDue: (name) => t('nextDue', { name }),
+    stillOpen: (name) => t('stillOpen', { name }),
+    latest: (name) => t('latest', { name }),
+    whereToLook: t('whereToLook'),
+    agentActivity: t('agentActivity'),
+  });
+  const { itemId } = await createDashboard(workspaceId, title, undefined, {
+    spec: { version: DASHBOARD_SPEC_VERSION, blocks },
+    icon: 'lucide:PieChart',
+    iconColor: 'blue',
+  });
   await setHomeDashboard(workspaceId, itemId);
   // createDashboard revalidated before the workspace pointed at the new dashboard; do it
   // again so the sidebar's refreshed props already carry the home id.

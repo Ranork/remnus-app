@@ -175,7 +175,7 @@ export default function TemplatePickerModal({
           <div className="overflow-y-auto p-5 space-y-6">
             {/* Blank group */}
             <div>
-              <p className="text-[10px] font-semibold text-neutral-500 uppercase tracking-widest mb-3">
+              <p className="text-2xs font-medium text-neutral-500 mb-3">
                 {t('groupBlank')}
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
@@ -193,7 +193,7 @@ export default function TemplatePickerModal({
 
             {/* Templates group */}
             <div>
-              <p className="text-[10px] font-semibold text-neutral-500 uppercase tracking-widest mb-3">
+              <p className="text-2xs font-medium text-neutral-500 mb-3">
                 {t('groupTemplates')}
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
@@ -233,7 +233,7 @@ export default function TemplatePickerModal({
 
           {/* Body */}
           <div className="p-5">
-            <label className="block text-[10px] font-semibold text-neutral-500 uppercase tracking-widest mb-2">
+            <label className="block text-2xs font-medium text-neutral-500 mb-2">
               Name
             </label>
             <input
@@ -246,7 +246,7 @@ export default function TemplatePickerModal({
               }}
               placeholder="Enter a name..."
               disabled={isPending}
-              className="w-full bg-neutral-900 border border-neutral-700 rounded-md text-neutral-100 placeholder-neutral-600 px-3 py-2 text-sm outline-none focus:border-blue-500/60 transition-colors disabled:opacity-50"
+              className="w-full bg-neutral-900 border border-neutral-700 rounded-md text-neutral-100 placeholder-neutral-600 px-3 py-2 text-sm outline-none focus:border-signal/60 transition-colors disabled:opacity-50"
             />
           </div>
 
@@ -261,7 +261,7 @@ export default function TemplatePickerModal({
             <button
               onClick={handleCreate}
               disabled={!title.trim() || isPending}
-              className="flex items-center gap-1.5 text-sm bg-blue-500 hover:bg-blue-400 disabled:opacity-50 disabled:cursor-not-allowed text-white px-4 py-1.5 rounded font-medium transition-colors"
+              className="flex items-center gap-1.5 text-sm bg-ink hover:bg-ink/88 disabled:opacity-50 disabled:cursor-not-allowed text-ink-fg px-4 py-1.5 rounded font-medium transition-colors"
             >
               {isPending && (
                 <div className="w-3 h-3 rounded-full border-2 border-white/25 border-t-white animate-spin shrink-0" />

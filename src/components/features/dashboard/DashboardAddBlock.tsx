@@ -17,11 +17,11 @@ export default function DashboardAddBlock({ itemId, prominent = false }: { itemI
         onClick={() => setOpen(true)}
         className={
           prominent
-            ? 'inline-flex items-center gap-1.5 bg-neutral-800 px-3 py-1.5 text-xs font-medium text-neutral-200 transition-colors hover:bg-neutral-700'
-            : 'inline-flex items-center gap-1 text-[11px] text-neutral-500 transition-colors hover:text-neutral-200'
+            ? 'inline-flex h-8 items-center gap-1.5 rounded-control bg-ink px-3.5 text-ui font-semibold text-ink-fg transition-colors hover:bg-ink/88'
+            : 'inline-flex h-7 items-center gap-1 rounded-control px-2 text-xs text-fg-3 transition-colors hover:bg-hover hover:text-fg'
         }
       >
-        <Plus size={prominent ? 13 : 12} />
+        <Plus size={prominent ? 16 : 14} />
         {t('addBlock')}
       </button>
       {open && <DashboardBlockEditor itemId={itemId} onClose={() => setOpen(false)} />}

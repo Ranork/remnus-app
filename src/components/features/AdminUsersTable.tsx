@@ -342,7 +342,7 @@ function Th({ sk, label, sortKey, sortDir, onSort, className }: {
     <th className={`text-left px-4 py-2.5 ${className ?? ''}`}>
       <button
         onClick={() => onSort(sk)}
-        className="group inline-flex items-center gap-1 text-xs font-medium text-neutral-500 uppercase tracking-wider hover:text-neutral-300 transition-colors"
+        className="group inline-flex items-center gap-1 text-xs font-medium text-neutral-500 hover:text-neutral-300 transition-colors"
       >
         {label}
         <SortIcon active={sortKey === sk} dir={sortDir} />

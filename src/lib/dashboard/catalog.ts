@@ -9,10 +9,13 @@ import {
   linksBlockSchema,
   listBlockSchema,
   metricBlockSchema,
+  projectBlockSchema,
+  savingsBlockSchema,
   textBlockSchema,
   validateDashboardSpec,
   type DashboardBlockType,
 } from './schema';
+import { CURATED_ICON_NAMES } from '@/lib/icons';
 
 /**
  * The block catalog an agent reads before building a dashboard — served as the
@@ -37,6 +40,8 @@ const SCHEMAS: Record<DashboardBlockType, z.ZodType> = {
   text: textBlockSchema,
   links: linksBlockSchema,
   activity: activityBlockSchema,
+  project: projectBlockSchema,
+  savings: savingsBlockSchema,
 };
 
 /** Rules a JSON schema cannot carry (refinements, runtime semantics). */
@@ -46,7 +51,8 @@ const NOTES: Partial<Record<DashboardBlockType, string>> = {
   database_embed: 'viewId: a table or kanban view id or name (get_database_schema lists them); omitted = the first one. The view is shown as saved.',
   list: 'Rows in database order unless `sort`; showColumns adds up to 3 property columns.',
   text: 'Headings, **bold**, _italic_, `code`, links and simple lists. Long content belongs on a page.',
-  links: 'itemId: any page, database or dashboard of this workspace.',
+  links: 'itemId: any page, database or dashboard of this workspace; for a database either of its ids works.',
+  project: 'The workspace name and "last agent activity" are live; write only what you read — summary and stack.',
 };
 
 /** Fields every block shares; listed once instead of in every signature. */
@@ -103,10 +109,24 @@ export function blockSignature(type: DashboardBlockType): string {
 /**
  * Skeletons an agent fills in instead of designing from scratch. Placeholders:
  * `$DB` a databaseId; `$STATUS`, `$OWNER`, `$DATE` column names; `$DONE` the
- * status value meaning finished. Column fields accept names, so a skeleton
- * needs no schema lookup beyond knowing which columns exist.
+ * status value meaning finished; `$SUMMARY`, `$STACK`, `$ITEM` for the home
+ * skeleton. Column fields accept names, so a skeleton needs no schema lookup
+ * beyond knowing which columns exist.
  */
 export const DASHBOARD_TEMPLATES: { key: string; name: string; needs: string; blocks: Record<string, unknown>[] }[] = [
+  {
+    // The part of a home dashboard every project has. Status blocks from the
+    // templates below go between `project` and `go` when a database earns them.
+    key: 'home',
+    name: 'Project home frame; status blocks go after `project`',
+    needs: '$SUMMARY, $STACK, $ITEM',
+    blocks: [
+      { id: 'project', type: 'project', summary: '$SUMMARY', stack: ['$STACK'] },
+      { id: 'go', type: 'links', title: 'Where to look', width: 'half', items: [{ itemId: '$ITEM' }] },
+      { id: 'agents', type: 'activity', title: 'Agent activity', width: 'half' },
+      { id: 'saved', type: 'savings', width: 'full' },
+    ],
+  },
   {
     key: 'project-status',
     name: 'Project status',
@@ -162,7 +182,10 @@ export function renderDashboardCatalog(): string {
     '- source: {databaseId*, filters?}. databaseId: from the workspace map (either id of a database works).',
     '- Column fields (columnId, groupBy, valueColumnId, sort.columnId, showColumns, filters[].columnId) take a column id or name, case-insensitive; the id is stored.',
     '- filters (≤8, all must match): {columnId*, operator*: equals|not_equals|contains|not_contains|is_empty|is_not_empty, value?}. value is a string; \'["A","B"]\' matches any of them. Select/status values must be exact options (case is fixed for you).',
-    '- The write result lists warnings for blocks that will render empty or broken (unknown column, no matching rows). Read them; you cannot see the screen.',
+    '- The write result lists warnings for blocks that will render empty or broken (unknown column, no matching rows). Read them; you cannot see the screen. No `warnings` field = nothing to report.',
+    `- icon: an emoji or "lucide:Name" from: ${CURATED_ICON_NAMES.join(', ')}.`,
+    '- Home dashboard: each workspace has at most one, pinned above its tree in the sidebar ("home" in the workspace map). create_dashboard({…, home: true}) builds and pins it; update_dashboard({dashboardId, home: true}) pins an existing one. Never a second one — extend it.',
+    '- No zeros: a block whose number is 0 or whose list is empty today is noise. Add a status block only over a database that has rows and the column it groups by.',
     '',
     '## Blocks (* = required)',
   ];
@@ -174,7 +197,7 @@ export function renderDashboardCatalog(): string {
   lines.push(
     '',
     '## Templates',
-    'Fill the placeholders ($DB a databaseId; $STATUS/$OWNER/$DATE column names; $DONE the finished status value), drop blocks whose column the database lacks, then pass `blocks` to create_dashboard.',
+    'Fill the placeholders ($DB a databaseId; $STATUS/$OWNER/$DATE column names; $DONE the finished status value; $SUMMARY/$STACK/$ITEM for home), drop blocks whose column the database lacks, then pass `blocks` to create_dashboard.',
   );
   for (const tpl of DASHBOARD_TEMPLATES) {
     const check = validateDashboardSpec({ version: DASHBOARD_SPEC_VERSION, blocks: tpl.blocks });

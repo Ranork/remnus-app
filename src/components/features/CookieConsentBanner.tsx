@@ -51,7 +51,7 @@ export default function CookieConsentBanner() {
             </span>{' '}
             <Link
               href="/privacy"
-              className="text-blue-500 underline-offset-2 hover:underline"
+              className="text-signal-text underline-offset-2 hover:underline"
             >
               {t('learnMore')}
             </Link>
@@ -71,7 +71,7 @@ export default function CookieConsentBanner() {
               <button
                 type="button"
                 onClick={accept}
-                className="bg-blue-500 px-4 py-1.5 text-sm font-medium text-white transition-colors hover:bg-blue-500/90"
+                className="rounded-control bg-ink px-4 py-1.5 text-sm font-semibold text-ink-fg transition-colors hover:bg-ink/88"
               >
                 {t('accept')}
               </button>
@@ -80,7 +80,7 @@ export default function CookieConsentBanner() {
             <button
               type="button"
               onClick={accept}
-              className="bg-blue-500 px-4 py-1.5 text-sm font-medium text-white transition-colors hover:bg-blue-500/90"
+              className="rounded-control bg-ink px-4 py-1.5 text-sm font-semibold text-ink-fg transition-colors hover:bg-ink/88"
             >
               {t('gotIt')}
             </button>

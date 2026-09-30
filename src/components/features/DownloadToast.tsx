@@ -89,7 +89,7 @@ export default function DownloadToast() {
             {toast.success && toast.path && (
               <button
                 onClick={() => reveal(toast.path)}
-                className="mt-1 self-start flex items-center gap-1.5 text-xs font-medium text-blue-400 hover:text-blue-300 transition-colors"
+                className="mt-1 self-start flex items-center gap-1.5 text-xs font-medium text-signal-text hover:text-fg transition-colors"
               >
                 <FolderOpen size={12} />
                 {t('downloadShowInFolder')}

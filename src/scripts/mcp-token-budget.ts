@@ -14,6 +14,7 @@
  * Read-only: nothing here writes. resources/list does hit the DB for the sample
  * workspace, which is why DATABASE_URL must be the local file.
  */
+import './serverOnlyStub';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { Client } from '@modelcontextprotocol/sdk/client/index.js';
 import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';

@@ -133,8 +133,8 @@ export default function PwaInstallModal({ open, onClose }: Props) {
               key={key}
               className="flex flex-col items-center gap-1.5 px-2 py-3 rounded-xl border border-neutral-800 bg-neutral-900 text-center"
             >
-              <span className="w-7 h-7 rounded-lg bg-blue-500/10 border border-blue-500/20 flex items-center justify-center">
-                <Icon size={14} className="text-blue-300" />
+              <span className="w-7 h-7 rounded-lg bg-signal/10 border border-signal/20 flex items-center justify-center">
+                <Icon size={14} className="text-signal-text" />
               </span>
               <span className="text-[10.5px] leading-tight text-neutral-300">{t(key)}</span>
             </div>
@@ -153,7 +153,7 @@ export default function PwaInstallModal({ open, onClose }: Props) {
           ) : status === 'available' ? (
             <button
               onClick={() => void triggerInstallPrompt()}
-              className="w-full inline-flex items-center justify-center gap-2.5 bg-blue-500 hover:bg-accent-strong text-white px-6 py-3.5 rounded-xl text-[14px] font-medium transition-colors duration-150"
+              className="w-full inline-flex items-center justify-center gap-2.5 bg-ink hover:bg-accent-strong text-ink-fg px-6 py-3.5 rounded-xl text-[14px] font-medium transition-colors duration-150"
             >
               <Download size={16} aria-hidden />
               {t('pwaInstallCta')}
@@ -161,7 +161,7 @@ export default function PwaInstallModal({ open, onClose }: Props) {
           ) : (
             <div className="space-y-4">
               <div className="flex items-center gap-3">
-                <span className="font-mono text-[10px] text-neutral-500 uppercase tracking-[0.16em] shrink-0">
+                <span className="font-mono text-2xs text-neutral-500 shrink-0">
                   {t('pwaHowTitle')}
                 </span>
                 <span className="flex-1 h-px bg-neutral-800" />

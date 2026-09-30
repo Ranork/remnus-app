@@ -4,6 +4,7 @@ import { join } from 'path';
 import { execSync } from 'child_process';
 import { Marked } from 'marked';
 import { WIKI_PAGES, BLOG_POSTS, type WikiPage, type BlogPost } from './manifest';
+import { CURATED_ICON_NAMES } from '@/lib/icons';
 
 export { WIKI_PAGES, BLOG_POSTS } from './manifest';
 export type { WikiPage, BlogPost } from './manifest';
@@ -103,8 +104,18 @@ function truncateAtWord(text: string, max: number): string {
   return (lastSpace > 0 ? cut.slice(0, lastSpace) : cut).trimEnd() + '…';
 }
 
+/**
+ * Values the MCP docs quote from code, filled in when a page is served so the text
+ * can never drift from what the server accepts. `{{LUCIDE_ICONS}}` is the curated
+ * icon list — both calibration test agents lost a call guessing a name before it.
+ */
+const DOC_PLACEHOLDERS: Record<string, () => string> = {
+  LUCIDE_ICONS: () => CURATED_ICON_NAMES.join(', '),
+};
+
 function readContent(kind: 'mcp' | 'blog', file: string): string {
-  return readFileSync(join(process.cwd(), 'docs', kind, file), 'utf8');
+  const raw = readFileSync(join(process.cwd(), 'docs', kind, file), 'utf8');
+  return kind === 'mcp' ? raw.replace(/\{\{([A-Z_]+)\}\}/g, (m, key: string) => DOC_PLACEHOLDERS[key]?.() ?? m) : raw;
 }
 
 // Real last-edited date for a content file, from git history (build-time only —

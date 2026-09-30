@@ -13,14 +13,11 @@ import {
   AlertTriangle,
   ChevronDown,
   ChevronRight,
-  Check,
   Trash,
   Edit3,
-  Briefcase,
   MoreHorizontal,
   Copy,
   Settings,
-  Layers,
   ArrowLeft,
   Bot,
   Globe,
@@ -70,12 +67,17 @@ import { getMyTier } from '@/lib/actions/billing';
 import type { PlanTier } from '@/lib/billing/plans';
 import { getSidebarOverlayContainer, writeSidebarVisible } from '@/lib/sidebarVisibility';
 import { useSidebarPeek } from '@/lib/sidebarPeekContext';
+import { RemnusMark } from '@/components/ui/remnus-mark';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { ConfirmDialog } from './ConfirmDialog';
 
-const TIER_BADGE: Record<PlanTier, { color: string; background: string; borderColor: string }> = {
-  free:         { color: 'var(--color-neutral-50)',    background: 'rgba(127,195,109,0.10)', borderColor: 'rgba(127,195,109,0.30)' },
-  startup:      { color: '#fff',                        background: 'var(--color-blue-500)',  borderColor: 'transparent' },
-  professional: { color: 'var(--color-accent-strong)', background: 'rgba(68,92,149,0.12)',   borderColor: 'rgba(68,92,149,0.40)' },
-  enterprise:   { color: 'var(--color-amber-500)',     background: 'rgba(204,125,69,0.12)',  borderColor: 'rgba(204,125,69,0.40)' },
+// Plan pill in the account menu: neutral for free, the accent for the paid tiers.
+const TIER_BADGE: Record<PlanTier, 'neutral' | 'outline' | 'signal' | 'solid'> = {
+  free: 'neutral',
+  startup: 'outline',
+  professional: 'signal',
+  enterprise: 'solid',
 };
 import { useWorkspaceEvents } from '@/hooks/useWorkspaceEvents';
 
@@ -94,6 +96,8 @@ type WorkspaceType = {
   hidden?: boolean | null;
   /** The pinned Pano (already validated server-side). Left out of the tree below. */
   homeDashboardItemId?: string | null;
+  /** Access requests waiting on this user — non-zero only for owners, counted server-side. */
+  pendingAccessRequests?: number | null;
 };
 
 type CurrentUser = {
@@ -113,6 +117,7 @@ export default function WorkspaceSidebar({
   density = 'comfortable',
   showOnboarding = false,
   isProjectWindow = false,
+  renderedAt = 0,
 }: {
   items: WorkspaceItemRow[];
   workspaces: WorkspaceType[];
@@ -131,6 +136,9 @@ export default function WorkspaceSidebar({
    *  round-trips that could only fail. The flag comes from the server's lock claim
    *  (see the `(app)` layout) — never guessed on the client. */
   isProjectWindow?: boolean;
+  /** Server clock (epoch ms) of the layout render. Passed only to the desktop sidebar,
+   *  which makes it the one copy that drives live refresh (see `useWorkspaceEvents`). */
+  renderedAt?: number;
 }) {
   const t = useTranslations('Workspace');
   const tLayout = useTranslations('Layout');
@@ -329,7 +337,7 @@ export default function WorkspaceSidebar({
   );
 
   // Subscribe to real-time events from other users / MCP agents
-  useWorkspaceEvents(currentUser.id, isAnyModalOrPickerOpen);
+  useWorkspaceEvents(currentUser.id, isAnyModalOrPickerOpen, renderedAt);
 
   // Load agent token count + current plan tier for the sidebar badges. Trash is the
   // only one a project window asks for — the other two are account-level and their
@@ -929,13 +937,13 @@ export default function WorkspaceSidebar({
   return (
     <div className="flex flex-col flex-1 overflow-hidden h-full">
       {/* Brand Header — hidden in mobile sheet */}
-      <div className={`px-4 h-10 border-b border-neutral-800 flex items-center justify-between shrink-0 ${hideBrandHeader ? 'hidden' : ''}`} {...(isTauri ? { 'data-tauri-drag-region': '' } : {})}>
+      <div className={`pl-3 pr-2 h-12 flex items-center justify-between shrink-0 ${hideBrandHeader ? 'hidden' : ''}`} {...(isTauri ? { 'data-tauri-drag-region': '' } : {})}>
         <div className="flex items-center group/brand">
           {!isTauri && (
             <div className="w-0 overflow-hidden group-hover/brand:w-6 transition-[width] duration-200 shrink-0">
               <Link
                 href="/"
-                className="flex items-center justify-center w-6 h-6 rounded text-neutral-500 hover:text-neutral-200 hover:bg-neutral-800"
+                className="flex items-center justify-center w-6 h-6 rounded-sm text-fg-3 hover:text-fg hover:bg-hover"
                 title={t('backToHome')}
               >
                 <ArrowLeft size={13} />
@@ -943,18 +951,16 @@ export default function WorkspaceSidebar({
             </div>
           )}
 
-          <Link href={logoHref ?? '#'} className="font-semibold flex items-center gap-2.5 text-neutral-50 hover:text-neutral-300 transition-colors">
-            <img src="/logo-square-dark.png" alt="Remnus Logo" className={`w-5 h-5 object-contain rounded-md shrink-0 shadow-sm ${isSaving ? 'animate-pulse' : ''}`} />
-            <span className="font-bold tracking-tight text-neutral-50">Remnus</span>
-            <span className="font-mono text-[9px] text-amber-400/60 bg-amber-500/8 border border-amber-500/15 px-1.5 py-0.5 rounded-full leading-none tracking-wide">
-              {t('earlyAccess')}
-            </span>
+          <Link href={logoHref ?? '#'} className="flex items-center gap-2.5 rounded-sm text-fg transition-opacity hover:opacity-80">
+            <RemnusMark className="h-4 w-[18px]" />
+            <span className="font-semibold tracking-tight">Remnus</span>
+            <Badge variant="outline" size="sm">{t('earlyAccess')}</Badge>
           </Link>
         </div>
         <div className="flex items-center gap-1.5">
           {isSaving && (
-            <div className="flex items-center gap-1.5 text-[11px] text-blue-400 font-medium bg-blue-500/10 px-2 py-0.5 rounded-full border border-blue-500/20 animate-pulse">
-              <div className="w-2 h-2 rounded-full border border-blue-400 border-t-transparent animate-spin shrink-0" />
+            <div className="flex items-center gap-1.5 text-2xs text-fg-3 font-medium px-1.5" role="status">
+              <div className="w-2.5 h-2.5 rounded-full border-[1.5px] border-fg-3 border-t-transparent animate-spin shrink-0" />
               <span>{t('saving')}</span>
             </div>
           )}
@@ -965,9 +971,9 @@ export default function WorkspaceSidebar({
               onClick={pin}
               aria-label={tLayout('pinSidebar')}
               title={tLayout('pinSidebar')}
-              className="hidden lg:flex h-6 w-6 items-center justify-center rounded text-neutral-500 hover:text-neutral-100 hover:bg-neutral-800 transition-colors"
+              className="hidden lg:flex h-7 w-7 items-center justify-center rounded-control text-fg-3 hover:text-fg hover:bg-hover transition-colors"
             >
-              <PanelLeft size={14} />
+              <PanelLeft size={16} />
             </button>
           ) : (
             /* Pinned mode: clicking hides the sidebar and content fills the space */
@@ -976,16 +982,16 @@ export default function WorkspaceSidebar({
               onClick={() => writeSidebarVisible(false)}
               aria-label={tLayout('hideSidebar')}
               title={tLayout('hideSidebar')}
-              className="hidden lg:flex h-6 w-6 items-center justify-center rounded text-neutral-500 hover:text-neutral-100 hover:bg-neutral-800 transition-colors"
+              className="hidden lg:flex h-7 w-7 items-center justify-center rounded-control text-fg-3 hover:text-fg hover:bg-hover transition-colors"
             >
-              <PanelLeftClose size={14} />
+              <PanelLeftClose size={16} />
             </button>
           )}
         </div>
       </div>
 
       {/* Tree view list */}
-      <div className="flex-1 overflow-y-auto px-2 py-4 space-y-4 group/wslist">
+      <div className="flex-1 overflow-y-auto px-2 pt-1 pb-4 space-y-3 group/wslist">
         {localWorkspaces
           .filter((w) => showHidden || !w.hidden || w.id === activeWorkspaceIdFromPath)
           .map((w) => {
@@ -1010,10 +1016,10 @@ export default function WorkspaceSidebar({
               onDrop={(e) => handleWorkspaceDrop(e, w.id)}
             >
               {isWorkspaceDragOver && (
-                <div className={`absolute left-0 right-0 h-0.5 bg-blue-500 rounded-full z-10 shadow-[0_1px_3px_rgba(0,0,0,0.4)] ${
+                <div className={`absolute left-0 right-0 h-0.5 bg-signal rounded-full z-10 ${
                   dropPosition === 'after' ? '-bottom-1' : '-top-1'
                 }`}>
-                  <div className="absolute -left-1 -top-0.5 w-1.5 h-1.5 bg-blue-500 rounded-full shadow-[0_0_6px_#445c95]" />
+                  <div className="absolute -left-1 -top-0.5 w-1.5 h-1.5 bg-signal rounded-full" />
                 </div>
               )}
               {/* Workspace Root Node */}
@@ -1022,13 +1028,13 @@ export default function WorkspaceSidebar({
                 onDragOver={(e) => handleWorkspaceItemDragOverRoot(e, w.id)}
                 onDragLeave={handleWorkspaceItemDragLeaveRoot}
                 onDrop={(e) => handleWorkspaceItemDropOnRoot(e, w.id)}
-                className={`flex items-center justify-between px-2 py-1.5 rounded-lg text-sm transition-all group/root cursor-pointer ${
+                className={`flex items-center justify-between h-8 px-1.5 rounded-control text-sm transition-colors group/root cursor-pointer ${
                   isCurrentActive
-                    ? 'workspace-root-active bg-neutral-850 text-neutral-50 font-medium shadow-sm'
-                    : 'text-neutral-400 hover:bg-neutral-850/50 hover:text-neutral-200'
+                    ? 'text-fg font-semibold'
+                    : 'text-fg-2 hover:bg-sheet/55 hover:text-fg'
                 } ${
                   dragOverWorkspaceForItemId === w.id
-                    ? 'bg-blue-500/10 border border-blue-500/30 text-blue-400 scale-[1.02]'
+                    ? 'bg-signal-soft ring-1 ring-signal/50 text-fg'
                     : ''
                 }`}
               >
@@ -1036,7 +1042,7 @@ export default function WorkspaceSidebar({
                   {/* Chevron Toggle */}
                   <button
                     onClick={(e) => toggleExpand(w.id, e)}
-                    className="p-0.5 rounded hover:bg-neutral-700 text-neutral-500 hover:text-neutral-50 transition-colors shrink-0"
+                    className="p-0.5 rounded-sm hover:bg-hover text-fg-4 hover:text-fg transition-colors shrink-0"
                   >
                     {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                   </button>
@@ -1057,10 +1063,10 @@ export default function WorkspaceSidebar({
                       ) : (
                         <div
                           translate="no"
-                          className={`w-5 h-5 rounded flex items-center justify-center text-[10px] font-bold shrink-0 shadow-sm transition-colors notranslate ${
+                          className={`w-5 h-5 rounded-[5px] flex items-center justify-center text-2xs font-bold shrink-0 transition-colors notranslate ${
                             isCurrentActive
-                              ? 'bg-neutral-50 text-neutral-950'
-                              : 'bg-neutral-700 group-hover/root:bg-neutral-600 text-neutral-200'
+                              ? 'bg-ink text-ink-fg'
+                              : 'bg-hover text-fg-2 group-hover/root:bg-line-strong'
                           }`}
                         >
                           {(w.name || 'W').trim().charAt(0).toUpperCase()}
@@ -1080,6 +1086,24 @@ export default function WorkspaceSidebar({
                   </div>
 
                   <span className="truncate flex-1 font-medium">{w.name}</span>
+
+                  {/* Someone asked to join. The count only ever reaches an owner (see
+                      getWorkspaces) and a project window gets 0, so no role check here. */}
+                  {!isProjectWindow && (w.pendingAccessRequests ?? 0) > 0 && (
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSettingsInitialTab('members');
+                        setSettingsModalWorkspace({ id: w.id, name: w.name, icon: w.icon, iconColor: w.iconColor });
+                      }}
+                      className="min-w-4 h-4 shrink-0 rounded-full bg-red-500 px-1 text-center text-2xs leading-4 font-semibold text-white hover:bg-red-500/85 transition-colors"
+                      title={t('accessRequestsPending', { count: w.pendingAccessRequests ?? 0 })}
+                      aria-label={t('accessRequestsPending', { count: w.pendingAccessRequests ?? 0 })}
+                    >
+                      {(w.pendingAccessRequests ?? 0) > 9 ? '9+' : w.pendingAccessRequests}
+                    </button>
+                  )}
                 </div>
 
                 {/* Workspace actions on hover */}
@@ -1089,10 +1113,10 @@ export default function WorkspaceSidebar({
                       setTemplatePickerWorkspaceId(w.id);
                       setExpandedWorkspaces(prev => ({ ...prev, [w.id]: true }));
                     }}
-                    className="p-1 rounded hover:bg-neutral-700 text-neutral-400 hover:text-neutral-50"
+                    className="p-1 rounded-sm hover:bg-hover text-fg-3 hover:text-fg"
                     title={t('newItem')}
                   >
-                    <Plus size={12} />
+                    <Plus size={14} />
                   </button>
                   {/* Hiding and workspace settings are management, denied to a locked
                       session — only the "new item" button above is content. */}
@@ -1100,20 +1124,20 @@ export default function WorkspaceSidebar({
                     <>
                       <button
                         onClick={() => handleToggleWorkspaceHidden(w.id, !w.hidden)}
-                        className="p-1 rounded hover:bg-neutral-700 text-neutral-400 hover:text-neutral-50"
+                        className="p-1 rounded-sm hover:bg-hover text-fg-3 hover:text-fg"
                         title={w.hidden ? t('unhideWorkspace') : t('hideWorkspace')}
                       >
-                        {w.hidden ? <EyeOff size={12} /> : <Eye size={12} />}
+                        {w.hidden ? <EyeOff size={14} /> : <Eye size={14} />}
                       </button>
                       <button
                         onClick={() => {
                           setSettingsInitialTab('general');
                           setSettingsModalWorkspace({ id: w.id, name: w.name, icon: w.icon, iconColor: w.iconColor });
                         }}
-                        className="p-1 rounded hover:bg-neutral-700 text-neutral-400 hover:text-neutral-50"
+                        className="p-1 rounded-sm hover:bg-hover text-fg-3 hover:text-fg"
                         title={t('workspaceSettings')}
                       >
-                        <Settings size={12} />
+                        <Settings size={14} />
                       </button>
                     </>
                   )}
@@ -1122,7 +1146,7 @@ export default function WorkspaceSidebar({
 
               {/* Workspace Children Subtree */}
               {isExpanded && (
-                <div className="pl-3 space-y-0.5 border-l border-neutral-800 ml-2.5 my-1">
+                <div className="pl-2.5 ml-2 space-y-px mt-0.5 mb-1">
                   <WorkspaceQuickLinks
                     workspaceId={w.id}
                     homeDashboardId={w.homeDashboardItemId ?? null}
@@ -1163,10 +1187,10 @@ export default function WorkspaceSidebar({
                       return (
                         <div key={item.id} className="space-y-0.5">
                           <div
-                            className={`flex items-center gap-1.5 min-w-0 px-2 ${density === 'compact' ? 'py-1' : 'py-1.5'} rounded-md text-sm transition-all duration-200 group/item cursor-pointer relative ${
+                            className={`flex items-center gap-1.5 min-w-0 px-1.5 ${density === 'compact' ? 'h-7' : 'h-8'} rounded-control text-sm transition-[background-color,color,box-shadow] duration-150 group/item cursor-pointer relative ${
                               isActive(item)
-                                ? 'workspace-item-active bg-neutral-850 text-neutral-50 font-medium'
-                                : 'text-neutral-400 hover:bg-neutral-850/50 hover:text-neutral-200'
+                                ? 'bg-sheet text-fg font-medium shadow-lift'
+                                : 'text-fg-2 hover:bg-sheet/55 hover:text-fg'
                             } ${isLoading ? 'opacity-40 pointer-events-none' : ''} ${
                               isItemDragged ? 'opacity-30 animate-pulse' : ''
                             } ${isInvalidDropTarget ? 'opacity-35' : ''}`}
@@ -1179,14 +1203,14 @@ export default function WorkspaceSidebar({
                           >
                             {/* Drop INSIDE: highlight the whole row */}
                             {isItemDragOver && itemDropPosition === 'inside' && (
-                              <div className="absolute inset-0 rounded-md ring-2 ring-blue-500 bg-blue-500/15 z-10 pointer-events-none" />
+                              <div className="absolute inset-0 rounded-control ring-2 ring-signal/70 bg-signal-soft z-10 pointer-events-none" />
                             )}
                             {/* Drop BEFORE / AFTER: a reorder line at the matching edge */}
                             {isItemDragOver && itemDropPosition !== 'inside' && (
-                              <div className={`absolute left-6 right-0 h-0.5 bg-blue-500 rounded-full z-10 shadow-[0_1px_3px_rgba(0,0,0,0.4)] ${
+                              <div className={`absolute left-6 right-0 h-0.5 bg-signal rounded-full z-10 ${
                                 itemDropPosition === 'after' ? '-bottom-0.5' : '-top-0.5'
                               }`}>
-                                <div className="absolute -left-1 -top-0.5 w-1.5 h-1.5 bg-blue-500 rounded-full shadow-[0_0_6px_#445c95]" />
+                                <div className="absolute -left-1 -top-0.5 w-1.5 h-1.5 bg-signal rounded-full" />
                               </div>
                             )}
                             
@@ -1198,12 +1222,12 @@ export default function WorkspaceSidebar({
                                   e.preventDefault();
                                   setExpandedItems(prev => ({ ...prev, [item.id]: !prev[item.id] }));
                                 }}
-                                className="p-0.5 rounded hover:bg-neutral-700 text-neutral-500 hover:text-neutral-50 transition-colors shrink-0"
+                                className="p-0.5 rounded-sm hover:bg-hover text-fg-4 hover:text-fg transition-colors shrink-0"
                               >
-                                {isItemExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+                                {isItemExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                               </button>
                             ) : (
-                              <div className="w-4 h-4 shrink-0" />
+                              <div className="w-[18px] h-4 shrink-0" />
                             )}
 
                             {/* Icon picker trigger */}
@@ -1215,7 +1239,7 @@ export default function WorkspaceSidebar({
                                   e.stopPropagation();
                                   setActiveIconPickerId(activeIconPickerId === item.id ? null : item.id);
                                 }}
-                                className="hover:bg-neutral-800 p-0.5 rounded transition-colors flex items-center justify-center cursor-pointer"
+                                className="hover:bg-hover p-0.5 rounded-sm transition-colors flex items-center justify-center cursor-pointer"
                                 title={t('changeIcon')}
                               >
                                 <PageIcon
@@ -1251,7 +1275,7 @@ export default function WorkspaceSidebar({
                                 }}
                                 onBlur={() => handleRenameItem(item)}
                                 onClick={e => e.stopPropagation()}
-                                className="flex-1 min-w-0 bg-neutral-800 border border-neutral-600 rounded px-1.5 py-0.5 text-xs text-neutral-50 focus:outline-none focus:border-blue-500/60"
+                                className="flex-1 min-w-0 h-6 bg-sheet border border-focus rounded-sm px-1.5 text-ui text-fg outline-none"
                               />
                             ) : (
                               <Link
@@ -1265,11 +1289,11 @@ export default function WorkspaceSidebar({
                             {/* Hover actions & spinner */}
                             {renamingItemId !== item.id && (
                               isLoading ? (
-                                <div className={`shrink-0 p-1 ${isDeleting ? 'text-red-400' : 'text-neutral-400'}`}>
+                                <div className={`shrink-0 p-1 ${isDeleting ? 'text-red-400' : 'text-fg-3'}`}>
                                   <div className={`w-3 h-3 rounded-full border-2 animate-spin shrink-0 ${
                                     isDeleting
-                                      ? 'border-red-900/50 border-t-red-400'
-                                      : 'border-neutral-800 border-t-neutral-500'
+                                      ? 'border-red-500/25 border-t-red-400'
+                                      : 'border-line border-t-fg-3'
                                   }`} />
                                 </div>
                               ) : (
@@ -1283,29 +1307,29 @@ export default function WorkspaceSidebar({
                                         setTemplatePickerWorkspaceId(w.id);
                                         setExpandedItems(prev => ({ ...prev, [item.id]: true }));
                                       }}
-                                      className="p-1 rounded hover:bg-neutral-700 text-neutral-400 hover:text-neutral-50"
+                                      className="p-1 rounded-sm hover:bg-hover text-fg-3 hover:text-fg"
                                       title={t('addSubPage')}
                                     >
-                                      <Plus size={12} />
+                                      <Plus size={14} />
                                     </button>
                                   )}
                                   <button
                                     onClick={(e) => openMenuFor(e, item, w.id)}
-                                    className={`p-1 rounded transition-colors text-neutral-500 hover:text-neutral-200 hover:bg-neutral-700 ${
-                                      openMenuItemId === item.id ? 'bg-neutral-700 text-neutral-200' : ''
+                                    className={`p-1 rounded-sm transition-colors text-fg-3 hover:text-fg hover:bg-hover ${
+                                      openMenuItemId === item.id ? 'bg-hover text-fg' : ''
                                     }`}
                                     title={t('moreOptions')}
                                   >
-                                    <MoreHorizontal size={13} />
+                                    <MoreHorizontal size={14} />
                                   </button>
                                 </div>
                               )
                             )}
                           </div>
 
-                          {/* Children Subtree with Dusk Blue line theme */}
+                          {/* Children: indented under the parent's chevron, a faint guide line for depth */}
                           {isItemExpanded && hasChildren && (
-                            <div className="pl-2.5 space-y-0.5 border-l border-neutral-850 hover:border-blue-500/20 transition-colors ml-2 my-0.5">
+                            <div className="pl-2 space-y-px border-l border-line/70 ml-[15px] my-px">
                               {itemChildren.map(child => renderItem(child, depth + 1))}
                             </div>
                           )}
@@ -1318,7 +1342,7 @@ export default function WorkspaceSidebar({
 
                   {/* Empty state */}
                   {workspaceChildren.length === 0 && (
-                    <div className="text-xs text-neutral-600 py-1.5 px-2.5 italic">
+                    <div className="text-xs text-fg-4 py-1.5 px-2">
                       {t('emptyWorkspace')}
                     </div>
                   )}
@@ -1332,9 +1356,9 @@ export default function WorkspaceSidebar({
         {!isProjectWindow && localWorkspaces.some((w) => w.hidden) && (
           <button
             onClick={toggleShowHidden}
-            className="flex items-center gap-1.5 px-2 py-1 text-[11px] text-neutral-500 hover:text-neutral-300 transition-colors"
+            className="flex items-center gap-1.5 px-2 py-1 text-2xs text-fg-3 hover:text-fg transition-colors"
           >
-            {showHidden ? <EyeOff size={12} /> : <Eye size={12} />}
+            {showHidden ? <EyeOff size={13} /> : <Eye size={13} />}
             <span>
               {showHidden
                 ? t('hideHiddenWorkspaces')
@@ -1347,13 +1371,13 @@ export default function WorkspaceSidebar({
         {!isProjectWindow && (
         <div className="pt-2">
           {isCreatingWorkspace ? (
-            <div className="bg-neutral-850/40 border border-neutral-800/80 rounded-lg p-2.5 space-y-2">
+            <div className="bg-sheet rounded-surface p-2.5 space-y-2 shadow-lift">
               <input
                 type="text"
                 value={newWorkspaceName}
                 onChange={(e) => setNewWorkspaceName(e.target.value)}
                 placeholder={t('workspaceNamePlaceholder')}
-                className="w-full bg-neutral-800 border border-neutral-700 rounded px-2 py-1 text-xs text-neutral-50 placeholder:text-neutral-500 focus:outline-none focus:border-neutral-500"
+                className="w-full h-8 bg-raised border border-line rounded-control px-2.5 text-ui text-fg placeholder:text-fg-4 outline-none hover:border-line-strong focus-visible:border-focus"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') handleCreateWorkspace();
                   if (e.key === 'Escape') { setIsCreatingWorkspace(false); setWorkspaceCreateError(null); }
@@ -1361,30 +1385,30 @@ export default function WorkspaceSidebar({
                 autoFocus
               />
               {workspaceCreateError && (
-                <p className="m-0 text-[11px] text-red-400 leading-snug">{workspaceCreateError}</p>
+                <p className="m-0 text-2xs text-red-400 leading-snug">{workspaceCreateError}</p>
               )}
               <div className="flex gap-1.5">
-                <button
+                <Button
+                  variant="primary"
+                  size="sm"
                   onClick={handleCreateWorkspace}
-                  disabled={!newWorkspaceName.trim() || isPending}
-                  className="flex-1 bg-neutral-50 hover:bg-neutral-100 disabled:opacity-40 text-neutral-950 rounded text-[11px] font-semibold py-1 px-2 transition-colors"
+                  disabled={!newWorkspaceName.trim()}
+                  loading={isPending}
+                  className="flex-1"
                 >
-                  {isPending ? t('creating') : t('create')}
-                </button>
-                <button
-                  onClick={() => setIsCreatingWorkspace(false)}
-                  className="bg-neutral-800 hover:bg-neutral-750 text-neutral-400 rounded text-[11px] font-medium py-1 px-2 border border-neutral-700 transition-colors"
-                >
+                  {t('create')}
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => setIsCreatingWorkspace(false)}>
                   {t('cancel')}
-                </button>
+                </Button>
               </div>
             </div>
           ) : (
             <button
               onClick={() => setIsCreatingWorkspace(true)}
-              className="w-full flex items-center justify-center gap-1.5 px-3 py-2 text-xs text-neutral-500 hover:text-neutral-350 hover:bg-neutral-850/30 border border-dashed border-neutral-800 hover:border-neutral-700 rounded-lg transition-all opacity-0 group-hover/wslist:opacity-100"
+              className="w-full flex items-center justify-center gap-1.5 h-8 text-xs text-fg-3 hover:text-fg hover:bg-sheet/55 border border-dashed border-line hover:border-line-strong rounded-control transition-[color,background-color,border-color,opacity] opacity-0 group-hover/wslist:opacity-100 focus-visible:opacity-100"
             >
-              <Plus size={12} /> {t('addWorkspace')}
+              <Plus size={14} /> {t('addWorkspace')}
             </button>
           )}
         </div>
@@ -1399,11 +1423,11 @@ export default function WorkspaceSidebar({
             className={`fixed inset-0 z-250 sm:hidden transition-opacity duration-200 ${openMenuItemId ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
             onClick={() => setOpenMenuItemId(null)}
           />
-          <div ref={mobileMenuRef} className={`fixed inset-x-0 bottom-14 z-250 sm:hidden bg-neutral-850 border-t border-neutral-800 rounded-t-xl transition-transform duration-200 ease-in-out ${openMenuItemId ? 'translate-y-0' : 'translate-y-full'}`}>
+          <div ref={mobileMenuRef} className={`fixed inset-x-0 bottom-14 z-250 sm:hidden bg-float rounded-t-2xl shadow-modal transition-transform duration-200 ease-in-out ${openMenuItemId ? 'translate-y-0' : 'translate-y-full'}`}>
             <div className="flex justify-center pt-2.5 pb-1 shrink-0">
-              <div className="w-8 h-1 rounded-full bg-neutral-700" />
+              <div className="w-8 h-1 rounded-full bg-line-strong" />
             </div>
-            <div className="px-4 py-2 text-xs text-neutral-500 font-medium truncate border-b border-neutral-800/60 mb-1">
+            <div className="px-4 py-2 text-xs text-fg-3 font-medium truncate border-b border-line mb-1">
               {activeMenuItem.title}
             </div>
             <button
@@ -1412,16 +1436,16 @@ export default function WorkspaceSidebar({
                 setRenamingItemId(activeMenuItem.id);
                 setRenamingTitle(activeMenuItem.title);
               }}
-              className="w-full flex items-center gap-3 px-4 py-3.5 text-sm text-neutral-300 active:bg-neutral-800 transition-colors"
+              className="w-full flex items-center gap-3 px-4 py-3.5 text-sm text-fg-2 active:bg-hover transition-colors"
             >
-              <Edit3 size={15} className="text-neutral-500 shrink-0" />
+              <Edit3 size={16} className="text-fg-3 shrink-0" />
               {t('rename')}
             </button>
             <button
               onClick={() => handleDuplicateItem(activeMenuItem)}
-              className="w-full flex items-center gap-3 px-4 py-3.5 text-sm text-neutral-300 active:bg-neutral-800 transition-colors"
+              className="w-full flex items-center gap-3 px-4 py-3.5 text-sm text-fg-2 active:bg-hover transition-colors"
             >
-              <Copy size={15} className="text-neutral-500 shrink-0" />
+              <Copy size={16} className="text-fg-3 shrink-0" />
               {t('duplicate')}
             </button>
             {/* Same reason as the desktop menu above: dashboards aren't publishable in v1. */}
@@ -1431,18 +1455,18 @@ export default function WorkspaceSidebar({
                   setOpenMenuItemId(null);
                   setShareModalItemId(activeMenuItem.id);
                 }}
-                className="w-full flex items-center gap-3 px-4 py-3.5 text-sm text-neutral-300 active:bg-neutral-800 transition-colors"
+                className="w-full flex items-center gap-3 px-4 py-3.5 text-sm text-fg-2 active:bg-hover transition-colors"
               >
-                <Globe size={15} className="text-neutral-500 shrink-0" />
+                <Globe size={16} className="text-fg-3 shrink-0" />
                 {tSharing('shareButton')}
               </button>
             )}
-            <div className="border-t border-neutral-800 mx-4 my-1" />
+            <div className="border-t border-line mx-4 my-1" />
             <button
               onClick={() => handleDeleteItem(activeMenuItem)}
-              className="w-full flex items-center gap-3 px-4 py-3.5 text-sm text-red-400 active:bg-neutral-800 transition-colors mb-2"
+              className="w-full flex items-center gap-3 px-4 py-3.5 text-sm text-red-400 active:bg-hover transition-colors mb-2"
             >
-              <Trash size={15} className="shrink-0" />
+              <Trash size={16} className="shrink-0" />
               {t('delete')}
             </button>
           </div>
@@ -1450,7 +1474,7 @@ export default function WorkspaceSidebar({
         sidebarOverlayContainer,
       )}
 
-      {/* Desktop: Notion-style right-click / ⋯ menu (rendered via portal) */}
+      {/* Desktop: right-click / ⋯ menu (rendered via portal) */}
       {itemMenu.node}
 
       {shareModalItemId && sidebarOverlayContainer && createPortal(
@@ -1585,15 +1609,15 @@ export default function WorkspaceSidebar({
       {deleteError && sidebarOverlayContainer && createPortal(
         <div
           role="alert"
-          className="fixed z-300 bottom-4 left-1/2 -translate-x-1/2 w-[min(24rem,calc(100vw-2rem))] bg-neutral-850 border border-red-400/40 rounded-lg shadow-[0_8px_40px_rgba(0,0,0,0.6)] px-4 py-3 flex items-start gap-3 animate-in fade-in slide-in-from-bottom-2 duration-150"
+          className="fixed z-300 bottom-4 left-1/2 -translate-x-1/2 w-[min(24rem,calc(100vw-2rem))] bg-float rounded-surface shadow-float px-4 py-3 flex items-start gap-3 animate-scale-in"
         >
-          <AlertTriangle size={15} className="text-red-400 shrink-0 mt-0.5" />
-          <p className="text-xs text-neutral-200 leading-relaxed flex-1">
+          <AlertTriangle size={16} className="text-red-400 shrink-0 mt-0.5" />
+          <p className="text-ui text-fg leading-relaxed flex-1">
             {t('deleteFailed', { title: deleteError })}
           </p>
           <button
             onClick={() => setDeleteError(null)}
-            className="shrink-0 text-neutral-500 hover:text-neutral-300 transition-colors"
+            className="shrink-0 rounded-sm p-0.5 text-fg-3 hover:bg-hover hover:text-fg transition-colors"
           >
             <X size={14} />
           </button>
@@ -1601,40 +1625,20 @@ export default function WorkspaceSidebar({
         sidebarOverlayContainer,
       )}
 
-      {/* Delete confirmation modal */}
+      {/* Delete confirmation — the shared dialog; the delete itself is optimistic
+          (confirmDelete closes it and runs in a transition). */}
       {confirmDeleteItemId && (() => {
         const item = localItems.find(i => i.id === confirmDeleteItemId);
         if (!item) return null;
-        return sidebarOverlayContainer && createPortal(
-          <>
-            <div
-              className="fixed inset-0 z-300 bg-black/60"
-              onClick={() => setConfirmDeleteItemId(null)}
-            />
-            <div className="fixed z-300 inset-x-4 top-1/2 -translate-y-1/2 sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:w-full sm:max-w-sm bg-neutral-850 border border-neutral-800 rounded-xl shadow-[0_8px_40px_rgba(0,0,0,0.6)] p-5 flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-150">
-              <div>
-                <p className="text-sm font-semibold text-neutral-100 mb-1.5">{t('delete')} — {item.title}</p>
-                <p className="text-xs text-neutral-400 leading-relaxed">
-                  {t('deleteConfirm', { title: item.title })}
-                </p>
-              </div>
-              <div className="flex gap-2 justify-end">
-                <button
-                  onClick={() => setConfirmDeleteItemId(null)}
-                  className="px-4 py-2 text-xs font-medium text-neutral-400 hover:text-neutral-200 bg-neutral-800 hover:bg-neutral-700 rounded-lg transition-colors"
-                >
-                  {t('deleteCancel')}
-                </button>
-                <button
-                  onClick={() => confirmDelete(item)}
-                  className="px-4 py-2 text-xs font-semibold text-white bg-red-500/80 hover:bg-red-500 rounded-lg transition-colors"
-                >
-                  {t('delete')}
-                </button>
-              </div>
-            </div>
-          </>,
-          sidebarOverlayContainer,
+        return (
+          <ConfirmDialog
+            title={item.title || t('delete')}
+            description={t('deleteConfirm', { title: item.title })}
+            confirmLabel={t('delete')}
+            cancelLabel={t('deleteCancel')}
+            onConfirm={() => confirmDelete(item)}
+            onCancel={() => setConfirmDeleteItemId(null)}
+          />
         );
       })()}
 
@@ -1650,61 +1654,53 @@ export default function WorkspaceSidebar({
         </div>
       )}
 
-      {/* What the agents have saved, as a card: the number that says what Remnus is for
-          should not be a footnote. Workspace-scoped in a project window (content data the
-          lock allows), account-wide otherwise. */}
-      <AgentSavingsCard
-        variant="sidebar"
-        workspaceId={isProjectWindow ? activeWorkspace.id : undefined}
-        onOpenDetail={isProjectWindow ? undefined : () => setAgentsModalOpen(true)}
-      />
-
-      {/* AI Agents — the one entry kept outside the account menu: it is what the product is
-          for. Account-level (tokens span every workspace the user is in), and in a project
-          window the modal is opened with a token that can't list them, so it would show
-          nothing useful. */}
-      {!isProjectWindow && (
-      <div className="shrink-0 px-2 pt-1">
-        <button
-          onClick={() => setAgentsModalOpen(true)}
-          className="w-full flex items-center gap-1.5 min-w-0 px-2 py-1.5 rounded-md text-sm text-neutral-300 hover:bg-neutral-800 hover:text-neutral-50 transition-all duration-200"
-        >
-          <span className="relative shrink-0">
-            <Bot size={14} className="text-amber-400" />
-            {agentTokenCount === 0 && (
-              <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-amber-400 ring-2 ring-neutral-900 animate-pulse" />
-            )}
-          </span>
-          <span className="truncate">{t('myAgents')}</span>
-          {agentTokenCount !== null && agentTokenCount > 0 ? (
-            <span className="ml-auto shrink-0 text-[10px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded-full leading-none">
-              {agentTokenCount}
+      {/* The agents panel: a small sheet on the desk holding what the agents saved (the
+          number that says what Remnus is for should not be a footnote) and the AI Agents
+          entry — the one account-level row kept outside the account menu, because it is
+          what the product is for. Savings are workspace-scoped in a project window
+          (content data the lock allows); the AI Agents row is account-level (tokens span
+          every workspace) and not rendered there. `empty:hidden` drops the panel when a
+          project window has nothing measured yet. */}
+      <div className="shrink-0 mx-2 mb-1 rounded-surface bg-sheet/70 p-1 shadow-lift empty:hidden">
+        <AgentSavingsCard
+          variant="sidebar"
+          workspaceId={isProjectWindow ? activeWorkspace.id : undefined}
+          onOpenDetail={isProjectWindow ? undefined : () => setAgentsModalOpen(true)}
+        />
+        {!isProjectWindow && (
+          <button
+            onClick={() => setAgentsModalOpen(true)}
+            className="w-full flex items-center gap-2 min-w-0 h-8 px-2 rounded-control text-sm text-fg-2 hover:bg-hover hover:text-fg transition-colors"
+          >
+            <span className="relative shrink-0">
+              <Bot size={16} className="text-fg-3" />
+              {agentTokenCount === 0 && (
+                <span className="absolute -top-0.5 -right-0.5 w-2 h-2 rounded-full bg-signal ring-2 ring-sheet" />
+              )}
             </span>
-          ) : agentTokenCount === 0 ? (
-            <span className="ml-auto shrink-0 text-[10px] font-semibold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded-full leading-none">
-              {t('agentsConnectNudge')}
-            </span>
-          ) : null}
-        </button>
+            <span className="truncate">{t('myAgents')}</span>
+            {agentTokenCount !== null && agentTokenCount > 0 ? (
+              <Badge variant="neutral" size="sm" className="ml-auto">{agentTokenCount}</Badge>
+            ) : agentTokenCount === 0 ? (
+              <Badge variant="solid" size="sm" className="ml-auto">{t('agentsConnectNudge')}</Badge>
+            ) : null}
+          </button>
+        )}
       </div>
-      )}
 
       {/* Everything else lives behind the account row: settings, plan, trash, app install,
           what's new, admin, sign-out. A project window renders only trash and what's new
           (workspace content / product news) — the rest is account-level and denied by the
           lock, so it is not rendered at all rather than hidden. */}
-      <div className="shrink-0 border-t border-neutral-800 mt-1 px-2 py-2">
+      <div className="shrink-0 px-2 pb-2 pt-0.5">
         <AccountMenu
           user={currentUser}
           isProjectWindow={isProjectWindow}
           planBadge={
             planTier ? (
-              <span
-                className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full leading-none border"
-                style={TIER_BADGE[planTier]}
-              >
+              <Badge variant={TIER_BADGE[planTier]} size="sm">
                 {tBilling(`tier_${planTier}` as 'tier_free')}
-              </span>
+              </Badge>
             ) : undefined
           }
           trashCount={trashCount}

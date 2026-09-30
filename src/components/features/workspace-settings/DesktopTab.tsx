@@ -136,7 +136,7 @@ export default function DesktopTab() {
           step={ZOOM_STEP}
           value={zoom}
           onChange={(e) => changeZoom(parseFloat(e.target.value))}
-          className="w-full accent-blue-500"
+          className="w-full accent-signal"
         />
       </div>
 
@@ -194,7 +194,7 @@ export default function DesktopTab() {
           </p>
         )}
         {updateCheck === 'found' && (
-          <p className="text-[11px] text-blue-400">{tUpdater('availableTitle')}</p>
+          <p className="text-[11px] text-signal-text">{tUpdater('availableTitle')}</p>
         )}
         {updateCheck === 'error' && (
           <p className="text-[11px] text-red-400">{tUpdater('checkError')}</p>

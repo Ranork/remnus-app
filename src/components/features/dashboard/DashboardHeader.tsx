@@ -24,6 +24,7 @@ export default function DashboardHeader({
   initialIconColor,
   blockCount,
   isHome = false,
+  compact = false,
 }: {
   itemId: string;
   workspaceId: string;
@@ -33,6 +34,8 @@ export default function DashboardHeader({
   blockCount: number;
   /** The workspace's pinned Pano. It is left out of the sidebar tree, so delete lives here. */
   isHome?: boolean;
+  /** A project block below carries the page's big title: this one steps down to a label. */
+  compact?: boolean;
 }) {
   const t = useTranslations('Dashboard');
   const tPage = useTranslations('Page');
@@ -78,15 +81,15 @@ export default function DashboardHeader({
   };
 
   return (
-    <div className="mb-6 flex items-center gap-3 select-none">
+    <div className={`flex items-center select-none ${compact ? 'mb-4 gap-2' : 'mb-6 gap-3'}`}>
       <div className="relative flex shrink-0 items-center">
         <button
           ref={iconButtonRef}
           onClick={() => setShowIconPicker(!showIconPicker)}
-          className="flex shrink-0 cursor-pointer items-center justify-center rounded p-1 transition-colors duration-150 hover:bg-neutral-800"
+          className="flex shrink-0 cursor-pointer items-center justify-center rounded-control p-1 transition-colors duration-150 hover:bg-hover"
           title={icon ? tPage('changeIcon') : tPage('addIcon')}
         >
-          <PageIcon icon={icon} iconColor={iconColor} size={34} fallbackType="dashboard" />
+          <PageIcon icon={icon} iconColor={iconColor} size={compact ? 18 : 34} fallbackType="dashboard" />
         </button>
         {showIconPicker && (
           <IconPicker
@@ -106,15 +109,19 @@ export default function DashboardHeader({
           onChange={(e) => setTitle(e.target.value)}
           placeholder={t('untitled')}
           aria-label={t('renameDashboard')}
-          className="w-full bg-transparent py-0.5 text-2xl font-bold tracking-tight text-neutral-100 placeholder:text-neutral-700 focus:outline-none sm:text-3xl"
+          className={
+            compact
+              ? 'w-full bg-transparent py-0.5 text-ui font-medium text-fg-3 placeholder:text-fg-4 outline-none hover:text-fg-2 focus:text-fg'
+              : 'w-full bg-transparent py-0.5 text-2xl font-semibold tracking-tight text-fg placeholder:text-fg-4 outline-none sm:text-3xl'
+          }
         />
-        <p className="text-[11px] text-neutral-600">{t('blockCount', { count: blockCount })}</p>
+        {!compact && <p className="text-xs text-fg-4">{t('blockCount', { count: blockCount })}</p>}
       </div>
 
       {isHome && (
         <Button
           variant="ghost"
-          size="icon"
+          size={compact ? 'icon-sm' : 'icon'}
           onClick={() => setConfirmDelete(true)}
           title={t('deleteDashboard')}
           aria-label={t('deleteDashboard')}

@@ -44,15 +44,18 @@ commit, a note. `Dataset` text · `Severity` select (`Breaks model`, `Skews resu
   `days_since_last_order` was capped at 365; longer windows added noise. Run in the
   tracker: link."
 
-## Status screen
+## Home dashboard
 
-`Model status`:
-- `metric` Experiments, trend on Date over 30 days
-- `chart` line, Experiments grouped by Date, bucket week
-- `list` Experiments, sort Score descending, showColumns Model, Score, Outcome
-- `metric` Models, filter Stage equals `Production`, unit "live"
-- `list` Data-quality issues, filter Status equals `Open`, showColumns Dataset, Severity
-- `links` overview, Datasets, Decisions
+The workspace's home (`home: true`), which opens on the **Pano** button:
+- `project` — summary: what is predicted or analysed, from which data, at what stage;
+  stack chips (framework, tracker, orchestrator).
+- Then, only for the databases you actually built, and only blocks that show something
+  today:
+  - Experiments: `metric` with a trend on Date over 30 days; `chart` line grouped by Date,
+    bucket week; `list` sort Score descending, showColumns Model, Score, Outcome.
+  - Models: `metric` filter Stage equals `Production`, unit "live".
+  - Data-quality issues: `list` filter Status equals `Open`, showColumns Dataset, Severity.
+- `links` overview, Datasets, Decisions · `activity` · `savings`
 
 ## Don't
 

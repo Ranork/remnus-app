@@ -45,15 +45,18 @@ label or a fix commit that names one. `Severity` select (`SEV1`, `SEV2`, `SEV3`)
   `Applied`. Body: "Floats lost cents on currency conversion. Added `amount_minor`,
   backfilled, dropped `amount` two releases later; readers had to deploy first."
 
-## Status screen
+## Home dashboard
 
-`Service status`:
-- `metric` Endpoints, filter Status equals `Live`, unit "live"
-- `chart` donut, Endpoints grouped by Status
-- `list` Endpoints, filter Status equals `Deprecated`, showColumns Version, Consumers
-- `metric` Incidents, filter Status not_equals `Resolved`, unit "open"
-- `list` Incidents, sort Detected descending, showColumns Severity, Status
-- `links` overview, Dependencies, Decisions
+The workspace's home (`home: true`), which opens on the **Pano** button:
+- `project` — summary: what the service does and who calls it; stack chips (language,
+  framework, datastore, where it runs).
+- Then, only for the databases you actually built, and only blocks that show something
+  today:
+  - Endpoints: `metric` filter Status equals `Live`, unit "live"; `chart` donut grouped by
+    Status; `list` filter Status equals `Deprecated`, showColumns Version, Consumers.
+  - Incidents: `metric` filter Status not_equals `Resolved`, unit "open" (none open → leave
+    it out); `list` sort Detected descending, showColumns Severity, Status.
+- `links` overview, Dependencies, Decisions · `activity` · `savings`
 
 ## Don't
 

@@ -8,9 +8,10 @@ import { cn } from "@/lib/cn"
 
 import { Button } from "@/components/ui/button"
 
-// shadcn/ui Dialog on Base UI, drawn like the app's existing modals (z-300, the
-// modal layer; neutral-850 panel). Focus trap, Escape, scroll lock and
-// aria-labelledby/-describedby come from Base UI.
+// shadcn/ui Dialog on Base UI, in the R8 language: a floating surface (bg-float,
+// rounded-surface, shadow-modal — no border, the shadow carries the edge) on the z-300
+// modal layer. Focus trap, Escape, scroll lock and aria-labelledby/-describedby come
+// from Base UI.
 
 function Dialog({ ...props }: DialogPrimitive.Root.Props) {
   return <DialogPrimitive.Root data-slot="dialog" {...props} />
@@ -35,7 +36,7 @@ function DialogOverlay({
   return (
     <DialogPrimitive.Backdrop
       data-slot="dialog-overlay"
-      className={cn("fixed inset-0 isolate z-300 bg-black/60", className)}
+      className={cn("fixed inset-0 isolate z-300 bg-overlay animate-fade-in", className)}
       {...props}
     />
   )
@@ -56,7 +57,7 @@ function DialogContent({
       <DialogPrimitive.Popup
         data-slot="dialog-content"
         className={cn(
-          "fixed inset-x-4 top-1/2 z-300 flex -translate-y-1/2 flex-col gap-4 rounded-xl border border-neutral-800 bg-neutral-850 p-5 text-neutral-200 shadow-[0_8px_40px_rgba(0,0,0,0.6)] outline-none animate-scale-in sm:inset-x-auto sm:left-1/2 sm:w-full sm:max-w-sm sm:-translate-x-1/2",
+          "fixed inset-x-4 top-1/2 z-300 flex -translate-y-1/2 flex-col gap-4 rounded-surface bg-float p-5 text-fg-2 shadow-modal outline-none animate-scale-in sm:inset-x-auto sm:left-1/2 sm:w-full sm:max-w-sm sm:-translate-x-1/2",
           className
         )}
         {...props}
@@ -68,7 +69,7 @@ function DialogContent({
             render={
               <Button
                 variant="ghost"
-                className="absolute top-2.5 right-2.5"
+                className="absolute top-3 right-3"
                 size="icon-sm"
               />
             }
@@ -96,7 +97,7 @@ function DialogFooter({ className, ...props }: React.ComponentProps<"div">) {
   return (
     <div
       data-slot="dialog-footer"
-      className={cn("flex justify-end gap-2", className)}
+      className={cn("flex flex-wrap justify-end gap-2 pt-1", className)}
       {...props}
     />
   )
@@ -106,7 +107,7 @@ function DialogTitle({ className, ...props }: DialogPrimitive.Title.Props) {
   return (
     <DialogPrimitive.Title
       data-slot="dialog-title"
-      className={cn("text-sm font-semibold text-neutral-100", className)}
+      className={cn("pr-8 text-[15px] leading-snug font-semibold text-fg", className)}
       {...props}
     />
   )
@@ -119,7 +120,7 @@ function DialogDescription({
   return (
     <DialogPrimitive.Description
       data-slot="dialog-description"
-      className={cn("text-xs leading-relaxed text-neutral-400", className)}
+      className={cn("text-ui leading-relaxed text-fg-3", className)}
       {...props}
     />
   )

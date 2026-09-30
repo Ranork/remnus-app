@@ -38,7 +38,7 @@ export default function RecurringBadge({
 
   return (
     <span className="relative shrink-0 inline-flex items-center" title={title}>
-      <Repeat size={size} className={detached ? 'text-neutral-600' : 'text-blue-400/80'} />
+      <Repeat size={size} className={detached ? 'text-neutral-600' : 'text-signal-text/80'} />
       {detached && (
         <span className="absolute inset-0 flex items-center justify-center" aria-hidden>
           <span className="h-px bg-neutral-500 rotate-45" style={{ width: size + 3 }} />

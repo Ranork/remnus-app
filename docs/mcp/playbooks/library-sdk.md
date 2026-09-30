@@ -18,7 +18,8 @@ a docs generator (TypeDoc, Sphinx, MkDocs) or a publish workflow in CI.
 ## Concepts to model
 
 **Public API** (`conceptType: api`) — one row per entry point or module a user imports,
-not per symbol. `Entry point` text · `Stability` select (`Stable`, `Experimental`,
+not per symbol; a module whose exports differ in stability gets one row per stability
+(`backoff` stable, `backoff` experimental), so the Stability column stays true. `Entry point` text · `Stability` select (`Stable`, `Experimental`,
 `Deprecated`) · `Since` text (a version) · `Docs` url.
 
 **Releases** (`release`) — from tags and the changelog. Title is the version. `Date` date
@@ -41,14 +42,18 @@ not per symbol. `Entry point` text · `Stability` select (`Stable`, `Experimenta
   callback API. Migration: wrap calls in `await`; `onError` moved to the client options.
   Reason: the callback path doubled the test matrix for 4% of downloads."
 
-## Status screen
+## Home dashboard
 
-`Release status`:
-- `list` Releases, sort Date descending, showColumns Type, Breaking
-- `metric` Deprecations, filter Status equals `Announced`, unit "pending"
-- `chart` donut, Public API grouped by Stability
-- `list` Public API, filter Stability equals `Experimental`, showColumns Since
-- `links` overview, Deprecations, Decisions
+The workspace's home (`home: true`), which opens on the **Pano** button:
+- `project` — summary: what the library lets its users do and who they are; stack chips
+  (language, supported runtimes, package registry).
+- Then, only for the databases you actually built, and only blocks that show something
+  today:
+  - Releases: `list` sort Date descending, showColumns Type, Breaking.
+  - Deprecations: `metric` filter Status equals `Announced`, unit "pending".
+  - Public API: `chart` donut grouped by Stability; `list` filter Stability equals
+    `Experimental`, showColumns Since.
+- `links` overview, Deprecations, Decisions · `activity` · `savings`
 
 ## Don't
 

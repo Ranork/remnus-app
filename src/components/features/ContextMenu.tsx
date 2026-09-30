@@ -6,7 +6,7 @@ import type { LucideIcon } from 'lucide-react';
 
 // A single entry in a Notion-style context menu. `action` is the default kind
 // (icon + label + handler); `separator` draws a divider; `label` is a small
-// uppercase section header.
+// sentence-case section header.
 export type MenuItem =
   | {
       kind?: 'action';
@@ -79,20 +79,20 @@ function ContextMenuView({
       <div
         ref={ref}
         role="menu"
-        className="fixed z-9999 min-w-56 max-w-xs bg-neutral-900 border border-neutral-800 rounded-lg shadow-2xl py-1 px-1 animate-scale-in select-none"
+        className="fixed z-9999 min-w-56 max-w-xs rounded-surface bg-float p-1 shadow-float animate-scale-in select-none"
         style={{ left: pos?.left ?? x, top: pos?.top ?? y, visibility: pos ? 'visible' : 'hidden' }}
         onClick={(e) => e.stopPropagation()}
         onContextMenu={(e) => e.preventDefault()}
       >
         {items.map((item, i) => {
           if ('kind' in item && item.kind === 'separator') {
-            return <div key={`sep-${i}`} className="my-1 border-t border-neutral-800" />;
+            return <div key={`sep-${i}`} className="-mx-1 my-1 border-t border-line" />;
           }
           if ('kind' in item && item.kind === 'label') {
             return (
               <div
                 key={`lbl-${i}`}
-                className="px-2.5 pt-1.5 pb-1 text-[10px] font-semibold uppercase tracking-wider text-neutral-600"
+                className="px-2.5 pt-2 pb-1 text-2xs font-medium text-fg-3"
               >
                 {item.text}
               </div>
@@ -110,17 +110,17 @@ function ContextMenuView({
                 action.onSelect();
                 onClose();
               }}
-              className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-md text-sm text-left transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+              className={`w-full flex items-center gap-2.5 px-2.5 py-1.5 rounded-control text-ui text-left transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
                 action.danger
-                  ? 'text-red-400 hover:bg-red-500/10'
-                  : 'text-neutral-300 hover:bg-neutral-800 hover:text-neutral-50'
+                  ? 'text-red-400 hover:bg-red-500/12'
+                  : 'text-fg-2 hover:bg-hover hover:text-fg'
               }`}
             >
               {Icon && (
-                <Icon size={15} className={`shrink-0 ${action.danger ? 'text-red-400' : 'text-neutral-500'}`} />
+                <Icon size={16} className={`shrink-0 ${action.danger ? 'text-red-400' : 'text-fg-3'}`} />
               )}
               <span className="flex-1 truncate">{action.label}</span>
-              {action.hint && <span className="text-[11px] text-neutral-600 shrink-0">{action.hint}</span>}
+              {action.hint && <span className="font-mono text-2xs text-fg-4 shrink-0">{action.hint}</span>}
             </button>
           );
         })}

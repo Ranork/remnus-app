@@ -6,7 +6,7 @@ Every write tool also accepts optional `contextRunId`. In a workspace using **St
 
 `create_page`, `update_page`, and `create_database` additionally accept optional `knowledge` (`conceptType`, `description`, `tags`, `sources`, `status`, `staleAfter`); each `bulk_create_pages` entry accepts the labelling subset (`conceptType`, `tags`, `sources`). `sources` is a list of `{ resource, title? }` — typically repository-relative file paths. Agent-created or agent-updated items are recorded as machine-generated drafts; only a signed-in Remnus user can review the exact revision.
 
-`create_page`, `bulk_create_pages`, `update_page`, `bulk_update_pages`, `create_database`, `create_dashboard` and `update_dashboard` accept `icon` — an emoji (`"🗺️"`) or `"lucide:Name"` for one of the icons the sidebar can draw (for example `lucide:Map`, `lucide:Layers`, `lucide:Target`) — and `iconColor`: `default`, `red`, `orange`, `yellow`, `green`, `teal`, `blue`, `purple` or `pink` (applies to Lucide icons). An unknown Lucide name is refused with the list of valid ones, and image URLs can't be set over MCP. In updates, `null` clears.
+`create_page`, `bulk_create_pages`, `update_page`, `bulk_update_pages`, `create_database`, `create_dashboard` and `update_dashboard` accept `icon` — an emoji (`"🗺️"`) or `"lucide:Name"` for one of the icons the sidebar can draw — {{LUCIDE_ICONS}} — and `iconColor`: `default`, `red`, `orange`, `yellow`, `green`, `teal`, `blue`, `purple` or `pink` (applies to Lucide icons). An unknown Lucide name is refused with the list of valid ones, and image URLs can't be set over MCP. In updates, `null` clears.
 
 ---
 
@@ -46,7 +46,9 @@ Update an existing page or database row. Properties are **merged** — existing 
 |---|---|---|---|
 | `pageId` | string | ✓ | Workspace item ID or database row ID |
 | `title` | string | | New title |
-| `content` | string | | New markdown content (replaces existing) |
+| `content` | string | | New markdown content (replaces existing); can't be combined with `tick` / `append` |
+| `tick` | array | | Check open task items (`- [ ] …`) without resending the body: each entry is the start of an item's text (case-insensitive), or `{ item, note }` to add ` — note` to the line. An entry that matches no open task refuses the call and lists the open ones |
+| `append` | string | | Markdown added to the end of the body (after `tick`) |
 | `properties` | object | | Properties to merge into the row |
 | `icon` | string \| null | | Emoji or `lucide:Name`; `null` clears |
 | `iconColor` | string \| null | | Color for a Lucide icon; `null` clears |
@@ -65,7 +67,7 @@ Update multiple pages or database rows in a single call.
 
 | Parameter | Type | Required | Description |
 |---|---|---|---|
-| `updates` | array | ✓ | Array of update objects — each has `pageId` plus optional `title`, `content`, `properties`, `icon`, `iconColor` |
+| `updates` | array | ✓ | Array of update objects — each has `pageId` plus optional `title`, `content`, `properties`, `icon`, `iconColor`. One entry per page: entries run concurrently. `tick` / `append` / `knowledge` are `update_page` only |
 
 **Returns** — array of per-item results.
 
@@ -159,8 +161,9 @@ Move a sidebar item (page or database) to a new parent within the workspace.
 |---|---|---|---|
 | `itemId` | string | ✓ | Workspace item ID to move |
 | `newParentId` | string \| null | | New parent item ID — pass `null` to move to workspace root |
+| `position` | integer | | Place among the new siblings, `0` = first (past the end = last). To reorder in place, pass the item's current parent. Omitted = order unchanged |
 
-**Returns** — updated item object.
+**Returns** — `{ moved: true, position? }`.
 
 ---
 
@@ -310,11 +313,12 @@ Create a [dashboard](dashboards.md) — metric, chart, list, table-view and text
 | `parentId` | string | | A **page** to nest under (only pages hold children); omit for root |
 | `icon` / `iconColor` | string | | See the icon note above |
 | `blocks` | array | | Up to 40 block objects, see the catalog. `id` may be omitted — one is generated and returned |
+| `home` | boolean | | `true` pins it as the workspace's **home dashboard** — the one the sidebar's Pano button opens, marked `home` in the workspace map. A workspace has at most one; pinning another unpins the old one (it stays as an ordinary dashboard) |
 | `contextRunId` | string | | Context preflight ID (required in Strict mode) |
 
 Column fields take a column **name or id** (case-insensitive) and store the id; `databaseId` may be the database id or its item id. A database the workspace does not have — another workspace's included — refuses the whole call.
 
-**Returns** — `{ id, url, blocks, warnings? }`: the in-app `url` to show a human, every block id in order, and `warnings` for blocks that will render empty or broken (unknown column, a filter value that is no option, no matching rows). An invalid block is an error naming the entry, the field and what was expected.
+**Returns** — `{ id, url, blocks, home?, warnings? }`: the in-app `url` to show a human, every block id in order, and `warnings` for blocks that will render empty or broken (unknown column, a filter value that is no option, no matching rows). An invalid block is an error naming the entry, the field and what was expected.
 
 ---
 
@@ -333,6 +337,7 @@ Patch a dashboard **by block id** — send only what changes, never the whole sp
 | `update` | array | | `{ id, ...fields }` merged into that block; `null` removes a field; `type` cannot change |
 | `remove` | string[] | | Block ids to delete |
 | `order` | string[] | | Block ids in their new order; unlisted blocks follow in their current order |
+| `home` | boolean | | `true` pins this dashboard as the workspace home; `false` unpins it if it is the home. May be the only field sent |
 | `contextRunId` | string | | Context preflight ID (required in Strict mode) |
 
 All-or-nothing, applied remove → update → add → order: one bad entry refuses the call and says which. Blocks the call does not touch are passed through untouched, even ones this build cannot read. Concurrent patches to different blocks both land (compare-and-swap on the stored spec).

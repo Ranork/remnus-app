@@ -42,7 +42,7 @@ export default function DashboardBlockActions({
     });
 
   const buttonClass =
-    'p-1 rounded text-neutral-600 hover:text-neutral-200 hover:bg-neutral-800/60 transition-colors disabled:opacity-30 disabled:hover:text-neutral-600 disabled:hover:bg-transparent';
+    'p-1 rounded-sm text-fg-4 hover:text-fg hover:bg-hover transition-colors disabled:opacity-30 disabled:hover:text-fg-4 disabled:hover:bg-transparent';
 
   return (
     <>

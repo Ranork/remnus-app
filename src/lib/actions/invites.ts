@@ -8,6 +8,7 @@ import { getTranslations } from 'next-intl/server';
 import { revalidatePath } from 'next/cache';
 import { cookies } from 'next/headers';
 import { checkCanAddSeatForEmail } from '@/lib/services/billing';
+import { touchWorkspaces } from '@/lib/services/changeVersion';
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
 
@@ -108,6 +109,7 @@ export async function acceptInvite(token: string): Promise<{ ok?: boolean; works
   }
 
   await db.update(workspaceInvites).set({ acceptedAt: new Date() }).where(eq(workspaceInvites.id, inv.id));
+  await touchWorkspaces(inv.workspaceId);
   (await cookies()).delete('pending_invite');
   revalidatePath('/');
   return { ok: true, workspaceId: inv.workspaceId };

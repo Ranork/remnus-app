@@ -81,7 +81,7 @@ export default function BillingSuccessModal() {
           <>
             <h2 className="m-0 text-lg font-semibold text-neutral-100">{t('successTitle')}</h2>
             <span
-              className="mt-2.5 text-[11px] font-semibold uppercase tracking-wider px-2.5 py-1 rounded-full border"
+              className="mt-2.5 text-xs font-medium px-2.5 py-1 rounded-full border"
               style={{ color: TIER_ACCENT[tier], borderColor: TIER_ACCENT[tier], background: 'rgba(255,255,255,0.03)' }}
             >
               {t(`tier_${tier}` as 'tier_free')}
@@ -97,7 +97,7 @@ export default function BillingSuccessModal() {
 
             <button
               onClick={close}
-              className="w-full inline-flex items-center justify-center px-5 py-3 rounded-lg text-[13.5px] font-semibold text-white bg-blue-500 hover:opacity-90 transition-opacity"
+              className="w-full inline-flex items-center justify-center px-5 py-3 rounded-lg text-[13.5px] font-semibold text-ink-fg bg-ink hover:opacity-90 transition-opacity"
             >
               {t('successCta')}
             </button>

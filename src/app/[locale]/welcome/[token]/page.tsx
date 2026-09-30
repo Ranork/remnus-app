@@ -22,7 +22,7 @@ function Shell({ children, footer }: { children: React.ReactNode; footer?: React
     <div className="relative min-h-screen overflow-hidden bg-neutral-950 flex flex-col items-center justify-center gap-5 px-4 py-10">
       <div
         aria-hidden
-        className="pointer-events-none absolute left-1/2 top-1/2 h-[420px] w-[420px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-blue-600/10 blur-[110px]"
+        className="pointer-events-none absolute left-1/2 top-1/2 h-[420px] w-[420px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-signal/10 blur-[110px]"
       />
       <div className="relative w-full max-w-md bg-neutral-900 border border-neutral-800 rounded-2xl p-8 flex flex-col items-center text-center gap-4">
         {children}
@@ -92,12 +92,12 @@ export default async function ProspectWelcomePage({ params }: { params: Promise<
           // eslint-disable-next-line @next/next/no-img-element -- external Scout Forge asset; not worth a next/image remotePatterns entry for a one-off outreach link
           <img src={invite.appLogoUrl} alt={invite.appName} className="h-10 w-10 rounded-xl object-cover" />
         ) : (
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500/15 text-sm font-semibold text-blue-300">
+          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-signal/15 text-sm font-semibold text-signal-text">
             {invite.appName.charAt(0).toUpperCase()}
           </div>
         )}
       </div>
-      <p className="m-0 text-[11px] font-medium uppercase tracking-wider text-neutral-500">
+      <p className="m-0 text-xs font-medium text-neutral-500">
         {t('welcomeTitle', { appName: invite.appName })}
       </p>
 
@@ -172,7 +172,7 @@ export default async function ProspectWelcomePage({ params }: { params: Promise<
       />
       {header}
       <form action={signInToClaim} className="w-full mt-1">
-        <button type="submit" className="w-full px-5 py-2.5 rounded-lg text-[13.5px] font-semibold text-white bg-blue-500 hover:opacity-90 transition-opacity">
+        <button type="submit" className="w-full px-5 py-2.5 rounded-lg text-[13.5px] font-semibold text-ink-fg bg-ink hover:opacity-90 transition-opacity">
           {t('signInCta', { days: invite.giftDays })}
         </button>
       </form>

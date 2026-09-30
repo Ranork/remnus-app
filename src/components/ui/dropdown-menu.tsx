@@ -4,11 +4,11 @@ import * as React from "react"
 import { Menu as MenuPrimitive } from "@base-ui/react/menu"
 import { cn } from "@/lib/cn"
 
-// shadcn/ui DropdownMenu on Base UI, in the app's flat neutral look. Like Select, the
-// popup portals to <body> on z-9999 so it opens in front of the z-300 modals and the
-// z-200 mobile sheets. Only the parts the app uses are here; add the rest from
-// `npx shadcn add dropdown-menu` when needed (and swap its token classes for palette
-// classes — see src/components/ui/select.tsx).
+// shadcn/ui DropdownMenu on Base UI, in the R8 language (bg-float surface, shadow-float
+// edge, rounded-control rows). Like Select, the popup portals to <body> on z-9999 so it
+// opens in front of the z-300 modals and the z-200 mobile sheets. Only the parts the app
+// uses are here; add the rest from `npx shadcn add dropdown-menu` when needed and map
+// its token classes onto ours (popover → float, accent → hover, muted-foreground → fg-3).
 
 function DropdownMenu({ ...props }: MenuPrimitive.Root.Props) {
   return <MenuPrimitive.Root data-slot="dropdown-menu" {...props} />
@@ -42,7 +42,7 @@ function DropdownMenuContent({
         <MenuPrimitive.Popup
           data-slot="dropdown-menu-content"
           className={cn(
-            "max-h-(--available-height) min-w-56 origin-(--transform-origin) overflow-x-hidden overflow-y-auto rounded-lg border border-neutral-700 bg-neutral-900 py-1 text-neutral-100 shadow-xl outline-none",
+            "max-h-(--available-height) min-w-56 origin-(--transform-origin) overflow-x-hidden overflow-y-auto rounded-surface bg-float p-1 text-fg shadow-float outline-none animate-scale-in",
             className
           )}
           {...props}
@@ -64,7 +64,7 @@ function DropdownMenuLabel({
     <MenuPrimitive.GroupLabel
       data-slot="dropdown-menu-label"
       className={cn(
-        "px-3 py-1 text-[10px] font-semibold tracking-wide text-neutral-500 uppercase",
+        "px-2.5 pt-2 pb-1 text-2xs font-medium text-fg-3",
         className
       )}
       {...props}
@@ -84,7 +84,7 @@ function DropdownMenuItem({
       data-slot="dropdown-menu-item"
       data-variant={variant}
       className={cn(
-        "relative flex w-full cursor-pointer items-center gap-2.5 px-3 py-2 text-sm text-neutral-300 outline-hidden select-none data-highlighted:bg-neutral-800 data-highlighted:text-neutral-50 data-[variant=destructive]:text-red-400 data-[variant=destructive]:data-highlighted:bg-red-500/10 data-[variant=destructive]:data-highlighted:text-red-300 data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-3.5 [&_svg:not([class*='text-'])]:text-neutral-500",
+        "relative flex w-full cursor-pointer items-center gap-2.5 rounded-control px-2.5 py-1.5 text-ui text-fg-2 outline-hidden select-none data-highlighted:bg-hover data-highlighted:text-fg data-[variant=destructive]:text-red-400 data-[variant=destructive]:data-highlighted:bg-red-500/12 data-[variant=destructive]:data-highlighted:text-red-400 data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4 [&_svg:not([class*='text-'])]:text-fg-3",
         className
       )}
       {...props}
@@ -99,7 +99,18 @@ function DropdownMenuSeparator({
   return (
     <MenuPrimitive.Separator
       data-slot="dropdown-menu-separator"
-      className={cn("my-1 h-px bg-neutral-800", className)}
+      className={cn("-mx-1 my-1 h-px bg-line", className)}
+      {...props}
+    />
+  )
+}
+
+/** A keyboard hint at the end of a menu row (e.g. "Ctrl K"). */
+function DropdownMenuShortcut({ className, ...props }: React.ComponentProps<"span">) {
+  return (
+    <span
+      data-slot="dropdown-menu-shortcut"
+      className={cn("ml-auto pl-4 font-mono text-2xs text-fg-4", className)}
       {...props}
     />
   )
@@ -107,6 +118,7 @@ function DropdownMenuSeparator({
 
 export {
   DropdownMenu,
+  DropdownMenuShortcut,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuGroup,

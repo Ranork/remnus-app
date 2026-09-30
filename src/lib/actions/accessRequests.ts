@@ -19,6 +19,7 @@ import { getTranslations } from 'next-intl/server';
 import { revalidatePath } from 'next/cache';
 import { checkCanAddSeat } from '@/lib/services/billing';
 import { notifyOwnersOfAccessRequest } from '@/lib/email/lifecycle';
+import { touchWorkspaces } from '@/lib/services/changeVersion';
 import {
   createAccessRequest,
   getPendingAccessRequest,
@@ -157,6 +158,8 @@ export async function approveWorkspaceAccessRequest(
   }
 
   await markAccessRequestResolved(requestId, 'approved', resolverId);
+  // The joiner's open tabs pick the new workspace up, and other owners' badges clear.
+  await touchWorkspaces(request.workspaceId);
   revalidatePath('/');
   return { success: true };
 }
@@ -173,6 +176,7 @@ export async function denyWorkspaceAccessRequest(
   if (request.status !== 'pending') return { success: true };
 
   await markAccessRequestResolved(requestId, 'denied', resolverId);
+  await touchWorkspaces(request.workspaceId);
   revalidatePath('/');
   return { success: true };
 }

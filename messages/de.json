@@ -2,7 +2,7 @@
   "Layout": {
     "demoMode": "Demo-Modus",
     "demoChangesNote": "Änderungen sind vorübergehend und werden für jeden Besucher zurückgesetzt.",
-    "createFreeAccount": "Kostenloses Konto erstellen →",
+    "createFreeAccount": "Kostenloses Konto erstellen",
     "projectWindowLabel": "Projektfenster",
     "projectWindowExplain": "Dieses Fenster zeigt nur {workspace}. Ihr Konto, Ihre anderen Arbeitsbereiche und Einstellungen finden Sie in der vollen Remnus-App.",
     "projectWindowAbout": "Über dieses Fenster",
@@ -261,6 +261,7 @@
     "showHiddenWorkspaces": "Ausgeblendete anzeigen ({count})",
     "hideHiddenWorkspaces": "Ausgeblendete verbergen",
     "workspaceSettings": "Arbeitsbereichseinstellungen",
+    "accessRequestsPending": "{count, plural, one {# Zugriffsanfrage wartet — ansehen} other {# Zugriffsanfragen warten — ansehen}}",
     "importNotion": "Von Notion importieren",
     "changeIcon": "Symbol ändern",
     "addSubPage": "Unterseite hinzufügen",
@@ -880,6 +881,21 @@
     "cancel": "Abbrechen",
     "addBlock": "Block hinzufügen",
     "editBlock": "Block bearbeiten",
+    "project": {
+      "lastAgent": "Zuletzt hat hier {when} ein Agent gearbeitet",
+      "noAgent": "Hier hat noch kein Agent gearbeitet"
+    },
+    "home": {
+      "badge": "Start",
+      "note": "Dieses Dashboard wurde aus Ihren Datenbanken zusammengestellt. Für eines, das auf Ihr Projekt zugeschnitten ist, sagen Sie Ihrem verbundenen Agenten: „Remnus-Kalibrierung auffrischen“.",
+      "open": "{name}: offen",
+      "byStatus": "{name} nach Status",
+      "nextDue": "{name}: als Nächstes fällig",
+      "stillOpen": "{name}: noch offen",
+      "latest": "{name}: neueste",
+      "whereToLook": "Wo nachsehen",
+      "agentActivity": "Agentenaktivität"
+    },
     "blockTypes": {
       "metric": "Kennzahl",
       "chart": "Diagramm",
@@ -887,7 +903,9 @@
       "list": "Liste",
       "text": "Text",
       "links": "Links",
-      "activity": "Agentenaktivität"
+      "activity": "Agentenaktivität",
+      "project": "Projektkopf",
+      "savings": "Agenten-Ersparnis"
     },
     "editor": {
       "addTitle": "Block hinzufügen",
@@ -953,7 +971,10 @@
       "requiredHint": "Füllen Sie die mit * markierten Felder aus, um zu speichern.",
       "saveFailed": "Dieser Block konnte nicht gespeichert werden. Prüfen Sie seine Einstellungen und versuchen Sie es erneut.",
       "save": "Speichern",
-      "saving": "Wird gespeichert…"
+      "saving": "Wird gespeichert…",
+      "summary": "Zusammenfassung",
+      "stack": "Stack",
+      "stackPlaceholder": "z. B. Next.js, Postgres, Stripe"
     }
   },
   "Editor": {
@@ -1073,6 +1094,9 @@
     "untitled": "Ohne Titel",
     "addIcon": "Symbol hinzufügen",
     "changeIcon": "Symbol ändern",
+    "removeIcon": "Symbol entfernen",
+    "pageOptions": "Seitenoptionen",
+    "widthLabel": "Seitenbreite",
     "deletePage": "Seite löschen",
     "deleteConfirm": "\"{title}\" löschen?",
     "delete": "Löschen",
@@ -2257,6 +2281,9 @@
   },
   "Graph": {
     "title": "Wissenskarte",
+    "switchWorkspace": "Arbeitsbereich wechseln",
+    "openDashboard": "Dashboard dieses Arbeitsbereichs öffnen",
+    "loadingRows": "Zeilen werden geladen…",
     "layoutLabel": "Anordnung",
     "layoutNetwork": "Netz",
     "layoutTree": "Baum",

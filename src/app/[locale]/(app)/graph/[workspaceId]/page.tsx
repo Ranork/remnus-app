@@ -16,16 +16,17 @@ export async function generateMetadata() {
  *
  * Project windows: `getGraphWorkspace` and the data action behind the screen
  * go through `getCurrentUserAllowingWorkspaceLock()` + `assertWorkspaceLockAllows()`,
- * so a window opens its own workspace's map and gets "not found" for any other.
+ * so a window opens its own workspace's map and gets "not found" for any other,
+ * and it gets no workspace switcher (`switchable` is null there).
  */
 export default async function GraphRoute(props: { params: Promise<{ workspaceId: string }> }) {
   const { workspaceId } = await props.params;
-  const workspace = await getGraphWorkspace(workspaceId);
-  if (!workspace) return <NotFoundRedirect />;
+  const data = await getGraphWorkspace(workspaceId);
+  if (!data) return <NotFoundRedirect />;
 
   return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden bg-neutral-850">
-      <GraphRouteClient workspace={workspace} />
+      <GraphRouteClient workspace={data.workspace} switchable={data.switchable} />
     </div>
   );
 }

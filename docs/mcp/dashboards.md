@@ -11,6 +11,21 @@ whole status screen in a single small write and patch one tile of it later
 without resending the rest. People can edit the same blocks from the page itself
 — **Add block**, or the settings button on any tile.
 
+## The home dashboard
+
+Each workspace can pin **one** dashboard as its home. It sits above the tree in the
+sidebar — the **Pano** button — and the workspace map marks it `home`. Calibration builds
+it for every project (see [Calibrate](calibrate.md)): a `project` header first, then the
+status blocks the project's databases earn, then links, agent activity and savings.
+`create_dashboard` pins with `home: true`; `update_dashboard` pins or unpins an existing
+one with `home` alone.
+
+A workspace nobody has calibrated gets one the first time someone presses Pano: Remnus
+composes it on the server from the databases already there — an open-items number and a
+status donut over the largest database with a lifecycle, what is due next, links,
+activity and savings, each only when it would show something — with a note on how to ask
+an agent for one built around the project.
+
 ## What a dashboard is not
 
 - **It does not hold data.** Every block names a *source* — a `databaseId` plus
@@ -101,7 +116,8 @@ one tile afterwards costs a few dozen.
   "warnings": ["block \"typo\" source.filters.0.columnId: no column \"Stauts\" in \"Sprint Board\" — columns: Title, Status, Priority, Category"] }
 ```
 
-An agent never sees the screen it builds, so the answer is its only feedback:
+An agent never sees the screen it builds, so the answer is its only feedback
+(`warnings` is left out when there is nothing to say):
 
 - `url` — where a human can look.
 - `blocks` — every block id in display order.
@@ -148,8 +164,10 @@ characters) and `width`.
 | `database_embed` | A saved table or kanban view of a database, rendered as the real thing. | `databaseId*`, `viewId` (id or name; default the first view), `limit` 1–50 (default 10) |
 | `list` | The first N rows of a filtered query, as a compact list of titles. | `source*`, `limit` 1–20 (default 5), `sort` `{columnId*, direction* asc/desc}`, `showColumns` (≤ 3) |
 | `text` | Short markdown — a heading, an explanation, a warning. | `markdown*` (≤ 2,000), `tone` (`default` · `info` · `warning`) |
-| `links` | Quick links to pages, databases or dashboards of this workspace. | `items*` — 1–12 of `{itemId*, label}` |
+| `links` | Quick links to pages, databases or dashboards of this workspace. | `items*` — 1–12 of `{itemId*, label}`; a database may be named by either of its ids |
 | `activity` | The most recent agent activity in this workspace. | `limit` 1–20 (default 6) |
+| `project` | The header of a home dashboard: the workspace name, a short summary and the stack as chips, plus when an agent last worked here (live). | `summary*` (≤ 280), `stack` (≤ 8 chips of ≤ 24) |
+| `savings` | The tokens agents did not have to spend in this workspace, with the basis for the figure — the same measurements as the AI Agents panel. | — |
 
 `source` is `{ databaseId*, filters }`. Filters (up to 8, all must match) are
 `{ columnId*, operator*, value }` with the same operators as database views —
@@ -161,19 +179,21 @@ listed values.
 ### Layout
 
 `width` is `quarter`, `half` or `full` on a four-column desktop grid; on a phone
-every block is full width. Omitting it gives the block type's own default
-(`metric` and `links` a quarter, `database_embed` the full row, everything else
-a half).
+every block is full width, and on a tablet quarter tiles sit in pairs. Omitting it
+gives the block type's own default (`metric` and `links` a quarter,
+`database_embed` and `project` the full row, everything else a half).
 
 ## Templates
 
-The catalog resource carries three skeletons, so an agent fills in ids instead
+The catalog resource carries four skeletons, so an agent fills in ids instead
 of designing from scratch. Placeholders: `$DB` a databaseId; `$STATUS`,
-`$OWNER`, `$DATE` column names; `$DONE` the status value that means finished.
-Drop the blocks whose column the database does not have.
+`$OWNER`, `$DATE` column names; `$DONE` the status value that means finished;
+`$SUMMARY`, `$STACK`, `$ITEM` for the home frame. Drop the blocks whose column
+the database does not have.
 
 | Template | Needs | Blocks |
 |---|---|---|
+| `home` | `$SUMMARY`, `$STACK`, `$ITEM` | The frame of a home dashboard: project header, links, agent activity, savings — status blocks from the other templates go after the header |
 | `project-status` | `$DB`, `$STATUS`, `$DONE` | Open / Done / All metrics, a donut by status, a list of what is still open |
 | `backlog-health` | `$DB`, `$STATUS`, `$DONE`, `$OWNER` | Open items, open items with no owner, a bar chart of open work per owner, a triage list |
 | `weekly-pulse` | `$DB`, `$DATE` | A count with a 7-day trend, a weekly line chart, the latest rows, agent activity |

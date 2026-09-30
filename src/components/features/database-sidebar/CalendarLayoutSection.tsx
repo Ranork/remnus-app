@@ -92,7 +92,7 @@ export default function CalendarLayoutSection({
       <CollapsibleSection label={t('sectionCalendar')}>
         <div className="px-4 pb-3 flex flex-col gap-2">
           <div>
-            <span className="block text-[10px] text-neutral-500 uppercase tracking-wider mb-1.5">{t('calendarBy')}</span>
+            <span className="block text-2xs text-neutral-500 mb-1.5">{t('calendarBy')}</span>
             {dateColumns.length > 0 ? (
               <SimpleSelect
                 value={dateCol ?? ''}
@@ -106,7 +106,7 @@ export default function CalendarLayoutSection({
           </div>
           <div className="flex gap-3">
             <div className="flex-1">
-              <span className="block text-[10px] text-neutral-500 uppercase tracking-wider mb-1.5">View</span>
+              <span className="block text-2xs text-neutral-500 mb-1.5">View</span>
               <SimpleSelect
                 value={viewMode ?? 'month'}
                 onValueChange={(v) => onViewModeChange?.(v as 'month' | 'week')}
@@ -115,7 +115,7 @@ export default function CalendarLayoutSection({
               />
             </div>
             <div className="flex-1">
-              <span className="block text-[10px] text-neutral-500 uppercase tracking-wider mb-1.5">{t('weekStart')}</span>
+              <span className="block text-2xs text-neutral-500 mb-1.5">{t('weekStart')}</span>
               <SimpleSelect
                 value={firstDayOfWeek || 'sunday'}
                 onValueChange={(v) => onFirstDayOfWeekChange?.(v as 'sunday' | 'monday')}
@@ -141,7 +141,7 @@ export default function CalendarLayoutSection({
                 onDragOver={(e) => { e.preventDefault(); if (draggingCalProp && draggingCalProp !== col.id) setDragOverCalProp(col.id); }}
                 onDrop={() => handleDrop(col.id)}
                 onDragEnd={() => { setDraggingCalProp(null); setDragOverCalProp(null); }}
-                className={`flex items-center gap-2 px-4 py-2 border-b border-neutral-800/30 hover:bg-neutral-800/10 transition-colors cursor-default ${draggingCalProp === col.id ? 'opacity-30' : ''} ${dragOverCalProp === col.id ? 'border-t-2 border-t-blue-500/50' : ''}`}
+                className={`flex items-center gap-2 px-4 py-2 border-b border-neutral-800/30 hover:bg-neutral-800/10 transition-colors cursor-default ${draggingCalProp === col.id ? 'opacity-30' : ''} ${dragOverCalProp === col.id ? 'border-t-2 border-t-signal/50' : ''}`}
               >
                 <GripVertical size={11} className="text-neutral-600 cursor-grab shrink-0" />
                 {getPropertyIcon(col.type)}
@@ -213,7 +213,7 @@ export default function CalendarLayoutSection({
                       onClick={() => onCardBorderSideChange?.(side)}
                       className={`w-7 h-7 flex items-center justify-center border rounded transition-colors cursor-pointer ${
                         cardBorderSide === side
-                          ? 'border-blue-500/60 text-blue-400 bg-blue-500/10'
+                          ? 'border-signal/60 text-signal-text bg-signal/10'
                           : 'border-neutral-700 text-neutral-500 hover:border-neutral-600 hover:text-neutral-400'
                       }`}
                     >

@@ -10,6 +10,7 @@
     "lint": "eslint",
     "test:okf": "npx tsx src/scripts/test-okf.ts",
     "test:recurrence": "npx tsx src/scripts/test-recurrence.ts",
+    "test:body-edits": "npx tsx src/scripts/test-body-edits.ts",
     "test:access": "npx tsx src/scripts/test-access-requests.ts",
     "test:agent-access": "npx tsx src/scripts/test-agent-access.ts",
     "test:workspace-deletion": "npx tsx src/scripts/test-workspace-deletion.ts",

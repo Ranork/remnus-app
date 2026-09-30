@@ -93,10 +93,10 @@ export default function RecurrenceScopeDialog({
         <div className="flex items-center gap-2.5 px-5 py-3.5 border-b border-neutral-800 shrink-0">
           <div
             className={`w-7 h-7 rounded-lg border flex items-center justify-center shrink-0 ${
-              isDelete ? 'bg-red-500/10 border-red-500/20' : 'bg-blue-500/10 border-blue-500/20'
+              isDelete ? 'bg-red-500/10 border-red-500/20' : 'bg-signal/10 border-signal/20'
             }`}
           >
-            <Icon size={13} className={isDelete ? 'text-red-400' : 'text-blue-400'} />
+            <Icon size={13} className={isDelete ? 'text-red-400' : 'text-signal-text'} />
           </div>
           <div className="min-w-0">
             <h2 className="m-0 text-sm font-semibold text-neutral-100 truncate">

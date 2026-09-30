@@ -161,7 +161,7 @@ export default function SubItemsPanel({ parentId, workspaceId }: SubItemsPanelPr
                 if (e.key === 'Escape') setRenamingId(null);
               }}
               onBlur={() => handleRename(item)}
-              className="flex-1 bg-neutral-800 border border-neutral-700 rounded px-1.5 py-0.5 text-xs text-white focus:outline-none focus:border-blue-500/60 max-w-sm"
+              className="flex-1 bg-neutral-800 border border-neutral-700 rounded px-1.5 py-0.5 text-xs text-white focus:outline-none focus:border-signal/60 max-w-sm"
             />
           ) : (
             <Link

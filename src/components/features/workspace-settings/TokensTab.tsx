@@ -31,7 +31,7 @@ export default function TokensTab({ onOpenAgents }: TokensTabProps) {
 
         <button
           onClick={onOpenAgents}
-          className="w-full sm:w-auto flex items-center justify-center gap-2 text-sm font-semibold text-white bg-blue-500 hover:bg-blue-400 px-5 py-3 rounded-lg shadow-[0_0_20px_-6px_rgba(68,92,149,0.6)] transition-colors"
+          className="w-full sm:w-auto flex items-center justify-center gap-2 text-sm font-semibold text-ink-fg bg-ink hover:bg-ink/88 px-5 py-3 rounded-lg transition-colors"
         >
           <Bot size={16} />
           {t('openAgentsCenter')}

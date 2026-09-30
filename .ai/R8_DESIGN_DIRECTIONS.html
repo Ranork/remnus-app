@@ -1,0 +1,918 @@
+<title>Remnus Tasarım Yönleri</title>
+<meta name="description" content="R8 Faz 3: aynı iki ekran (kenar çubuğu + sayfa, proje panosu) üç tasarım yönünde.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Onest:wght@400..700&display=swap">
+<style>
+/* Decision memo around three live mock-ups. The memo stays quiet and neutral so the
+   mock-ups carry the design; each mock-up owns its own palette (dark + light). */
+:root {
+  --bg: #f5f6f8;
+  --paper: #ffffff;
+  --ink: #16181c;
+  --ink-2: #4a505a;
+  --ink-3: #686f7a;
+  --rule: #e1e4e9;
+  --rule-2: #cfd3da;
+  --brand: #3d57a6;
+  --chip: #eef0f4;
+  --sans: "Onest", "Segoe UI", system-ui, sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, "Cascadia Code", monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e1013; --paper: #15171b; --ink: #e8eaed; --ink-2: #b1b6be; --ink-3: #8a919b;
+    --rule: #262a30; --rule-2: #353a42; --brand: #8ea5ea; --chip: #1d2025; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e1013; --paper: #15171b; --ink: #e8eaed; --ink-2: #b1b6be; --ink-3: #8a919b;
+  --rule: #262a30; --rule-2: #353a42; --brand: #8ea5ea; --chip: #1d2025; color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font: 400 15px/1.6 var(--sans); -webkit-font-smoothing: antialiased; }
+.wrap { max-width: 1380px; margin: 0 auto; padding-inline: clamp(16px, 3vw, 32px); padding-block: 40px 96px; }
+h1, h2, h3 { text-wrap: balance; }
+a { color: var(--brand); text-underline-offset: 3px; }
+a:focus-visible, button:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; border-radius: 6px; }
+code { font: 500 0.88em/1 var(--mono); background: var(--chip); padding: 2px 5px; border-radius: 4px; }
+
+.intro { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr); gap: 40px; align-items: end; margin-bottom: 28px; }
+.intro h1 { margin: 0 0 12px; font-size: clamp(30px, 4vw, 42px); line-height: 1.08; font-weight: 650; letter-spacing: -0.03em; }
+.intro p { margin: 0; color: var(--ink-2); max-width: 62ch; }
+.facts { margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--rule); }
+.facts li { display: grid; grid-template-columns: 5.5ch minmax(0, 1fr); gap: 12px; padding: 7px 0; border-bottom: 1px solid var(--rule); font-size: 14px; color: var(--ink-2); }
+.facts b { color: var(--ink); font-weight: 650; text-align: right; }
+
+.controls { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 20; display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px; margin: 0 calc(-1 * clamp(16px, 3vw, 32px)) 28px; padding: 10px clamp(16px, 3vw, 32px); background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(10px); border-bottom: 1px solid var(--rule); }
+.seg { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink-3); }
+.seg .opts { display: inline-flex; padding: 3px; gap: 2px; border-radius: 9px; background: var(--chip); border: 1px solid var(--rule); }
+.seg button { appearance: none; border: 0; background: transparent; color: var(--ink-2); font: 500 13px/1 var(--sans); padding: 7px 11px; border-radius: 6px; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--paper); color: var(--ink); box-shadow: 0 1px 2px rgba(0,0,0,.08), 0 0 0 1px var(--rule); }
+.jump { margin-left: auto; display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 13px; }
+.jump a { color: var(--ink-2); text-decoration: none; }
+.jump a:hover { color: var(--ink); text-decoration: underline; }
+
+.dir { margin-top: 56px; scroll-margin-top: 72px; }
+.dir-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 16px; margin-bottom: 14px; }
+.dir-head h2 { margin: 0; font-size: 26px; line-height: 1.2; font-weight: 650; letter-spacing: -0.02em; }
+.dir-head .letter { display: inline-grid; place-items: center; width: 30px; height: 30px; margin-right: 10px; border-radius: 8px; background: var(--ink); color: var(--bg); font-size: 15px; vertical-align: 3px; }
+.dir-head p { margin: 0; flex: 1 1 420px; color: var(--ink-2); }
+
+.frame { position: relative; overflow: hidden; border-radius: 12px; border: 1px solid var(--rule-2); background: #0b0c0e; box-shadow: 0 1px 2px rgba(0,0,0,.05), 0 24px 48px -32px rgba(0,0,0,.35); }
+.frame.actual { overflow-x: auto; height: auto !important; }
+.frame .mock { transform: scale(var(--s, 1)); transform-origin: 0 0; }
+.frame.actual .mock { transform: none; }
+
+.spec { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px; margin-top: 20px; }
+.spec h3 { margin: 0 0 8px; font-size: 14px; font-weight: 600; }
+.spec ul { margin: 0; padding-left: 18px; color: var(--ink-2); font-size: 14px; }
+.spec li + li { margin-top: 5px; }
+.spec p { margin: 0 0 8px; font-size: 14px; color: var(--ink-2); }
+.sw { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 6px; margin-top: 10px; }
+.sw div { display: flex; flex-direction: column; gap: 4px; font-size: 11.5px; color: var(--ink-3); }
+.sw span { height: 26px; border-radius: 6px; border: 1px solid var(--rule); }
+.sw code { background: none; padding: 0; font-size: 10.5px; color: var(--ink-3); }
+.tradeoff { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 12px; margin-top: 16px; }
+.tradeoff div { padding: 12px 14px; border-radius: 10px; background: var(--paper); border: 1px solid var(--rule); font-size: 14px; color: var(--ink-2); }
+.tradeoff b { display: block; margin-bottom: 4px; color: var(--ink); font-weight: 600; }
+
+.section { margin-top: 72px; scroll-margin-top: 72px; }
+.section > h2 { margin: 0 0 8px; font-size: 24px; font-weight: 650; letter-spacing: -0.02em; }
+.section > p { margin: 0 0 18px; color: var(--ink-2); max-width: 75ch; }
+.cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 32px; }
+.cols h3 { margin: 0 0 10px; font-size: 15px; font-weight: 600; }
+.list { margin: 0; padding: 0; list-style: none; border-top: 1px solid var(--rule); }
+.list li { padding: 10px 0; border-bottom: 1px solid var(--rule); font-size: 14px; color: var(--ink-2); }
+.list li b { color: var(--ink); font-weight: 600; }
+.tbl { overflow-x: auto; border: 1px solid var(--rule); border-radius: 10px; background: var(--paper); }
+.tbl table { border-collapse: collapse; width: 100%; min-width: 760px; font-size: 14px; }
+.tbl th, .tbl td { text-align: left; padding: 10px 14px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+.tbl th { font-weight: 600; color: var(--ink); background: var(--chip); }
+.tbl td { color: var(--ink-2); }
+.tbl tr:last-child td { border-bottom: 0; }
+.tbl td:first-child { color: var(--ink); font-weight: 500; white-space: nowrap; }
+
+@media (max-width: 900px) {
+  .intro, .cols, .spec, .tradeoff { grid-template-columns: minmax(0, 1fr); }
+  .jump { margin-left: 0; }
+}
+
+/* ───────────────────────── Mock-up base (shared structure) ───────────────────────── */
+.mock {
+  --sans-ui: "Onest", "Segoe UI", system-ui, sans-serif;
+  --mono-ui: "JetBrains Mono", ui-monospace, monospace;
+  --ico: 16px;
+  position: relative; width: 1280px; height: 800px; display: grid; grid-template-columns: 256px minmax(0, 1fr);
+  background: var(--frame); color: var(--fg); font: 400 var(--fs-ui)/1.45 var(--sans-ui); overflow: hidden; text-align: left;
+}
+.mock * { box-sizing: border-box; }
+.mock .i { width: var(--ico); height: var(--ico); fill: none; stroke: currentColor; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.mock .grow { flex: 1 1 auto; }
+.mock code, .mock .mono { font-family: var(--mono-ui); background: transparent; padding: 0; border-radius: 0; font-size: inherit; font-weight: 500; }
+.mock em { font-style: normal; }
+
+/* sidebar */
+.mock .sb { display: flex; flex-direction: column; min-height: 0; background: var(--panel); padding: 10px 8px 8px; gap: 1px; }
+.mock .sb-top { display: flex; align-items: center; gap: 9px; height: 32px; padding: 0 6px 0 8px; }
+.mock .logo { width: 17px; height: 15px; color: var(--fg); flex: none; }
+.mock .brand { font-weight: 650; letter-spacing: -0.01em; }
+.mock .ib { display: inline-grid; place-items: center; width: 28px; height: 28px; border-radius: var(--r-ctl); color: var(--fg3); flex: none; }
+.mock .sb-search { display: flex; align-items: center; gap: 8px; height: 30px; margin: 6px 0 12px; padding: 0 6px 0 9px; border-radius: var(--r-ctl); background: var(--raised); color: var(--fg3); border: 1px solid var(--line); --ico: 14px; }
+.mock kbd { margin-left: auto; font: 500 10.5px/1 var(--mono-ui); color: var(--fg3); padding: 3px 5px; border-radius: min(4px, var(--r-ctl)); border: 1px solid var(--line2); }
+.mock .ws-row { display: flex; align-items: center; gap: 8px; height: var(--row); padding: 0 8px 0 6px; border-radius: var(--r-ctl); font-weight: 600; color: var(--fg); }
+.mock .ws.closed .ws-row { color: var(--fg2); font-weight: 500; }
+.mock .ws-ico { width: 18px; height: 18px; display: grid; place-items: center; border-radius: 5px; background: var(--ws); color: #fff; font-size: 11px; font-weight: 700; flex: none; }
+.mock .ws-name { flex: 1; }
+.mock .chev { --ico: 14px; color: var(--fg4); }
+.mock .chev.ghost { visibility: hidden; }
+.mock .quick { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; margin: 4px 0 6px 28px; }
+.mock .q { display: flex; align-items: center; justify-content: center; gap: 6px; height: 28px; border-radius: var(--r-ctl); color: var(--fg2); border: 1px solid var(--line); font-size: 12.5px; font-weight: 500; --ico: 14px; }
+.mock .q.on { background: var(--raised); color: var(--fg); border-color: var(--line2); }
+.mock .tree { display: flex; flex-direction: column; gap: 1px; margin-bottom: 6px; }
+.mock .it { position: relative; display: flex; align-items: center; gap: 8px; height: var(--row); padding: 0 8px 0 20px; border-radius: var(--r-ctl); color: var(--fg2); }
+.mock .it.l2 { padding-left: 42px; }
+.mock .it > .i:not(.chev) { color: var(--fg3); }
+.mock .it.on { background: var(--raised); color: var(--fg); font-weight: 500; }
+.mock .it.on > .i:not(.chev) { color: var(--fg); }
+.mock .it .t { flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mock .it .age { font-size: 11.5px; color: var(--fg3); }
+.mock .live { position: relative; width: 7px; height: 7px; border-radius: 50%; background: var(--agent); flex: none; }
+.mock .live::after { content: ""; position: absolute; inset: -4px; border-radius: 50%; border: 1.5px solid var(--agent); opacity: 0; animation: mk-ping 2s ease-out infinite; }
+
+.mock .agents { display: flex; flex-direction: column; gap: 4px; padding: 10px 8px; }
+.mock .ag-h { font-size: 12px; font-weight: 500; color: var(--fg3); margin-bottom: 2px; }
+.mock .ag { display: flex; align-items: center; gap: 8px; height: 26px; color: var(--fg2); }
+.mock .ag .nm { color: var(--fg); font-weight: 500; }
+.mock .ag .st { margin-left: auto; font-size: 12px; color: var(--fg3); }
+.mock .ag.on .st { color: var(--agent-text); display: inline-flex; align-items: center; gap: 6px; font-weight: 500; }
+.mock .ag-last { display: flex; align-items: center; gap: 8px; margin: -2px 0 4px 24px; font-size: 11.5px; color: var(--fg3); white-space: nowrap; overflow: hidden; }
+.mock .ag-last code { color: var(--agent-text); font-size: 11px; }
+.mock .saved { margin-top: 6px; font-size: 12px; color: var(--fg3); }
+.mock .saved b { color: var(--fg); font-weight: 600; }
+.mock .mark-svg { width: 16px; height: 16px; flex: none; }
+.mock .me { display: flex; align-items: center; gap: 9px; height: 40px; padding: 0 8px; border-radius: var(--r-ctl); color: var(--fg); font-weight: 500; }
+.mock .me .i { margin-left: auto; color: var(--fg3); --ico: 14px; }
+.mock .av { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; background: var(--raised); border: 1px solid var(--line2); color: var(--fg2); font-size: 10.5px; font-weight: 650; flex: none; }
+
+/* main */
+.mock .main { display: flex; flex-direction: column; min-width: 0; min-height: 0; background: var(--canvas); position: relative; }
+.mock .bar { display: flex; align-items: center; gap: 8px; height: 46px; padding: 0 12px 0 22px; border-bottom: 1px solid var(--line); flex: none; }
+.mock .crumbs { display: flex; align-items: center; gap: 7px; color: var(--fg3); font-size: 13px; white-space: nowrap; }
+.mock .crumbs i { font-style: normal; color: var(--fg4); }
+.mock .crumbs b { color: var(--fg); font-weight: 500; }
+.mock .pres { display: flex; align-items: center; margin-right: 6px; }
+.mock .pres .av { width: 26px; height: 26px; border: 2px solid var(--canvas); }
+.mock .pres .av + .av { margin-left: -6px; }
+.mock .pres .av.ag { background: var(--raised); }
+.mock .pres .av.ag.on { box-shadow: 0 0 0 1.5px var(--agent); }
+.mock .pres-txt { display: none; }
+.mock .scroll { flex: 1; min-height: 0; overflow: hidden; position: relative; }
+.mock .doc { position: relative; width: 660px; margin: 0 auto; padding: 44px 0 40px; }
+.mock .pico { width: 38px; height: 38px; display: grid; place-items: center; border-radius: 10px; background: var(--raised); color: var(--fg2); border: 1px solid var(--line); --ico: 20px; flex: none; }
+.mock h1 { margin: 16px 0 12px; font-size: var(--fs-title); line-height: 1.12; font-weight: 650; letter-spacing: -0.025em; color: var(--fg); }
+.mock .prov { display: flex; align-items: center; gap: 16px; padding-bottom: 18px; border-bottom: 1px solid var(--line); font-size: 12.5px; color: var(--fg3); }
+.mock .by { display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; }
+.mock .by.agent { color: var(--agent-text); font-weight: 500; }
+.mock .trust { display: inline-flex; align-items: center; gap: 6px; height: 24px; padding: 0 9px; border-radius: var(--r-chip); background: var(--agent-soft); color: var(--agent-text); font-weight: 500; --ico: 13px; white-space: nowrap; }
+.mock .btn { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 12px; border-radius: var(--r-ctl); background: var(--accent); color: var(--accent-fg); font-weight: 600; font-size: 12.5px; white-space: nowrap; --ico: 14px; }
+.mock .btn.sm { height: 24px; padding: 0 10px; }
+.mock .btn.ghost { background: transparent; color: var(--fg2); box-shadow: inset 0 0 0 1px var(--line2); font-weight: 500; }
+.mock .body { font-size: var(--fs-body); line-height: 1.7; color: var(--fg2); padding-top: 22px; }
+.mock .body p { margin: 0 0 14px; }
+.mock .body h2 { margin: 26px 0 8px; font-size: 18.5px; line-height: 1.3; color: var(--fg); font-weight: 600; letter-spacing: -0.012em; }
+.mock .body code { font-size: 0.84em; padding: 1px 5px; border-radius: 4px; background: var(--raised); color: var(--fg); border: 1px solid var(--line); }
+.mock .edit { position: relative; }
+.mock .edit p { color: var(--fg); }
+.mock .caret { display: inline-block; width: 2px; height: 1.15em; margin-left: 1px; vertical-align: -0.2em; background: var(--agent); animation: mk-blink 1.06s steps(1) infinite; }
+.mock .flag { display: inline-flex; align-items: center; gap: 5px; margin-left: 4px; vertical-align: 0.1em; height: 19px; padding: 0 6px; font: 600 11px/1 var(--sans-ui); color: var(--flag-fg); background: var(--agent); border-radius: 3px; white-space: nowrap; }
+.mock .tasks { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 9px; }
+.mock .tasks li { display: flex; align-items: center; gap: 10px; }
+.mock .tasks li.done { color: var(--fg3); }
+.mock .tasks li.done > span { text-decoration: line-through; text-decoration-color: var(--fg4); }
+.mock .cbx { width: 16px; height: 16px; border-radius: min(4px, var(--r-ctl)); border: 1.5px solid var(--line2); display: grid; place-items: center; flex: none; --ico: 12px; }
+.mock .cbx.on { background: var(--fg3); border-color: var(--fg3); color: var(--canvas); }
+.mock .cbx .i { stroke-width: 3; }
+.mock .by-ag { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; color: var(--agent-text); text-decoration: none; }
+.mock .mnote, .mock .anno { display: none; }
+
+/* dashboard */
+.mock .db .scroll { padding: 28px 32px; }
+.mock .dhead { display: flex; align-items: center; gap: 14px; margin-bottom: 22px; }
+.mock .dhead .ws-ico { width: 38px; height: 38px; font-size: 18px; border-radius: 10px; }
+.mock .dhead h1 { margin: 0 0 6px; font-size: 25px; }
+.mock .stack { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: 12.5px; color: var(--fg3); }
+.mock .tag { height: 22px; display: inline-flex; align-items: center; padding: 0 8px; border-radius: var(--r-chip); background: var(--raised); color: var(--fg2); border: 1px solid var(--line); font-size: 12px; }
+.mock .stack .by { margin-left: 8px; }
+.mock .bento { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.mock .blk { min-width: 0; }
+.mock .blk > .in { height: 100%; padding: 16px 18px; background: var(--canvas); }
+.mock .blk h3 { display: flex; align-items: center; gap: 8px; margin: 0 0 12px; font-size: 12.5px; font-weight: 500; color: var(--fg3); }
+.mock .big { font-size: 40px; line-height: 1; font-weight: 600; letter-spacing: -0.03em; color: var(--fg); }
+.mock .big small { font-size: 14px; font-weight: 500; color: var(--fg3); letter-spacing: 0; margin-left: 5px; }
+.mock .sub { margin-top: 10px; font-size: 12.5px; color: var(--fg3); }
+.mock .sub b { color: var(--ok); font-weight: 600; }
+.mock .k-next { grid-column: 1 / span 2; }
+.mock .k-act { grid-column: 3; grid-row: 2 / span 2; }
+.mock .k-health { grid-column: 1 / span 2; }
+.mock .sbar { display: flex; height: 10px; gap: 2px; overflow: hidden; border-radius: min(3px, var(--r-chip)); }
+.mock .sbar i { width: var(--w); background: var(--c); }
+.mock .legend { list-style: none; padding: 0; margin: 14px 0 0; display: grid; grid-template-columns: 1fr 1fr; gap: 7px 18px; font-size: 12.5px; color: var(--fg2); }
+.mock .legend li { display: flex; align-items: center; gap: 8px; }
+.mock .legend b { margin-left: auto; font-weight: 500; color: var(--fg); font-variant-numeric: tabular-nums; }
+.mock .glyph { width: 15px; height: 15px; flex: none; }
+.mock .rows { list-style: none; margin: 0; padding: 0; }
+.mock .rows li { display: flex; align-items: center; gap: 10px; height: 38px; border-top: 1px solid var(--line); font-size: 13px; color: var(--fg); }
+.mock .rows li:first-child { border-top: 0; }
+.mock .rows .who { margin-left: auto; display: inline-flex; align-items: center; gap: 6px; color: var(--fg3); font-size: 12px; }
+.mock .rows .due { width: 54px; text-align: right; color: var(--fg3); font-size: 12px; }
+.mock .rows .due.today { color: var(--fg); font-weight: 500; }
+.mock .rows .av { width: 18px; height: 18px; font-size: 8.5px; }
+.mock .spark { display: block; width: 100%; height: 42px; margin-top: 12px; }
+.mock .sess { border-top: 1px solid var(--line); padding: 10px 0; }
+.mock .sess:first-of-type { border-top: 0; padding-top: 0; }
+.mock .sess-h { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--fg); }
+.mock .sess-h b { font-weight: 600; }
+.mock .sess-h .meta { margin-left: auto; font-size: 12px; color: var(--fg3); }
+.mock .sess-h .i { --ico: 14px; color: var(--fg3); }
+.mock .calls { list-style: none; margin: 10px 0 0; padding: 0 0 0 8px; display: grid; gap: 2px; border-left: 1px solid var(--line); }
+.mock .calls li { display: grid; grid-template-columns: 112px minmax(0, 1fr) 40px; align-items: center; gap: 8px; height: 26px; padding-left: 10px; font-size: 12.5px; }
+.mock .calls code { font-size: 11.5px; color: var(--fg3); }
+.mock .calls li.w code { color: var(--agent-text); font-weight: 600; }
+.mock .calls .tg { color: var(--fg2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mock .calls time { text-align: right; color: var(--fg3); font-size: 11.5px; }
+.mock .health { display: flex; align-items: center; gap: 28px; }
+.mock .hstat { display: flex; flex-direction: column; gap: 2px; }
+.mock .hstat b { font-size: 22px; font-weight: 600; color: var(--fg); letter-spacing: -0.02em; }
+.mock .hstat span { font-size: 12.5px; color: var(--fg3); }
+.mock .health .btn { margin-left: auto; }
+
+@keyframes mk-ping { 0% { transform: scale(.6); opacity: .9; } 80%, 100% { transform: scale(1.7); opacity: 0; } }
+@keyframes mk-blink { 50% { opacity: 0; } }
+@keyframes mk-breathe { 0%, 100% { box-shadow: 0 0 0 1.5px var(--agent); } 50% { box-shadow: 0 0 0 3.5px color-mix(in srgb, var(--agent) 45%, transparent); } }
+@keyframes mk-square { 0%, 55% { opacity: 1; } 56%, 100% { opacity: .25; } }
+@media (prefers-reduced-motion: reduce) {
+  .mock *, .mock *::after, .mock *::before { animation: none !important; }
+}
+
+/* ───────────────────────── A · Sinyal ───────────────────────── */
+.mock.dir-a { --row: 28px; --fs-ui: 13px; --fs-body: 15px; --fs-title: 30px; --r-chip: 4px; --r-ctl: 6px; --r-panel: 10px; }
+.mock.dir-a.m-dark {
+  --frame: #0f1114; --panel: #0f1114; --canvas: #16181c; --raised: #1d2025; --line: #262a30; --line2: #353a42;
+  --fg: #e8eaed; --fg2: #a9afb8; --fg3: #858c96; --fg4: #59606a;
+  --accent: #e8eaed; --accent-fg: #0f1114; --agent: #f0b43c; --agent-text: #f0b43c; --agent-soft: rgba(240,180,60,.13); --flag-fg: #1b1405;
+  --ok: #5cc98a; --prog: #72a7ff; --rev: #b394f6; --bad: #f07070;
+}
+.mock.dir-a.m-light {
+  --frame: #f2f3f5; --panel: #f2f3f5; --canvas: #ffffff; --raised: #f5f6f8; --line: #e4e6ea; --line2: #d2d6dc;
+  --fg: #14161a; --fg2: #4b525c; --fg3: #666d78; --fg4: #a2a8b1;
+  --accent: #14161a; --accent-fg: #ffffff; --agent: #c07400; --agent-text: #9c5a00; --agent-soft: rgba(214,138,0,.11); --flag-fg: #ffffff;
+  --ok: #1a7f4b; --prog: #2f6fd6; --rev: #7c4fd6; --bad: #cc3a3a;
+}
+.dir-a .sb { border-right: 1px solid var(--line); }
+.dir-a .it.ag-now::before, .dir-a .it.ag-recent::before { content: ""; position: absolute; left: 3px; top: 7px; bottom: 7px; width: 2px; border-radius: 2px; background: var(--agent); }
+.dir-a .it.ag-recent::before { opacity: .38; }
+.dir-a .it .mark { display: none; }
+.dir-a .it.ag-now .mark { display: block; }
+.dir-a .agents { border-top: 1px solid var(--line); margin: 0 -8px; padding: 12px 16px 8px; }
+.dir-a .edit::before { content: ""; position: absolute; left: -20px; top: 5px; bottom: 19px; width: 2px; border-radius: 2px; background: var(--agent); }
+.dir-a .bento { gap: 1px; background: var(--line); border: 1px solid var(--line); border-radius: var(--r-panel); overflow: hidden; }
+.dir-a .pres .av.ag.on { box-shadow: 0 0 0 1.5px var(--agent); }
+
+/* ───────────────────────── B · Ortak Masa ───────────────────────── */
+.mock.dir-b { --row: 32px; --fs-ui: 14px; --fs-body: 16px; --fs-title: 34px; --r-chip: 999px; --r-ctl: 8px; --r-panel: 12px; }
+.mock.dir-b.m-dark {
+  --frame: #111216; --panel: #111216; --canvas: #1a1b20; --raised: #23242b; --line: #2c2d35; --line2: #3b3c46;
+  --fg: #eceef2; --fg2: #b3b6c1; --fg3: #878a96; --fg4: #5f626d;
+  --accent: #5169b8; --accent-fg: #ffffff; --human: #8ea5ea; --agent: #a98cfb; --agent-text: #b9a2ff; --agent-soft: rgba(169,140,251,.14); --flag-fg: #1a1330;
+  --ok: #6fd19b; --prog: #e7b659; --rev: #e992bd; --bad: #f07575;
+  --sheet-shadow: 0 0 0 1px #26272e, 0 20px 50px -28px rgba(0,0,0,.7); --lift: 0 0 0 1px #2c2d35, 0 6px 16px -8px rgba(0,0,0,.6);
+}
+.mock.dir-b.m-light {
+  --frame: #eceef2; --panel: #eceef2; --canvas: #ffffff; --raised: #f4f5f8; --line: #e6e8ed; --line2: #d3d6de;
+  --fg: #16181d; --fg2: #4f5460; --fg3: #656a77; --fg4: #9ca0aa;
+  --accent: #3d57a6; --accent-fg: #ffffff; --human: #3d57a6; --agent: #6848d8; --agent-text: #5a3cc9; --agent-soft: rgba(104,72,216,.09); --flag-fg: #ffffff;
+  --ok: #1f9d5c; --prog: #b7791f; --rev: #c2417f; --bad: #d33c3c;
+  --sheet-shadow: 0 1px 2px rgba(20,24,40,.05), 0 12px 32px -18px rgba(20,24,40,.22); --lift: 0 1px 2px rgba(20,24,40,.08), 0 4px 12px -6px rgba(20,24,40,.14);
+}
+.dir-b .sb { padding-top: 12px; }
+.dir-b .sb-search { background: var(--canvas); border-color: transparent; box-shadow: var(--lift); }
+.dir-b .q { border: 0; background: color-mix(in srgb, var(--canvas) 55%, transparent); }
+.dir-b .q.on { background: var(--canvas); box-shadow: var(--lift); color: var(--human); }
+.dir-b .it.on { background: var(--canvas); box-shadow: var(--lift); }
+.dir-b .it .mark { display: none; }
+.dir-b .it.ag-now .mark { display: grid; place-items: center; width: 18px; height: 18px; border-radius: 50%; background: var(--agent-soft); box-shadow: 0 0 0 1.5px var(--agent); animation: mk-breathe 2.4s ease-in-out infinite; }
+.dir-b .it.ag-now .mark svg { width: 11px; height: 11px; }
+.dir-b .it.ag-recent .age { color: var(--agent-text); }
+.dir-b .agents { margin: 4px 0 6px; padding: 12px; border-radius: var(--r-panel); background: var(--canvas); box-shadow: var(--lift); }
+.dir-b .ag-h { color: var(--fg2); font-weight: 600; }
+.dir-b .main.pg { margin: 8px 8px 8px 0; border-radius: 14px; box-shadow: var(--sheet-shadow); overflow: hidden; }
+.dir-b .bar { border-bottom-color: transparent; height: 52px; }
+.dir-b .pres .av { width: 28px; height: 28px; }
+.dir-b .pres .av.ag.on { animation: mk-breathe 2.4s ease-in-out infinite; }
+.dir-b .pres-txt { display: inline-flex; align-items: center; gap: 6px; margin: 0 10px 0 2px; font-size: 12.5px; color: var(--fg3); white-space: nowrap; }
+.dir-b .pres-txt b { color: var(--agent-text); font-weight: 600; }
+.dir-b .doc { width: 620px; margin-left: 150px; }
+.dir-b .pico { border-radius: 12px; }
+.dir-b .prov { border-bottom: 0; padding-bottom: 6px; }
+.dir-b .trust { background: var(--agent-soft); }
+.dir-b .edit::before { content: ""; position: absolute; inset: -8px -12px 6px; border-radius: 10px; background: var(--agent-soft); }
+.dir-b .edit p { position: relative; }
+.dir-b .flag { border-radius: 999px; padding: 0 8px 0 3px; gap: 4px; }
+.dir-b .flag .av { width: 14px; height: 14px; border: 0; background: rgba(255,255,255,.9); }
+.dir-b .flag .av svg { width: 10px; height: 10px; }
+.dir-b .mnote { display: flex; position: absolute; left: calc(100% + 36px); top: -6px; width: 178px; gap: 9px; padding: 10px; border-radius: 10px; background: var(--canvas); box-shadow: var(--lift); font-size: 12px; line-height: 1.4; color: var(--fg3); }
+.dir-b .mnote b { display: block; color: var(--fg); font-weight: 600; font-size: 12.5px; }
+.dir-b .mnote .av { width: 22px; height: 22px; background: var(--agent-soft); border: 0; }
+.dir-b .main.db { background: transparent; }
+.dir-b .main.db .bar { margin: 8px 8px 0 0; border-radius: 12px; background: var(--canvas); box-shadow: var(--lift); height: 48px; }
+.dir-b .db .scroll { padding: 24px 8px 24px 4px; }
+.dir-b .bento { gap: 12px; }
+.dir-b .blk > .in { border-radius: var(--r-panel); box-shadow: var(--sheet-shadow); padding: 18px 20px; }
+.dir-b .dhead { padding: 0 4px; }
+.dir-b .dhead .ws-ico { border-radius: 12px; }
+.dir-b .tag { border: 0; background: var(--canvas); box-shadow: var(--lift); }
+.dir-b .big { font-size: 44px; }
+.dir-b .sbar { height: 12px; border-radius: 999px; }
+.dir-b .calls { border-left: 0; padding-left: 0; }
+.dir-b .calls li { padding-left: 0; }
+
+/* ───────────────────────── Seçilen: B yapısı + tek renk ───────────────────────── */
+/* D reuses every structural rule of B (the mock carries both classes) and replaces the two
+   voices with one: ink for actions, yellow for live activity and attention. No looping motion. */
+.mock.dir-b.dir-d.m-dark {
+  --frame: #111316; --panel: #111316; --canvas: #191b1f; --raised: #22252a; --line: #2a2d33; --line2: #393d44;
+  --fg: #eceef1; --fg2: #b6bac2; --fg3: #878c96; --fg4: #5d626c;
+  --accent: #eceef1; --accent-fg: #111316; --human: #eceef1; --agent: #f0b43c; --agent-text: #f0b43c; --agent-soft: rgba(240,180,60,.12); --flag-fg: #1c1504;
+  --ok: #5cc98a; --prog: #72a7ff; --rev: #b394f6; --bad: #f07070;
+  --sheet-shadow: 0 0 0 1px #24272c, 0 20px 50px -28px rgba(0,0,0,.72); --lift: 0 0 0 1px #2a2d33, 0 6px 16px -8px rgba(0,0,0,.6);
+}
+.mock.dir-b.dir-d.m-light {
+  --frame: #eceef1; --panel: #eceef1; --canvas: #ffffff; --raised: #f4f5f7; --line: #e4e6ea; --line2: #d2d6dc;
+  --fg: #15171b; --fg2: #454a53; --fg3: #62687a; --fg4: #9ba0a9;
+  --accent: #15171b; --accent-fg: #ffffff; --human: #15171b; --agent: #f5b300; --agent-text: #5c4600; --agent-soft: #fff3c2; --flag-fg: #1c1504;
+  --ok: #1a7f4b; --prog: #2f6fd6; --rev: #7c4fd6; --bad: #cc3a3a;
+  --sheet-shadow: 0 1px 2px rgba(20,24,40,.05), 0 12px 32px -18px rgba(20,24,40,.22); --lift: 0 1px 2px rgba(20,24,40,.08), 0 4px 12px -6px rgba(20,24,40,.14);
+}
+.dir-d .live::after { display: none; }
+.dir-d .pres .av.ag.on, .dir-d .it.ag-now .mark { animation: none; }
+.dir-d .caret { animation: none; }
+.dir-d.m-light .live, .dir-d.m-light .it.ag-now .mark { box-shadow: 0 0 0 1px rgba(92,70,0,.28); }
+.dir-d .q.on { color: var(--fg); }
+.dir-d .edit::before { background: var(--agent-soft); }
+.dir-d.m-light .edit::before { box-shadow: inset 3px 0 0 var(--agent); }
+.dir-d.m-dark .edit::before { box-shadow: inset 2px 0 0 var(--agent); }
+.dir-d.m-light .spark path:last-child { stroke: #c28e00; }
+
+/* ───────────────────────── C · Kesik ───────────────────────── */
+.mock.dir-c { --row: 28px; --fs-ui: 13px; --fs-body: 15px; --fs-title: 28px; --r-chip: 0px; --r-ctl: 0px; --r-panel: 0px; --cut: 7px; }
+.mock.dir-c.m-dark {
+  --frame: #0d1116; --panel: #111720; --canvas: #0f141b; --raised: #16202b; --line: #1e2935; --line2: #2b3a4b;
+  --fg: #e1e8f0; --fg2: #99abbf; --fg3: #6f8298; --fg4: #4a5b6e;
+  --accent: #e1e8f0; --accent-fg: #0d1116; --agent: #37c5f0; --agent-text: #5fd3f5; --agent-soft: rgba(55,197,240,.11); --flag-fg: #04212c;
+  --ok: #4fd199; --prog: #f0c24b; --rev: #b49dff; --bad: #ff6a6a; --grid: rgba(153,171,191,.10);
+}
+.mock.dir-c.m-light {
+  --frame: #edf1f5; --panel: #f5f7fa; --canvas: #ffffff; --raised: #f1f4f8; --line: #dbe2ea; --line2: #c3cedb;
+  --fg: #0d141c; --fg2: #3e4e61; --fg3: #5f6f82; --fg4: #93a1b1;
+  --accent: #0d141c; --accent-fg: #ffffff; --agent: #0a8fc4; --agent-text: #0069a0; --agent-soft: rgba(10,143,196,.09); --flag-fg: #ffffff;
+  --ok: #13875a; --prog: #9a6b00; --rev: #6a4fd0; --bad: #cc3333; --grid: rgba(64,80,99,.14);
+}
+.dir-c .sb { border-right: 1px solid var(--line); }
+.dir-c .ws-ico { border-radius: 0; clip-path: polygon(0 0, calc(100% - 5px) 0, 100% 5px, 100% 100%, 0 100%); }
+.dir-c .dhead .ws-ico { clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 0 100%); }
+.dir-c .logo { color: var(--fg); }
+.dir-c .it.on { clip-path: polygon(0 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% 100%, 0 100%); }
+.dir-c .q.on { clip-path: polygon(0 0, calc(100% - var(--cut)) 0, 100% var(--cut), 100% 100%, 0 100%); border-color: var(--fg3); }
+.dir-c .it .mark { display: none; }
+.dir-c .it.ag-now .mark { display: block; width: 7px; height: 7px; background: var(--agent); animation: mk-square 1.1s steps(1) infinite; }
+.dir-c .it.ag-now::before, .dir-c .it.ag-recent::before { content: ""; position: absolute; left: 4px; top: 6px; bottom: 6px; width: 5px; border: 1.5px solid var(--agent); border-right: 0; }
+.dir-c .it.ag-recent::before { opacity: .4; }
+.dir-c .live { border-radius: 0; }
+.dir-c .live::after { border-radius: 0; }
+.dir-c .agents { border-top: 1px solid var(--line); margin: 0 -8px; padding: 12px 16px 8px; }
+.dir-c .ag .st { font-family: var(--mono-ui); font-size: 11px; }
+.dir-c .av { border-radius: 0; clip-path: polygon(0 0, calc(100% - 6px) 0, 100% 6px, 100% 100%, 0 100%); }
+.dir-c .pres .av { border: 0; }
+.dir-c .pres .av.ag.on { box-shadow: inset 0 0 0 1.5px var(--agent); }
+.dir-c .btn { clip-path: polygon(var(--cut) 0, 100% 0, 100% calc(100% - var(--cut)), calc(100% - var(--cut)) 100%, 0 100%, 0 var(--cut)); padding: 0 14px; }
+.dir-c .btn.ghost { box-shadow: none; background: var(--raised); color: var(--fg); }
+.dir-c .pico { border-radius: 0; clip-path: polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 0 100%); }
+.dir-c .crumbs { font-family: var(--mono-ui); font-size: 12px; }
+.dir-c .crumbs b { font-weight: 600; }
+.dir-c .prov { font-size: 12px; }
+.dir-c .prov .by:not(.agent) { font-family: var(--mono-ui); font-size: 11.5px; }
+.dir-c .trust { clip-path: polygon(6px 0, 100% 0, 100% 100%, 0 100%, 0 6px); }
+.dir-c .flag { border-radius: 0; font-family: var(--mono-ui); font-weight: 600; font-size: 10.5px; clip-path: polygon(0 0, calc(100% - 5px) 0, 100% 5px, 100% 100%, 0 100%); }
+.dir-c .anno { display: flex; align-items: center; position: absolute; left: calc(100% + 14px); top: 14px; }
+.dir-c .anno .ln { width: 44px; height: 1px; background: var(--agent); position: relative; }
+.dir-c .anno .ln::before { content: ""; position: absolute; left: -3px; top: -3px; width: 7px; height: 7px; border: 1.5px solid var(--agent); background: var(--canvas); }
+.dir-c .anno .lbl { display: flex; flex-direction: column; gap: 2px; padding: 6px 9px; font: 500 11px/1.35 var(--mono-ui); color: var(--fg2); background: var(--agent-soft); box-shadow: inset 2px 0 0 var(--agent); white-space: nowrap; }
+.dir-c .anno .lbl b { color: var(--agent-text); font-weight: 600; }
+.dir-c .edit::after { content: ""; position: absolute; right: -14px; top: 4px; bottom: 18px; width: 5px; border: 1.5px solid var(--agent); border-left: 0; }
+.dir-c .body code { border-radius: 0; }
+.dir-c .cbx { border-radius: 0; }
+.dir-c .db .scroll { background-image: radial-gradient(var(--grid) 1.1px, transparent 1.3px); background-size: 16px 16px; background-position: 8px 8px; }
+.dir-c .bento { gap: 12px; }
+.dir-c .blk { padding: 1px; background: var(--line2); clip-path: polygon(12px 0, 100% 0, 100% 100%, 0 100%, 0 12px); }
+.dir-c .blk > .in { clip-path: polygon(11.4px 0, 100% 0, 100% 100%, 0 100%, 0 11.4px); }
+.dir-c .blk h3 { font-family: var(--mono-ui); font-size: 11.5px; font-weight: 500; }
+.dir-c .tag { font-family: var(--mono-ui); font-size: 11px; }
+.dir-c .sbar { gap: 1px; }
+.dir-c .calls { border-left: 1px dashed var(--line2); }
+.dir-c .rows .due { font-family: var(--mono-ui); font-size: 11px; }
+.dir-c .calls time { font-family: var(--mono-ui); font-size: 10.5px; }
+</style>
+
+<div class="wrap">
+  <header class="intro">
+    <div>
+      <h1>Remnus tasarım yönleri</h1>
+      <p>R8, üçüncü faz. Aynı iki ekranı üç ayrı yönde çizdim: kenar çubuğuyla birlikte bir sayfa ve projenin panosu. Her yön kendi koyu ve açık temasıyla geliyor. Hakan B'nin yapısını A'nın tek renk anlayışıyla birleştirmeyi seçti; seçilen yön en üstte, keşfedilen üç yön altında duruyor.</p>
+    </div>
+    <ul class="facts" aria-label="Denetimden sayılar">
+      <li><b>5</b><span>ayrı köşe yuvarlaklığı (4, 6, 8, 12, 16 px) ve 11 yerde hiç yok</span></li>
+      <li><b>7+</b><span>gölge tarifi; yükseklik ölçeği yok</span></li>
+      <li><b>11</b><span>farklı yazı boyutu 15 px altında; 51 yerde 8 ile 9 px</span></li>
+      <li><b>104</b><span>büyük harfli etiket; Türkçede "TİTLE" hatasını üretiyor</span></li>
+      <li><b>547</b><span>elle çizilmiş buton; ortak <code>Button</code> yalnız 7 yerde</span></li>
+      <li><b>33</b><span>elle kurulmuş modal ya da katman; ortak <code>Dialog</code> 1 yerde</span></li>
+    </ul>
+  </header>
+
+  <nav class="controls" aria-label="Görünüm seçenekleri">
+    <div class="seg"><span id="lbl-screen">Ekran</span><div class="opts" role="group" aria-labelledby="lbl-screen">
+      <button type="button" id="opt-page" data-screen="page" aria-pressed="true">Sayfa</button>
+      <button type="button" id="opt-dash" data-screen="dash" aria-pressed="false">Pano</button>
+    </div></div>
+    <div class="seg"><span id="lbl-mode">Tema</span><div class="opts" role="group" aria-labelledby="lbl-mode">
+      <button type="button" id="opt-dark" data-mode="dark" aria-pressed="true">Koyu</button>
+      <button type="button" id="opt-light" data-mode="light" aria-pressed="false">Açık</button>
+    </div></div>
+    <div class="seg"><span id="lbl-size">Boyut</span><div class="opts" role="group" aria-labelledby="lbl-size">
+      <button type="button" id="opt-fit" data-size="fit" aria-pressed="true">Sığdır</button>
+      <button type="button" id="opt-actual" data-size="actual" aria-pressed="false">Gerçek boyut</button>
+    </div></div>
+    <div class="jump"><a href="#secilen">Seçilen</a><a href="#a">A Sinyal</a><a href="#b">B Ortak Masa</a><a href="#c">C Kesik</a><a href="#ortak">Ortak temel</a><a href="#denetim">Denetim</a><a href="#arastirma">Araştırma</a><a href="#secim">Seçim</a></div>
+  </nav>
+
+  <section class="dir" id="secilen">
+    <div class="dir-head">
+      <h2><span class="letter">✓</span>Seçilen yön: Ortak Masa, tek renk</h2>
+      <p>B'nin yapısı (kâğıt gibi duran içerik, kartlar, köşeler, sayfayla bütünleşik kenar çubuğu) ile A'nın tek renk anlayışı. Eylemler mürekkep, canlı aktivite ve dikkat sarı; insan ve ajan için ayrı renk yok. Dalgalanan ya da nabız atan efekt yok.</p>
+    </div>
+    <div class="frame" id="frame-d"></div>
+    <div class="spec">
+      <div>
+        <h3>Hakan'ın kararları</h3>
+        <ul>
+          <li>Yapı B'den: masa üstünde kâğıt, masadaki kartlar, kalkık seçili öğe, 8, 12 ve tam yuvarlak köşeler.</li>
+          <li>Renk A'dan: kabuk tek renk, tek vurgu sarı. Koyu ve açık temada farklı tonlar.</li>
+          <li>Canlı durum sabit bir nokta; halka halka yayılan ya da nefes alan animasyon yok.</li>
+          <li>Varsayılan tema bugünkü gibi; Dracula, Tokyo Night ve Nord kalıyor, her biri kendi sarısını kullanıyor.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Renk rolleri</h3>
+        <p>Açık temada sarı yazı rengi olarak değil dolgu olarak kullanılır: bayrak, vurgu zemini, nokta. Metin mürekkep ya da koyu altın kalır.</p>
+        <div class="sw" data-swatches="d"></div>
+      </div>
+      <div>
+        <h3>Uygulamada</h3>
+        <ul>
+          <li>Birincil buton mürekkep (koyuda beyaz, açıkta siyah); odak halkası ve seçim sarı.</li>
+          <li>Onest; arayüz 14, gövde 16, sayfa başlığı 32. Mono yalnız kod, araç adı ve kısayolda.</li>
+          <li>Yoğunluk ayarı korunur: rahat 32 px, sıkı 28 px satır.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="dir" id="a">
+    <div class="dir-head">
+      <h2><span class="letter">A</span>Sinyal</h2>
+      <p>Kabuk tek renk; renk yalnızca anlam taşır. Ajanın dokunduğu her şey amber bir iz bırakır ve iz zamanla söner. Bugünkü koyu arayüzün en olgun hali.</p>
+    </div>
+    <div class="frame" id="frame-a"></div>
+    <div class="spec">
+      <div>
+        <h3>İlkeler</h3>
+        <ul>
+          <li>Renk anlam taşır: çerçeve, metin ve butonlar grafit ile mürekkep; renk yalnız durum, tehlike ve ajan için.</li>
+          <li>Ajan tek sinyal rengidir: az önce değişen öğe 2 px amber iz taşır, çalışan ajan nabız atar.</li>
+          <li>Yoğun ama okunaklı: 28 px satır, 13 px arayüz metni, 4'lük ızgara.</li>
+          <li>Kutu yerine ince çizgi; gölge yalnız menü ve modal gibi yüzen katmanlarda.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Renk rolleri ve yazı</h3>
+        <p>Onest; başlık 30/650, gövde 15/1.7, arayüz 13. JetBrains Mono yalnız makine verisinde: araç adı, kimlik, kısayol.</p>
+        <div class="sw" data-swatches="a"></div>
+      </div>
+      <div>
+        <h3>Biçim ve ajan görünümü</h3>
+        <ul>
+          <li>Köşe: çip 4, kontrol 6, yüzen panel 10 px.</li>
+          <li>Ajan imleci ve adı yazdığı yerde görünür; paragrafın solunda amber iz.</li>
+          <li>Sayfa başlığının altında köken satırı: kim düzenliyor, en son kim dokundu, incelendi mi.</li>
+          <li>Pano bir alet paneli gibi: kartlar yerine ince çizgiyle bölünmüş hücreler.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="tradeoff">
+      <div><b>Güçlü yanı</b>Bugünkü koyu arayüze en yakın yön, geçiş riski en düşük. Ajan aktivitesi ekranın tek renkli şeyi olduğu için yan ekranda bir bakışta fark edilir.</div>
+      <div><b>Zayıf yanı</b>Açık temada amber daha az parlar. İlk bakışta sade, hatta sert gelebilir; sıcaklığı içerik ve ajan izinden gelir.</div>
+    </div>
+  </section>
+
+  <section class="dir" id="b">
+    <div class="dir-head">
+      <h2><span class="letter">B</span>Ortak Masa</h2>
+      <p>İnsan ve ajan iki ayrı ses: mürekkep mavisi ve iris. İçerik masanın üstünde duran tek bir kâğıt gibi; kim burada ve kim yazıyor her an görünür.</p>
+    </div>
+    <div class="frame" id="frame-b"></div>
+    <div class="spec">
+      <div>
+        <h3>İlkeler</h3>
+        <ul>
+          <li>İki ses: insan eylemleri markanın mavisi, ajan eylemleri iris; ikisi her yüzeyde aynı anlamda.</li>
+          <li>Katmanlı alan: kenar çubuğu masanın parçası, sayfa üstünde duran kâğıt. Seçili öğe de hafifçe kalkar.</li>
+          <li>Varlık görünür: üst şeritte sen ve çalışan ajanlar, durumlarıyla.</li>
+          <li>Rahat yoğunluk: 32 px satır, 14 px metin; kart yalnız gerçekten kart olan içerikte.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Renk rolleri ve yazı</h3>
+        <p>Onest; başlık 34/650, gövde 16/1.7, arayüz 14. Mono yalnız kod ve araç adlarında.</p>
+        <div class="sw" data-swatches="b"></div>
+      </div>
+      <div>
+        <h3>Biçim ve ajan görünümü</h3>
+        <ul>
+          <li>Köşe: kontrol 8, yüzey 12, rozet ve avatar tam yuvarlak.</li>
+          <li>Ajanın yazdığı paragraf iris zeminle vurgulanır; kenarda "ne yaptı" notu durur.</li>
+          <li>Ajan avatarı çalışırken nefes alır; kenar çubuğunda o anda dokunduğu sayfanın yanında belirir.</li>
+          <li>Pano, masaya konmuş kartlar: her blok kendi kâğıdı.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="tradeoff">
+      <div><b>Güçlü yanı</b>En sıcak ve en anlaşılır yön; ajanların varlığı en çok burada hissedilir. Açık tema birinci sınıf görünür.</div>
+      <div><b>Zayıf yanı</b>Daha az yoğun; küçük ekranda daha çok kaydırma gerekir. Kart dili disiplinle sınırlanmazsa sıradan bir SaaS görünümüne kayar.</div>
+    </div>
+  </section>
+
+  <section class="dir" id="c">
+    <div class="dir-head">
+      <h2><span class="letter">C</span>Kesik</h2>
+      <p>R logosundaki 45 derecelik kesikler arayüzün imzası olur. Teknik çizim hassasiyeti: ajan değişiklikleri çizim üstündeki notlar gibi okunur.</p>
+    </div>
+    <div class="frame" id="frame-c"></div>
+    <div class="spec">
+      <div>
+        <h3>İlkeler</h3>
+        <ul>
+          <li>Marka biçimi: seçili öğe, birincil buton ve pano blokları köşesi kesik; başka hiçbir yerde yuvarlaklık yok.</li>
+          <li>Ölçülü ızgara: pano ve harita ince nokta ızgarası üstünde, hizalama 8 px'e kilitli.</li>
+          <li>Ajan bir açıklama notudur: değişen paragraf köşeli ayraçla işaretlenir, kılavuz çizgisiyle bir nota bağlanır.</li>
+          <li>Makine dili görünür: yol, araç adı ve zaman mono; insan içeriği sans.</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Renk rolleri ve yazı</h3>
+        <p>Onest; başlık 28/650, gövde 15/1.7. JetBrains Mono daha görünür: yol çubuğu, blok başlıkları, zaman damgaları.</p>
+        <div class="sw" data-swatches="c"></div>
+      </div>
+      <div>
+        <h3>Biçim ve ajan görünümü</h3>
+        <ul>
+          <li>Köşe: 0; kesik 7 px (kontrol) ve 12 px (blok).</li>
+          <li>Ajanın o anki konumu yanıp sönen bir kare; yakın zamandaki dokunuş köşeli ayraç.</li>
+          <li>Soğuk çelik yüzeyler, tek canlı renk camgöbeği ve o da yalnız ajana ait.</li>
+          <li>Pano blokları kesik köşeli ince çerçeveler; zemin nokta ızgarası.</li>
+        </ul>
+      </div>
+    </div>
+    <div class="tradeoff">
+      <div><b>Güçlü yanı</b>En ayırt edici yön ve doğrudan markadan türüyor; bir ekran görüntüsünden bile Remnus olduğu anlaşılır.</div>
+      <div><b>Zayıf yanı</b>En cesur yön. Kesik dozu kaçarsa süs gibi durur; kesik köşeye kenarlık çizmek bileşenlerde ek iş ister.</div>
+    </div>
+  </section>
+
+  <section class="section" id="ortak">
+    <h2>Hangi yön seçilirse seçilsin kurulacak temel</h2>
+    <p>Yönler renk, yoğunluk, biçim ve ajan görünümünde ayrışıyor. Aşağıdakiler üçünde de aynı ve dördüncü fazın iskeleti.</p>
+    <div class="tbl"><table>
+      <thead><tr><th>Katman</th><th>Ne kurulacak</th><th>Neyi çözer</th></tr></thead>
+      <tbody>
+        <tr><td>Rol tokenları</td><td>Yüzey (çerçeve, panel, tuval, yükseltilmiş, yüzen), çizgi, dört metin kademesi, birincil, ajan, durum renkleri ve odak. Remnus, Dracula, Tokyo Night, Nord ve açık tema yalnız bu rolleri doldurur.</td><td>Açık tema için seçici seçici yama (55 adet) biter; yeni tema eklemek bir blok olur.</td></tr>
+        <tr><td>Ölçekler</td><td>Köşe 3 kademe ve tam yuvarlak; yükseklik 3 kademe (düz, kalkık, yüzen); yazı 7 kademe (11, 12, 13, 14, 16, 20, 28); ikon 3 boy (14, 16, 20); 4 px boşluk ızgarası; hareket 120, 180, 240 ms.</td><td>5 köşe, 7 gölge, 11 yazı ve 15 ikon boyutu tek bir sisteme iner.</td></tr>
+        <tr><td>Primitifler</td><td>Button, IconButton, Input, Select, Menu, Dialog, Tooltip, Badge, Tabs, Card, EmptyState, Kbd, AgentMark.</td><td>547 elle çizilmiş buton ve 33 elle kurulmuş modal zamanla tek kaynaktan boyanır.</td></tr>
+        <tr><td>Uygulama kabuğu</td><td>Kenar çubuğu, üst çubuk (yol, varlık, eylemler), sayfa başlığı (ikon, başlık, köken satırı), masaüstü başlık çubuğu ve sekme şeridi.</td><td>Her ekranın aynı çerçeveyle açılması; ajan aktivitesinin kabuğun parçası olması.</td></tr>
+        <tr><td>Pano başlığı</td><td>Tek başlık: projenin adı. "Pano" yalnız yol çubuğunda; proje bloğu adı tekrar etmez, yığın ve son ajan zamanı başlığın altına iner. Tasarruf bloğunun büyük harfli üst etiketi kalkar. Pano ve Harita düğmeleri mavi ve mor çerçeveden çıkıp seçilen paletin kontrol biçimini alır.</td><td>R5 ve R6'dan devreden çift başlık, büyük harf etiket ve renkli düğme kararları.</td></tr>
+        <tr><td>Kurallar</td><td>Büyük harfli etiket yok; meta bilgisi orta noktayla birleştirilmez; 11 px altı yazı yok; her etkileşimli öğede görünür odak; hareket <code>prefers-reduced-motion</code>'a uyar.</td><td>Türkçe "İ" hatası, okunmayan 8 ile 9 px yazılar ve klavyede görünmeyen odak.</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section class="section" id="denetim">
+    <h2>Denetim</h2>
+    <p>Demo çalışma alanında 14 ekran görüntüsü (koyu, açık, Nord, Dracula, Tokyo Night, 390 px mobil) ve uygulama bileşenlerinin kod taraması. Pazarlama sitesi hariç.</p>
+    <div class="cols">
+      <div>
+        <h3>Tutarsızlıklar</h3>
+        <ul class="list">
+          <li><b>Köşe.</b> Kural "çalışma alanında köşe yok" diyor ama kodda 310 <code>rounded</code>, 162 <code>rounded-lg</code>, 114 <code>rounded-md</code>, 52 <code>rounded-xl</code> var. Seçim kutusu 4 px, buton 8 px, menü 8 px, seçim menüsü 4 px, modal 12 px.</li>
+          <li><b>Gölge.</b> 50 <code>shadow-xl</code>, 19 <code>modal-shadow</code>, 12 <code>shadow-2xl</code> ve 9 ayrı elle yazılmış gölge; mavi parıltılar ayrıca.</li>
+          <li><b>Yazı.</b> 8, 9, 10, 10.5, 11, 11.5, 12, 12.5, 13, 13.5 ve 14 px birlikte kullanılıyor. İkonlarda 9 ile 40 arasında 15 boy.</li>
+          <li><b>Etiketler.</b> 104 büyük harfli, harf aralığı açık etiket. <code>lang="tr"</code> ile "Title" başlığı "TİTLE", "Kategorisiz" grubu "KATEGORİSİZ" oluyor.</li>
+          <li><b>Butonlar.</b> Birincil eylem dört farklı biçimde: mavi dolu (Yükselt), beyaz dolu (Yeni), çerçeveli (Detaylar), mavi küçük (Ajan bağla).</li>
+          <li><b>Modallar.</b> 33 katman kendi başlığını, boşluğunu, kapatma düğmesini ve gölgesini çiziyor.</li>
+          <li><b>Açık tema.</b> Rollerden türemiyor; 55 seçici yamayla ayakta. Panoda bloklar (#f8f9fb) beyaz zeminde neredeyse görünmüyor. 115 <code>text-white</code> ayrıca düzeltme istiyor.</li>
+          <li><b>Palet adları.</b> Koyu temada neutral-850 neutral-900'den koyu, açık temada tersi; AGENTS.md'deki renk tablosu koddaki değerlerle uyuşmuyor.</li>
+          <li><b>Odak.</b> 66 yerde <code>outline-none</code>, yalnız 9 yerde görünür odak. Klavyeyle gezinen kişi nerede olduğunu göremiyor.</li>
+          <li><b>Ajan aktivitesi dağınık.</b> Satırlarda küçük marka rozetleri, bir modal ve bir pano bloğu var; kabukta canlı bir iz yok. Ürünün konusu ajanlar olduğu halde.</li>
+          <li><b>Çeviri.</b> Eğik çizgi menüsünde "Divider" sabit İngilizce (<code>SlashCommandList.tsx:136</code>).</li>
+        </ul>
+      </div>
+      <div>
+        <h3>Notion gibi okunanlar</h3>
+        <ul class="list">
+          <li><b>Sayfa başı.</b> Büyük emoji ve 36 px başlık, ortalanmış dar sütunun en üstünde. Notion'un imza kalıbı; sayfanın kim tarafından ve nasıl oluştuğu hakkında hiçbir şey söylemiyor.</li>
+          <li><b>Kenar çubuğu.</b> Çalışma alanı satırı ve emoji ikonlu sayfa ağacı. Ajanların çalıştığını gösteren bir şey yok.</li>
+          <li><b>Eğik çizgi menüsü.</b> Başlık 1, 2, 3, listeler, alıntı, ayırıcı; sırası ve adları Notion ile aynı. Üzerine gelince çıkan artı ve tutamak da.</li>
+          <li><b>Veritabanı.</b> Altı çizili "Board, Table, +" sekmeleri, "Yeni" butonu, sütun başlığında tür ikonları, renkli kanban sütunları ve kartlarda "Priority: High" satırları.</li>
+          <li><b>Bilgi kutusu ve açılır başlık.</b> Yetenek olarak doğru; sorun, bunları çevreleyen kabuğun da belge odaklı olması.</li>
+          <li><b>Özet.</b> Parçalar tek tek yanlış değil. Notion hissi, içeriği çevreleyen kabuğun hiçbir yerinde "burada ajanlar çalışıyor" dememesinden geliyor. Üç yön de bunu kabuğa taşıyor.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" id="arastirma">
+    <h2>Araştırmadan alınanlar</h2>
+    <p>Kopyalamak için değil, bize uyan ilkeyi çıkarmak için bakılan ürünler.</p>
+    <div class="tbl"><table>
+      <thead><tr><th>Kaynak</th><th>İlke</th><th>Remnus'ta karşılığı</th></tr></thead>
+      <tbody>
+        <tr><td><a href="https://linear.app/now/how-we-redesigned-the-linear-ui">Linear arayüz yenilemesi</a></td><td>98 tema değişkeni yerine üç girdi (taban, vurgu, kontrast) ve LCH ile türetme; kabukta renk azaltma; etiket ve ikonların satır satır hizalanması.</td><td>Temalar yalnız rolleri doldurur; kabuk renksizleşir; kenar çubuğu hizası.</td></tr>
+        <tr><td><a href="https://linear.app/now/our-approach-to-building-the-agent-interaction-sdk">Linear ajan etkileşimi</a></td><td>Ajan her zaman ajan olarak işaretli; durumları (çalışıyor, girdi bekliyor, hata, bitti) görünür; sorumluluk insanda.</td><td>Ajan rolü rengi, canlı durum, köken satırı, "incelenmedi" rozeti.</td></tr>
+        <tr><td><a href="https://vercel.com/geist/colors">Vercel Geist renkleri</a></td><td>Ölçekteki her adımın bir işi var: 100 ile 300 zemin, 400 ile 600 kenar, 900 ile 1000 metin.</td><td>Nötr ölçeği rollerle eşlemek; bugünkü neutral-850 karmaşasının çözümü.</td></tr>
+        <tr><td><a href="https://www.raycast.com/">Raycast</a></td><td>Yoğunluk bir özellik; klavye önce; her eylemin kısayolu görünür; ölçülü köşe.</td><td>Ara veya git (Ctrl K), menülerde kısayollar, 28 px satır.</td></tr>
+        <tr><td><a href="https://www.warp.dev/blog/block-model-behind-warps-agentic-development-environment">Warp blok modeli</a></td><td>Ajan işi tiplenmiş bloklar halinde; özet görünür, ayrıntı istenince açılır.</td><td>Panodaki ajan oturumu blokları: çağrı sayısı, yazma sayısı, açılır liste.</td></tr>
+        <tr><td><a href="https://zed.dev/docs/themes">Zed</a></td><td>Arayüz arka plana çekilir; tema oluşturucu her yüzeyi tek yerden önizler.</td><td>Sade kabuk; tokenların tek dosyada toplanması.</td></tr>
+        <tr><td><a href="https://en.wikipedia.org/wiki/Arc_(web_browser)">Arc</a></td><td>Her alanın kendi rengi ve ikonu; hangi bağlamda olduğun rengiyle belli.</td><td>Her çalışma alanının renk kimliği; proje penceresinde hangi projede olduğun rengiyle belli.</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+
+  <section class="section" id="secim">
+    <h2>Nasıl seçelim</h2>
+    <p>Bir yönü olduğu gibi seçebilir ya da eksenleri karıştırabilirsin. Örnek: "A'nın kabuğu ve yoğunluğu, B'nin varlık şeridi, C'nin kesiği yalnız logoda ve birincil butonda".</p>
+    <div class="tbl"><table>
+      <thead><tr><th>Eksen</th><th>A Sinyal</th><th>B Ortak Masa</th><th>C Kesik</th></tr></thead>
+      <tbody>
+        <tr><td>Ajan rengi</td><td>Amber</td><td>İris</td><td>Camgöbeği</td></tr>
+        <tr><td>Birincil buton</td><td>Mürekkep (tek renk)</td><td>Marka mavisi</td><td>Mürekkep, kesik köşe</td></tr>
+        <tr><td>Yoğunluk</td><td>28 px satır, 13 px</td><td>32 px satır, 14 px</td><td>28 px satır, 13 px</td></tr>
+        <tr><td>Köşe</td><td>4, 6, 10</td><td>8, 12, tam yuvarlak</td><td>0 ve 45° kesik</td></tr>
+        <tr><td>Derinlik</td><td>İnce çizgi; gölge yalnız yüzen katmanda</td><td>Katmanlar: masa, kâğıt, kalkık öğe</td><td>İnce çerçeve ve nokta ızgarası</td></tr>
+        <tr><td>Ajan izi</td><td>Solda amber çizgi, nabız, imleç bayrağı</td><td>İris zemin, kenar notu, nefes alan avatar</td><td>Köşeli ayraç, yanıp sönen kare, kılavuzlu not</td></tr>
+        <tr><td>Pano</td><td>Çizgiyle bölünmüş alet paneli</td><td>Masadaki kartlar</td><td>Izgara üstünde kesik bloklar</td></tr>
+        <tr><td>Mono kullanımı</td><td>Yalnız makine verisi</td><td>Yalnız kod</td><td>Yol, blok başlığı, zaman</td></tr>
+      </tbody>
+    </table></div>
+  </section>
+</div>
+
+<script>
+(() => {
+  const I = {
+    search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>',
+    chevR: '<path d="m9 6 6 6-6 6"/>',
+    chevD: '<path d="m6 9 6 6 6-6"/>',
+    panel: '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M9 4v16"/>',
+    grid: '<rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/>',
+    map: '<circle cx="6" cy="6" r="2.2"/><circle cx="18" cy="8.5" r="2.2"/><circle cx="10" cy="18" r="2.2"/><path d="m8.2 6.5 7.6 1.5M6.8 8.1l2.4 7.8M16.5 10.2l-5 6.1"/>',
+    file: '<path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M8 13h8M8 17h5"/>',
+    book: '<path d="M4 19V5a2 2 0 0 1 2-2h13v14H6a2 2 0 0 0-2 2z"/><path d="M6 21h13v-4"/>',
+    radio: '<circle cx="12" cy="12" r="2"/><path d="M16.2 7.8a6 6 0 0 1 0 8.4M7.8 16.2a6 6 0 0 1 0-8.4M19.1 4.9a10 10 0 0 1 0 14.2M4.9 19.1a10 10 0 0 1 0-14.2"/>',
+    db: '<ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/>',
+    kanban: '<rect x="3" y="3" width="18" height="18" rx="2"/><path d="M8 7v7M12 7v4M16 7v9"/>',
+    more: '<circle cx="5" cy="12" r="1"/><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/>',
+    updown: '<path d="m7 15 5 5 5-5M7 9l5-5 5 5"/>',
+    check: '<path d="M20 6 9 17l-5-5"/>',
+    copy: '<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/>',
+    shield: '<path d="M12 3 5 6v6c0 4 3 7 7 9 4-2 7-5 7-9V6z"/><path d="m9 12 2 2 4-4"/>',
+    pencil: '<path d="M4 20h4L19 9l-4-4L4 16z"/>',
+    spark: '<path d="M3 17l5-5 4 3 8-8"/><path d="M14 7h6v6"/>'
+  };
+  const ic = (n, c = '') => `<svg class="i ${c}" viewBox="0 0 24 24" aria-hidden="true">${I[n]}</svg>`;
+  const logo = '<svg class="logo" viewBox="40 70 432 370" aria-hidden="true"><polygon fill="currentColor" points="90,88 355,88 422,168 330,268 455,420 318,420 210,300 104,420 55,420 272,175 178,175 90,268"/></svg>';
+  const claude = (s = 16) => `<svg class="mark-svg" style="width:${s}px;height:${s}px" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v5.5M12 15.5V21M3 12h5.5M15.5 12H21M5.6 5.6l3.9 3.9M14.5 14.5l3.9 3.9M5.6 18.4l3.9-3.9M14.5 9.5l3.9-3.9" stroke="#D97757" stroke-width="2.7" stroke-linecap="round" fill="none"/></svg>`;
+  const codex = (s = 16) => `<svg class="mark-svg" style="width:${s}px;height:${s}px" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 20 7.5v9L12 21 4 16.5v-9z" fill="none" stroke="currentColor" stroke-width="1.9"/><path d="m9.5 10 2.5 2-2.5 2M13 14h2" stroke="currentColor" stroke-width="1.9" fill="none" stroke-linecap="round"/></svg>`;
+  const glyph = (kind) => {
+    const c = { backlog: 'var(--fg3)', prog: 'var(--prog)', rev: 'var(--rev)', done: 'var(--ok)' }[kind];
+    const ring = `<circle cx="8" cy="8" r="6" fill="none" stroke="${c}" stroke-width="1.6"${kind === 'backlog' ? ' stroke-dasharray="2.3 2.1"' : ''}/>`;
+    const fill = kind === 'prog' ? `<path d="M8 4.5a3.5 3.5 0 0 1 0 7z" fill="${c}"/>`
+      : kind === 'rev' ? `<path d="M8 4.5a3.5 3.5 0 1 1-3.5 3.5H8z" fill="${c}"/>` : '';
+    if (kind === 'done') return `<svg class="glyph" viewBox="0 0 16 16" aria-hidden="true"><circle cx="8" cy="8" r="7" fill="${c}"/><path d="m5 8.3 2 2 4-4.3" fill="none" stroke="var(--canvas)" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>`;
+    return `<svg class="glyph" viewBox="0 0 16 16" aria-hidden="true">${ring}${fill}</svg>`;
+  };
+  const box = (on) => `<span class="cbx${on ? ' on' : ''}">${on ? ic('check') : ''}</span>`;
+
+  function sidebar(d, screen) {
+    if (d === 'd') d = 'b';
+    return `
+    <aside class="sb">
+      <div class="sb-top">${logo}<span class="brand">Remnus</span><span class="grow"></span><span class="ib">${ic('panel')}</span></div>
+      <div class="sb-search">${ic('search')}<span>Ara veya git</span><kbd>Ctrl K</kbd></div>
+      <div class="ws">
+        <div class="ws-row">${ic('chevD', 'chev')}<span class="ws-ico" style="--ws:#4f7be0">r</span><span class="ws-name">remnus-app</span><span class="live"></span></div>
+        <div class="quick"><span class="q${screen === 'dash' ? ' on' : ''}">${ic('grid')}Pano</span><span class="q">${ic('map')}Harita</span></div>
+        <div class="tree">
+          <div class="it">${ic('chevD', 'chev')}${ic('book')}<span class="t">Mimari</span></div>
+          <div class="it l2 ag-now${screen === 'page' ? ' on' : ''}">${ic('radio')}<span class="t">Canlı yenileme</span><span class="mark">${d === 'b' ? claude(11) : d === 'a' ? '<span class="live"></span>' : ''}</span></div>
+          <div class="it l2">${ic('file')}<span class="t">Kimlik ve oturum</span></div>
+          <div class="it ag-recent">${ic('chevR', 'chev')}${ic('db')}<span class="t">Kararlar</span><span class="age">12 dk</span></div>
+          <div class="it">${ic('chevR', 'chev')}${ic('kanban')}<span class="t">Sprint</span></div>
+          <div class="it">${ic('chevR', 'chev ghost')}${ic('file')}<span class="t">API sözleşmeleri</span></div>
+          <div class="it">${ic('chevR', 'chev ghost')}${ic('file')}<span class="t">Sürüm notları</span></div>
+        </div>
+      </div>
+      <div class="ws closed"><div class="ws-row">${ic('chevR', 'chev')}<span class="ws-ico" style="--ws:#2f9e74">t</span><span class="ws-name">tidewell</span></div></div>
+      <div class="grow"></div>
+      <div class="agents">
+        <div class="ag-h">Ajanlar</div>
+        <div class="ag on">${claude()}<span class="nm">Claude Code</span><span class="st"><span class="live"></span>çalışıyor</span></div>
+        <div class="ag-last"><code>update_page</code><span>Canlı yenileme</span></div>
+        <div class="ag">${codex()}<span class="nm">Codex</span><span class="st">12 dk önce</span></div>
+        <div class="saved">Bu hafta <b>98,1 bin</b> token kazandırdı</div>
+      </div>
+      <div class="me"><span class="av">HT</span><span>Hakan Temur</span>${ic('updown')}</div>
+    </aside>`;
+  }
+
+  function presence(d) {
+    return `<span class="pres-txt">Burada: sen ve <b>Claude Code</b></span>
+      <div class="pres"><span class="av">HT</span><span class="av ag on">${claude(14)}</span></div>`;
+  }
+
+  function agentNote(d) {
+    if (d === 'b') return `<aside class="mnote"><span class="av">${claude(13)}</span><div><b>Claude Code</b>Bu paragrafı şimdi yazıyor. Görevdeki ikinci maddeyi de işaretledi.</div></aside>`;
+    if (d === 'c') return `<div class="anno"><span class="ln"></span><span class="lbl"><b>claude-code</b><span>update_page</span><span>14:02:31</span></span></div>`;
+    return '';
+  }
+
+  function flag(d) {
+    if (d === 'b') return `<span class="flag"><span class="av">${claude(10)}</span>Claude Code</span>`;
+    if (d === 'c') return `<span class="flag">claude-code</span>`;
+    return `<span class="flag">Claude Code</span>`;
+  }
+
+  function pageMain(d) {
+    if (d === 'd') d = 'b';
+    return `
+    <main class="main pg">
+      <div class="bar">
+        <div class="crumbs"><span>remnus-app</span><i>/</i><span>Mimari</span><i>/</i><b>Canlı yenileme</b></div>
+        <span class="ib">${ic('copy')}</span>
+        <span class="grow"></span>
+        ${presence(d)}
+        <span class="ib">${ic('more')}</span>
+      </div>
+      <div class="scroll">
+        <article class="doc">
+          <div class="pico">${ic('radio')}</div>
+          <h1>Canlı yenileme</h1>
+          <div class="prov">
+            <span class="by agent"><span class="live"></span>Claude Code düzenliyor</span>
+            <span class="by">Sen, dün 18:40</span>
+            <span class="grow"></span>
+            <span class="trust">${ic('shield')}Ajan yazdı, incelenmedi</span>
+            <span class="btn sm">İncele</span>
+          </div>
+          <div class="body">
+            <p>Açık bir sayfa, başka bir yerde yapılan değişikliği kendiliğinden alır. Sunucu bir şey itmez; istemci her birkaç saniyede küçük bir sürüm numarasını yoklar.</p>
+            <h2>Saniye çözünürlüğü neden sorun</h2>
+            <p>Sürüm <code>max(updated_at)</code> değerinden gelir ve saniye hassasiyetindedir. Aynı saniyedeki ikinci yazma sürümü ilerletmez, bu yüzden görünmeden kalabilir.</p>
+            <div class="edit">
+              <p>Düzen, okumaya başlamadan önce aldığı <code>renderedAt</code> değerini gönderir; istemci sürümün bu andan eski olabileceğini görürse bir sonraki turda bir kez daha yeniler.<span class="caret"></span>${flag(d)}</p>
+              ${agentNote(d)}
+            </div>
+            <ul class="tasks">
+              <li class="done">${box(true)}<span>Aynı saniyedeki yazmayı yakala</span></li>
+              <li class="done">${box(true)}<span>Harita ekranına da uygula</span><em class="by-ag">${d === 'c' ? '' : claude(12)}${d === 'c' ? '[claude-code]' : 'Claude Code işaretledi'}</em></li>
+              <li>${box(false)}<span>Mobil çekmecenin çift yenilemesini kaldır</span></li>
+            </ul>
+          </div>
+        </article>
+      </div>
+    </main>`;
+  }
+
+  function dashMain(d) {
+    if (d === 'd') d = 'b';
+    const next = [
+      ['prog', 'Harita ekranında dokunmatik seçim', claude(12), 'Claude', 'Bugün', true],
+      ['rev', 'Pano başlığını tekilleştir', '<span class="av">HT</span>', 'Sen', 'Yarın', false],
+      ['backlog', 'Mobil çekmecenin çift yenilemesi', '<span class="av">HT</span>', 'Sen', '3 Eki', false],
+      ['backlog', 'Erişim isteği e-postasını sadeleştir', codex(12), 'Codex', '7 Eki', false]
+    ].map(([g, t, av, who, due, today]) => `<li>${glyph(g)}<span>${t}</span><span class="who">${av}${who}</span><span class="due${today ? ' today' : ''}">${due}</span></li>`).join('');
+    const calls = [
+      ['update_page', 'Canlı yenileme', 'şimdi', true],
+      ['update_page', 'Sprint: dokunmatik seçim', '1 dk', true],
+      ['query_database', 'Sprint', '2 dk', false],
+      ['get_page', 'Kararlar', '4 dk', false],
+      ['add_comment', 'Kararlar: 0054 notu', '6 dk', true],
+      ['prepare_context', '"canlı yenileme"', '12 dk', false]
+    ].map(([tool, tg, t, w]) => `<li class="${w ? 'w' : ''}"><code>${tool}</code><span class="tg">${tg}</span><time>${t}</time></li>`).join('');
+    return `
+    <main class="main db">
+      <div class="bar">
+        <div class="crumbs"><span>remnus-app</span><i>/</i><b>Pano</b></div>
+        <span class="grow"></span>
+        ${presence(d)}
+        <span class="btn ghost">${ic('pencil')}Düzenle</span>
+        <span class="ib">${ic('more')}</span>
+      </div>
+      <div class="scroll">
+        <div class="dhead">
+          <span class="ws-ico" style="--ws:#4f7be0">r</span>
+          <div>
+            <h1>remnus-app</h1>
+            <div class="stack"><span class="tag">Next.js 16</span><span class="tag">Turso</span><span class="tag">8 dil</span><span class="by agent"><span class="live"></span>Claude Code 2 dk önce güncelledi</span></div>
+          </div>
+        </div>
+        <div class="bento">
+          <section class="blk"><div class="in"><h3>Açık görevler</h3><div class="big">13</div><div class="sub"><b>+2</b> bu hafta, 1 tanesi ajanda</div></div></section>
+          <section class="blk"><div class="in"><h3>Durum</h3>
+            <div class="sbar"><i style="--w:21.3%;--c:var(--fg4)"></i><i style="--w:6%;--c:var(--prog)"></i><i style="--w:6%;--c:var(--rev)"></i><i style="--w:66.7%;--c:var(--ok)"></i></div>
+            <ul class="legend"><li>${glyph('backlog')}Bekliyor<b>10</b></li><li>${glyph('prog')}Sürüyor<b>1</b></li><li>${glyph('rev')}İncelemede<b>2</b></li><li>${glyph('done')}Tamam<b>34</b></li></ul>
+          </div></section>
+          <section class="blk"><div class="in"><h3>Ajanların kazandırdığı</h3><div class="big">98,1 bin<small>token</small></div>
+            <svg class="spark" viewBox="0 0 240 42" preserveAspectRatio="none" aria-hidden="true"><path d="M0 34 L40 30 L80 32 L120 22 L160 24 L200 12 L240 6 L240 42 L0 42Z" fill="var(--agent-soft)"/><path d="M0 34 L40 30 L80 32 L120 22 L160 24 L200 12 L240 6" fill="none" stroke="var(--agent)" stroke-width="1.8" vector-effect="non-scaling-stroke"/></svg>
+            <div class="sub">Son 7 günde 12,4 bin</div></div></section>
+          <section class="blk k-next"><div class="in"><h3>Sıradaki</h3><ul class="rows">${next}</ul></div></section>
+          <section class="blk k-act"><div class="in"><h3>Ajan etkinliği</h3>
+            <div class="sess"><div class="sess-h">${claude()}<b>Claude Code</b><span class="live"></span><span class="meta">14 çağrı, 3 yazma</span></div><ol class="calls">${calls}</ol></div>
+            <div class="sess"><div class="sess-h">${codex()}<b>Codex</b><span class="meta">4 çağrı, 12 dk önce bitti</span>${ic('chevR')}</div></div>
+          </div></section>
+          <section class="blk k-health"><div class="in"><h3>Bilgi sağlığı</h3>
+            <div class="health"><div class="hstat"><b>5</b><span>incelenmemiş sayfa</span></div><div class="hstat"><b>2</b><span>eskimiş</span></div><div class="hstat"><b>3</b><span>hiçbir yerden bağlanmamış</span></div><span class="btn ghost">İncele</span></div>
+          </div></section>
+        </div>
+      </div>
+    </main>`;
+  }
+
+  const state = { screen: 'page', mode: 'dark', size: 'fit' };
+  const dirs = ['d', 'a', 'b', 'c'];
+  const names = { a: 'Sinyal', b: 'Ortak Masa', c: 'Kesik', d: 'Seçilen' };
+  const roles = [['frame', 'Çerçeve'], ['canvas', 'Tuval'], ['raised', 'Kalkık'], ['line', 'Çizgi'], ['fg', 'Metin'], ['fg3', 'Soluk metin'], ['accent', 'Birincil'], ['agent', 'Ajan'], ['ok', 'Tamam'], ['prog', 'Sürüyor'], ['rev', 'İnceleme'], ['bad', 'Tehlike']];
+
+  function render() {
+    for (const d of dirs) {
+      const host = document.getElementById('frame-' + d);
+      const label = `${names[d]} yönü, ${state.screen === 'page' ? 'kenar çubuğu ve sayfa' : 'proje panosu'}, ${state.mode === 'dark' ? 'koyu' : 'açık'} tema`;
+      host.innerHTML = `<div class="mock ${d === 'd' ? 'dir-b dir-d' : 'dir-' + d} m-${state.mode}" role="img" aria-label="${label}">${sidebar(d, state.screen)}${state.screen === 'page' ? pageMain(d) : dashMain(d)}</div>`;
+      const mock = host.firstElementChild;
+      const cs = getComputedStyle(mock);
+      const sw = document.querySelector(`[data-swatches="${d}"]`);
+      sw.innerHTML = roles.map(([k, n]) => {
+        const v = cs.getPropertyValue('--' + k).trim();
+        return `<div><span style="background:${v}"></span>${n}<code>${v}</code></div>`;
+      }).join('');
+    }
+    fit();
+  }
+
+  function fit() {
+    document.querySelectorAll('.frame').forEach((f) => {
+      f.classList.toggle('actual', state.size === 'actual');
+      if (state.size === 'actual') { f.style.removeProperty('--s'); f.style.height = ''; return; }
+      const s = f.clientWidth / 1280;
+      f.style.setProperty('--s', String(s));
+      f.style.height = Math.round(800 * s) + 'px';
+    });
+  }
+
+  function bind(attr, key) {
+    document.querySelectorAll(`[data-${attr}]`).forEach((b) => {
+      b.addEventListener('click', () => {
+        state[key] = b.dataset[attr];
+        document.querySelectorAll(`[data-${attr}]`).forEach((o) => o.setAttribute('aria-pressed', String(o === b)));
+        render();
+      });
+    });
+  }
+  bind('screen', 'screen');
+  bind('mode', 'mode');
+  bind('size', 'size');
+  if ('ResizeObserver' in window) new ResizeObserver(fit).observe(document.querySelector('.wrap'));
+  else window.addEventListener('resize', fit);
+  render();
+})();
+</script>

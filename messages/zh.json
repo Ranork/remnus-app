@@ -2,7 +2,7 @@
   "Layout": {
     "demoMode": "演示模式",
     "demoChangesNote": "更改是临时的，每位访客都会重置。",
-    "createFreeAccount": "创建免费账户 →",
+    "createFreeAccount": "创建免费账户",
     "projectWindowLabel": "项目窗口",
     "projectWindowExplain": "此窗口仅显示 {workspace}。您的账户、其他工作区和设置都在完整的 Remnus 应用中。",
     "projectWindowAbout": "关于此窗口",
@@ -261,6 +261,7 @@
     "showHiddenWorkspaces": "显示已隐藏（{count}）",
     "hideHiddenWorkspaces": "隐藏",
     "workspaceSettings": "工作区设置",
+    "accessRequestsPending": "{count, plural, other {# 个访问请求待处理 — 查看}}",
     "importNotion": "从 Notion 导入",
     "changeIcon": "更换图标",
     "addSubPage": "添加子页面",
@@ -880,6 +881,21 @@
     "cancel": "取消",
     "addBlock": "添加区块",
     "editBlock": "编辑区块",
+    "project": {
+      "lastAgent": "智能体最近一次在此工作：{when}",
+      "noAgent": "还没有智能体在此工作过"
+    },
+    "home": {
+      "badge": "主页",
+      "note": "此仪表盘由你的数据库自动生成。想要一个围绕你的项目搭建的仪表盘，请对已连接的智能体说：“刷新 Remnus 校准”。",
+      "open": "{name}：未完成",
+      "byStatus": "{name} 按状态",
+      "nextDue": "{name}：即将到期",
+      "stillOpen": "{name}：仍未完成",
+      "latest": "{name}：最新",
+      "whereToLook": "去哪里看",
+      "agentActivity": "智能体活动"
+    },
     "blockTypes": {
       "metric": "指标",
       "chart": "图表",
@@ -887,7 +903,9 @@
       "list": "列表",
       "text": "文本",
       "links": "链接",
-      "activity": "智能体活动"
+      "activity": "智能体活动",
+      "project": "项目标题",
+      "savings": "智能体节省"
     },
     "editor": {
       "addTitle": "添加区块",
@@ -953,7 +971,10 @@
       "requiredHint": "填写带 * 的字段后即可保存。",
       "saveFailed": "无法保存此区块。请检查设置后重试。",
       "save": "保存",
-      "saving": "正在保存…"
+      "saving": "正在保存…",
+      "summary": "摘要",
+      "stack": "技术栈",
+      "stackPlaceholder": "例如 Next.js、Postgres、Stripe"
     }
   },
   "Editor": {
@@ -1073,6 +1094,9 @@
     "untitled": "无标题",
     "addIcon": "添加图标",
     "changeIcon": "更换图标",
+    "removeIcon": "移除图标",
+    "pageOptions": "页面选项",
+    "widthLabel": "页面宽度",
     "deletePage": "删除页面",
     "deleteConfirm": "删除“{title}”？",
     "delete": "删除",
@@ -2257,6 +2281,9 @@
   },
   "Graph": {
     "title": "知识地图",
+    "switchWorkspace": "切换工作区",
+    "openDashboard": "打开此工作区的仪表盘",
+    "loadingRows": "正在加载行…",
     "layoutLabel": "布局",
     "layoutNetwork": "网络",
     "layoutTree": "树形",

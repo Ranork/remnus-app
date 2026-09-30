@@ -48,15 +48,18 @@ limits constant). `Price` number · `Interval` select (`Monthly`, `Yearly`) ·
   Source `Issue` · Link to the issue. Body: "Three reports since v2.3; nested tables flatten
   to text. Affects the PDF path only."
 
-## Status screen
+## Home dashboard
 
-`Product status`, next to the overview:
-- `metric` Features, filter Status equals `Building`, unit "building"
-- `chart` donut, Features grouped by Status
-- `list` Features, filter Status equals `Planned`, showColumns Area, Audience
-- `metric` Feedback, trend on Received over 30 days — only if Feedback exists
-- `chart` bar, Feedback grouped by Area
-- `links` overview, Decisions, Features
+The workspace's home (`home: true`), which opens on the **Pano** button:
+- `project` — summary: what users do with the product and who pays for it; stack chips
+  from the manifest (framework, database, auth, billing).
+- Then, only for the databases you actually built, and only blocks that show something
+  today:
+  - Features: `metric` filter Status equals `Building`, unit "building"; `chart` donut
+    grouped by Status; `list` filter Status equals `Planned`, showColumns Area, Audience.
+  - Feedback: `metric` with a trend on Received over 30 days; `chart` bar grouped by Area.
+  - Experiments: `list` filter Status equals `Running`, showColumns Metric, Started.
+- `links` overview, Decisions, Features · `activity` · `savings`
 
 ## Don't
 

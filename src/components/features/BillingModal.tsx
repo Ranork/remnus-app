@@ -84,7 +84,7 @@ export default function BillingModal({ isDemo = false, initialPickerOpen = false
               {/* Current plan */}
               <div className="flex items-center justify-between mb-5">
                 <div>
-                  <p className="m-0 text-[11px] uppercase tracking-wider text-neutral-500">{t('currentPlan')}</p>
+                  <p className="m-0 text-xs text-neutral-500">{t('currentPlan')}</p>
                   <p className="m-0 mt-0.5 text-lg font-semibold text-neutral-100" style={{ color: TIER_ACCENT[tier] }}>
                     {tierLabel}
                   </p>
@@ -120,7 +120,7 @@ export default function BillingModal({ isDemo = false, initialPickerOpen = false
               <div className="flex flex-col gap-2">
                 <button
                   onClick={() => setPickerOpen(true)}
-                  className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-[13px] font-semibold text-white bg-blue-500 hover:opacity-90 transition-opacity"
+                  className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-[13px] font-semibold text-ink-fg bg-ink hover:opacity-90 transition-opacity"
                 >
                   {t('changePlan')}
                 </button>

@@ -204,7 +204,7 @@ export default function AdminUserDetailModal({
             <>
               {/* Account details */}
               <section>
-                <h3 className="text-xs font-medium text-neutral-400 uppercase tracking-wider mb-3">{t('accountDetails')}</h3>
+                <h3 className="text-xs font-medium text-neutral-400 mb-3">{t('accountDetails')}</h3>
                 <div className="grid grid-cols-2 gap-3">
                   <Field icon={<Calendar size={12} />} label={t('colJoined')} value={formatDate(detail.account.createdAt, locale)} />
                   <Field
@@ -218,7 +218,7 @@ export default function AdminUserDetailModal({
                     }
                   />
                   <div className="flex flex-col gap-1">
-                    <span className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-neutral-600"><Shield size={12} />{t('colRole')}</span>
+                    <span className="flex items-center gap-1.5 text-2xs text-neutral-600"><Shield size={12} />{t('colRole')}</span>
                     <div className="flex items-center gap-2">
                       <span className={`text-xs font-medium ${detail.account.role === 'admin' ? 'text-blue-400' : detail.account.role === 'demo' ? 'text-amber-500/80' : 'text-neutral-300'}`}>
                         {detail.account.role === 'admin' ? t('roleAdmin') : detail.account.role === 'demo' ? t('roleDemo') : t('roleUser')}
@@ -239,7 +239,7 @@ export default function AdminUserDetailModal({
 
               {/* Activity summary */}
               <section>
-                <h3 className="text-xs font-medium text-neutral-400 uppercase tracking-wider mb-3">{t('activitySummary')}</h3>
+                <h3 className="text-xs font-medium text-neutral-400 mb-3">{t('activitySummary')}</h3>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   <Stat icon={<Clock size={13} />} label={t('totalTime')} value={formatDuration(detail.activity.totalSeconds)} />
                   <Stat icon={<Layers size={13} />} label={t('sessions')} value={String(detail.activity.sessionCount)} />
@@ -250,7 +250,7 @@ export default function AdminUserDetailModal({
 
               {/* Content */}
               <section>
-                <h3 className="text-xs font-medium text-neutral-400 uppercase tracking-wider mb-3">{t('contentSection')}</h3>
+                <h3 className="text-xs font-medium text-neutral-400 mb-3">{t('contentSection')}</h3>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                   <Stat icon={<Crown size={13} />} label={t('ownedWorkspaces')} value={String(detail.account.ownedWorkspaces)} />
                   <Stat icon={<FileText size={13} />} label={t('contentPages')} value={String(detail.content.pages)} />
@@ -261,7 +261,7 @@ export default function AdminUserDetailModal({
 
               {/* AI agents (MCP) */}
               <section>
-                <h3 className="text-xs font-medium text-neutral-400 uppercase tracking-wider mb-3">{t('agentsSection')}</h3>
+                <h3 className="text-xs font-medium text-neutral-400 mb-3">{t('agentsSection')}</h3>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-3">
                   <Stat icon={<Bot size={13} />} label={t('agentsConnected')} value={String(detail.agents.active)} />
                   <Stat icon={<Zap size={13} />} label={t('agentsCalls')} value={detail.agents.calls.toLocaleString(locale)} />
@@ -276,7 +276,7 @@ export default function AdminUserDetailModal({
                       <div key={tok.id} className="flex items-center gap-2.5 border border-neutral-800 rounded-md bg-neutral-900/40 px-3 py-2">
                         <Key size={12} className="text-neutral-500 shrink-0" />
                         <span className="text-xs text-neutral-200 truncate flex-1 min-w-0">{tok.agentName || tok.name}</span>
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-neutral-800 text-neutral-400 uppercase shrink-0">{tok.scope}</span>
+                        <span className="text-2xs px-1.5 py-0.5 rounded bg-neutral-800 text-neutral-400 shrink-0">{tok.scope}</span>
                         <span className="text-[10px] text-neutral-500 shrink-0 hidden sm:inline">{formatRelative(tok.lastUsedAt, relLabels)}</span>
                         <AgentStatusBadge status={tok.status} t={t} />
                       </div>
@@ -293,7 +293,7 @@ export default function AdminUserDetailModal({
 
               {/* Subscription / plan */}
               <section>
-                <h3 className="text-xs font-medium text-neutral-400 uppercase tracking-wider mb-3">{t('subscriptionPlan')}</h3>
+                <h3 className="text-xs font-medium text-neutral-400 mb-3">{t('subscriptionPlan')}</h3>
                 <div className="rounded-md border border-neutral-800 bg-neutral-900/40 p-4 space-y-3">
                   <div className="flex items-center justify-between gap-3 flex-wrap">
                     <div className="flex items-center gap-2 min-w-0">
@@ -316,7 +316,7 @@ export default function AdminUserDetailModal({
                   ) : (
                     <>
                       <div className="flex flex-col gap-1.5">
-                        <span className="text-[10px] uppercase tracking-wider text-neutral-600">{t('setPlanManually')}</span>
+                        <span className="text-2xs text-neutral-600">{t('setPlanManually')}</span>
                         <div className="flex flex-wrap gap-1.5">
                           {PLAN_TIERS.map((tier) => {
                             const active = detail.subscription.tier === tier;
@@ -345,7 +345,7 @@ export default function AdminUserDetailModal({
 
               {/* Workspaces */}
               <section>
-                <h3 className="text-xs font-medium text-neutral-400 uppercase tracking-wider mb-3">
+                <h3 className="text-xs font-medium text-neutral-400 mb-3">
                   {t('userWorkspaces')} <span className="text-neutral-600 normal-case">({detail.workspaces.length})</span>
                 </h3>
                 {detail.workspaces.length === 0 ? (
@@ -417,7 +417,7 @@ function AgentStatusBadge({ status, t }: { status: 'active' | 'revoked' | 'expir
 function Field({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
     <div className="flex flex-col gap-1">
-      <span className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-neutral-600">{icon}{label}</span>
+      <span className="flex items-center gap-1.5 text-2xs text-neutral-600">{icon}{label}</span>
       <span className="text-xs text-neutral-300">{value}</span>
     </div>
   );
@@ -426,7 +426,7 @@ function Field({ icon, label, value }: { icon: React.ReactNode; label: string; v
 function Stat({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
   return (
     <div className="rounded-md border border-neutral-800 bg-neutral-900/40 px-3 py-2.5 flex flex-col gap-1.5 min-w-0">
-      <span className="flex items-center gap-1.5 text-neutral-500 text-[10px] uppercase tracking-wider">{icon}{label}</span>
+      <span className="flex items-center gap-1.5 text-neutral-500 text-2xs">{icon}{label}</span>
       <span className="text-sm font-semibold text-neutral-100 truncate">{value}</span>
     </div>
   );

@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 
 import Link from 'next/link';
-import { ChevronLeft, RefreshCw, MoreHorizontal, Globe, ArrowLeftRight, FileCode2, History } from 'lucide-react';
+import { ChevronLeft, RefreshCw } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useQueryClient } from '@tanstack/react-query';
 import { updateStandalonePageContent, updateWorkspaceItemTitle, updateWorkspaceItemIcon } from '@/lib/actions/workspace';
@@ -10,6 +10,8 @@ import BlockEditor, { type BlockEditorHandle } from '@/components/features/edito
 import PageIcon from './PageIcon';
 import IconPicker from './IconPicker';
 import SaveStatus, { type SaveState } from './SaveStatus';
+import PageActionsMenu from './PageActionsMenu';
+import { Button } from '@/components/ui/button';
 import ShareModal from '@/components/share/ShareModal';
 import { PageMarkdownDialog } from './PageMarkdownDialog';
 import { PageHistoryModal } from './PageHistoryModal';
@@ -46,7 +48,6 @@ export default function StandalonePageEditor({
   const t = useTranslations('Page');
   const tEditor = useTranslations('Editor');
   const tWs = useTranslations('Workspace');
-  const tSharing = useTranslations('Sharing');
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [title, setTitle] = useState(item.title);
   const savedTitle = useRef(item.title);
@@ -57,11 +58,9 @@ export default function StandalonePageEditor({
   const [saveState, setSaveState] = useState<SaveState>('idle');
   type WidthMode = 'narrow' | 'wide' | 'full';
   const [widthMode, setWidthMode] = useState<WidthMode>('narrow');
-  const [openMenu, setOpenMenu] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
   const [markdownDraft, setMarkdownDraft] = useState<string | null>(null);
   const [showHistory, setShowHistory] = useState(false);
-  const menuRef = useRef<HTMLDivElement>(null);
   const editorRef = useRef<BlockEditorHandle>(null);
 
   // Keep the Tauri keep-alive query cache (TabPane) in sync with each save, so
@@ -103,8 +102,7 @@ export default function StandalonePageEditor({
     }
   }, [item.id]);
 
-  const cycleWidth = () => {
-    const next: WidthMode = widthMode === 'narrow' ? 'wide' : widthMode === 'wide' ? 'full' : 'narrow';
+  const changeWidth = (next: WidthMode) => {
     setWidthMode(next);
     localStorage.setItem(`page-width-${item.id}`, next);
   };
@@ -116,16 +114,6 @@ export default function StandalonePageEditor({
     patchPageCache({ item: { icon: newIcon, iconColor: newColor } });
   };
 
-  const widthLabels: Record<WidthMode, string> = { narrow: t('narrow'), wide: t('wide'), full: t('full') };
-
-  useEffect(() => {
-    if (!openMenu) return;
-    const handler = (e: MouseEvent) => {
-      if (!menuRef.current?.contains(e.target as Node)) setOpenMenu(false);
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [openMenu]);
 
   useEffect(() => {
     if (title === savedTitle.current) return;
@@ -176,96 +164,35 @@ export default function StandalonePageEditor({
 
   return (
     <div className={containerClass}>
-      <div className="mb-6 flex items-center justify-between">
-        <div>
+      <div className="mb-8 flex min-h-8 items-center justify-between gap-3">
+        <div className="min-w-0">
           {/* Back link only for sub-pages — climbs to the parent page. Top-level
               pages have no back button (by design). */}
           {item.parentId && (
             <Link
               href={`/page/${item.parentId}`}
-              className="inline-flex items-center gap-1 text-sm text-neutral-500 hover:text-neutral-300 transition-colors"
+              className="-ml-2 inline-flex h-8 items-center gap-1 rounded-control px-2 text-ui text-fg-3 transition-colors hover:bg-hover hover:text-fg"
             >
-              <ChevronLeft size={14} />
+              <ChevronLeft size={16} />
               {t('back')}
             </Link>
           )}
         </div>
-        <div className="flex items-center gap-2">
-          <SaveStatus state={saveState} />
+        <div className="flex items-center gap-1">
+          <SaveStatus state={saveState} className="mr-1" />
 
-          {/* Refresh */}
-          <button
-            onClick={handleRefresh}
-            className="inline-flex items-center gap-1.5 text-xs text-neutral-500 hover:text-neutral-300 transition-colors p-1 cursor-pointer"
-            title={tWs('refresh')}
-          >
-            <RefreshCw size={14} className={isRefreshing ? 'animate-spin text-blue-400' : ''} />
+          <Button variant="ghost" size="sm" onClick={handleRefresh} title={tWs('refresh')} aria-label={tWs('refresh')}>
+            <RefreshCw className={isRefreshing ? 'animate-spin' : ''} />
             <span className="hidden sm:inline">{tWs('refresh')}</span>
-          </button>
+          </Button>
 
-          {/* ⋯ Options menu */}
-          <div className="relative" ref={menuRef}>
-            <button
-              onClick={() => setOpenMenu(v => !v)}
-              className="flex items-center justify-center p-1.5 text-neutral-500 hover:text-neutral-200 hover:bg-neutral-800/40 border border-neutral-800 cursor-pointer rounded transition-colors"
-            >
-              <MoreHorizontal size={14} />
-            </button>
-
-            {openMenu && (
-              <div className="absolute right-0 top-full mt-1.5 z-50 bg-neutral-850 border border-neutral-800 shadow-xl py-1.5 w-44 rounded overflow-hidden animate-fade-in animate-duration-100">
-                {/* Width — desktop only. On mobile the page is always full-bleed,
-                    so the selector is hidden (it had no visual effect there). */}
-                <div className="hidden lg:block">
-                  <p className="px-3 pt-0.5 pb-1 text-[9px] font-semibold text-neutral-600 uppercase tracking-widest">
-                    {widthLabels[widthMode]}
-                  </p>
-                  {(['narrow', 'wide', 'full'] as WidthMode[]).map(w => (
-                    <button
-                      key={w}
-                      onClick={() => { setWidthMode(w); localStorage.setItem(`page-width-${item.id}`, w); setOpenMenu(false); }}
-                      className={`w-full flex items-center gap-2 px-3 py-1.5 text-xs transition-colors cursor-pointer ${
-                        widthMode === w ? 'text-blue-400 bg-blue-500/8' : 'text-neutral-300 hover:bg-neutral-800'
-                      }`}
-                    >
-                      <ArrowLeftRight size={12} className={widthMode === w ? 'text-blue-400' : 'text-neutral-600'} />
-                      {widthLabels[w]}
-                      {widthMode === w && <span className="ml-auto text-[9px] text-blue-400">✓</span>}
-                    </button>
-                  ))}
-
-                  <div className="border-t border-neutral-800 my-1.5" />
-                </div>
-
-                {/* Share */}
-                <button
-                  onClick={() => { setOpenMenu(false); setShowShareModal(true); }}
-                  className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-neutral-300 hover:bg-neutral-800 cursor-pointer transition-colors"
-                >
-                  <Globe size={12} className="text-neutral-500" />
-                  {tSharing('shareButton')}
-                </button>
-
-                {/* Markdown — separate copy/edit surface for the whole page body */}
-                <button
-                  onClick={() => { setOpenMenu(false); setMarkdownDraft(editorRef.current?.getMarkdown() ?? page.content); }}
-                  className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-neutral-300 hover:bg-neutral-800 cursor-pointer transition-colors"
-                >
-                  <FileCode2 size={12} className="text-neutral-500" />
-                  {t('markdown.button')}
-                </button>
-
-                {/* History — earlier content versions, session+size debounced */}
-                <button
-                  onClick={() => { setOpenMenu(false); setShowHistory(true); }}
-                  className="w-full flex items-center gap-2 px-3 py-1.5 text-xs text-neutral-300 hover:bg-neutral-800 cursor-pointer transition-colors"
-                >
-                  <History size={12} className="text-neutral-500" />
-                  {t('history.button')}
-                </button>
-              </div>
-            )}
-          </div>
+          <PageActionsMenu
+            widthMode={widthMode}
+            onWidthChange={changeWidth}
+            onShare={() => setShowShareModal(true)}
+            onMarkdown={() => setMarkdownDraft(editorRef.current?.getMarkdown() ?? page.content)}
+            onHistory={() => setShowHistory(true)}
+          />
         </div>
 
         {showShareModal && (
@@ -297,23 +224,23 @@ export default function StandalonePageEditor({
       </div>
 
       {/* Unified Page Header: Icon + Title Input */}
-      <div className="flex items-center gap-3 mb-8 group/page-header relative select-none">
+      <div className="flex items-center gap-3 mb-6 group/page-header relative select-none">
         <div className="relative shrink-0 flex items-center group/icon-wrapper">
           <div className="relative flex items-center">
             <button
               ref={iconButtonRef}
               onClick={() => setShowIconPicker(!showIconPicker)}
-              className="p-1 hover:bg-neutral-800 rounded transition-colors duration-150 cursor-pointer flex items-center justify-center shrink-0"
+              className="p-1 hover:bg-hover rounded-surface transition-colors duration-150 cursor-pointer flex items-center justify-center shrink-0"
               title={icon ? t('changeIcon') : t('addIcon')}
             >
-              <PageIcon icon={icon} iconColor={iconColor} size={40} fallbackType="page" />
+              <PageIcon icon={icon} iconColor={iconColor} size={36} fallbackType="page" />
             </button>
             {icon && (
               <button
                 onClick={() => handleIconSelect(null, null)}
-                className="absolute -top-7 left-1/2 -translate-x-1/2 opacity-0 group-hover/icon-wrapper:opacity-100 px-1.5 py-0.5 text-[9px] bg-neutral-900 border border-neutral-800 text-neutral-400 hover:text-white rounded transition-all cursor-pointer font-medium whitespace-nowrap shadow-xl z-20"
+                className="absolute -top-7 left-1/2 -translate-x-1/2 opacity-0 group-hover/icon-wrapper:opacity-100 focus-visible:opacity-100 h-6 px-2 text-2xs bg-fg text-desk rounded-control transition-opacity cursor-pointer font-medium whitespace-nowrap shadow-float z-20"
               >
-                Remove
+                {t('removeIcon')}
               </button>
             )}
           </div>
@@ -344,7 +271,7 @@ export default function StandalonePageEditor({
               }
             }}
             placeholder={t('untitled')}
-            className="w-full bg-transparent text-neutral-100 font-bold text-2xl sm:text-4xl focus:outline-none placeholder:text-neutral-700 tracking-tight py-1"
+            className="w-full bg-transparent text-fg font-semibold text-[28px] sm:text-[34px] leading-tight tracking-[-0.025em] outline-none placeholder:text-fg-4 py-1"
           />
         </div>
       </div>

@@ -343,7 +343,7 @@ export default function KanbanBoard({
             onMouseLeave={() => setIsGroupDragReady(null)}
             className={`shrink-0 w-68 flex flex-col transition-opacity group/col ${
               hasBg ? 'p-3 rounded' : ''
-            } ${isDraggingThis ? 'opacity-30' : ''} ${isOver ? 'ring-1 ring-blue-500/40' : ''}`}
+            } ${isDraggingThis ? 'opacity-30' : ''} ${isOver ? 'ring-1 ring-signal/40' : ''}`}
             style={groupBgStyle}
           >
             <div
@@ -357,7 +357,7 @@ export default function KanbanBoard({
                 !isUncategorized ? 'cursor-grab active:cursor-grabbing' : ''
               }`}
             >
-              <h3 className="text-xs font-medium uppercase tracking-wider text-neutral-400 truncate">
+              <h3 className="text-xs font-medium text-neutral-400 truncate">
                 {isUncategorized ? t('uncategorized') : columnName}
               </h3>
               <div className="flex items-center gap-1 shrink-0">
@@ -444,8 +444,8 @@ export default function KanbanBoard({
                     className={`database-card relative mb-1.5 cursor-pointer transition-colors group rounded
                       ${isCardEditing ? 'overflow-visible z-30' : 'overflow-hidden'}
                       ${draggedCardId === page.id ? 'opacity-25' : ''}
-                      ${dragOverCardId === page.id && dragOverPosition === 'before' ? 'border-t-2 border-t-blue-500/60' : ''}
-                      ${dragOverCardId === page.id && dragOverPosition === 'after' ? 'border-b-2 border-b-blue-500/60' : ''}
+                      ${dragOverCardId === page.id && dragOverPosition === 'before' ? 'border-t-2 border-t-signal/60' : ''}
+                      ${dragOverCardId === page.id && dragOverPosition === 'after' ? 'border-b-2 border-b-signal/60' : ''}
                     `}
                     style={{ backgroundColor: bgColor ?? 'var(--database-card-bg, rgba(64,68,75,0.55))' }}
                   >
@@ -648,12 +648,12 @@ export default function KanbanBoard({
                             );
                           } else if (c.type === 'checkbox') {
                             display = (val === true || val === 'true')
-                              ? <CheckSquare size={13} className="text-blue-400" />
+                              ? <CheckSquare size={13} className="text-signal-text" />
                               : <Square size={13} className="text-neutral-600" />;
                           } else if (c.type === 'url' && val) {
                             const safeHref = typeof val === 'string' && /^https?:\/\//i.test(val) ? val : null;
                             display = safeHref ? (
-                              <a href={safeHref} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className={`text-blue-400 hover:text-blue-300 flex items-center gap-0.5 ${textClass}`}>
+                              <a href={safeHref} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()} className={`text-signal-text hover:text-fg flex items-center gap-0.5 ${textClass}`}>
                                 <span className="truncate">{val}</span>
                                 <ExternalLink size={9} className="shrink-0" />
                               </a>
@@ -662,7 +662,7 @@ export default function KanbanBoard({
                             );
                           } else if (c.type === 'email' && val) {
                             display = (
-                              <a href={`mailto:${val}`} onClick={(e) => e.stopPropagation()} className={`text-blue-400 hover:text-blue-300 ${textClass}`}>{val}</a>
+                              <a href={`mailto:${val}`} onClick={(e) => e.stopPropagation()} className={`text-signal-text hover:text-fg ${textClass}`}>{val}</a>
                             );
                           } else {
                             display = (

@@ -5,7 +5,7 @@ import { lockClaimsOf } from '@/lib/auth/workspaceLock';
 import { db } from '@/db';
 import { userSessions, demoSessions } from '@/db/schema';
 import { isTauriRequest } from '@/lib/server/platform';
-import { changeVersionForUser } from '@/lib/services/changeVersion';
+import { heartbeatSignals, signalExtras, visibleWorkspaceIds } from '@/lib/services/changeVersion';
 
 // Heartbeat endpoint. The client pings while the user is active (see
 // ActivityTracker). Each ping extends the most recent open session, or opens a
@@ -18,6 +18,12 @@ import { changeVersionForUser } from '@/lib/services/changeVersion';
 // /api/activity/changes, which runs at its own, much faster cadence and does no
 // session bookkeeping — this endpoint must not be called every few seconds, as
 // every call writes a session row.
+//
+// `agent: true` (sent only when set, to keep the body small) says an agent has
+// called Remnus in one of the caller's workspaces in the last few minutes; a
+// normal tab then polls the change signal as closely as a project window until
+// the flag drops. The heartbeat is the one place that asks — every 30s, not every
+// poll.
 const SESSION_GAP_MS = 2 * 60 * 1000; // 2 minutes of inactivity ends a session
 
 /**
@@ -71,16 +77,21 @@ export async function POST() {
   // Cheap change-detection signal — computed for everyone (admins included) so
   // their tabs still reflect live edits.
   let changeVersion = 0;
+  let agentActive = false;
+  let extras: { n?: number; h?: 1 } = {};
   try {
-    changeVersion = await changeVersionForUser(userId, lockClaimsOf(session?.user).workspaceLock ?? null);
+    const ids = await visibleWorkspaceIds(userId, lockClaimsOf(session?.user).workspaceLock ?? null);
+    ({ version: changeVersion, agentActive } = await heartbeatSignals(ids));
+    extras = signalExtras(changeVersion, ids.length);
   } catch {
     // best-effort — a missing version just means "no refresh this tick"
   }
+  const body = { ok: true, changeVersion, ...extras, ...(agentActive ? { agent: true } : {}) };
 
   // Don't track admins — their browsing would create noise rows in the
   // engagement stats they're meant to be reviewing. (Still return changeVersion.)
   if (session.user.role === 'admin') {
-    return NextResponse.json({ ok: true, changeVersion });
+    return NextResponse.json(body);
   }
 
   try {
@@ -114,5 +125,5 @@ export async function POST() {
     // best-effort tracking — swallow errors
   }
 
-  return NextResponse.json({ ok: true, changeVersion });
+  return NextResponse.json(body);
 }

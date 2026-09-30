@@ -2,7 +2,7 @@
   "Layout": {
     "demoMode": "Demo Mode",
     "demoChangesNote": "Changes are temporary and reset for each visitor.",
-    "createFreeAccount": "Create a free account →",
+    "createFreeAccount": "Create a free account",
     "projectWindowLabel": "Project window",
     "projectWindowExplain": "This window shows only {workspace}. Your account, other workspaces and settings are in the full Remnus app.",
     "projectWindowAbout": "About this window",
@@ -261,6 +261,7 @@
     "showHiddenWorkspaces": "Show hidden ({count})",
     "hideHiddenWorkspaces": "Hide hidden",
     "workspaceSettings": "Workspace settings",
+    "accessRequestsPending": "{count, plural, one {# access request is waiting — review it} other {# access requests are waiting — review them}}",
     "importNotion": "Import from Notion",
     "changeIcon": "Change icon",
     "addSubPage": "Add sub-page",
@@ -880,6 +881,21 @@
     "cancel": "Cancel",
     "addBlock": "Add block",
     "editBlock": "Edit block",
+    "project": {
+      "lastAgent": "An agent last worked here {when}",
+      "noAgent": "No agent has worked here yet"
+    },
+    "home": {
+      "badge": "Home",
+      "note": "This dashboard was put together from your databases. For one built around your project, ask your connected agent: “Refresh the Remnus calibration”.",
+      "open": "{name}: open",
+      "byStatus": "{name} by status",
+      "nextDue": "{name}: next due",
+      "stillOpen": "{name}: still open",
+      "latest": "{name}: latest",
+      "whereToLook": "Where to look",
+      "agentActivity": "Agent activity"
+    },
     "blockTypes": {
       "metric": "Metric",
       "chart": "Chart",
@@ -887,7 +903,9 @@
       "list": "List",
       "text": "Text",
       "links": "Links",
-      "activity": "Agent activity"
+      "activity": "Agent activity",
+      "project": "Project header",
+      "savings": "Agent savings"
     },
     "editor": {
       "addTitle": "Add a block",
@@ -953,7 +971,10 @@
       "requiredHint": "Fill in the fields marked * to save.",
       "saveFailed": "This block couldn't be saved. Check its settings and try again.",
       "save": "Save",
-      "saving": "Saving…"
+      "saving": "Saving…",
+      "summary": "Summary",
+      "stack": "Stack",
+      "stackPlaceholder": "e.g. Next.js, Postgres, Stripe"
     }
   },
   "Editor": {
@@ -1073,6 +1094,9 @@
     "untitled": "Untitled",
     "addIcon": "Add icon",
     "changeIcon": "Change icon",
+    "removeIcon": "Remove icon",
+    "pageOptions": "Page options",
+    "widthLabel": "Page width",
     "deletePage": "Delete page",
     "deleteConfirm": "Delete \"{title}\"?",
     "delete": "Delete",
@@ -2281,6 +2305,9 @@
   },
   "Graph": {
     "title": "Knowledge map",
+    "switchWorkspace": "Switch workspace",
+    "openDashboard": "Open this workspace's dashboard",
+    "loadingRows": "Loading rows…",
     "layoutLabel": "Layout",
     "layoutNetwork": "Network",
     "layoutTree": "Tree",

@@ -79,7 +79,7 @@ export default function AgentDetectModal({ detected, onConnect, onDismiss }: Pro
         <div className="px-7 pb-7 flex flex-col gap-2">
           <button
             onClick={onConnect}
-            className="flex items-center justify-center gap-2 text-sm font-semibold text-white bg-blue-500 hover:bg-blue-400 px-4 py-2.5 rounded-lg transition-colors"
+            className="flex items-center justify-center gap-2 text-sm font-semibold text-ink-fg bg-ink hover:bg-ink/88 px-4 py-2.5 rounded-lg transition-colors"
           >
             {t('agentDetectConnect')} <ArrowRight size={14} />
           </button>

@@ -48,7 +48,7 @@ function StatCard({
         <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-lg ${cls}`}>
           <Icon size={15} />
         </div>
-        <span className="text-[10.5px] font-medium uppercase leading-tight tracking-wider text-neutral-500">
+        <span className="text-2xs font-medium leading-tight text-neutral-500">
           {label}
         </span>
       </div>

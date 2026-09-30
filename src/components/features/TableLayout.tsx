@@ -548,7 +548,7 @@ export default function TableLayout({
                     }}
                     className={`group py-2 px-3 font-medium whitespace-nowrap cursor-grab active:cursor-grabbing transition-colors relative
                       ${!isLast ? 'border-r border-neutral-800/40' : ''}
-                      ${isOver ? 'border-l-2 border-l-blue-500/60' : ''}
+                      ${isOver ? 'border-l-2 border-l-signal/60' : ''}
                       ${isDraggingThis ? 'opacity-25' : ''}
                     `}
                   >
@@ -559,11 +559,11 @@ export default function TableLayout({
                         title="Click for options (sort, filter, hide)"
                       >
                         {getPropertyIcon(col.type)}
-                        <span className="truncate text-neutral-400 group-hover:text-neutral-200 text-xs uppercase tracking-wider transition-colors">
+                        <span className="truncate text-neutral-400 group-hover:text-neutral-200 text-xs transition-colors">
                           {col.name}
                         </span>
                         {(filters ?? []).some((f) => f.columnId === col.id) && (
-                          <Filter size={10} className="text-blue-500 shrink-0" />
+                          <Filter size={10} className="text-signal-text shrink-0" />
                         )}
                       </div>
                       <div className="opacity-0 group-hover:opacity-40 text-neutral-600 cursor-grab transition-opacity pl-1">
@@ -574,7 +574,7 @@ export default function TableLayout({
                     <div
                       onMouseDown={(e) => handleResizeStart(e, col.id)}
                       onClick={(e) => e.stopPropagation()}
-                      className="absolute right-0 top-0 bottom-0 w-1.5 hover:bg-blue-500/40 active:bg-blue-500 cursor-col-resize z-20 transition-colors"
+                      className="absolute right-0 top-0 bottom-0 w-1.5 hover:bg-signal/40 active:bg-signal cursor-col-resize z-20 transition-colors"
                       title="Drag to resize"
                     />
                   </th>
@@ -630,9 +630,9 @@ export default function TableLayout({
                     isRowEditing ? 'relative z-20' : '',
                     draggedRowId === page.id ? 'opacity-25' : '',
                     dragOverRowId === page.id && dropPosition === 'before'
-                      ? 'border-t-2 border-t-blue-500 border-b border-neutral-800/40'
+                      ? 'border-t-2 border-t-signal border-b border-neutral-800/40'
                       : dragOverRowId === page.id && dropPosition === 'after'
-                      ? 'border-b-2 border-b-blue-500'
+                      ? 'border-b-2 border-b-signal'
                       : 'border-b border-neutral-800/40',
                   ].join(' ')}
                 >
@@ -760,7 +760,7 @@ export default function TableLayout({
                           <span className="text-xs text-neutral-100">{val ? formatDateValue(val, col.type, col.dateFormat) : '—'}</span>
                         ) : col.type === 'checkbox' ? (
                           (val === true || val === 'true')
-                            ? <CheckSquare size={14} className="text-blue-400" />
+                            ? <CheckSquare size={14} className="text-signal-text" />
                             : <Square size={14} className="text-neutral-600" />
                         ) : col.type === 'url' ? (
                           (() => {
@@ -771,7 +771,7 @@ export default function TableLayout({
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 onClick={(e) => e.stopPropagation()}
-                                className="text-xs text-blue-400 hover:text-blue-300 flex items-center gap-0.5 truncate"
+                                className="text-xs text-signal-text hover:text-fg flex items-center gap-0.5 truncate"
                               >
                                 <span className="truncate">{val}</span>
                                 <ExternalLink size={9} className="shrink-0" />
@@ -783,7 +783,7 @@ export default function TableLayout({
                             <a
                               href={`mailto:${val}`}
                               onClick={(e) => e.stopPropagation()}
-                              className="text-xs text-blue-400 hover:text-blue-300 truncate"
+                              className="text-xs text-signal-text hover:text-fg truncate"
                             >
                               {val}
                             </a>
@@ -908,7 +908,7 @@ export default function TableLayout({
                         <ArrowUp size={13} className="text-neutral-500" />
                         {t('sortAscending')}
                       </span>
-                      {activeSort?.direction === 'asc' && <span className="text-[10px] text-blue-400">✓</span>}
+                      {activeSort?.direction === 'asc' && <span className="text-[10px] text-signal-text">✓</span>}
                     </button>
                     <button
                       onClick={() => handleSortCol(activeHeaderMenuColId, 'desc')}
@@ -920,7 +920,7 @@ export default function TableLayout({
                         <ArrowDown size={13} className="text-neutral-500" />
                         {t('sortDescending')}
                       </span>
-                      {activeSort?.direction === 'desc' && <span className="text-[10px] text-blue-400">✓</span>}
+                      {activeSort?.direction === 'desc' && <span className="text-[10px] text-signal-text">✓</span>}
                     </button>
                     {activeSort && (
                       <button
@@ -967,7 +967,7 @@ export default function TableLayout({
 
             {/* Filter section */}
             <div className="px-3 py-2 border-b border-neutral-800/40 flex flex-col gap-1.5">
-              <div className="text-[10px] text-neutral-500 uppercase tracking-wider font-semibold flex items-center justify-between">
+              <div className="text-2xs text-neutral-500 font-medium flex items-center justify-between">
                 <span>Filter</span>
                 <Filter size={10} />
               </div>
@@ -1028,9 +1028,9 @@ export default function TableLayout({
                                     className="flex items-center gap-2 text-left text-xs text-neutral-300 hover:bg-neutral-800/40 px-1.5 py-1 rounded cursor-pointer transition-colors"
                                   >
                                     <span className={`w-3.5 h-3.5 border flex items-center justify-center shrink-0 rounded-sm transition-colors ${
-                                      isChecked ? 'bg-blue-500 border-blue-500' : 'border-neutral-700'
+                                      isChecked ? 'bg-signal border-signal' : 'border-neutral-700'
                                     }`}>
-                                      {isChecked && <span className="text-[9px] font-bold text-white leading-none">✓</span>}
+                                      {isChecked && <span className="text-2xs font-bold text-signal-fg leading-none">✓</span>}
                                     </span>
                                     <span className="truncate">{opt.value}</span>
                                   </button>
@@ -1058,7 +1058,7 @@ export default function TableLayout({
                   return (
                     <button
                       onClick={() => handleAddFilter(activeHeaderMenuColId)}
-                      className="w-full mt-1 py-1 text-xs flex items-center justify-center gap-1.5 text-blue-400 hover:text-blue-300 hover:bg-neutral-800/40 border border-dashed border-neutral-800/80 rounded transition-colors"
+                      className="w-full mt-1 py-1 text-xs flex items-center justify-center gap-1.5 text-signal-text hover:text-fg hover:bg-neutral-800/40 border border-dashed border-neutral-800/80 rounded transition-colors"
                     >
                       <Plus size={11} />
                       Add Filter
@@ -1084,7 +1084,7 @@ export default function TableLayout({
             onClick={(e) => e.stopPropagation()}
           >
             <div className="px-1 py-1">
-              <div className="px-2 py-1 text-[10px] text-neutral-500 uppercase tracking-wider font-semibold">
+              <div className="px-2 py-1 text-2xs text-neutral-500 font-medium">
                 Toggle Columns
               </div>
               <div className="max-h-56 overflow-y-auto flex flex-col gap-0.5 mt-0.5">
@@ -1105,9 +1105,9 @@ export default function TableLayout({
                         <span className="truncate text-neutral-400">{c.name}</span>
                       </div>
                       <span className={`w-3.5 h-3.5 border flex items-center justify-center shrink-0 rounded-sm transition-colors ${
-                        !isHidden ? 'bg-blue-500 border-blue-500' : 'border-neutral-700'
+                        !isHidden ? 'bg-signal border-signal' : 'border-neutral-700'
                       }`}>
-                        {!isHidden && <span className="text-[9px] font-bold text-white leading-none">✓</span>}
+                        {!isHidden && <span className="text-2xs font-bold text-signal-fg leading-none">✓</span>}
                       </span>
                     </button>
                   );

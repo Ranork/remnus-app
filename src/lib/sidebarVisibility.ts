@@ -44,38 +44,56 @@ export function getSidebarVisibilityToggleHost(sidebarVisible: boolean): 'sideba
 
 export function getSidebarRestoreButtonClassName(hasDemoBanner: boolean): string {
   return [
-    'hidden lg:flex absolute left-2 z-30 h-7 w-7 items-center justify-center',
-    'text-neutral-500 hover:text-neutral-100 hover:bg-neutral-800/80 transition-colors',
-    hasDemoBanner ? 'top-12' : 'top-2',
+    'hidden lg:flex absolute left-3.5 z-30 h-7 w-7 items-center justify-center rounded-control',
+    'text-fg-3 hover:text-fg hover:bg-hover transition-colors',
+    hasDemoBanner ? 'top-12' : 'top-3.5',
   ].join(' ');
 }
 
 export function getSidebarAnimationClasses(sidebarVisible: boolean, peeking = false): string {
   // Sidebar is ALWAYS absolute — it never participates in flex layout so the
-  // main content never shifts when opening or closing.
+  // main content never shifts when opening or closing. Pinned, it is part of the
+  // desk (no edge, no shadow); peeking over the content, it floats.
   const shown = sidebarVisible || peeking;
   return [
     'hidden lg:flex flex-col',
     'absolute left-0 inset-y-0 w-72 z-50',
-    'bg-neutral-900 border-r border-neutral-800',
-    'transition-[transform,opacity] duration-200 ease-out',
+    'bg-desk',
+    'transition-[transform,opacity,box-shadow] duration-200 ease-out',
     shown
-      ? 'translate-x-0 opacity-100 shadow-xl'
+      ? 'translate-x-0 opacity-100'
       : '-translate-x-full opacity-0 pointer-events-none',
+    peeking && !sidebarVisible ? 'shadow-float' : '',
   ].join(' ');
 }
 
 /**
- * Classes for the <main> content area.
+ * Classes for the <main> content area — the desk the sheet sits on.
  * When the sidebar is pinned (sidebarVisible=true) the content is pushed right via
  * padding-left so it doesn't sit under the overlay sidebar. The transition duration
- * matches the sidebar's so both animate together on pin/unpin.
+ * matches the sidebar's so both animate together on pin/unpin. Below `lg` there is no
+ * desk: the sheet is the whole screen.
  */
 export function getMainContentClasses(sidebarVisible: boolean): string {
   return [
-    'relative flex-1 flex flex-col h-full overflow-hidden bg-neutral-850 pb-14 lg:pb-0',
+    'relative flex-1 flex flex-col h-full overflow-hidden bg-sheet lg:bg-desk pb-14 lg:pb-0',
     'transition-[padding-left] duration-200 ease-out',
     sidebarVisible ? 'lg:pl-72' : '',
+  ].join(' ');
+}
+
+/**
+ * The sheet: the one lifted, rounded surface the content lives on (desktop). `onDesk`
+ * routes (the project dashboard) skip the sheet's own fill so their cards sit on the
+ * desk, each card a small sheet of its own. `underChrome`: something already sits
+ * above it on the desk (the desktop titlebar, a banner), so no top gap.
+ */
+export function getSheetClasses({ onDesk = false, underChrome = false }: { onDesk?: boolean; underChrome?: boolean } = {}): string {
+  return [
+    'relative flex-1 min-h-0 flex flex-col overflow-hidden',
+    onDesk ? 'bg-sheet lg:bg-transparent' : 'bg-sheet lg:rounded-surface lg:shadow-sheet',
+    'lg:mx-2 lg:mb-2',
+    underChrome ? '' : 'lg:mt-2',
   ].join(' ');
 }
 

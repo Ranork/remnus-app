@@ -124,11 +124,11 @@ export default function TabBar() {
   };
 
   return (
-    <div className="flex items-stretch min-w-0 max-w-[calc(100%-180px)] h-full">
+    <div className="flex items-center gap-1 min-w-0 max-w-[calc(100%-180px)] h-full">
       {overflow.left && (
         <button
           onClick={() => scrollByDir(-1)}
-          className="shrink-0 px-1 flex items-center justify-center text-neutral-500 hover:text-neutral-100 hover:bg-neutral-800/50 transition-colors"
+          className="shrink-0 size-7 flex items-center justify-center rounded-control text-fg-3 hover:text-fg hover:bg-hover transition-colors"
           tabIndex={-1}
         >
           <ChevronLeft size={14} />
@@ -137,7 +137,7 @@ export default function TabBar() {
 
       <div
         ref={scrollRef}
-        className="tabstrip-scroll flex items-stretch min-w-0 overflow-x-auto"
+        className="tabstrip-scroll flex items-center gap-1 min-w-0 overflow-x-auto py-1"
       >
         {list.map((tab) => {
           const meta = displayMeta(tab);
@@ -166,9 +166,9 @@ export default function TabBar() {
               onAuxClick={(e) => { if (e.button === 1) { e.preventDefault(); closeTab(tab.id); } }}
               onContextMenu={(e) => { e.preventDefault(); setMenu({ id: tab.id, x: e.clientX, y: e.clientY }); }}
               title={meta.title}
-              className={`group/tab relative flex items-center gap-1.5 pl-3 pr-2 w-[170px] shrink-0 cursor-default border-r border-neutral-800 transition-colors ${
-                isActive ? 'bg-neutral-850 text-neutral-50' : 'bg-neutral-900 text-neutral-400 hover:bg-neutral-800/40'
-              } ${!isActive && isSuspended ? 'opacity-50' : ''} ${overId === tab.id ? 'border-l-2 border-l-blue-500' : ''}`}
+              className={`group/tab relative flex items-center gap-1.5 h-8 pl-2.5 pr-1.5 w-[176px] shrink-0 cursor-default rounded-control transition-colors ${
+                isActive ? 'bg-sheet text-fg shadow-lift' : 'text-fg-3 hover:bg-sheet/60 hover:text-fg-2'
+              } ${!isActive && isSuspended ? 'opacity-50' : ''} ${overId === tab.id ? 'ring-2 ring-signal/70' : ''}`}
             >
               <PageIcon
                 icon={meta.icon}
@@ -181,7 +181,7 @@ export default function TabBar() {
                 <button
                   onClick={(e) => { e.stopPropagation(); refreshTab(tab); }}
                   title={t('tabRefresh')}
-                  className={`shrink-0 p-0.5 rounded text-neutral-500 hover:text-neutral-100 hover:bg-neutral-700 transition-opacity ${
+                  className={`shrink-0 p-1 rounded-sm text-fg-3 hover:text-fg hover:bg-hover transition-opacity ${
                     refreshingId === tab.id ? 'opacity-100' : 'opacity-0 group-hover/tab:opacity-100'
                   }`}
                   tabIndex={-1}
@@ -192,7 +192,7 @@ export default function TabBar() {
               <button
                 onClick={(e) => { e.stopPropagation(); closeTab(tab.id); }}
                 title={t('tabClose')}
-                className="shrink-0 p-0.5 rounded text-neutral-500 hover:text-neutral-100 hover:bg-neutral-700 opacity-0 group-hover/tab:opacity-100 transition-opacity"
+                className="shrink-0 p-1 rounded-sm text-fg-3 hover:text-fg hover:bg-hover opacity-0 group-hover/tab:opacity-100 transition-opacity"
                 tabIndex={-1}
               >
                 <X size={12} />
@@ -205,7 +205,7 @@ export default function TabBar() {
       {overflow.right && (
         <button
           onClick={() => scrollByDir(1)}
-          className="shrink-0 px-1 flex items-center justify-center text-neutral-500 hover:text-neutral-100 hover:bg-neutral-800/50 transition-colors"
+          className="shrink-0 size-7 flex items-center justify-center rounded-control text-fg-3 hover:text-fg hover:bg-hover transition-colors"
           tabIndex={-1}
         >
           <ChevronRight size={14} />
@@ -215,7 +215,7 @@ export default function TabBar() {
       <button
         onClick={() => openInNewTab('/app')}
         title={t('tabNewTooltip')}
-        className="shrink-0 px-2.5 flex items-center justify-center text-neutral-500 hover:text-neutral-100 hover:bg-neutral-800/40 border-r border-neutral-800 transition-colors"
+        className="shrink-0 size-8 flex items-center justify-center rounded-control text-fg-3 hover:text-fg hover:bg-hover transition-colors"
         tabIndex={-1}
       >
         <Plus size={15} />
@@ -224,16 +224,16 @@ export default function TabBar() {
       {menu && (
         <div
           ref={menuRef}
-          className="fixed z-[120] min-w-[160px] bg-neutral-900 border border-neutral-800 rounded-md py-1 shadow-xl text-xs"
+          className="fixed z-[120] min-w-[170px] bg-float rounded-surface p-1 shadow-float text-xs animate-scale-in"
           style={{ top: menu.y, left: menu.x }}
         >
-          <button onClick={() => { closeTab(menu.id); setMenu(null); }} className="w-full text-left px-3 py-1.5 text-neutral-300 hover:bg-neutral-800 hover:text-neutral-50">
+          <button onClick={() => { closeTab(menu.id); setMenu(null); }} className="w-full text-left px-2.5 py-1.5 rounded-control text-fg-2 hover:bg-hover hover:text-fg">
             {t('tabClose')}
           </button>
-          <button onClick={() => { closeOthers(menu.id); setMenu(null); }} className="w-full text-left px-3 py-1.5 text-neutral-300 hover:bg-neutral-800 hover:text-neutral-50">
+          <button onClick={() => { closeOthers(menu.id); setMenu(null); }} className="w-full text-left px-2.5 py-1.5 rounded-control text-fg-2 hover:bg-hover hover:text-fg">
             {t('tabCloseOthers')}
           </button>
-          <button onClick={() => { closeAll(); setMenu(null); }} className="w-full text-left px-3 py-1.5 text-neutral-300 hover:bg-neutral-800 hover:text-neutral-50">
+          <button onClick={() => { closeAll(); setMenu(null); }} className="w-full text-left px-2.5 py-1.5 rounded-control text-fg-2 hover:bg-hover hover:text-fg">
             {t('tabCloseAll')}
           </button>
         </div>

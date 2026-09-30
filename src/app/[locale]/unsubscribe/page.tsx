@@ -59,7 +59,7 @@ export default async function UnsubscribePage({
           </>
         ) : (
           <>
-            <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-blue-500/12 text-blue-400">
+            <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-signal/12 text-signal-text">
               <MailX size={20} />
             </div>
             <h1 className="text-lg font-semibold text-neutral-100">{t('unsubConfirmTitle')}</h1>
@@ -69,7 +69,7 @@ export default async function UnsubscribePage({
             <form action={confirm} className="mt-6">
               <button
                 type="submit"
-                className="w-full rounded-lg bg-blue-500 px-4 py-2.5 text-sm font-medium text-white transition-colors hover:bg-blue-500/85"
+                className="w-full rounded-lg bg-ink px-4 py-2.5 text-sm font-medium text-ink-fg transition-colors hover:bg-ink/88"
               >
                 {t('unsubConfirmCta')}
               </button>

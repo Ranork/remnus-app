@@ -38,13 +38,14 @@ export default function WorkspaceQuickLinks({
   const dashboardActive = !!homeDashboardId && pathname.startsWith(`/dashboard/${homeDashboardId}`);
   const mapActive = pathname.startsWith(`/graph/${workspaceId}`);
 
-  const base = 'flex min-w-0 flex-1 items-center justify-center gap-1.5 rounded-md px-2 py-1.5 text-xs transition-colors duration-200';
+  // The project's two fixed entrances, drawn as a pair of soft buttons rather than two
+  // more tree rows. Monochrome like the rest of the chrome (V2 R8): the open one is
+  // lifted onto the sheet, exactly like a selected tree row.
   const cls = (active: boolean) =>
-    `${base} ${
-      active
-        ? 'bg-neutral-850 font-medium text-neutral-50'
-        : 'text-neutral-400 hover:bg-neutral-850/50 hover:text-neutral-200'
+    `flex min-w-0 flex-1 items-center justify-center gap-1.5 h-7 rounded-control px-2 text-xs font-medium transition-[background-color,color,box-shadow] duration-150 ${
+      active ? 'bg-sheet text-fg shadow-lift' : 'bg-sheet/35 text-fg-2 hover:bg-sheet/70 hover:text-fg'
     }`;
+  const iconCls = (active: boolean) => `shrink-0 ${active ? 'text-fg' : 'text-fg-3'}`;
 
   const createHome = () => {
     if (creating) return;
@@ -62,19 +63,19 @@ export default function WorkspaceQuickLinks({
   };
 
   return (
-    <div className="pb-1">
+    <div className="pb-1.5 pt-0.5">
       <div className="flex gap-1">
         {homeDashboardId ? (
           <Link href={`/dashboard/${homeDashboardId}`} className={cls(dashboardActive)} aria-current={dashboardActive ? 'page' : undefined}>
-            <LayoutDashboard size={13} className="shrink-0 text-neutral-500" />
+            <LayoutDashboard size={14} className={iconCls(dashboardActive)} />
             <span className="truncate">{t('dashboardShort')}</span>
           </Link>
         ) : (
           <button type="button" onClick={createHome} disabled={creating} aria-busy={creating} className={`${cls(false)} cursor-pointer disabled:opacity-60`}>
             {creating ? (
-              <Loader2 size={13} className="shrink-0 animate-spin text-neutral-500" />
+              <Loader2 size={14} className={`animate-spin ${iconCls(false)}`} />
             ) : (
-              <LayoutDashboard size={13} className="shrink-0 text-neutral-500" />
+              <LayoutDashboard size={14} className={iconCls(false)} />
             )}
             <span className="truncate">{t('dashboardShort')}</span>
           </button>
@@ -86,11 +87,11 @@ export default function WorkspaceQuickLinks({
           className={cls(mapActive)}
           aria-current={mapActive ? 'page' : undefined}
         >
-          <Waypoints size={13} className="shrink-0 text-neutral-500" />
+          <Waypoints size={14} className={iconCls(mapActive)} />
           <span className="truncate">{t('mapShort')}</span>
         </Link>
       </div>
-      {failed && <p role="alert" className="px-2 pt-1 text-[10px] text-red-400">{t('dashboardOpenFailed')}</p>}
+      {failed && <p role="alert" className="px-2 pt-1 text-2xs text-red-400">{t('dashboardOpenFailed')}</p>}
     </div>
   );
 }

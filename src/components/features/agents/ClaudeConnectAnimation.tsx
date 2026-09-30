@@ -182,7 +182,7 @@ export default function ClaudeConnectAnimation({ mcpUrl }: { mcpUrl: string }) {
                 className={`mt-0.5 w-full rounded-md py-1 text-[8px] font-semibold transition-colors ${
                   authorized
                     ? 'bg-green-600 text-white'
-                    : 'connect-anim-authbtn bg-blue-500 text-white'
+                    : 'connect-anim-authbtn bg-ink text-ink-fg'
                 }`}
               >
                 {authorized ? '✓' : t('connectAnimAuthBtn')}

@@ -248,7 +248,7 @@ export default function PageCommentsPanel({ workspaceId, pageId, isPeek = false 
                   onMouseDown={(e) => e.preventDefault()}
                   onClick={submit}
                   disabled={pending || !draft.trim()}
-                  className="inline-flex items-center gap-1.5 bg-blue-600 px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
+                  className="inline-flex items-center gap-1.5 bg-ink px-3 py-1.5 text-xs font-medium text-ink-fg transition-colors hover:bg-ink/88 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
                 >
                   {pending && <Loader2 size={12} className="animate-spin" />}
                   {t('submit')}

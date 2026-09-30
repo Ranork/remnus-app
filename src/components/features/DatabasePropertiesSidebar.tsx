@@ -168,7 +168,7 @@ export default function DatabasePropertiesSidebar({
             key={id}
             onClick={() => setActiveTab(id)}
             className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-medium border-b-2 -mb-px transition-colors cursor-pointer ${
-              activeTab === id ? 'border-blue-500 text-white' : 'border-transparent text-neutral-500 hover:text-neutral-300'
+              activeTab === id ? 'border-signal text-fg' : 'border-transparent text-neutral-500 hover:text-neutral-300'
             }`}
           >
             <Icon size={12} />
@@ -199,7 +199,7 @@ export default function DatabasePropertiesSidebar({
             <CollapsibleSection label={t('sectionPages')}>
               <div className="px-4 pb-3 flex flex-col gap-3 relative">
                 <div>
-                  <span className="block text-[10px] text-neutral-500 uppercase tracking-wider mb-1.5">{t('openPagesAs')}</span>
+                  <span className="block text-2xs text-neutral-500 mb-1.5">{t('openPagesAs')}</span>
                   <SimpleSelect
                     value={openBehavior}
                     onValueChange={(v) => onOpenBehaviorChange(v as 'center' | 'side' | 'full')}
@@ -212,7 +212,7 @@ export default function DatabasePropertiesSidebar({
                   />
                 </div>
                 <div>
-                  <span className="block text-[10px] text-neutral-500 uppercase tracking-wider mb-1.5">{t('defaultPageIcon')}</span>
+                  <span className="block text-2xs text-neutral-500 mb-1.5">{t('defaultPageIcon')}</span>
                   <div className="flex items-center gap-2">
                     <button
                       ref={defaultIconBtnRef}
@@ -257,7 +257,7 @@ export default function DatabasePropertiesSidebar({
                 <CollapsibleSection label={t('sectionAppearance')}>
                   <div className="px-4 pb-3 flex flex-col gap-3">
                     <div>
-                      <span className="block text-[10px] text-neutral-500 uppercase tracking-wider mb-1.5">{t('rowColor')}</span>
+                      <span className="block text-2xs text-neutral-500 mb-1.5">{t('rowColor')}</span>
                       {colorColumns.length > 0 ? (
                         <SimpleSelect
                           value={rowColorCol ?? ''}
@@ -271,9 +271,9 @@ export default function DatabasePropertiesSidebar({
                     </div>
                     <div>
                       <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-[10px] text-neutral-500 uppercase tracking-wider">{t('columns')}</span>
+                        <span className="text-2xs text-neutral-500">{t('columns')}</span>
                         <div className="flex gap-3">
-                          <button onClick={() => onHiddenColumnsChange([])} className="text-[10px] text-blue-400 hover:text-blue-300 cursor-pointer">{t('showAll')}</button>
+                          <button onClick={() => onHiddenColumnsChange([])} className="text-[10px] text-signal-text hover:text-fg cursor-pointer">{t('showAll')}</button>
                           <button onClick={() => onHiddenColumnsChange(schema.map((c) => c.id).filter((id) => id !== 'title'))} className="text-[10px] text-neutral-500 hover:text-neutral-300 cursor-pointer">{t('hideAll')}</button>
                         </div>
                       </div>
@@ -289,8 +289,8 @@ export default function DatabasePropertiesSidebar({
                               className={`flex items-center gap-2 px-1 py-1.5 border-b border-neutral-800/30 text-left transition-colors ${isTitle ? 'opacity-40 cursor-not-allowed' : 'hover:bg-neutral-800/10 cursor-pointer'}`}
                             >
                               <span className="flex-1 text-xs text-neutral-300 truncate">{col.name}</span>
-                              <span className={`w-3.5 h-3.5 border flex items-center justify-center shrink-0 transition-colors rounded-sm ${!isHidden ? 'bg-blue-500 border-blue-500' : 'border-neutral-700'}`}>
-                                {!isHidden && <span className="text-[8px] font-bold text-white leading-none">✓</span>}
+                              <span className={`w-3.5 h-3.5 border flex items-center justify-center shrink-0 transition-colors rounded-sm ${!isHidden ? 'bg-signal border-signal' : 'border-neutral-700'}`}>
+                                {!isHidden && <span className="text-2xs font-bold text-signal-fg leading-none">✓</span>}
                               </span>
                             </button>
                           );

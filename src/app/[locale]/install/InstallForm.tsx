@@ -85,12 +85,12 @@ export function InstallForm({ projectName, authMode, workspaces, userName, error
         <div className="bg-neutral-900 border border-neutral-800 rounded-xl overflow-hidden">
           {authMode === 'oauth' ? (
             <div className="px-6 pt-5 pb-4 border-b border-neutral-800">
-              <p className="text-xs text-neutral-500 uppercase tracking-wider mb-2.5">{t('accessLevel')}</p>
+              <p className="text-xs text-neutral-500 mb-2.5">{t('accessLevel')}</p>
               <p className="text-sm text-neutral-400 leading-relaxed">{t('oauthScopeHint')}</p>
             </div>
           ) : (
           <div className="px-6 pt-5 pb-4 border-b border-neutral-800">
-            <p className="text-xs text-neutral-500 uppercase tracking-wider mb-2.5">{t('accessLevel')}</p>
+            <p className="text-xs text-neutral-500 mb-2.5">{t('accessLevel')}</p>
             <div className="flex gap-2 mb-3">
               {(['read', 'write'] as const).map((s) => (
                 <button
@@ -101,7 +101,7 @@ export function InstallForm({ projectName, authMode, workspaces, userName, error
                     scope === s
                       ? s === 'write'
                         ? 'bg-amber-500/10 border-amber-500/40 text-amber-300'
-                        : 'bg-blue-500/10 border-blue-500/40 text-blue-300'
+                        : 'bg-signal/10 border-signal/40 text-signal-text'
                       : 'bg-neutral-800 border-neutral-700 text-neutral-400 hover:text-neutral-200 hover:border-neutral-600'
                   }`}
                 >
@@ -126,7 +126,7 @@ export function InstallForm({ projectName, authMode, workspaces, userName, error
             <input type="hidden" name="scope" value={scope} />
             <input type="hidden" name="workspace_id" value={target} />
 
-            <label className="text-xs text-neutral-500 uppercase tracking-wider mb-2 block">
+            <label className="text-xs text-neutral-500 mb-2 block">
               {t('workspaceLabel')}
             </label>
 
@@ -140,7 +140,7 @@ export function InstallForm({ projectName, authMode, workspaces, userName, error
                     onClick={() => setTarget(ws.id)}
                     className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg border text-left transition-all ${
                       active
-                        ? 'bg-blue-500/10 border-blue-500/40'
+                        ? 'bg-signal/10 border-signal/40'
                         : 'bg-neutral-800 border-neutral-700 hover:border-neutral-600'
                     }`}
                   >
@@ -150,10 +150,10 @@ export function InstallForm({ projectName, authMode, workspaces, userName, error
                           {ws.name.charAt(0).toUpperCase()}
                         </span>
                     }
-                    <span className={`flex-1 text-sm truncate ${active ? 'text-blue-400' : 'text-neutral-200'}`}>
+                    <span className={`flex-1 text-sm truncate ${active ? 'text-signal-text' : 'text-neutral-200'}`}>
                       {ws.name}
                     </span>
-                    {active && <Check size={15} className="text-blue-400 shrink-0" />}
+                    {active && <Check size={15} className="text-signal-text shrink-0" />}
                   </button>
                 );
               })}
@@ -163,21 +163,21 @@ export function InstallForm({ projectName, authMode, workspaces, userName, error
                 onClick={() => setTarget(NEW_WORKSPACE)}
                 className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg border text-left transition-all ${
                   creatingNew
-                    ? 'bg-blue-500/10 border-blue-500/40'
+                    ? 'bg-signal/10 border-signal/40'
                     : 'bg-neutral-800 border-neutral-700 hover:border-neutral-600'
                 }`}
               >
-                <Plus size={16} className={creatingNew ? 'text-blue-300 shrink-0' : 'text-neutral-400 shrink-0'} />
-                <span className={`flex-1 text-sm truncate ${creatingNew ? 'text-blue-400' : 'text-neutral-200'}`}>
+                <Plus size={16} className={creatingNew ? 'text-signal-text shrink-0' : 'text-neutral-400 shrink-0'} />
+                <span className={`flex-1 text-sm truncate ${creatingNew ? 'text-signal-text' : 'text-neutral-200'}`}>
                   {t('newWorkspaceOption')}
                 </span>
-                {creatingNew && <Check size={15} className="text-blue-400 shrink-0" />}
+                {creatingNew && <Check size={15} className="text-signal-text shrink-0" />}
               </button>
             </div>
 
             {creatingNew && (
               <>
-                <label className="text-xs text-neutral-500 uppercase tracking-wider mb-2 block">
+                <label className="text-xs text-neutral-500 mb-2 block">
                   {t('newWorkspaceNameLabel')}
                 </label>
                 <input
@@ -187,7 +187,7 @@ export function InstallForm({ projectName, authMode, workspaces, userName, error
                   value={newName}
                   onChange={(e) => setNewName(e.target.value)}
                   placeholder={t('newWorkspaceNamePlaceholder')}
-                  className="w-full bg-neutral-800 border border-neutral-700 text-neutral-100 text-sm px-3 py-2.5 rounded-lg focus:outline-none focus:border-blue-500 mb-4 placeholder:text-neutral-600"
+                  className="w-full bg-neutral-800 border border-neutral-700 text-neutral-100 text-sm px-3 py-2.5 rounded-lg focus:outline-none focus:border-signal mb-4 placeholder:text-neutral-600"
                 />
               </>
             )}
@@ -195,7 +195,7 @@ export function InstallForm({ projectName, authMode, workspaces, userName, error
             <button
               type="submit"
               disabled={!canSubmit}
-              className="w-full bg-blue-500 hover:bg-blue-600 active:bg-blue-700 disabled:opacity-50 text-white font-medium text-sm py-2.5 rounded-lg transition-colors"
+              className="w-full bg-ink hover:bg-ink/88 active:bg-ink/80 disabled:opacity-50 text-ink-fg font-medium text-sm py-2.5 rounded-lg transition-colors"
             >
               {t('connect')}
             </button>

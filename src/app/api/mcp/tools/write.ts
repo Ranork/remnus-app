@@ -22,7 +22,7 @@ import {
   type SnapshotActor,
 } from '@/lib/services/workspace';
 import { appUrl, logActivity, type TokenContext } from '../context';
-import { createDashboardInWorkspace, patchDashboard } from '@/lib/services/dashboards';
+import { createDashboardInWorkspace, describeDashboard, getHomeDashboardItemId, patchDashboard, setHomeDashboard } from '@/lib/services/dashboards';
 import { recordGeneratedKnowledge, validateContextRunForWrite } from '@/lib/services/knowledge';
 import { applyRecurrenceInput, changeRecurrenceForRow } from '@/lib/services/recurrence';
 import { addPageComment, MAX_COMMENT_LENGTH } from '@/lib/services/comments';
@@ -70,6 +70,17 @@ const ICON_INPUT = z.string().max(32).optional().describe('Emoji or "lucide:Name
 const ICON_COLOR_INPUT = z.enum(ICON_COLOR_KEYS).optional().describe('Color for a lucide icon');
 const ICON_PATCH_INPUT = z.string().max(32).nullable().optional().describe('Emoji or "lucide:Name"; null clears');
 const ICON_COLOR_PATCH_INPUT = z.enum(ICON_COLOR_KEYS).nullable().optional().describe('Color for a lucide icon; null clears');
+
+// Small body edits without resending the body (services/bodyEdits.ts) — a
+// Calibration Log tick used to cost a full ~6k-character rewrite.
+// update_page only — a bulk entry that needs them is a separate update_page call:
+// tools/list is paid by every write session (measured ~+350 tok with them on both tools).
+const TICK_INPUT = z.array(z.union([z.string(), z.object({ item: z.string(), note: z.string().optional() })]))
+  .optional().describe('Check "- [ ]" tasks by text start; note is added to the line');
+/** An error's own message — `String(err)` would read "Error: Error: …" after our prefix. */
+const errorText = (err: unknown) => (err instanceof Error ? err.message : String(err));
+
+const APPEND_INPUT = z.string().optional().describe('Markdown added at the end');
 const COLUMN_INPUT = z.object({
   name: z.string(),
   type: z.string().describe('text | number | select | multi_select | status | user | multi_user | date | datetime | checkbox | url | email | phone'),
@@ -187,7 +198,7 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
         return { content: [{ type: 'text' as const, text }], structuredContent: out };
       } catch (err) {
         await logActivity(ctx, 'create_page', 'error');
-        return { content: [{ type: 'text' as const, text: `Error: ${String(err)}` }], isError: true };
+        return { content: [{ type: 'text' as const, text: `Error: ${errorText(err)}` }], isError: true };
       }
     },
   );
@@ -195,11 +206,13 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
   server.registerTool(
     'update_page',
     {
-      description: 'Update a page or row. Only the fields you pass change. `content` replaces the whole body; row `properties` are merged into the existing values, not replaced; `title` also updates the row\'s title property.',
+      description: 'Update a page or row. Only the fields you pass change. `content` replaces the whole body (`tick` / `append` edit it without resending it); row `properties` are merged into the existing values, not replaced; `title` also updates the row\'s title property.',
       inputSchema: {
         pageId: z.string().describe('Page or row id'),
         title: z.string().optional(),
         content: z.string().optional().describe('Markdown; replaces the body'),
+        tick: TICK_INPUT,
+        append: APPEND_INPUT,
         properties: z.record(z.string(), z.any()).optional().describe('Merged into the row\'s properties'),
         icon: ICON_PATCH_INPUT,
         iconColor: ICON_COLOR_PATCH_INPUT,
@@ -216,7 +229,7 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
       }).passthrough(),
       annotations: { title: 'Update page', readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     },
-    async ({ pageId, title, content, properties, icon, iconColor, recurrence, recurrenceScope, knowledge, contextRunId }) => {
+    async ({ pageId, title, content, tick, append, properties, icon, iconColor, recurrence, recurrenceScope, knowledge, contextRunId }) => {
       if (ctx.scope !== 'write') {
         await logActivity(ctx, 'update_page', 'error', 'page', pageId);
         return { content: [{ type: 'text' as const, text: READ_ONLY_ERROR }], isError: true };
@@ -229,7 +242,7 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
         return iconErrorResult(iconProblem);
       }
       try {
-        await updatePageById(ctx.workspaceId, pageId, { title, content, properties, icon, iconColor }, { tokenId: ctx.tokenId }, agentActor(ctx));
+        await updatePageById(ctx.workspaceId, pageId, { title, content, tick, append, properties, icon, iconColor }, { tokenId: ctx.tokenId }, agentActor(ctx));
         const knowledgeCaptured = await recordGeneratedKnowledge(ctx.workspaceId, pageId, actorId(ctx), knowledge).then(() => true).catch(() => false);
 
         // Reported, never thrown: the field update above already landed, so a
@@ -254,7 +267,7 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
         return { content: [{ type: 'text' as const, text }], structuredContent: out };
       } catch (err) {
         await logActivity(ctx, 'update_page', 'error', 'page', pageId);
-        return { content: [{ type: 'text' as const, text: `Error: ${String(err)}` }], isError: true };
+        return { content: [{ type: 'text' as const, text: `Error: ${errorText(err)}` }], isError: true };
       }
     },
   );
@@ -262,7 +275,7 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
   server.registerTool(
     'bulk_update_pages',
     {
-      description: 'Update many pages/rows in one call, each with update_page\'s rules (partial patch, properties merged, title synced). Concurrent and NOT atomic: on an error, entries that already succeeded stay applied and the error does not say which — re-read before retrying.',
+      description: 'Update many pages/rows in one call, each with update_page\'s rules (partial patch, properties merged, title synced; one entry per page). Concurrent and NOT atomic: on an error, entries that already succeeded stay applied and the error does not say which — re-read before retrying.',
       inputSchema: {
         updates: z.array(z.object({
           pageId: z.string().describe('Page or row id'),
@@ -303,7 +316,7 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
         return { content: [{ type: 'text' as const, text }], structuredContent: { results } };
       } catch (err) {
         await logActivity(ctx, 'bulk_update_pages', 'error');
-        return { content: [{ type: 'text' as const, text: `Error: ${String(err)}` }], isError: true };
+        return { content: [{ type: 'text' as const, text: `Error: ${errorText(err)}` }], isError: true };
       }
     },
   );
@@ -364,7 +377,7 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
         );
       } catch (err) {
         await logActivity(ctx, 'bulk_create_pages', 'error');
-        return { content: [{ type: 'text' as const, text: `Error: ${String(err)}` }], isError: true };
+        return { content: [{ type: 'text' as const, text: `Error: ${errorText(err)}` }], isError: true };
       }
 
       const text = JSON.stringify(out);
@@ -411,7 +424,7 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
         return { content: [{ type: 'text' as const, text }], structuredContent: out };
       } catch (err) {
         await logActivity(ctx, 'delete_page', 'error', 'page', pageId);
-        return { content: [{ type: 'text' as const, text: `Error: ${String(err)}` }], isError: true };
+        return { content: [{ type: 'text' as const, text: `Error: ${errorText(err)}` }], isError: true };
       }
     },
   );
@@ -473,7 +486,7 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
         return { content: [{ type: 'text' as const, text }], structuredContent: out };
       } catch (err) {
         await logActivity(ctx, 'bulk_delete_pages', 'error');
-        return { content: [{ type: 'text' as const, text: `Error: ${String(err)}` }], isError: true };
+        return { content: [{ type: 'text' as const, text: `Error: ${errorText(err)}` }], isError: true };
       }
     },
   );
@@ -481,10 +494,11 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
   server.registerTool(
     'move_item',
     {
-      description: 'Move a page or database under a new parent; null = workspace root.',
+      description: 'Move a page or database under a new parent; null = workspace root. `position` places it among its siblings (to reorder in place, pass its current parent).',
       inputSchema: {
         itemId: z.string(),
         newParentId: z.string().nullish().describe('null or omitted = root'),
+        position: z.number().int().min(0).optional().describe('0 = first'),
         contextRunId: CONTEXT_RUN_ID,
       },
       outputSchema: z.object({
@@ -492,7 +506,7 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
       }).passthrough(),
       annotations: { title: 'Move item', readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     },
-    async ({ itemId, newParentId, contextRunId }) => {
+    async ({ itemId, newParentId, position, contextRunId }) => {
       if (ctx.scope !== 'write') {
         await logActivity(ctx, 'move_item', 'error', 'item', itemId);
         return { content: [{ type: 'text' as const, text: READ_ONLY_ERROR }], isError: true };
@@ -500,13 +514,13 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
       const contextError = await requireContext(ctx, contextRunId, 'move_item', itemId);
       if (contextError) return contextError;
       try {
-        const result = await moveItemInWorkspace(ctx.workspaceId, itemId, newParentId ?? null);
+        const result = await moveItemInWorkspace(ctx.workspaceId, itemId, newParentId ?? null, position);
         const text = JSON.stringify(result);
         await logActivity(ctx, 'move_item', 'success', 'item', itemId, text);
         return { content: [{ type: 'text' as const, text }], structuredContent: result };
       } catch (err) {
         await logActivity(ctx, 'move_item', 'error', 'item', itemId);
-        return { content: [{ type: 'text' as const, text: `Error: ${String(err)}` }], isError: true };
+        return { content: [{ type: 'text' as const, text: `Error: ${errorText(err)}` }], isError: true };
       }
     },
   );
@@ -557,7 +571,7 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
         return { content: [{ type: 'text' as const, text }], structuredContent: out };
       } catch (err) {
         await logActivity(ctx, 'bulk_move_items', 'error');
-        return { content: [{ type: 'text' as const, text: `Error: ${String(err)}` }], isError: true };
+        return { content: [{ type: 'text' as const, text: `Error: ${errorText(err)}` }], isError: true };
       }
     },
   );
@@ -616,7 +630,7 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
         return { content: [{ type: 'text' as const, text }], structuredContent: out };
       } catch (err) {
         await logActivity(ctx, 'create_database', 'error');
-        return { content: [{ type: 'text' as const, text: `Error: ${String(err)}` }], isError: true };
+        return { content: [{ type: 'text' as const, text: `Error: ${errorText(err)}` }], isError: true };
       }
     },
   );
@@ -652,7 +666,7 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
         return { content: [{ type: 'text' as const, text }], structuredContent: result };
       } catch (err) {
         await logActivity(ctx, 'update_database_schema', 'error', 'database', databaseId);
-        return { content: [{ type: 'text' as const, text: `Error: ${String(err)}` }], isError: true };
+        return { content: [{ type: 'text' as const, text: `Error: ${errorText(err)}` }], isError: true };
       }
     },
   );
@@ -699,7 +713,7 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
         return { content: [{ type: 'text' as const, text }], structuredContent: result };
       } catch (err) {
         await logActivity(ctx, 'create_database_view', 'error', 'database', databaseId);
-        return { content: [{ type: 'text' as const, text: `Error: ${String(err)}` }], isError: true };
+        return { content: [{ type: 'text' as const, text: `Error: ${errorText(err)}` }], isError: true };
       }
     },
   );
@@ -737,7 +751,7 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
         return { content: [{ type: 'text' as const, text }], structuredContent: result };
       } catch (err) {
         await logActivity(ctx, 'update_database_view', 'error', 'database', databaseId);
-        return { content: [{ type: 'text' as const, text: `Error: ${String(err)}` }], isError: true };
+        return { content: [{ type: 'text' as const, text: `Error: ${errorText(err)}` }], isError: true };
       }
     },
   );
@@ -773,7 +787,7 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
         return { content: [{ type: 'text' as const, text }], structuredContent: result };
       } catch (err) {
         await logActivity(ctx, 'delete_database_view', 'error', 'database', databaseId);
-        return { content: [{ type: 'text' as const, text: `Error: ${String(err)}` }], isError: true };
+        return { content: [{ type: 'text' as const, text: `Error: ${errorText(err)}` }], isError: true };
       }
     },
   );
@@ -788,12 +802,13 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
         icon: ICON_INPUT,
         iconColor: ICON_COLOR_INPUT,
         blocks: BLOCKS_INPUT.optional().describe('Block objects, see the catalog'),
+        home: z.boolean().optional().describe('Pin as the workspace home dashboard'),
         contextRunId: CONTEXT_RUN_ID,
       },
       outputSchema: DASHBOARD_RESULT,
       annotations: { title: 'Create dashboard', readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
     },
-    async ({ title, parentId, icon, iconColor, blocks, contextRunId }) => {
+    async ({ title, parentId, icon, iconColor, blocks, home, contextRunId }) => {
       if (ctx.scope !== 'write') {
         await logActivity(ctx, 'create_dashboard', 'error');
         return { content: [{ type: 'text' as const, text: READ_ONLY_ERROR }], isError: true };
@@ -807,7 +822,8 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
       }
       try {
         const result = await createDashboardInWorkspace(ctx.workspaceId, { title, parentId, icon, iconColor, blocks });
-        const out = { id: result.id, url: appUrl(ctx, `/dashboard/${result.id}`), blocks: result.blocks, ...(result.warnings ? { warnings: result.warnings } : {}) };
+        if (home) await setHomeDashboard(ctx.workspaceId, result.id);
+        const out = { id: result.id, url: appUrl(ctx, `/dashboard/${result.id}`), blocks: result.blocks, ...(home ? { home: true } : {}), ...(result.warnings ? { warnings: result.warnings } : {}) };
         const text = JSON.stringify(out);
         await logActivity(ctx, 'create_dashboard', 'success', 'dashboard', result.id, text, { itemsAffected: result.blocks.length });
         return { content: [{ type: 'text' as const, text }], structuredContent: out };
@@ -831,12 +847,13 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
         update: BLOCKS_INPUT.optional(),
         remove: z.array(z.string()).optional().describe('Block ids'),
         order: z.array(z.string()).optional().describe('Block ids in their new order; unlisted ones follow'),
+        home: z.boolean().optional().describe('true pins it as the workspace home dashboard; false unpins it'),
         contextRunId: CONTEXT_RUN_ID,
       },
       outputSchema: DASHBOARD_RESULT,
       annotations: { title: 'Update dashboard', readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false },
     },
-    async ({ dashboardId, title, icon, iconColor, add, update, remove, order, contextRunId }) => {
+    async ({ dashboardId, title, icon, iconColor, add, update, remove, order, home, contextRunId }) => {
       if (ctx.scope !== 'write') {
         await logActivity(ctx, 'update_dashboard', 'error', 'dashboard', dashboardId);
         return { content: [{ type: 'text' as const, text: READ_ONLY_ERROR }], isError: true };
@@ -849,8 +866,15 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
         return iconErrorResult(iconProblem);
       }
       try {
-        const result = await patchDashboard(ctx.workspaceId, dashboardId, { add, update, remove, order }, { title, icon, iconColor });
-        const out = { id: result.id, url: appUrl(ctx, `/dashboard/${result.id}`), blocks: result.blocks, ...(result.warnings ? { warnings: result.warnings } : {}) };
+        const onlyPin = home !== undefined && !add?.length && !update?.length && !remove?.length && !order?.length
+          && title === undefined && icon === undefined && iconColor === undefined;
+        const result = onlyPin
+          ? await describeDashboard(ctx.workspaceId, dashboardId)
+          : await patchDashboard(ctx.workspaceId, dashboardId, { add, update, remove, order }, { title, icon, iconColor });
+        // After the patch, so a refused patch leaves the pin untouched too.
+        if (home === true) await setHomeDashboard(ctx.workspaceId, result.id);
+        else if (home === false && (await getHomeDashboardItemId(ctx.workspaceId)) === result.id) await setHomeDashboard(ctx.workspaceId, null);
+        const out = { id: result.id, url: appUrl(ctx, `/dashboard/${result.id}`), blocks: result.blocks, ...(home !== undefined ? { home } : {}), ...(result.warnings ? { warnings: result.warnings } : {}) };
         const text = JSON.stringify(out);
         await logActivity(ctx, 'update_dashboard', 'success', 'dashboard', dashboardId, text, {
           itemsAffected: (add?.length ?? 0) + (update?.length ?? 0) + (remove?.length ?? 0),
@@ -902,7 +926,7 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
         return { content: [{ type: 'text' as const, text }], structuredContent: result };
       } catch (err) {
         await logActivity(ctx, 'add_comment', 'error', 'page', pageId);
-        return { content: [{ type: 'text' as const, text: `Error: ${String(err)}` }], isError: true };
+        return { content: [{ type: 'text' as const, text: `Error: ${errorText(err)}` }], isError: true };
       }
     },
   );
