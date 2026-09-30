@@ -1,6 +1,7 @@
 export const runtime = 'edge';
 
 import { isProtectedMcpPath } from '@/lib/mcp/workspaceEndpoint';
+import { getPublicOrigin } from '@/lib/mcp/publicOrigin';
 
 // RFC 9728 §3.1: a protected resource at `<base><path>` publishes its metadata at
 // `<base>/.well-known/oauth-protected-resource<path>`. The sibling route.ts serves the
@@ -24,8 +25,7 @@ export async function GET(
     });
   }
 
-  const url = new URL(req.url);
-  const base = `${url.protocol}//${url.host}`;
+  const base = getPublicOrigin(req);
   return Response.json(
     {
       resource: `${base}${resourcePath}`,
