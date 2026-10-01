@@ -14,7 +14,7 @@
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, useTransition } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import {
   AlertTriangle,
@@ -57,8 +57,16 @@ import {
 } from '@/lib/graph/types';
 import type { GraphCanvasHandle, GraphColorMode, GraphLayers, GraphLayoutMode } from './GraphCanvas';
 import { SimpleSelect } from '@/components/ui/select';
-import { Button } from '@/components/ui/button';
+import { Button, buttonVariants } from '@/components/ui/button';
+import { DropdownMenu, DropdownMenuCheckboxItem, DropdownMenuContent, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { EmptyState } from '@/components/ui/empty-state';
+import { Input } from '@/components/ui/input';
+import { Tabs, TabsList, TabsTab } from '@/components/ui/tabs';
+import { Tooltip } from '@/components/ui/tooltip';
+import { cn } from '@/lib/cn';
 import PageIcon from '@/components/features/PageIcon';
+import { MENU_EMPTY, MENU_SURFACE, menuItem } from '@/components/features/editor/menuStyles';
+import { readGraphTheme, watchTheme, type GraphTheme } from './graphTheme';
 
 const GraphCanvas = dynamic(() => import('./GraphCanvas'), { ssr: false });
 
@@ -212,7 +220,6 @@ export default function GraphScreen({
   const [highlightId, setHighlightId] = useState<string | null>(null);
   const [arranging, setArranging] = useState(false);
   const [attentionOpen, setAttentionOpen] = useState(false);
-  const [layersOpen, setLayersOpen] = useState(false);
   const [query, setQuery] = useState('');
   // The database whose rows are on their way (show/hide rows), and the list to go
   // back to if that request fails — one toggle at a time.
@@ -312,8 +319,7 @@ export default function GraphScreen({
       }
     });
   };
-  const homeClass =
-    'flex shrink-0 items-center gap-1.5 border border-neutral-800 px-2 py-1 text-xs text-neutral-300 transition-colors hover:border-blue-500/40 hover:bg-blue-500/5 hover:text-neutral-100 disabled:opacity-60';
+  const homeClass = cn(buttonVariants({ variant: 'secondary', size: 'sm' }), 'shrink-0');
 
   const pickEntry = (entry: AttentionEntry) => {
     const [id, , , databaseItemId] = entry;
@@ -354,11 +360,12 @@ export default function GraphScreen({
   const selected = nodeById(selectedId);
   const attention = payload?.attention;
   const attentionCount = attention ? attention.orphanTotal + attention.outdatedTotal + attention.hubs.length : 0;
+  const graphTheme = useGraphTheme();
 
   return (
-    <div className="flex h-full min-h-0 w-full flex-col bg-neutral-850">
+    <div className="flex h-full min-h-0 w-full flex-col bg-sheet">
       {/* Toolbar */}
-      <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-neutral-800 bg-neutral-900 px-3 py-2">
+      <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-line px-3 py-2">
         {/* Whose map this is, and the way back to that project's dashboard. */}
         <div className="mr-1 flex min-w-0 items-center gap-2">
           {switchable && switchable.length > 1 ? (
@@ -372,55 +379,50 @@ export default function GraphScreen({
               options={switchable.map((w) => ({ value: w.id, label: w.name, icon: <WorkspaceBadge workspace={w} /> }))}
             />
           ) : (
-            <span className="flex min-w-0 items-center gap-1.5 text-xs font-medium text-neutral-200">
+            <span className="flex min-w-0 items-center gap-1.5 text-ui font-medium text-fg-2">
               <WorkspaceBadge workspace={workspace} />
               <span className="max-w-52 truncate">{workspace.name}</span>
             </span>
           )}
           {switching ? (
-            <Loader2 size={12} className="shrink-0 animate-spin text-neutral-500 motion-reduce:animate-none" aria-hidden />
+            <Loader2 size={14} className="shrink-0 animate-spin text-fg-3 motion-reduce:animate-none" aria-hidden />
           ) : (
-            <span aria-hidden className="text-neutral-700">/</span>
+            <span aria-hidden className="text-fg-4">/</span>
           )}
-          <h1 className="shrink-0 text-sm font-medium text-neutral-100">{t('title')}</h1>
+          <h1 className="shrink-0 text-sm font-semibold text-fg">{t('title')}</h1>
           {workspace.homeDashboardItemId ? (
             <Link href={`/dashboard/${workspace.homeDashboardItemId}`} title={t('openDashboard')} className={homeClass}>
-              <LayoutDashboard size={13} className="text-blue-400" />
+              <LayoutDashboard />
               {tWorkspace('dashboardShort')}
             </Link>
           ) : (
-            <button type="button" onClick={openHome} disabled={openingHome} aria-busy={openingHome} title={t('openDashboard')} className={homeClass}>
-              {openingHome ? (
-                <Loader2 size={13} className="animate-spin text-blue-400 motion-reduce:animate-none" aria-hidden />
-              ) : (
-                <LayoutDashboard size={13} className="text-blue-400" />
-              )}
+            <Button variant="secondary" size="sm" onClick={openHome} loading={openingHome} title={t('openDashboard')} className="shrink-0">
+              <LayoutDashboard />
               {tWorkspace('dashboardShort')}
-            </button>
+            </Button>
           )}
-          {homeFailed && <span role="alert" className="text-[11px] text-red-400">{tWorkspace('dashboardOpenFailed')}</span>}
+          {homeFailed && <span role="alert" className="text-xs text-red-400">{tWorkspace('dashboardOpenFailed')}</span>}
         </div>
 
-        <div className="flex border border-neutral-800" role="group" aria-label={t('layoutLabel')}>
-          {(['network', 'tree'] as const).map((mode) => {
-            const Icon = mode === 'network' ? Waypoints : Network;
-            const active = prefs.layout === mode;
-            return (
-              <button
-                key={mode}
-                type="button"
-                aria-pressed={active}
-                onClick={() => updatePrefs({ layout: mode })}
-                className={`flex items-center gap-1.5 px-2 py-1 text-xs transition-colors ${active ? 'bg-neutral-800 text-neutral-50' : 'text-neutral-400 hover:text-neutral-200'}`}
-              >
-                <Icon size={13} />
-                {mode === 'network' ? t('layoutNetwork') : t('layoutTree')}
-              </button>
-            );
-          })}
-        </div>
+        <Tabs
+          value={prefs.layout}
+          onValueChange={(value) => updatePrefs({ layout: value as GraphLayoutMode })}
+          variant="segmented"
+          aria-label={t('layoutLabel')}
+        >
+          <TabsList>
+            <TabsTab value="network">
+              <Waypoints />
+              {t('layoutNetwork')}
+            </TabsTab>
+            <TabsTab value="tree">
+              <Network />
+              {t('layoutTree')}
+            </TabsTab>
+          </TabsList>
+        </Tabs>
 
-        <label className="flex items-center gap-1.5 text-xs text-neutral-500">
+        <label className="flex items-center gap-1.5 text-xs text-fg-3">
           <span className="hidden sm:inline">{t('colorLabel')}</span>
           <SimpleSelect
             value={colorMode}
@@ -445,47 +447,32 @@ export default function GraphScreen({
           />
         )}
 
-        <div className="relative">
-          <button
-            type="button"
-            aria-expanded={layersOpen}
-            onClick={() => setLayersOpen((v) => !v)}
-            className="flex items-center gap-1.5 border border-neutral-800 px-2 py-1 text-xs text-neutral-300 hover:text-neutral-50"
-          >
-            <Layers size={13} />
+        <DropdownMenu>
+          <DropdownMenuTrigger className={buttonVariants({ variant: 'secondary', size: 'sm' })}>
+            <Layers />
             {t('layersLabel')}
-            <ChevronDown size={12} className={`transition-transform ${layersOpen ? 'rotate-180' : ''}`} />
-          </button>
-          {layersOpen && (
-            <>
-              <button type="button" aria-label={t('close')} className="fixed inset-0 z-20 cursor-default" onClick={() => setLayersOpen(false)} />
-              <div className="absolute left-0 top-full z-30 mt-1 w-52 border border-neutral-800 bg-neutral-900 py-1">
-                {(['hierarchy', 'membership', 'link', 'mention', 'tag', 'code'] as const)
-                  .filter((layer) => (layer !== 'tag' || hasTags) && (layer !== 'code' || codePaths > 0))
-                  .map((layer) => (
-                    <button
-                      key={layer}
-                      type="button"
-                      role="menuitemcheckbox"
-                      aria-checked={prefs.layers[layer]}
-                      onClick={() => updatePrefs({ layers: { ...prefs.layers, [layer]: !prefs.layers[layer] } })}
-                      className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs text-neutral-300 hover:bg-neutral-800/60"
-                    >
-                      <span className={`flex h-3.5 w-3.5 items-center justify-center border ${prefs.layers[layer] ? 'border-blue-500 bg-blue-500 text-white' : 'border-neutral-700'}`}>
-                        {prefs.layers[layer] && <Check size={10} />}
-                      </span>
-                      <EdgeSwatch kind={layer} />
-                      {layer === 'code' ? t('layer_code', { count: codePaths }) : t(`layer_${layer}`)}
-                    </button>
-                  ))}
-              </div>
-            </>
-          )}
-        </div>
+            <ChevronDown className="text-fg-3" />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent className="min-w-52">
+            {(['hierarchy', 'membership', 'link', 'mention', 'tag', 'code'] as const)
+              .filter((layer) => (layer !== 'tag' || hasTags) && (layer !== 'code' || codePaths > 0))
+              .map((layer) => (
+                <DropdownMenuCheckboxItem
+                  key={layer}
+                  checked={prefs.layers[layer]}
+                  onCheckedChange={(checked) => updatePrefs({ layers: { ...prefs.layers, [layer]: checked } })}
+                >
+                  <EdgeSwatch kind={layer} theme={graphTheme} />
+                  {layer === 'code' ? t('layer_code', { count: codePaths }) : t(`layer_${layer}`)}
+                </DropdownMenuCheckboxItem>
+              ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
 
         <div className="relative min-w-40 flex-1 sm:max-w-xs">
-          <Search size={13} className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-neutral-500" />
-          <input
+          <Search size={14} className="pointer-events-none absolute left-2 top-1/2 -translate-y-1/2 text-fg-4" aria-hidden />
+          <Input
+            size="sm"
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -495,12 +482,12 @@ export default function GraphScreen({
             }}
             placeholder={t('searchPlaceholder')}
             aria-label={t('searchPlaceholder')}
-            className="w-full border border-neutral-800 bg-neutral-850 py-1 pl-7 pr-2 text-xs text-neutral-100 placeholder:text-neutral-600 focus:outline-none focus-visible:ring-1 focus-visible:ring-blue-500"
+            className="pl-7"
           />
           {query.trim() && (
-            <div className="absolute left-0 right-0 top-full z-30 mt-1 border border-neutral-800 bg-neutral-900 py-1">
+            <div className={`absolute left-0 right-0 top-full z-30 mt-1 ${MENU_SURFACE}`}>
               {suggestions.length === 0 ? (
-                <p className="px-3 py-1.5 text-xs text-neutral-500">{t('searchEmpty')}</p>
+                <p className={MENU_EMPTY}>{t('searchEmpty')}</p>
               ) : suggestions.map((node) => {
                 const Icon = KIND_ICON[node[1]];
                 return (
@@ -510,9 +497,9 @@ export default function GraphScreen({
                     onClick={() => choose(node)}
                     onMouseEnter={() => setHighlightId(node[0])}
                     onMouseLeave={() => setHighlightId(null)}
-                    className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs text-neutral-300 hover:bg-neutral-800/60"
+                    className={menuItem()}
                   >
-                    <Icon size={12} className="shrink-0 text-neutral-500" />
+                    <Icon size={16} className="shrink-0 text-fg-3" aria-hidden />
                     <span className="truncate">{node[2] || t('untitled')}</span>
                   </button>
                 );
@@ -523,27 +510,27 @@ export default function GraphScreen({
 
         <div className="ml-auto flex items-center gap-1">
           {arranging && (
-            <span className="flex items-center gap-1.5 px-1 text-xs text-neutral-500" aria-live="polite">
-              <Loader2 size={12} className="animate-spin motion-reduce:animate-none" />
+            <span className="flex items-center gap-1.5 px-1 text-xs text-fg-3" aria-live="polite">
+              <Loader2 size={14} className="animate-spin motion-reduce:animate-none" aria-hidden />
               <span className="hidden sm:inline">{t('arranging')}</span>
             </span>
           )}
           {prefs.layout === 'network' && (
-            <button type="button" onClick={() => canvas.current?.relayout()} title={t('relayout')} aria-label={t('relayout')} className="p-1.5 text-neutral-400 hover:text-neutral-50">
-              <RotateCcw size={14} />
-            </button>
+            <Tooltip content={t('relayout')}>
+              <Button variant="ghost" size="icon-sm" onClick={() => canvas.current?.relayout()} aria-label={t('relayout')}>
+                <RotateCcw />
+              </Button>
+            </Tooltip>
           )}
-          <button type="button" onClick={() => canvas.current?.fit()} title={t('fit')} aria-label={t('fit')} className="p-1.5 text-neutral-400 hover:text-neutral-50">
-            <Maximize2 size={14} />
-          </button>
-          <button
-            type="button"
-            onClick={() => setAttentionOpen((v) => !v)}
-            className="flex items-center gap-1.5 border border-neutral-800 px-2 py-1 text-xs text-neutral-300 lg:hidden"
-          >
-            <AlertTriangle size={12} className="text-amber-500" />
+          <Tooltip content={t('fit')}>
+            <Button variant="ghost" size="icon-sm" onClick={() => canvas.current?.fit()} aria-label={t('fit')}>
+              <Maximize2 />
+            </Button>
+          </Tooltip>
+          <Button variant="secondary" size="sm" onClick={() => setAttentionOpen((v) => !v)} className="lg:hidden">
+            <AlertTriangle className="text-signal-text" />
             {t('attentionToggle', { count: attentionCount })}
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -552,17 +539,25 @@ export default function GraphScreen({
         <div className="relative min-w-0 flex-1">
           {failed && !payload ? (
             <CenterMessage>
-              <p>{t('loadFailed')}</p>
-              <button type="button" onClick={() => void load()} className="mt-3 border border-neutral-800 px-3 py-1 text-xs text-neutral-200 hover:bg-neutral-800">
-                {t('retry')}
-              </button>
+              <EmptyState
+                icon={<AlertTriangle />}
+                title={t('loadFailed')}
+              >
+                <Button variant="secondary" size="sm" onClick={() => void load()}>
+                  {t('retry')}
+                </Button>
+              </EmptyState>
             </CenterMessage>
           ) : !payload ? (
-            <CenterMessage><p className="text-neutral-500">{t('loading')}</p></CenterMessage>
+            <CenterMessage>
+              <p className="flex items-center gap-2 text-ui text-fg-3">
+                <Loader2 size={16} className="animate-spin motion-reduce:animate-none" aria-hidden />
+                {t('loading')}
+              </p>
+            </CenterMessage>
           ) : payload.nodes.length === 0 ? (
             <CenterMessage>
-              <p className="text-neutral-200">{t('emptyTitle')}</p>
-              <p className="mt-1 max-w-xs text-neutral-500">{t('emptyHint')}</p>
+              <EmptyState icon={<Waypoints />} title={t('emptyTitle')} description={t('emptyHint')} />
             </CenterMessage>
           ) : (
             <>
@@ -578,10 +573,10 @@ export default function GraphScreen({
                 onLayoutRunning={setArranging}
                 handleRef={canvas}
               />
-              <Legend colorMode={colorMode} auditLimited={!!payload.auditLimited} showCode={showCode && codePaths > 0} />
+              <Legend colorMode={colorMode} auditLimited={!!payload.auditLimited} showCode={showCode && codePaths > 0} theme={graphTheme} />
               {rowsPending && (
-                <div role="status" className="pointer-events-none absolute left-1/2 top-3 z-10 flex -translate-x-1/2 items-center gap-1.5 border border-neutral-800 bg-neutral-900 px-2.5 py-1 text-xs text-neutral-300">
-                  <Loader2 size={12} className="animate-spin motion-reduce:animate-none" aria-hidden />
+                <div role="status" className="pointer-events-none absolute left-1/2 top-3 z-10 flex -translate-x-1/2 items-center gap-1.5 rounded-control bg-float px-2.5 py-1.5 text-xs text-fg-2 shadow-float">
+                  <Loader2 size={14} className="animate-spin motion-reduce:animate-none" aria-hidden />
                   {t('loadingRows')}
                 </div>
               )}
@@ -604,43 +599,49 @@ export default function GraphScreen({
         {/* Needs attention: a column on wide screens, a bottom sheet on narrow ones. */}
         {attention && (
           <aside
-            className={`${attentionOpen ? 'flex' : 'hidden'} fixed inset-x-0 bottom-14 z-40 max-h-[65vh] flex-col border-t border-neutral-800 bg-neutral-900 lg:static lg:z-auto lg:flex lg:max-h-none lg:w-72 lg:shrink-0 lg:border-l lg:border-t-0`}
+            className={`${attentionOpen ? 'flex' : 'hidden'} fixed inset-x-0 bottom-14 z-40 max-h-[65vh] flex-col rounded-t-surface bg-float shadow-modal lg:static lg:z-auto lg:flex lg:max-h-none lg:w-72 lg:shrink-0 lg:rounded-none lg:border-l lg:border-line lg:bg-sheet lg:shadow-none`}
             aria-label={t('attentionTitle')}
           >
-            <div className="flex shrink-0 items-center justify-between border-b border-neutral-800 px-3 py-2">
-              <h2 className="text-xs font-medium text-neutral-200">{t('attentionTitle')}</h2>
-              <button type="button" onClick={() => setAttentionOpen(false)} aria-label={t('close')} className="p-1 text-neutral-500 hover:text-neutral-200 lg:hidden">
-                <X size={14} />
-              </button>
+            <div className="flex h-11 shrink-0 items-center justify-between border-b border-line px-4">
+              <h2 className="text-ui font-semibold text-fg">{t('attentionTitle')}</h2>
+              <Button variant="ghost" size="icon-sm" onClick={() => setAttentionOpen(false)} aria-label={t('close')} className="lg:hidden">
+                <X />
+              </Button>
             </div>
             <div className="min-h-0 flex-1 overflow-y-auto pb-4">
-              <AttentionGroup
-                title={t('orphansTitle')}
-                hint={t('orphansHint')}
-                entries={attention.orphans}
-                total={attention.orphanTotal}
-                meta={(entry) => (entry[4] > 0 ? t('mentionedIn', { count: entry[4] }) : null)}
-                onPick={pickEntry}
-                onHover={setHighlightId}
-              />
-              <AttentionGroup
-                title={t('outdatedTitle')}
-                hint={t('outdatedHint')}
-                entries={attention.outdated}
-                total={attention.outdatedTotal}
-                meta={(entry) => (statusOf(entry[4]) === 3 ? t('trustDeprecated') : t('trustStale'))}
-                onPick={pickEntry}
-                onHover={setHighlightId}
-              />
-              <AttentionGroup
-                title={t('hubsTitle')}
-                hint={t('hubsHint')}
-                entries={attention.hubs}
-                total={attention.hubs.length}
-                meta={(entry) => t('connections', { count: entry[4] })}
-                onPick={pickEntry}
-                onHover={setHighlightId}
-              />
+              {attentionCount === 0 ? (
+                <EmptyState size="sm" icon={<Check />} title={t('allClear')} />
+              ) : (
+                <>
+                  <AttentionGroup
+                    title={t('orphansTitle')}
+                    hint={t('orphansHint')}
+                    entries={attention.orphans}
+                    total={attention.orphanTotal}
+                    meta={(entry) => (entry[4] > 0 ? t('mentionedIn', { count: entry[4] }) : null)}
+                    onPick={pickEntry}
+                    onHover={setHighlightId}
+                  />
+                  <AttentionGroup
+                    title={t('outdatedTitle')}
+                    hint={t('outdatedHint')}
+                    entries={attention.outdated}
+                    total={attention.outdatedTotal}
+                    meta={(entry) => (statusOf(entry[4]) === 3 ? t('trustDeprecated') : t('trustStale'))}
+                    onPick={pickEntry}
+                    onHover={setHighlightId}
+                  />
+                  <AttentionGroup
+                    title={t('hubsTitle')}
+                    hint={t('hubsHint')}
+                    entries={attention.hubs}
+                    total={attention.hubs.length}
+                    meta={(entry) => t('connections', { count: entry[4] })}
+                    onPick={pickEntry}
+                    onHover={setHighlightId}
+                  />
+                </>
+              )}
             </div>
           </aside>
         )}
@@ -649,76 +650,107 @@ export default function GraphScreen({
   );
 }
 
+/**
+ * The live graph colours for the HTML around the canvas (legend, layer swatches), so a
+ * swatch is always the colour the WebGL renderer draws — re-read when the theme changes.
+ */
+function useGraphTheme(): GraphTheme | null {
+  const themeName = useSyncExternalStore(
+    watchTheme,
+    () => document.documentElement.dataset.theme ?? '',
+    () => null,
+  );
+  return useMemo(() => (themeName === null ? null : readGraphTheme()), [themeName]);
+}
+
 /** A workspace's own icon, or its initial — the same mark the sidebar shows. */
 function WorkspaceBadge({ workspace }: { workspace: GraphWorkspace }) {
-  if (workspace.icon) return <PageIcon icon={workspace.icon} iconColor={workspace.iconColor} size={14} hideFallback={false} className="shrink-0 rounded" />;
+  if (workspace.icon) return <PageIcon icon={workspace.icon} iconColor={workspace.iconColor} size={16} hideFallback={false} className="shrink-0 rounded" />;
   return (
-    <span translate="no" className="notranslate flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded-sm bg-neutral-700 text-[9px] font-bold text-neutral-200">
+    <span translate="no" className="notranslate flex size-4 shrink-0 items-center justify-center rounded-sm bg-ink text-2xs font-semibold text-ink-fg">
       {(workspace.name || 'W').trim().charAt(0).toUpperCase()}
     </span>
   );
 }
 
 function CenterMessage({ children }: { children: React.ReactNode }) {
-  return <div className="absolute inset-0 flex flex-col items-center justify-center px-6 text-center text-sm">{children}</div>;
+  return <div className="absolute inset-0 flex flex-col items-center justify-center px-6 text-center">{children}</div>;
 }
 
-function EdgeSwatch({ kind }: { kind: keyof GraphLayers }) {
-  const style: Record<keyof GraphLayers, string> = {
-    hierarchy: 'border-neutral-600',
-    membership: 'border-neutral-700',
-    link: 'border-blue-400',
-    mention: 'border-dashed border-neutral-500',
-    tag: 'border-[var(--color-opt-teal)]',
-    code: 'border-[var(--color-opt-pink)]',
-  };
-  return <span aria-hidden className={`inline-block w-4 border-t-2 ${style[kind]}`} />;
+const EDGE_THEME_KEY: Record<keyof GraphLayers, keyof GraphTheme['edge']> = {
+  hierarchy: 'hierarchy',
+  membership: 'membership',
+  link: 'link',
+  mention: 'mention',
+  tag: 'tag',
+  code: 'source',
+};
+
+function EdgeSwatch({ kind, theme }: { kind: keyof GraphLayers; theme: GraphTheme | null }) {
+  return (
+    <span
+      aria-hidden
+      className={`inline-block w-4 shrink-0 border-t-2 ${kind === 'mention' ? 'border-dashed' : ''}`}
+      style={{ borderTopColor: theme?.edge[EDGE_THEME_KEY[kind]] }}
+    />
+  );
 }
 
-function Legend({ colorMode, auditLimited, showCode }: { colorMode: GraphColorMode; auditLimited: boolean; showCode: boolean }) {
+function Legend({
+  colorMode,
+  auditLimited,
+  showCode,
+  theme,
+}: {
+  colorMode: GraphColorMode;
+  auditLimited: boolean;
+  showCode: boolean;
+  theme: GraphTheme | null;
+}) {
   const t = useTranslations('Graph');
+  if (!theme) return null;
   // Code files keep their own colour in every mode (they carry no trust or agent state).
-  const code: Array<[string, string]> = showCode ? [['bg-[var(--color-opt-pink)]', t('kindFile')]] : [];
+  const code: Array<[string, string]> = showCode ? [[theme.kind.file, t('kindFile')]] : [];
   const entries: Array<[string, string]> =
     colorMode === 'trust'
       ? [
-          ['bg-green-400', t('trustReviewed')],
-          ['bg-blue-400', t('trustConfirmed')],
-          ['bg-[var(--color-opt-yellow)]', t('trustDraft')],
-          ['bg-amber-500', t('trustStale')],
-          ['bg-red-400', t('trustDeprecated')],
-          ['bg-neutral-700', t('trustNone')],
+          [theme.trust.reviewed, t('trustReviewed')],
+          [theme.trust.confirmed, t('trustConfirmed')],
+          [theme.trust.draft, t('trustDraft')],
+          [theme.trust.stale, t('trustStale')],
+          [theme.trust.deprecated, t('trustDeprecated')],
+          [theme.trust.none, t('trustNone')],
           ...code,
         ]
       : colorMode === 'agent'
         ? [
-            ['bg-amber-400', t('agentWrote')],
-            ['bg-amber-400/40', t('agentRead')],
-            ['bg-neutral-700', t('agentNone')],
+            [theme.agent.wrote, t('agentWrote')],
+            [theme.agent.read, t('agentRead')],
+            [theme.agent.none, t('agentNone')],
             ...code,
           ]
         : colorMode === 'cluster'
           ? code
           : [
-              ['bg-neutral-400', t('kindPage')],
-              ['bg-blue-400', t('kindDatabase')],
-              ['bg-neutral-600', t('kindRow')],
-              ['bg-[var(--color-opt-purple)]', t('kindDashboard')],
-              ['bg-[var(--color-opt-teal)]', t('kindTag')],
+              [theme.kind.page, t('kindPage')],
+              [theme.kind.database, t('kindDatabase')],
+              [theme.kind.row, t('kindRow')],
+              [theme.kind.dashboard, t('kindDashboard')],
+              [theme.kind.tag, t('kindTag')],
               ...code,
             ];
   if (entries.length === 0 && !auditLimited) return null;
   return (
-    <div className="pointer-events-none absolute left-3 top-3 max-w-56 border border-neutral-800 bg-neutral-900/90 px-2.5 py-2 text-[11px] text-neutral-400">
+    <div className="pointer-events-none absolute left-3 top-3 max-w-56 rounded-control bg-float/95 px-2.5 py-2 text-xs text-fg-2 shadow-float">
       <ul className="space-y-1">
-        {entries.map(([swatch, label]) => (
+        {entries.map(([color, label]) => (
           <li key={label} className="flex items-center gap-2">
-            <span className={`h-2 w-2 shrink-0 rounded-full ${swatch}`} />
+            <span aria-hidden className="size-2 shrink-0 rounded-full" style={{ backgroundColor: color }} />
             {label}
           </li>
         ))}
       </ul>
-      {colorMode === 'agent' && auditLimited && <p className="mt-1.5 text-neutral-500">{t('auditLimited')}</p>}
+      {colorMode === 'agent' && auditLimited && <p className="mt-1.5 text-fg-3">{t('auditLimited')}</p>}
     </div>
   );
 }
@@ -774,40 +806,43 @@ function SelectionCard({
   const mentions = connections[EDGE_KIND.mention];
 
   return (
-    <div className="absolute inset-x-3 bottom-3 z-10 border border-neutral-800 bg-neutral-900 sm:inset-x-auto sm:left-3 sm:w-80">
-      <div className="flex items-start gap-2 px-3 pt-3">
-        <Icon size={15} className="mt-0.5 shrink-0 text-neutral-500" />
+    // Kept clear of the cookie bar while it is up (its height is published as a CSS
+    // variable), so the card's buttons are never under it (R7 note).
+    <div
+      className="absolute inset-x-3 z-10 rounded-surface bg-float shadow-float sm:inset-x-auto sm:left-3 sm:w-80"
+      style={{ bottom: 'calc(var(--consent-banner-height, 0px) + 0.75rem)' }}
+    >
+      <div className="flex items-start gap-2.5 px-4 pt-3.5">
+        <Icon size={16} className="mt-0.5 shrink-0 text-fg-3" aria-hidden />
         <div className="min-w-0 flex-1">
           {/* A repo path wraps instead of truncating: its end (the file name) is the part that matters. */}
-          <p className={`${code ? 'break-all font-mono text-xs' : 'truncate text-sm'} font-medium text-neutral-100`} title={title}>{title || t('untitled')}</p>
-          <p className="text-xs text-neutral-500">{trust ? t('kindWithTrust', { kind: kindLabel, trust }) : kindLabel}</p>
+          <p className={`${code ? 'break-all font-mono text-xs' : 'truncate text-sm'} font-semibold text-fg`} title={title}>{title || t('untitled')}</p>
+          <p className="text-xs text-fg-3">{trust ? t('kindWithTrust', { kind: kindLabel, trust }) : kindLabel}</p>
         </div>
-        <button type="button" onClick={onClose} aria-label={t('close')} className="p-0.5 text-neutral-500 hover:text-neutral-200">
-          <X size={14} />
-        </button>
+        <Button variant="ghost" size="icon-sm" onClick={onClose} aria-label={t('close')} className="-mr-1.5 -mt-1">
+          <X />
+        </Button>
       </div>
-      <div className="space-y-0.5 px-3 pt-2 text-xs text-neutral-400">
+      <div className="space-y-0.5 px-4 pt-2 text-xs text-fg-2">
         {kind !== NODE_KIND.tag && !code && <p>{t('linkSummary', { links, mentions })}</p>}
         {kind === NODE_KIND.tag && <p>{t('tagMembers', { count: count ?? 0 })}</p>}
         {code && (count ?? 0) > 0 && <p>{t('codeRefs', { count: count ?? 0 })}</p>}
-        {code && <p className="text-neutral-500">{t('codeHint')}</p>}
-        {agent && <p className="text-amber-400">{agent}</p>}
+        {code && <p className="text-fg-3">{t('codeHint')}</p>}
+        {agent && (
+          <p className="flex items-center gap-1.5 text-fg">
+            <span aria-hidden className="size-1.5 shrink-0 rounded-full bg-signal" />
+            {agent}
+          </p>
+        )}
       </div>
-      <div className="flex items-center gap-2 px-3 py-3">
+      <div className="flex items-center gap-2 px-4 pb-3.5 pt-3">
         {href && (
-          <Link href={href} className="border border-neutral-700 px-2.5 py-1 text-xs text-neutral-100 hover:bg-neutral-800">
+          <Link href={href} className={buttonVariants({ variant: 'primary', size: 'xs' })}>
             {t('open')}
           </Link>
         )}
         {kind === NODE_KIND.database && (count ?? 0) > 0 && (
-          <Button
-            variant="ghost"
-            size="xs"
-            onClick={onToggleRows}
-            loading={rowsLoading}
-            disabled={rowsBusy}
-            className="h-auto rounded-none px-2.5 py-1 text-xs text-neutral-300"
-          >
+          <Button variant="secondary" size="xs" onClick={onToggleRows} loading={rowsLoading} disabled={rowsBusy}>
             {expanded ? t('hideRows') : t('showRows', { count: count ?? 0 })}
           </Button>
         )}
@@ -835,16 +870,19 @@ function AttentionGroup({
 }) {
   const t = useTranslations('Graph');
   return (
-    <section className="border-b border-neutral-800 px-3 py-3">
+    <section className="border-b border-line px-4 py-3 last:border-b-0">
       <div className="flex items-baseline justify-between gap-2">
-        <h3 className="text-xs font-medium text-neutral-200">{title}</h3>
-        <span className="text-xs tabular-nums text-neutral-500">{total}</span>
+        <h3 className="text-ui font-medium text-fg">{title}</h3>
+        <span className="text-xs tabular-nums text-fg-3">{total}</span>
       </div>
-      <p className="mt-0.5 text-[11px] leading-snug text-neutral-500">{hint}</p>
+      <p className="mt-0.5 text-xs leading-snug text-fg-3">{hint}</p>
       {entries.length === 0 ? (
-        <p className="mt-2 text-xs text-neutral-600">{t('allClear')}</p>
+        <p className="mt-2 flex items-center gap-1.5 text-xs text-fg-3">
+          <Check size={14} className="shrink-0" aria-hidden />
+          {t('allClear')}
+        </p>
       ) : (
-        <ul className="mt-2 -mx-1.5">
+        <ul className="-mx-2 mt-2">
           {entries.map((entry) => {
             const Icon = KIND_ICON[entry[1]];
             const detail = meta(entry);
@@ -857,12 +895,12 @@ function AttentionGroup({
                   onMouseLeave={() => onHover(null)}
                   onFocus={() => onHover(entry[0])}
                   onBlur={() => onHover(null)}
-                  className="flex w-full items-start gap-2 px-1.5 py-1 text-left hover:bg-neutral-800/50 focus:outline-none focus-visible:bg-neutral-800/50"
+                  className="flex w-full cursor-pointer items-start gap-2 rounded-control px-2 py-1.5 text-left transition-colors hover:bg-hover focus:outline-none focus-visible:bg-hover"
                 >
-                  <Icon size={12} className="mt-0.5 shrink-0 text-neutral-500" />
+                  <Icon size={14} className="mt-0.5 shrink-0 text-fg-3" aria-hidden />
                   <span className="min-w-0 flex-1">
-                    <span className="block truncate text-xs text-neutral-300">{entry[2] || t('untitled')}</span>
-                    {detail && <span className="block text-[11px] text-neutral-500">{detail}</span>}
+                    <span className="block truncate text-ui text-fg-2">{entry[2] || t('untitled')}</span>
+                    {detail && <span className="block text-xs text-fg-3">{detail}</span>}
                   </span>
                 </button>
               </li>
@@ -870,7 +908,7 @@ function AttentionGroup({
           })}
         </ul>
       )}
-      {total > entries.length && <p className="mt-1 text-[11px] text-neutral-500">{t('more', { count: total - entries.length })}</p>}
+      {total > entries.length && <p className="mt-1 text-xs text-fg-3">{t('more', { count: total - entries.length })}</p>}
     </section>
   );
 }

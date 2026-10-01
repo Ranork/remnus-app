@@ -4,6 +4,9 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
+import { Waypoints } from 'lucide-react';
+import { EmptyState } from '@/components/ui/empty-state';
+import { cn } from '@/lib/cn';
 import { getLocalGraphData } from '@/lib/actions/graph';
 import { graphNodeHref, type GraphPayload } from '@/lib/graph/types';
 import GraphCanvas, { type GraphLayers } from './GraphCanvas';
@@ -40,29 +43,34 @@ export default function LocalGraphView({ workspaceId, pageId }: { workspaceId: s
   return (
     <div className="mt-3">
       <div className="mb-2 flex flex-wrap items-center gap-2 text-xs">
-        <div className="flex border border-neutral-800" role="group">
+        {/* Segmented switch, drawn like the segmented Tabs (it sets a view option,
+            it does not switch panels, so it stays a pair of pressed buttons). */}
+        <div className="flex w-fit gap-0.5 rounded-control bg-raised p-0.5 shadow-[inset_0_0_0_1px_var(--color-line)]" role="group">
           {([1, 2] as const).map((d) => (
             <button
               key={d}
               type="button"
               aria-pressed={depth === d}
               onClick={() => setDepth(d)}
-              className={`px-2 py-0.5 transition-colors ${depth === d ? 'bg-neutral-800 text-neutral-50' : 'text-neutral-400 hover:text-neutral-200'}`}
+              className={cn(
+                'h-6 cursor-pointer rounded-[calc(var(--radius-control)-2px)] px-2.5 font-medium transition-colors',
+                depth === d ? 'bg-sheet text-fg shadow-lift' : 'text-fg-3 hover:text-fg-2',
+              )}
             >
               {d === 1 ? t('localDepth1') : t('localDepth2')}
             </button>
           ))}
         </div>
-        {payload?.truncated && <span className="text-neutral-500">{t('localTruncated', { count: payload.nodes.length })}</span>}
-        <Link href={`/graph/${workspaceId}`} className="ml-auto text-neutral-400 hover:text-neutral-100">
+        {payload?.truncated && <span className="text-fg-3">{t('localTruncated', { count: payload.nodes.length })}</span>}
+        <Link href={`/graph/${workspaceId}`} className="ml-auto rounded px-1 text-fg-3 transition-colors hover:text-fg">
           {t('localOpenFull')}
         </Link>
       </div>
-      <div className="relative h-72 border border-neutral-800 bg-neutral-900">
+      <div className="relative h-72 overflow-hidden rounded-control border border-line bg-raised">
         {!current ? null : current.failed ? (
-          <p className="absolute inset-0 flex items-center justify-center text-xs text-neutral-500">{t('loadFailed')}</p>
+          <EmptyState size="sm" title={t('loadFailed')} className="absolute inset-0 justify-center" />
         ) : !connected ? (
-          <p className="absolute inset-0 flex items-center justify-center px-6 text-center text-xs text-neutral-500">{t('localEmpty')}</p>
+          <EmptyState size="sm" icon={<Waypoints />} title={t('localEmpty')} className="absolute inset-0 justify-center" />
         ) : (
           <GraphCanvas
             key={key}

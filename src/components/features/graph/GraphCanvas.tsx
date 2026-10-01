@@ -470,10 +470,12 @@ function drawHover(theme: GraphTheme, context: CanvasRenderingContext2D, data: L
     context.lineWidth = 1;
     context.strokeRect(x + 0.5, data.y - height / 2 + 0.5, width - 1, height - 1);
   }
+  // The hovered / selected / searched node gets the theme's signal ring (R8.4) — 2px,
+  // since a yellow hairline all but disappears on the light theme's white canvas.
   context.beginPath();
-  context.arc(data.x, data.y, data.size + 2.5, 0, Math.PI * 2);
-  context.strokeStyle = theme.label;
-  context.lineWidth = 1.5;
+  context.arc(data.x, data.y, data.size + 3, 0, Math.PI * 2);
+  context.strokeStyle = theme.accent;
+  context.lineWidth = 2;
   context.stroke();
   drawLabel(theme, context, data, settings);
 }

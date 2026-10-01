@@ -45,6 +45,31 @@ const FIRST_VISIT_WINDOW_DAYS = 7;
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-10-01-calmer-knowledge-map',
+    date: '2026-10-01',
+    category: 'improved',
+    title: {
+      en: 'A calmer knowledge map',
+      tr: 'Daha sakin bir bilgi haritası',
+      de: 'Eine ruhigere Wissenskarte',
+      es: 'Un mapa de conocimiento más tranquilo',
+      fr: 'Une carte des connaissances plus sobre',
+      hi: 'ज़्यादा शांत नॉलेज मैप',
+      ru: 'Более спокойная карта знаний',
+      zh: '更清爽的知识地图',
+    },
+    summary: {
+      en: 'The knowledge map now marks the page you pick and the pages agents wrote in the same clear gold in every theme, uses tidier controls, and keeps the selected page’s card above the cookie notice.',
+      tr: 'Bilgi haritası artık seçtiğiniz sayfayı ve ajanların yazdığı sayfaları her temada aynı belirgin altın renkle işaretliyor, daha düzenli kontroller kullanıyor ve seçili sayfanın kartını çerez bildiriminin üstünde tutuyor.',
+      de: 'Die Wissenskarte markiert die gewählte Seite und von Agenten geschriebene Seiten jetzt in jedem Design im selben klaren Gold, nutzt aufgeräumtere Bedienelemente und hält die Karte der gewählten Seite über dem Cookie-Hinweis.',
+      es: 'El mapa de conocimiento marca ahora la página que eliges y las que escribieron los agentes con el mismo dorado claro en todos los temas, usa controles más ordenados y mantiene la tarjeta de la página seleccionada por encima del aviso de cookies.',
+      fr: 'La carte des connaissances signale désormais la page choisie et les pages écrites par les agents dans le même doré bien visible quel que soit le thème, utilise des commandes plus nettes et garde la fiche de la page sélectionnée au-dessus du bandeau des cookies.',
+      hi: 'नॉलेज मैप अब आपकी चुनी हुई पेज और एजेंटों के लिखे पेजों को हर थीम में एक ही साफ़ सुनहरे रंग से दिखाता है, ज़्यादा व्यवस्थित कंट्रोल देता है और चुने गए पेज का कार्ड कुकी सूचना के ऊपर रखता है।',
+      ru: 'Карта знаний теперь отмечает выбранную страницу и страницы, написанные агентами, одинаково заметным золотым цветом во всех темах, использует более аккуратные элементы управления и держит карточку выбранной страницы над уведомлением о cookie.',
+      zh: '知识地图现在在所有主题中都用同一种醒目的金色标出你选中的页面和智能体写过的页面，控件更整洁，所选页面的卡片也不会再被 Cookie 提示挡住。',
+    },
+  },
+  {
     id: '2026-10-01-clearer-dashboards',
     date: '2026-10-01',
     category: 'improved',
