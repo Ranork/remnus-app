@@ -51,7 +51,7 @@ The workspace's home (`home: true`), which opens on the **Pano** button:
   today:
   - Releases: `list` sort Date descending, showColumns Type, Breaking.
   - Deprecations: `metric` filter Status equals `Announced`, unit "pending".
-  - Public API: `chart` donut grouped by Stability; `list` filter Stability equals
+  - Public API: `chart` stack grouped by Stability; `list` filter Stability equals
     `Experimental`, showColumns Since.
 - `links` overview, Deprecations, Decisions · `activity` · `savings`
 

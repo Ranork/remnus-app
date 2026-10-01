@@ -882,8 +882,6 @@
   "Dashboard": {
     "deleteDashboard": "डैशबोर्ड हटाएँ",
     "deleteDashboardTitle": "यह डैशबोर्ड हटाएँ?",
-      "ignoredColumns": "अनदेखा (कोई मेल खाती प्रॉपर्टी नहीं): {columns}",
-      "moreRows": "{count} और पंक्तियाँ",
     "deleteDashboardBody": "यह ट्रैश में चला जाता है और वहाँ से वापस लाया जा सकता है। आपका डेटा जैसा है वैसा रहता है।",
     "deleteDashboardConfirm": "हटाएँ",
     "untitled": "बिना नाम का डैशबोर्ड",
@@ -923,7 +921,9 @@
       "badge": "होम",
       "note": "यह डैशबोर्ड आपके डेटाबेस से बनाया गया है। अपने प्रोजेक्ट के हिसाब से बना डैशबोर्ड पाने के लिए अपने जुड़े एजेंट से कहें: “Remnus कैलिब्रेशन रिफ़्रेश करो”।",
       "open": "{name}: खुले",
-      "byStatus": "{name} — स्थिति के अनुसार",
+    "sessionMeta": "{calls} कॉल{more, select, yes { या अधिक} other {}}, {writes, plural, =0 {कोई लेखन नहीं} other {# लेखन}}",
+    "callFailed": "विफल",
+      "byStatus": "{name}: स्थिति के अनुसार",
       "nextDue": "{name}: अगली तारीख़",
       "stillOpen": "{name}: अभी भी खुले",
       "latest": "{name}: सबसे नए",
@@ -975,7 +975,8 @@
       "variants": {
         "donut": "डोनट",
         "bar": "बार",
-        "line": "लाइन"
+        "line": "लाइन",
+        "stack": "स्टैक्ड बार"
       },
       "bucket": "तारीखों को समूहित करें",
       "buckets": {

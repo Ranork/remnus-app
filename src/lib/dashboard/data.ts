@@ -66,7 +66,46 @@ export type DashboardDatabase = {
 
 /** `label` is raw data (a column value or a date bucket); the two flags mark the
  *  synthetic categories, whose wording is the renderer's job, not the query's. */
-export type ChartPoint = { label: string; value: number; isOther?: boolean; isEmpty?: boolean };
+/**
+ * `colorIndex`: the category's palette slot. For a select/status column it is the
+ * option's position in the column, so a category keeps its colour when a filter changes
+ * the counts or the ranking (colour follows the entity, never its rank); other columns
+ * fall back to rank order.
+ */
+export type ChartPoint = { label: string; value: number; isOther?: boolean; isEmpty?: boolean; colorIndex?: number };
+
+/** One agent call as the activity block lists it; `target` is the page/row/database title. */
+export type ActivityCall = { id: string; tool: string; status: 'success' | 'error'; createdAt: Date; target: string | null };
+
+/**
+ * A run of calls by one agent connection with no pause longer than SESSION_GAP_MS —
+ * what a person means by "Claude worked on this for twenty minutes". Counts cover the
+ * calls in the read window; `countsCapped` says the session runs past its edge.
+ */
+export type ActivitySession = {
+  key: string;
+  actor: string | null;
+  /** Canonical agent id or client name, for the agent's mark. */
+  agentName: string | null;
+  calls: ActivityCall[];
+  callCount: number;
+  writeCount: number;
+  lastAt: Date;
+  /** The agent acted within LIVE_MS of the render: the session gets the steady signal dot. */
+  live: boolean;
+  countsCapped: boolean;
+};
+
+/** Tools that change the workspace — what a human scans an agent's run for. */
+export const WRITE_TOOL = /^(create|update|delete|bulk|move|add|restore|set)_/;
+
+const SESSION_GAP_MS = 30 * 60 * 1000;
+/** Same "live" window as the project block's last-agent dot. */
+const LIVE_MS = 15 * 60 * 1000;
+/** Calls read to build sessions: enough to count a long run, cheap on the (workspace, created_at) index. */
+const ACTIVITY_WINDOW = 100;
+/** Sessions shown in one block. */
+const MAX_SESSIONS = 4;
 
 export type TrendResult = { direction: 'up' | 'down' | 'flat'; percent: number | null; current: number; previous: number };
 
@@ -77,7 +116,7 @@ export type ResolvedBlock =
   | { kind: 'list'; block: ListBlock; rows: DashboardRowLike[]; total: number; columns: { id: string; name: string; type: string }[] }
   | { kind: 'text'; block: TextBlock }
   | { kind: 'links'; block: LinksBlock; links: { itemId: string; label: string; href: string | null; icon: string | null; iconColor: string | null; type: 'page' | 'database' | 'dashboard' | null }[] }
-  | { kind: 'activity'; block: ActivityBlock; entries: { id: string; tool: string; status: 'success' | 'error'; actor: string | null; createdAt: Date }[] }
+  | { kind: 'activity'; block: ActivityBlock; sessions: ActivitySession[] }
   /** `agentRecent`: an agent called Remnus here in the last 15 minutes. */
   | { kind: 'project'; block: ProjectBlock; workspaceName: string; lastAgentAt: Date | null; agentRecent: boolean }
   | { kind: 'savings'; block: SavingsBlock; metrics: AgentMetrics }
@@ -244,16 +283,21 @@ export async function resolveDashboard(workspaceId: string, rawSpec: unknown): P
     }
   }
 
-  // 4. Agent activity, once, for however many rows the hungriest block wants.
+  // 4. Agent activity, once: the latest ACTIVITY_WINDOW calls, grouped into sessions,
+  //    with the titles of the calls a block will list resolved in one batch.
   const activityLimit = goodBlocks.reduce((max, b) => (b.type === 'activity' ? Math.max(max, b.limit) : max), 0);
-  let activityRows: { id: string; tool: string; status: 'success' | 'error'; actor: string | null; createdAt: Date }[] = [];
+  let activitySessions: ActivitySession[] = [];
   if (activityLimit > 0) {
-    activityRows = await db
+    const rows = await db
       .select({
         id: agentActivity.id,
         tool: agentActivity.tool,
         status: agentActivity.status,
+        targetType: agentActivity.targetType,
+        targetId: agentActivity.targetId,
+        sessionKey: sql<string | null>`coalesce(${agentActivity.tokenId}, ${agentActivity.oauthTokenId})`,
         actor: sql<string | null>`coalesce(${agentTokens.name}, ${oauthAccessTokens.agentName})`,
+        agentName: sql<string | null>`coalesce(${agentTokens.agentName}, ${oauthAccessTokens.agentName})`,
         createdAt: agentActivity.createdAt,
       })
       .from(agentActivity)
@@ -262,7 +306,9 @@ export async function resolveDashboard(workspaceId: string, rawSpec: unknown): P
       // Same audit window as the audit log itself (services/auditRetention.ts).
       .where(and(eq(agentActivity.workspaceId, workspaceId), activityAtOrAfter(await auditVisibleSince(workspaceId))))
       .orderBy(desc(agentActivity.createdAt))
-      .limit(activityLimit);
+      .limit(ACTIVITY_WINDOW);
+    activitySessions = groupSessions(rows, rows.length === ACTIVITY_WINDOW, activityLimit);
+    await resolveCallTargets(workspaceId, activitySessions, rows);
   }
 
   // 5. The home-dashboard blocks: the workspace's own name, when an agent last
@@ -320,7 +366,11 @@ export async function resolveDashboard(workspaceId: string, rawSpec: unknown): P
         };
 
       case 'activity':
-        return { kind: 'activity', block, entries: activityRows.slice(0, block.limit) };
+        return {
+          kind: 'activity',
+          block,
+          sessions: activitySessions.map((session) => ({ ...session, calls: session.calls.slice(0, block.limit) })),
+        };
 
       case 'project':
         return {
@@ -468,12 +518,122 @@ function computeTrend(
   return { direction: delta > 0 ? 'up' : delta < 0 ? 'down' : 'flat', percent, current, previous: prev };
 }
 
+type ActivityRow = {
+  id: string;
+  tool: string;
+  status: 'success' | 'error';
+  targetType: string | null;
+  targetId: string | null;
+  sessionKey: string | null;
+  actor: string | null;
+  agentName: string | null;
+  createdAt: Date;
+};
+
+/**
+ * Newest-first calls → sessions. A call joins its connection's open session when the
+ * gap to that session's oldest call so far is under SESSION_GAP_MS; otherwise it starts
+ * an older session. Two agents working at once keep separate sessions.
+ */
+function groupSessions(rows: ActivityRow[], windowFull: boolean, keepCalls: number): ActivitySession[] {
+  const now = Date.now();
+  const sessions: ActivitySession[] = [];
+  const open = new Map<string, ActivitySession>();
+  /** Each session's oldest call so far — the edge a still-older call has to be near. */
+  const oldestAt = new Map<ActivitySession, Date>();
+  for (const row of rows) {
+    const key = row.sessionKey ?? `actor:${row.actor ?? ''}`;
+    let session = open.get(key);
+    if (!session || oldestAt.get(session)!.getTime() - row.createdAt.getTime() > SESSION_GAP_MS) {
+      if (sessions.length >= MAX_SESSIONS && !session) continue;
+      if (sessions.length >= MAX_SESSIONS) {
+        open.delete(key);
+        continue;
+      }
+      session = {
+        key: `${key}:${row.createdAt.getTime()}`,
+        actor: row.actor,
+        agentName: row.agentName,
+        calls: [],
+        callCount: 0,
+        writeCount: 0,
+        lastAt: row.createdAt,
+        live: now - row.createdAt.getTime() < LIVE_MS,
+        countsCapped: false,
+      };
+      sessions.push(session);
+      open.set(key, session);
+    }
+    session.callCount++;
+    if (WRITE_TOOL.test(row.tool)) session.writeCount++;
+    oldestAt.set(session, row.createdAt);
+    if (session.calls.length < keepCalls) {
+      session.calls.push({ id: row.id, tool: row.tool, status: row.status, createdAt: row.createdAt, target: null });
+    }
+  }
+  // The window's oldest call may belong to a run that started earlier still.
+  const last = rows[rows.length - 1];
+  if (windowFull && last) {
+    const key = last.sessionKey ?? `actor:${last.actor ?? ''}`;
+    const session = open.get(key);
+    if (session) session.countsCapped = true;
+  }
+  return sessions;
+}
+
+/**
+ * Titles for the calls the block lists — one batched read per kind of target (an item,
+ * a database row, a database), scoped to this workspace. A target that is gone stays
+ * null and the call shows its tool alone.
+ */
+async function resolveCallTargets(workspaceId: string, sessions: ActivitySession[], rows: ActivityRow[]): Promise<void> {
+  const byId = new Map(rows.map((r) => [r.id, r]));
+  const ids = new Set<string>();
+  for (const session of sessions) {
+    for (const call of session.calls) {
+      const targetId = byId.get(call.id)?.targetId;
+      if (targetId && targetId !== workspaceId) ids.add(targetId);
+    }
+  }
+  if (!ids.size) return;
+  const list = [...ids];
+
+  const [items, rowsTitles, dbs] = await Promise.all([
+    db
+      .select({ id: workspaceItems.id, title: workspaceItems.title })
+      .from(workspaceItems)
+      .where(and(eq(workspaceItems.workspaceId, workspaceId), inArray(workspaceItems.id, list))),
+    db
+      .select({ id: pages.id, title: pages.title })
+      .from(pages)
+      .innerJoin(databases, eq(pages.databaseId, databases.id))
+      .innerJoin(workspaceItems, eq(databases.itemId, workspaceItems.id))
+      .where(and(eq(workspaceItems.workspaceId, workspaceId), inArray(pages.id, list))),
+    db
+      .select({ id: databases.id, title: databases.name })
+      .from(databases)
+      .innerJoin(workspaceItems, eq(databases.itemId, workspaceItems.id))
+      .where(and(eq(workspaceItems.workspaceId, workspaceId), inArray(databases.id, list))),
+  ]);
+  const titles = new Map<string, string>();
+  for (const r of [...items, ...rowsTitles, ...dbs]) if (r.title) titles.set(r.id, r.title);
+
+  for (const session of sessions) {
+    for (const call of session.calls) {
+      const targetId = byId.get(call.id)?.targetId;
+      call.target = targetId ? titles.get(targetId) ?? null : null;
+    }
+  }
+}
+
 function buildChartPoints(
   rows: DashboardRowLike[],
   block: ChartBlock,
   schema: Record<string, unknown>[],
 ): ChartPoint[] {
-  const column = schema.find((c) => (c as { id?: unknown }).id === block.groupBy) as { type?: string } | undefined;
+  const column = schema.find((c) => (c as { id?: unknown }).id === block.groupBy) as
+    | { type?: string; options?: (string | { value?: string })[] }
+    | undefined;
   const isDateColumn = column?.type === 'date' || column?.type === 'datetime';
   const bucket = block.bucket ?? (isDateColumn ? 'day' : undefined);
 
@@ -502,9 +662,31 @@ function buildChartPoints(
   if (isDateColumn && bucket) return entries.sort((a, b) => a.label.localeCompare(b.label));
 
   entries.sort((a, b) => b.value - a.value);
-  if (entries.length <= block.limit) return entries;
-  const kept = entries.slice(0, block.limit);
+  let kept = entries.slice(0, block.limit);
   const other = entries.slice(block.limit).reduce((s, e) => s + e.value, 0);
+
+  // Palette slots: an option keeps its own slot (its place in the column); anything else
+  // takes the next one by rank. Past eight distinct slots a chart would have to cycle
+  // hues, so it falls back to plain rank order instead.
+  const optionOrder = (column?.options ?? []).map((o) => (typeof o === 'string' ? o : String(o?.value ?? '')));
+  const slotOf = (label: string) => optionOrder.indexOf(label);
+  const usesOptionSlots = kept.every((p) => p.isEmpty || slotOf(p.label) < 8);
+  const taken = new Set(usesOptionSlots ? kept.map((p) => slotOf(p.label)).filter((i) => i >= 0) : []);
+  let free = 0;
+  kept = kept.map((p, i) => {
+    if (!usesOptionSlots) return { ...p, colorIndex: i };
+    if (slotOf(p.label) >= 0) return { ...p, colorIndex: slotOf(p.label) };
+    while (taken.has(free)) free++;
+    taken.add(free);
+    return { ...p, colorIndex: free };
+  });
+
+  // A stacked bar reads left to right in the column's own order (to-do → done), not by size.
+  if (block.variant === 'stack' && optionOrder.length) {
+    const rank = (p: ChartPoint) => (p.isEmpty ? Infinity : slotOf(p.label) >= 0 ? slotOf(p.label) : optionOrder.length);
+    kept.sort((a, b) => rank(a) - rank(b));
+  }
+
   if (other > 0) kept.push({ label: '', value: other, isOther: true });
   return kept;
 }

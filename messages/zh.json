@@ -882,8 +882,6 @@
   "Dashboard": {
     "deleteDashboard": "删除仪表盘",
     "deleteDashboardTitle": "删除此仪表盘？",
-      "ignoredColumns": "已忽略（无匹配属性）：{columns}",
-      "moreRows": "还有 {count} 行",
     "deleteDashboardBody": "它会移到回收站，可从那里恢复。你的数据不受影响。",
     "deleteDashboardConfirm": "删除",
     "untitled": "未命名仪表板",
@@ -923,6 +921,8 @@
       "badge": "主页",
       "note": "此仪表盘由你的数据库自动生成。想要一个围绕你的项目搭建的仪表盘，请对已连接的智能体说：“刷新 Remnus 校准”。",
       "open": "{name}：未完成",
+    "sessionMeta": "{calls} 次调用{more, select, yes {或更多} other {}}，{writes, plural, =0 {没有写入} other {# 次写入}}",
+    "callFailed": "失败",
       "byStatus": "{name} 按状态",
       "nextDue": "{name}：即将到期",
       "stillOpen": "{name}：仍未完成",
@@ -975,7 +975,8 @@
       "variants": {
         "donut": "环形图",
         "bar": "柱状图",
-        "line": "折线图"
+        "line": "折线图",
+        "stack": "堆叠条形图"
       },
       "bucket": "日期分组方式",
       "buckets": {

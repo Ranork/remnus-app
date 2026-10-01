@@ -882,8 +882,6 @@
   "Dashboard": {
     "deleteDashboard": "Eliminar panel",
     "deleteDashboardTitle": "¿Eliminar este panel?",
-      "ignoredColumns": "Ignoradas (sin propiedad coincidente): {columns}",
-      "moreRows": "{count, plural, one {# fila más} other {# filas más}}",
     "deleteDashboardBody": "Se mueve a la papelera y se puede restaurar desde allí. Tus datos no se tocan.",
     "deleteDashboardConfirm": "Eliminar",
     "untitled": "Panel sin título",
@@ -923,6 +921,8 @@
       "badge": "Inicio",
       "note": "Este panel se armó a partir de tus bases de datos. Para uno hecho a la medida de tu proyecto, pídele a tu agente conectado: «Actualiza la calibración de Remnus».",
       "open": "{name}: abiertos",
+    "sessionMeta": "{calls, plural, one {# llamada} other {# llamadas}}{more, select, yes { o más} other {}}, {writes, plural, =0 {sin escrituras} one {# escritura} other {# escrituras}}",
+    "callFailed": "falló",
       "byStatus": "{name} por estado",
       "nextDue": "{name}: próximos vencimientos",
       "stillOpen": "{name}: aún abiertos",
@@ -975,7 +975,8 @@
       "variants": {
         "donut": "Anillo",
         "bar": "Barras",
-        "line": "Líneas"
+        "line": "Líneas",
+        "stack": "Barra apilada"
       },
       "bucket": "Agrupar fechas por",
       "buckets": {

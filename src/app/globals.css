@@ -19,6 +19,20 @@
   --elev-shade-deep: rgb(0 0 0 / 0.62);
   --selection: rgb(240 180 60 / 0.28);
   --overlay: rgb(5 6 8 / 0.58);
+
+  /* Dashboard chart categories (V2 R8.3): the dataviz reference eight, in their validated
+     order (adjacent CVD ΔE ≥ 8.4, normal-vision ≥ 19.3, ≥ 3:1 on the dark sheet/raised).
+     Assign in this order, never cycled; a 9th category folds into "Other" (--chart-muted).
+     The light theme redefines them with the light steps of the same hues. */
+  --chart-1: #3987e5;
+  --chart-2: #d95926;
+  --chart-3: #199e70;
+  --chart-4: #c98500;
+  --chart-5: #d55181;
+  --chart-6: #008300;
+  --chart-7: #9085e9;
+  --chart-8: #e66767;
+  --chart-muted: #5d626b;
 }
 
 @theme {
@@ -448,6 +462,17 @@
   --elev-shade: rgb(16 24 40 / 0.1);
   --elev-shade-deep: rgb(16 24 40 / 0.16);
   --selection: rgb(245 179 0 / 0.3);
+  /* Chart categories, light steps (validated on #ffffff and #f7f8fa; slots 3, 4 and 5
+     sit under 3:1, so every chart keeps visible labels or values beside its marks). */
+  --chart-1: #2a78d6;
+  --chart-2: #eb6834;
+  --chart-3: #1baf7a;
+  --chart-4: #eda100;
+  --chart-5: #e87ba4;
+  --chart-6: #008300;
+  --chart-7: #4a3aa7;
+  --chart-8: #e34948;
+  --chart-muted: #9ba0a9;
   --overlay: rgb(16 24 40 / 0.32);
 
   /* select/multi-select chip colors — soft tints for light bg */

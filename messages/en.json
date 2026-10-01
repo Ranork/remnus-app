@@ -882,8 +882,6 @@
   "Dashboard": {
     "deleteDashboard": "Delete dashboard",
     "deleteDashboardTitle": "Delete this dashboard?",
-      "ignoredColumns": "Ignored (no matching property): {columns}",
-      "moreRows": "{count, plural, one {# more row} other {# more rows}}",
     "deleteDashboardBody": "It moves to the trash and can be restored from there. Your data stays where it is.",
     "deleteDashboardConfirm": "Delete",
     "untitled": "Untitled dashboard",
@@ -923,6 +921,8 @@
       "badge": "Home",
       "note": "This dashboard was put together from your databases. For one built around your project, ask your connected agent: “Refresh the Remnus calibration”.",
       "open": "{name}: open",
+    "sessionMeta": "{calls, plural, one {# call} other {# calls}}{more, select, yes { or more} other {}}, {writes, plural, =0 {no writes} one {# write} other {# writes}}",
+    "callFailed": "failed",
       "byStatus": "{name} by status",
       "nextDue": "{name}: next due",
       "stillOpen": "{name}: still open",
@@ -975,7 +975,8 @@
       "variants": {
         "donut": "Donut",
         "bar": "Bar",
-        "line": "Line"
+        "line": "Line",
+        "stack": "Stacked bar"
       },
       "bucket": "Group dates by",
       "buckets": {

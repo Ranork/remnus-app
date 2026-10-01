@@ -5,6 +5,10 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Plus, X } from 'lucide-react';
 import { SimpleSelect, type SelectOption } from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Input, Textarea } from '@/components/ui/input';
+import { Sheet, SheetBody, SheetContent, SheetFooter, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import {
   getDashboardEditorOptions,
   saveDashboardBlock,
@@ -43,8 +47,6 @@ const SELECT_TYPES = new Set(['select', 'multi_select', 'status']);
 const DATE_TYPES = new Set(['date', 'datetime']);
 const SOURCE_TYPES = new Set<DashboardBlockType>(['metric', 'chart', 'list']);
 
-const inputCls = 'w-full border-b border-neutral-700 bg-transparent px-1 py-1.5 text-xs text-neutral-200 outline-none placeholder:text-neutral-600 focus:border-neutral-500';
-
 /** A block-editor dropdown: full width, string values. */
 function Sel({ value, onChange, options }: { value: string; onChange: (value: string) => void; options: SelectOption[] }) {
   return <SimpleSelect value={value} onValueChange={onChange} options={options} className="w-full" />;
@@ -55,7 +57,7 @@ function emptyDraft(type: DashboardBlockType): Draft {
     case 'metric':
       return { type, source: { databaseId: '' }, aggregate: 'count' };
     case 'chart':
-      return { type, source: { databaseId: '' }, variant: 'donut', groupBy: '', aggregate: 'count' };
+      return { type, source: { databaseId: '' }, variant: 'bar', groupBy: '', aggregate: 'count' };
     case 'list':
       return { type, source: { databaseId: '' } };
     case 'database_embed':
@@ -152,12 +154,6 @@ export default function DashboardBlockEditor({
     };
   }, [itemId]);
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
-
   const type = draft.type as DashboardBlockType;
   const databaseId: string = type === 'database_embed' ? draft.databaseId : draft.source?.databaseId ?? '';
   const database = useMemo(() => options?.databases.find((d) => d.id === databaseId) ?? null, [options, databaseId]);
@@ -195,32 +191,26 @@ export default function DashboardBlockEditor({
   const complete = isComplete(draft);
 
   return (
-    <>
-      <div className="fixed inset-0 z-300 bg-black/40" onClick={onClose} />
-      <aside
-        role="dialog"
-        aria-label={isNew ? t('editor.addTitle') : t('editor.editTitle')}
-        className="fixed inset-y-0 right-0 z-300 flex w-full flex-col border-l border-neutral-800 bg-neutral-900 sm:w-[400px]"
-      >
-        <header className="flex shrink-0 items-center justify-between border-b border-neutral-800 px-5 py-3.5">
-          <p className="text-sm font-semibold text-neutral-100">{isNew ? t('editor.addTitle') : t('editor.editTitle')}</p>
-          <button type="button" onClick={onClose} aria-label={t('cancel')} className="p-1 text-neutral-500 transition-colors hover:text-neutral-200">
-            <X size={16} />
-          </button>
-        </header>
+    <Sheet open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <SheetContent>
+        <SheetHeader>
+          <SheetTitle>{isNew ? t('editor.addTitle') : t('editor.editTitle')}</SheetTitle>
+        </SheetHeader>
 
-        <div className="flex-1 space-y-5 overflow-y-auto px-5 py-4">
+        <SheetBody className="space-y-5">
           {isNew && (
             <Field label={t('editor.type')}>
-              <div className="grid grid-cols-2 gap-px bg-neutral-800">
+              {/* Block kinds as a 2-column picker: the chosen one lifted, like a selected tab. */}
+              <div className="grid grid-cols-2 gap-1 rounded-control bg-raised p-1 shadow-[inset_0_0_0_1px_var(--color-line)]">
                 {BLOCK_TYPES.map((option, i) => (
                   <button
                     key={option}
                     type="button"
+                    aria-pressed={option === type}
                     onClick={() => setDraft({ ...emptyDraft(option), ...(draft.title ? { title: draft.title } : {}) })}
-                    // An odd last type spans the row, so no empty cell shows the grid's gap colour.
-                    className={`px-2.5 py-2 text-left text-xs transition-colors ${i === BLOCK_TYPES.length - 1 && BLOCK_TYPES.length % 2 ? 'col-span-2 ' : ''}${
-                      option === type ? 'bg-neutral-800 text-neutral-100' : 'bg-neutral-900 text-neutral-400 hover:bg-neutral-850 hover:text-neutral-200'
+                    // An odd last type spans the row.
+                    className={`h-8 cursor-pointer rounded-[calc(var(--radius-control)-2px)] px-2.5 text-left text-xs transition-colors ${i === BLOCK_TYPES.length - 1 && BLOCK_TYPES.length % 2 ? 'col-span-2 ' : ''}${
+                      option === type ? 'bg-sheet font-medium text-fg shadow-lift' : 'text-fg-3 hover:bg-hover hover:text-fg'
                     }`}
                   >
                     {t(`blockTypes.${option}`)}
@@ -231,7 +221,7 @@ export default function DashboardBlockEditor({
           )}
 
           <Field label={t('editor.title')}>
-            <input className={inputCls} value={draft.title ?? ''} maxLength={80} onChange={(e) => set({ title: e.target.value })} />
+            <Input value={draft.title ?? ''} maxLength={80} onChange={(e) => set({ title: e.target.value })} />
           </Field>
 
           <Field label={t('editor.width')}>
@@ -247,7 +237,7 @@ export default function DashboardBlockEditor({
             />
           </Field>
 
-          {!options && !failed && <p className="text-xs text-neutral-600">{t('editor.loading')}</p>}
+          {!options && !failed && <p className="text-xs text-fg-3">{t('editor.loading')}</p>}
 
           {options && (SOURCE_TYPES.has(type) || type === 'database_embed') && (
             <Field label={`${t('editor.database')} *`}>
@@ -280,15 +270,14 @@ export default function DashboardBlockEditor({
                 <ColumnSelect label={`${t('editor.column')} *`} database={database} value={draft.columnId} only={(c) => c.type === 'number'} onChange={(columnId) => set({ columnId })} />
               )}
               <Field label={t('editor.unit')}>
-                <input className={inputCls} value={draft.unit ?? ''} maxLength={16} onChange={(e) => set({ unit: e.target.value })} />
+                <Input value={draft.unit ?? ''} maxLength={16} onChange={(e) => set({ unit: e.target.value })} />
               </Field>
-              <label className="flex items-center gap-2 text-xs text-neutral-300">
-                <input
-                  type="checkbox"
+              <label className="flex cursor-pointer items-center gap-2 text-ui text-fg-2">
+                <Checkbox
                   checked={!!draft.trend}
-                  onChange={(e) => {
+                  onCheckedChange={(checked) => {
                     const dateCol = database.columns.find((c) => DATE_TYPES.has(c.type));
-                    set({ trend: e.target.checked ? { columnId: dateCol?.id ?? '', days: 7 } : undefined });
+                    set({ trend: checked ? { columnId: dateCol?.id ?? '', days: 7 } : undefined });
                   }}
                 />
                 {t('editor.trend')}
@@ -297,7 +286,7 @@ export default function DashboardBlockEditor({
                 <div className="grid grid-cols-2 gap-3">
                   <ColumnSelect label={t('editor.dateColumn')} database={database} value={draft.trend.columnId} only={(c) => DATE_TYPES.has(c.type)} onChange={(columnId) => set({ trend: { ...draft.trend, columnId } })} />
                   <Field label={t('editor.trendDays')}>
-                    <input type="number" min={1} max={365} className={inputCls} value={draft.trend.days} onChange={(e) => set({ trend: { ...draft.trend, days: clamp(e.target.value, 1, 365) } })} />
+                    <Input type="number" min={1} max={365} value={draft.trend.days} onChange={(e) => set({ trend: { ...draft.trend, days: clamp(e.target.value, 1, 365) } })} />
                   </Field>
                 </div>
               )}
@@ -310,7 +299,7 @@ export default function DashboardBlockEditor({
                 <Sel
                   value={draft.variant}
                   onChange={(variant) => set({ variant })}
-                  options={(['donut', 'bar', 'line'] as const).map((v) => ({ value: v, label: t(`editor.variants.${v}`) }))}
+                  options={(['stack', 'bar', 'donut', 'line'] as const).map((v) => ({ value: v, label: t(`editor.variants.${v}`) }))}
                 />
               </Field>
               <ColumnSelect label={`${tDb('groupBy')} *`} database={database} value={draft.groupBy} onChange={(groupBy) => set({ groupBy })} />
@@ -374,12 +363,12 @@ export default function DashboardBlockEditor({
                     const chosen: string[] = draft.showColumns ?? [];
                     const on = chosen.includes(c.id);
                     return (
-                      <label key={c.id} className="flex items-center gap-2 text-xs text-neutral-300">
-                        <input
-                          type="checkbox"
+                      <label key={c.id} className="flex cursor-pointer items-center gap-2 text-ui text-fg-2">
+                        <Checkbox
+                          size="sm"
                           checked={on}
                           disabled={!on && chosen.length >= 3}
-                          onChange={() => set({ showColumns: on ? chosen.filter((id) => id !== c.id) : [...chosen, c.id] })}
+                          onCheckedChange={() => set({ showColumns: on ? chosen.filter((id) => id !== c.id) : [...chosen, c.id] })}
                         />
                         {c.name}
                       </label>
@@ -406,8 +395,8 @@ export default function DashboardBlockEditor({
           {type === 'text' && (
             <>
               <Field label={`${t('editor.markdown')} *`}>
-                <textarea
-                  className={`${inputCls} min-h-[140px] resize-y border border-neutral-800 bg-neutral-850 px-2 font-mono leading-relaxed`}
+                <Textarea
+                  className="min-h-36 font-mono text-xs"
                   value={draft.markdown ?? ''}
                   maxLength={2000}
                   onChange={(e) => set({ markdown: e.target.value })}
@@ -434,8 +423,7 @@ export default function DashboardBlockEditor({
                         onChange={(itemId) => set({ items: draft.items.map((l: object, k: number) => (k === i ? { ...l, itemId } : l)) })}
                         options={[{ value: '', label: t('editor.chooseItem') }, ...options.items.map((item) => ({ value: item.id, label: item.title || t('untitled') }))]}
                       />
-                      <input
-                        className={inputCls}
+                      <Input
                         placeholder={t('editor.linkLabel')}
                         value={link.label ?? ''}
                         maxLength={60}
@@ -459,16 +447,15 @@ export default function DashboardBlockEditor({
           {type === 'project' && (
             <>
               <Field label={`${t('editor.summary')} *`}>
-                <textarea
-                  className={`${inputCls} min-h-[88px] resize-y border border-neutral-800 bg-neutral-850 px-2 leading-relaxed`}
+                <Textarea
+                  className="min-h-22"
                   value={draft.summary ?? ''}
                   maxLength={280}
                   onChange={(e) => set({ summary: e.target.value })}
                 />
               </Field>
               <Field label={t('editor.stack')}>
-                <input
-                  className={inputCls}
+                <Input
                   placeholder={t('editor.stackPlaceholder')}
                   // Kept as typed while editing; split into chips (≤ 8 × 24 chars) on save.
                   value={Array.isArray(draft.stack) ? draft.stack.join(', ') : ''}
@@ -477,27 +464,23 @@ export default function DashboardBlockEditor({
               </Field>
             </>
           )}
-        </div>
+        </SheetBody>
 
-        <footer className="shrink-0 space-y-2 border-t border-neutral-800 px-5 py-3">
-          {failed && <p className="text-[11px] text-red-400">{options ? t('editor.saveFailed') : t('editor.loadFailed')}</p>}
-          {!complete && !failed && <p className="text-[11px] text-neutral-500">{t('editor.requiredHint')}</p>}
-          <div className="flex justify-end gap-2">
-            <button type="button" onClick={onClose} className="px-3 py-1.5 text-xs text-neutral-400 transition-colors hover:text-neutral-200">
+        <SheetFooter className="justify-between">
+          <p className={`min-w-0 flex-1 text-xs ${failed ? 'text-red-400' : 'text-fg-3'}`}>
+            {failed ? (options ? t('editor.saveFailed') : t('editor.loadFailed')) : !complete ? t('editor.requiredHint') : ''}
+          </p>
+          <div className="flex gap-2">
+            <Button variant="secondary" onClick={onClose}>
               {t('cancel')}
-            </button>
-            <button
-              type="button"
-              onClick={save}
-              disabled={!complete || pending || !options}
-              className="bg-ink px-3 py-1.5 text-xs font-medium text-ink-fg transition-colors hover:bg-ink/88 disabled:opacity-40"
-            >
-              {pending ? t('editor.saving') : t('editor.save')}
-            </button>
+            </Button>
+            <Button variant="primary" onClick={save} disabled={!complete || !options} loading={pending}>
+              {t('editor.save')}
+            </Button>
           </div>
-        </footer>
-      </aside>
-    </>
+        </SheetFooter>
+      </SheetContent>
+    </Sheet>
   );
 }
 
@@ -505,7 +488,7 @@ function LimitField({ value, fallback, min, max, onChange }: { value?: number; f
   const t = useTranslations('Dashboard');
   return (
     <Field label={t('editor.limit')}>
-      <input type="number" min={min} max={max} className={inputCls} value={value ?? fallback} onChange={(e) => onChange(clamp(e.target.value, min, max))} />
+      <Input type="number" min={min} max={max} value={value ?? fallback} onChange={(e) => onChange(clamp(e.target.value, min, max))} />
     </Field>
   );
 }
@@ -518,7 +501,7 @@ function clamp(raw: string, min: number, max: number): number {
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <p className="mb-1 text-2xs font-medium text-neutral-500">{label}</p>
+      <p className="mb-1.5 text-xs font-medium text-fg-3">{label}</p>
       {children}
     </div>
   );
@@ -592,7 +575,7 @@ function FiltersEditor({
                         options={[{ value: '', label: t('editor.chooseValue') }, ...column.options.map((o) => ({ value: o, label: o }))]}
                       />
                     ) : (
-                      <input className={inputCls} placeholder={tDb('filterValue')} value={filter.value ?? ''} onChange={(e) => update(i, { value: e.target.value })} />
+                      <Input size="sm" placeholder={tDb('filterValue')} value={filter.value ?? ''} onChange={(e) => update(i, { value: e.target.value })} />
                     )}
                   </div>
                 )}
@@ -611,17 +594,17 @@ function FiltersEditor({
 
 function AddButton({ label, onClick }: { label: string; onClick: () => void }) {
   return (
-    <button type="button" onClick={onClick} className="flex items-center gap-1 text-[11px] text-neutral-500 transition-colors hover:text-neutral-200">
-      <Plus size={12} />
+    <Button variant="ghost" size="xs" onClick={onClick} className="-ml-2">
+      <Plus />
       {label}
-    </button>
+    </Button>
   );
 }
 
 function RemoveButton({ label, onClick }: { label: string; onClick: () => void }) {
   return (
-    <button type="button" onClick={onClick} title={label} aria-label={label} className="mt-1 p-0.5 text-neutral-600 transition-colors hover:text-neutral-200">
-      <X size={13} />
-    </button>
+    <Button variant="ghost" size="icon-sm" onClick={onClick} title={label} aria-label={label} className="shrink-0 hover:text-red-400">
+      <X />
+    </Button>
   );
 }

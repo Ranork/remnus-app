@@ -10,7 +10,7 @@ import { getAgentMetrics } from '@/lib/services/agentMetrics';
  *
  * The rule is the calibration guide's: **no zeros**. A block goes in only when it
  * would show something today — an open-items metric only if items are open, a
- * donut only if there are at least two statuses to compare, activity only if an
+ * status bar only if there are at least two statuses to compare, activity only if an
  * agent has worked here, savings only if something was measured. A workspace with
  * nothing to show gets the note (and links, if it has items) and no filler.
  *
@@ -132,7 +132,7 @@ export async function composeHomeDashboardBlocks(
     if (index > 0) return; // the second tracker gets its headline number only
 
     if (new Set(values).size >= 2) {
-      detail.push({ id: 'mix', type: 'chart', variant: 'donut', title: clip(labels.byStatus(database.name)), groupBy: status.column.id, source: { databaseId: database.id } });
+      detail.push({ id: 'mix', type: 'chart', variant: 'stack', title: clip(labels.byStatus(database.name)), groupBy: status.column.id, source: { databaseId: database.id } });
     }
     if (status.done.length && openCount > 0) {
       const due = dateColumn(database.schema);

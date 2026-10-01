@@ -83,7 +83,8 @@ export const chartBlockSchema = z
     ...baseFields,
     type: z.literal('chart'),
     source: dashboardSourceSchema,
-    variant: z.enum(['bar', 'line', 'donut']),
+    /** `stack`: one horizontal bar split into its categories (part-to-whole, V2 R8.3). */
+    variant: z.enum(['bar', 'line', 'donut', 'stack']),
     /** Column whose values become the categories (or, for a date column, the axis). */
     groupBy: z.string().min(1),
     /** Only meaningful when `groupBy` is a date/datetime column. */
@@ -330,8 +331,8 @@ export const DASHBOARD_BLOCK_CATALOG: { type: DashboardBlockType; summary: strin
   },
   {
     type: 'chart',
-    summary: 'A bar, line or donut chart of one database grouped by one column.',
-    use: 'Status breakdowns (donut), per-owner totals (bar), volume over time (line + a date column with `bucket`).',
+    summary: 'A stacked bar, bar, line or donut chart of one database grouped by one column.',
+    use: 'Status breakdowns (stack: one bar split by status, in the column\'s option order), per-owner totals (bar), volume over time (line + a date column with `bucket`). Donut still works but reads worse than stack for a status mix.',
   },
   {
     type: 'database_embed',
@@ -355,7 +356,7 @@ export const DASHBOARD_BLOCK_CATALOG: { type: DashboardBlockType; summary: strin
   },
   {
     type: 'activity',
-    summary: 'The most recent agent activity in this workspace.',
+    summary: 'The most recent agent activity in this workspace, grouped into sessions per agent.',
     use: 'Showing what the agents have been doing, and when they last touched the workspace.',
   },
   {

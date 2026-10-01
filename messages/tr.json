@@ -882,8 +882,6 @@
   "Dashboard": {
     "deleteDashboard": "Panoyu sil",
     "deleteDashboardTitle": "Bu pano silinsin mi?",
-      "ignoredColumns": "Yok sayılacak (eşleşen özellik yok): {columns}",
-      "moreRows": "{count} satır daha",
     "deleteDashboardBody": "Çöp kutusuna taşınır ve oradan geri yüklenebilir. Verilerine dokunulmaz.",
     "deleteDashboardConfirm": "Sil",
     "untitled": "Adsız pano",
@@ -923,7 +921,9 @@
       "badge": "Ana pano",
       "note": "Bu pano veritabanlarınızdan otomatik oluşturuldu. Projenize göre kurulmuş bir pano için bağlı ajanınıza şunu yazın: “Remnus kalibrasyonunu yenile”.",
       "open": "{name}: açık",
-      "byStatus": "{name} — duruma göre",
+    "sessionMeta": "{calls} çağrı{more, select, yes { ve fazlası} other {}}, {writes, plural, =0 {yazma yok} other {# yazma}}",
+    "callFailed": "başarısız",
+      "byStatus": "{name}: duruma göre",
       "nextDue": "{name}: sıradaki tarih",
       "stillOpen": "{name}: hâlâ açık",
       "latest": "{name}: en yeni",
@@ -975,7 +975,8 @@
       "variants": {
         "donut": "Halka",
         "bar": "Çubuk",
-        "line": "Çizgi"
+        "line": "Çizgi",
+        "stack": "Yığın çubuk"
       },
       "bucket": "Tarihleri grupla",
       "buckets": {

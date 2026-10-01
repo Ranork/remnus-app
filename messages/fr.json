@@ -882,8 +882,6 @@
   "Dashboard": {
     "deleteDashboard": "Supprimer le tableau de bord",
     "deleteDashboardTitle": "Supprimer ce tableau de bord ?",
-      "ignoredColumns": "Ignorées (aucune propriété correspondante) : {columns}",
-      "moreRows": "{count, plural, one {# autre ligne} other {# autres lignes}}",
     "deleteDashboardBody": "Il est placé dans la corbeille et peut y être restauré. Vos données restent intactes.",
     "deleteDashboardConfirm": "Supprimer",
     "untitled": "Tableau de bord sans titre",
@@ -923,6 +921,8 @@
       "badge": "Accueil",
       "note": "Ce tableau de bord a été assemblé à partir de vos bases de données. Pour un tableau pensé pour votre projet, demandez à votre agent connecté : « Rafraîchis la calibration Remnus ».",
       "open": "{name} : ouverts",
+    "sessionMeta": "{calls, plural, one {# appel} other {# appels}}{more, select, yes { ou plus} other {}}, {writes, plural, =0 {aucune écriture} one {# écriture} other {# écritures}}",
+    "callFailed": "échec",
       "byStatus": "{name} par statut",
       "nextDue": "{name} : prochaines échéances",
       "stillOpen": "{name} : encore ouverts",
@@ -975,7 +975,8 @@
       "variants": {
         "donut": "Anneau",
         "bar": "Barres",
-        "line": "Courbe"
+        "line": "Courbe",
+        "stack": "Barre empilée"
       },
       "bucket": "Regrouper les dates par",
       "buckets": {

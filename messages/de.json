@@ -882,8 +882,6 @@
   "Dashboard": {
     "deleteDashboard": "Dashboard löschen",
     "deleteDashboardTitle": "Dieses Dashboard löschen?",
-      "ignoredColumns": "Ignoriert (keine passende Eigenschaft): {columns}",
-      "moreRows": "{count, plural, one {# weitere Zeile} other {# weitere Zeilen}}",
     "deleteDashboardBody": "Es wandert in den Papierkorb und kann dort wiederhergestellt werden. Deine Daten bleiben unverändert.",
     "deleteDashboardConfirm": "Löschen",
     "untitled": "Unbenanntes Dashboard",
@@ -923,6 +921,8 @@
       "badge": "Start",
       "note": "Dieses Dashboard wurde aus Ihren Datenbanken zusammengestellt. Für eines, das auf Ihr Projekt zugeschnitten ist, sagen Sie Ihrem verbundenen Agenten: „Remnus-Kalibrierung auffrischen“.",
       "open": "{name}: offen",
+    "sessionMeta": "{calls, plural, one {# Aufruf} other {# Aufrufe}}{more, select, yes { oder mehr} other {}}, {writes, plural, =0 {keine Schreibvorgänge} one {# Schreibvorgang} other {# Schreibvorgänge}}",
+    "callFailed": "fehlgeschlagen",
       "byStatus": "{name} nach Status",
       "nextDue": "{name}: als Nächstes fällig",
       "stillOpen": "{name}: noch offen",
@@ -975,7 +975,8 @@
       "variants": {
         "donut": "Ring",
         "bar": "Balken",
-        "line": "Linie"
+        "line": "Linie",
+        "stack": "Gestapelter Balken"
       },
       "bucket": "Daten gruppieren nach",
       "buckets": {

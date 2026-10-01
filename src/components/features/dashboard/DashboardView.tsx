@@ -84,7 +84,7 @@ export default async function DashboardView({
 
       {resolved.fatal && (
         <div className="mb-5 flex items-start gap-2 border-b border-line pb-4 text-ui text-fg-2">
-          <CircleAlert size={16} className="mt-px shrink-0 text-amber-400" />
+          <CircleAlert size={16} className="mt-px shrink-0 text-signal-text" aria-hidden />
           <div>
             <p>{t('specUnreadable')}</p>
             <p className="mt-1 font-mono text-2xs text-fg-4">{resolved.fatal}</p>
@@ -201,7 +201,7 @@ async function DatabaseEmbedBody({
         members={members}
       />
       {entry.truncated > 0 && (
-        <p className="pt-2 text-2xs text-fg-4">{t('andMore', { count: entry.truncated })}</p>
+        <p className="pt-2 text-xs text-fg-3">{t('andMore', { count: entry.truncated })}</p>
       )}
     </div>
   );

@@ -882,8 +882,6 @@
   "Dashboard": {
     "deleteDashboard": "Удалить панель",
     "deleteDashboardTitle": "Удалить эту панель?",
-      "ignoredColumns": "Игнорируются (нет соответствующего свойства): {columns}",
-      "moreRows": "{count, plural, one {ещё # строка} few {ещё # строки} many {ещё # строк} other {ещё # строки}}",
     "deleteDashboardBody": "Она попадёт в корзину, и её можно будет восстановить. Ваши данные не затрагиваются.",
     "deleteDashboardConfirm": "Удалить",
     "untitled": "Дашборд без названия",
@@ -923,6 +921,8 @@
       "badge": "Главная",
       "note": "Эта панель собрана из ваших баз данных. Чтобы получить панель под ваш проект, попросите подключённого агента: «Обнови калибровку Remnus».",
       "open": "{name}: открытые",
+    "sessionMeta": "{calls, plural, one {# вызов} few {# вызова} many {# вызовов} other {# вызова}}{more, select, yes { или больше} other {}}, {writes, plural, =0 {без записи} one {# запись} few {# записи} many {# записей} other {# записи}}",
+    "callFailed": "ошибка",
       "byStatus": "{name} по статусу",
       "nextDue": "{name}: ближайшие сроки",
       "stillOpen": "{name}: ещё открыты",
@@ -975,7 +975,8 @@
       "variants": {
         "donut": "Кольцевая",
         "bar": "Столбчатая",
-        "line": "Линейная"
+        "line": "Линейная",
+        "stack": "Составная полоса"
       },
       "bucket": "Группировать даты по",
       "buckets": {

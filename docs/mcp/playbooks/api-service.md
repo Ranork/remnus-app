@@ -52,7 +52,7 @@ The workspace's home (`home: true`), which opens on the **Pano** button:
   framework, datastore, where it runs).
 - Then, only for the databases you actually built, and only blocks that show something
   today:
-  - Endpoints: `metric` filter Status equals `Live`, unit "live"; `chart` donut grouped by
+  - Endpoints: `metric` filter Status equals `Live`, unit "live"; `chart` stack grouped by
     Status; `list` filter Status equals `Deprecated`, showColumns Version, Consumers.
   - Incidents: `metric` filter Status not_equals `Resolved`, unit "open" (none open → leave
     it out); `list` sort Detected descending, showColumns Severity, Status.

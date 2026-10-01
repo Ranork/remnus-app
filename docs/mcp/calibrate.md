@@ -173,7 +173,7 @@ The human reads this in a sidebar, so the shape is part of the work.
   - `project` first: `summary` — one or two sentences on what the project is, for whom,
     at what stage, from what you read — and `stack` chips from the manifest.
   - Status blocks **only where a database earns them**: open items (metric) and status mix
-    (donut) over a database with a lifecycle, next due (list sorted by date) over one with
+    (chart `stack`) over a database with a lifecycle, next due (list sorted by date) over one with
     dates. Pick them from what this project tracks — the playbook you read names its
     usual ones — not from a fixed set.
   - `links` to the overview and the main databases, `activity`, and `savings`.

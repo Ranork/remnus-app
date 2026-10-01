@@ -22,7 +22,7 @@ one with `home` alone.
 
 A workspace nobody has calibrated gets one the first time someone presses Pano: Remnus
 composes it on the server from the databases already there — an open-items number and a
-status donut over the largest database with a lifecycle, what is due next, links,
+status bar over the largest database with a lifecycle, what is due next, links,
 activity and savings, each only when it would show something — with a note on how to ask
 an agent for one built around the project.
 
@@ -66,7 +66,7 @@ one tile afterwards costs a few dozen.
   "blocks": [
     { "id": "open", "type": "metric", "title": "Open",
       "source": { "databaseId": "…", "filters": [ { "columnId": "Status", "operator": "not_equals", "value": "Done" } ] } },
-    { "id": "mix", "type": "chart", "title": "By status", "variant": "donut", "groupBy": "Status",
+    { "id": "mix", "type": "chart", "title": "By status", "variant": "stack", "groupBy": "Status",
       "source": { "databaseId": "…" } },
     { "id": "next", "type": "list", "title": "In progress", "showColumns": ["Priority"],
       "source": { "databaseId": "…", "filters": [ { "columnId": "Status", "operator": "equals", "value": "In Progress" } ] } }
@@ -160,12 +160,12 @@ characters) and `width`.
 | Type | What it shows | Fields |
 |---|---|---|
 | `metric` | One number — count, sum, average, min or max — with an optional unit and a trend against the previous period. | `source*`, `aggregate` (`count` default · `sum` · `avg` · `min` · `max`), `columnId` (required unless `count`), `unit` (≤ 16), `trend` `{columnId*, days* 1–365}` |
-| `chart` | A bar, line or donut chart of one database grouped by one column. | `source*`, `variant*` (`bar` · `line` · `donut`), `groupBy*`, `bucket` (`day` · `week` · `month`, date columns only), `aggregate` (`count` · `sum`), `valueColumnId` (required for `sum`), `limit` 2–12 (default 8) |
+| `chart` | A stacked bar, bar, line or donut chart of one database grouped by one column. `stack` is one bar split into its categories in the column's own order — the clearest status mix. | `source*`, `variant*` (`stack` · `bar` · `line` · `donut`), `groupBy*`, `bucket` (`day` · `week` · `month`, date columns only), `aggregate` (`count` · `sum`), `valueColumnId` (required for `sum`), `limit` 2–12 (default 8) |
 | `database_embed` | A saved table or kanban view of a database, rendered as the real thing. | `databaseId*`, `viewId` (id or name; default the first view), `limit` 1–50 (default 10) |
 | `list` | The first N rows of a filtered query, as a compact list of titles. | `source*`, `limit` 1–20 (default 5), `sort` `{columnId*, direction* asc/desc}`, `showColumns` (≤ 3) |
 | `text` | Short markdown — a heading, an explanation, a warning. | `markdown*` (≤ 2,000), `tone` (`default` · `info` · `warning`) |
 | `links` | Quick links to pages, databases or dashboards of this workspace. | `items*` — 1–12 of `{itemId*, label}`; a database may be named by either of its ids |
-| `activity` | The most recent agent activity in this workspace. | `limit` 1–20 (default 6) |
+| `activity` | The most recent agent activity in this workspace, grouped into sessions per agent (calls, writes, when; the newest session open). | `limit` 1–20 calls listed per session (default 6) |
 | `project` | The header of a home dashboard: the workspace name, a short summary and the stack as chips, plus when an agent last worked here (live). | `summary*` (≤ 280), `stack` (≤ 8 chips of ≤ 24) |
 | `savings` | The tokens agents did not have to spend in this workspace, with the basis for the figure — the same measurements as the AI Agents panel. | — |
 
@@ -194,7 +194,7 @@ the database does not have.
 | Template | Needs | Blocks |
 |---|---|---|
 | `home` | `$SUMMARY`, `$STACK`, `$ITEM` | The frame of a home dashboard: project header, links, agent activity, savings — status blocks from the other templates go after the header |
-| `project-status` | `$DB`, `$STATUS`, `$DONE` | Open / Done / All metrics, a donut by status, a list of what is still open |
+| `project-status` | `$DB`, `$STATUS`, `$DONE` | Open / Done / All metrics, a stacked bar by status, a list of what is still open |
 | `backlog-health` | `$DB`, `$STATUS`, `$DONE`, `$OWNER` | Open items, open items with no owner, a bar chart of open work per owner, a triage list |
 | `weekly-pulse` | `$DB`, `$DATE` | A count with a 7-day trend, a weekly line chart, the latest rows, agent activity |
 

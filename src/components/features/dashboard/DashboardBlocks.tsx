@@ -1,29 +1,32 @@
 import Link from 'next/link';
 import { getLocale, getTranslations } from 'next-intl/server';
-import { ArrowDownRight, ArrowRight, ArrowUpRight, CircleAlert, Info, Minus, TriangleAlert } from 'lucide-react';
+import { ArrowDownRight, ArrowRight, ArrowUpRight, BarChart3, Bot, ChevronRight, CircleAlert, Info, Minus, TriangleAlert, Unplug } from 'lucide-react';
 import PageIcon from '@/components/features/PageIcon';
-import type { ChartPoint, ResolvedBlock } from '@/lib/dashboard/data';
+import { EmptyState } from '@/components/ui/empty-state';
+import { MarkIcon } from '@/components/features/agents/AgentMark';
+import { markForId, resolveAgentMark } from '@/components/features/agents/agentMarks';
+import { WRITE_TOOL, type ActivitySession, type ChartPoint, type ResolvedBlock } from '@/lib/dashboard/data';
 
 /**
  * The non-interactive dashboard blocks, rendered on the server.
  *
  * Charts are hand-drawn SVG on purpose: this repo has no charting dependency
  * (the admin panel's trend charts are inline SVG too) and installing one for
- * seven tiles is not a trade worth making. The categorical palette below is
- * the same validated 8-hue dark set `TrafficTrendChart` uses, so every colored
- * thing in the product comes from one ramp instead of each surface inventing
- * its own.
+ * seven tiles is not a trade worth making.
+ *
+ * Colours are the `--chart-1…8` tokens (globals.css): the dataviz reference eight in
+ * their validated order, with light steps under the light theme. A category's slot
+ * comes from the data layer (`ChartPoint.colorIndex`: an option keeps its slot), so a
+ * colour follows the entity, never its rank. Past eight there is no ninth hue — those
+ * marks go muted and lean on their labels.
  */
 
-// Validated against the neutral-900/850 surfaces — see TrafficTrendChart's note.
-const PALETTE = ['#3987e5', '#199e70', '#c98500', '#008300', '#9085e9', '#e66767', '#d55181', '#d95926'];
-// The "Other" / "no value" slot: a neutral, never one of the eight hues, so a
-// bucket that isn't a real category never reads as one.
-const MUTED = '#5a5f69';
+const MUTED = 'var(--chart-muted)';
 
-function colorAt(index: number, point?: ChartPoint): string {
-  if (point?.isOther || point?.isEmpty) return MUTED;
-  return PALETTE[index % PALETTE.length];
+function colorOf(point: ChartPoint, index: number): string {
+  if (point.isOther || point.isEmpty) return MUTED;
+  const slot = point.colorIndex ?? index;
+  return slot < 8 ? `var(--chart-${slot + 1})` : MUTED;
 }
 
 function formatNumber(value: number, locale: string): string {
@@ -50,35 +53,32 @@ function pointLabel(point: ChartPoint, locale: string, t: Translate): string {
 }
 
 // -- shared states ------------------------------------------------------------
+// Tile-local empty and error states: an icon, one line that says what happened, and —
+// for a block this build cannot read — the reason in small mono so an agent can fix it.
 
 export async function BlockUnavailable({ reason }: { reason: 'database_missing' | 'view_missing' | 'column_missing' }) {
   const t = await getTranslations('Dashboard');
   const text =
     reason === 'database_missing' ? t('sourceRemoved') : reason === 'view_missing' ? t('viewRemoved') : t('columnRemoved');
-  return (
-    <div className="flex items-center gap-2 py-4 text-ui text-fg-3">
-      <CircleAlert size={16} className="shrink-0 text-amber-400" />
-      <span>{text}</span>
-    </div>
-  );
+  return <EmptyState size="sm" icon={<Unplug />} title={text} className="my-auto" />;
 }
 
 export async function BlockInvalid({ id, error }: { id: string | null; error: string }) {
   const t = await getTranslations('Dashboard');
   return (
-    <div className="py-4">
-      <div className="flex items-center gap-2 text-ui text-fg-2">
-        <CircleAlert size={16} className="shrink-0 text-amber-400" />
-        <span>{id ? t('blockUnreadableWithId', { id }) : t('blockUnreadable')}</span>
-      </div>
-      <p className="mt-1.5 pl-6 font-mono text-2xs leading-relaxed text-fg-4 break-words">{error}</p>
-    </div>
+    <EmptyState
+      size="sm"
+      icon={<CircleAlert className="text-signal-text" />}
+      title={id ? t('blockUnreadableWithId', { id }) : t('blockUnreadable')}
+      description={<span className="font-mono text-2xs text-fg-4 break-words">{error}</span>}
+      className="my-auto"
+    />
   );
 }
 
 async function NoData() {
   const t = await getTranslations('Dashboard');
-  return <p className="py-4 text-ui text-fg-3">{t('noData')}</p>;
+  return <EmptyState size="sm" icon={<BarChart3 />} title={t('noData')} className="my-auto" />;
 }
 
 // -- metric -------------------------------------------------------------------
@@ -91,25 +91,28 @@ export async function MetricBlockView({ data }: { data: Extract<ResolvedBlock, {
   if (value == null) return <NoData />;
 
   const TrendIcon = trend?.direction === 'up' ? ArrowUpRight : trend?.direction === 'down' ? ArrowDownRight : Minus;
-  const trendClass =
-    trend?.direction === 'up' ? 'text-green-400' : trend?.direction === 'down' ? 'text-red-400' : 'text-fg-3';
+  // The change is told in ink, not green/red: whether "up" is good depends on what is
+  // counted (open bugs vs shipped features), which the tile cannot know.
+  const delta = trend
+    ? trend.percent == null
+      ? `${trend.current - trend.previous > 0 ? '+' : ''}${formatNumber(trend.current - trend.previous, locale)}`
+      : `${trend.direction === 'down' ? '−' : trend.direction === 'up' ? '+' : ''}${formatNumber(Math.abs(trend.percent), locale)}%`
+    : null;
 
   // Pinned to the foot of the tile: in a row stretched by a taller neighbour the number
   // sits on the baseline the eye expects, not floating under the title.
   return (
     <div className="mt-auto">
       <div className="flex items-baseline gap-1.5">
-        <span className="text-4xl font-semibold tracking-tight text-fg">{formatNumber(value, locale)}</span>
-        {block.unit && <span className="text-xs text-fg-3">{block.unit}</span>}
+        <span className="text-[40px] font-semibold leading-none tracking-[-0.03em] text-fg">{formatNumber(value, locale)}</span>
+        {block.unit && <span className="text-sm font-medium text-fg-3">{block.unit}</span>}
       </div>
       {trend && (
-        <div className={`mt-2 flex items-center gap-1 text-xs ${trendClass}`}>
-          <TrendIcon size={14} className="shrink-0" />
-          <span className="tabular-nums">
-            {trend.percent == null ? formatNumber(trend.current - trend.previous, locale) : `${formatNumber(Math.abs(trend.percent), locale)}%`}
-          </span>
-          <span className="text-fg-3">{t('trendVsPrevious', { days: block.trend?.days ?? 0 })}</span>
-        </div>
+        <p className="mt-2.5 flex items-center gap-1 text-xs text-fg-3">
+          <TrendIcon size={14} className="shrink-0 text-fg-2" aria-hidden />
+          <span className="font-semibold tabular-nums text-fg-2">{delta}</span>
+          <span>{t('trendVsPrevious', { days: block.trend?.days ?? 0 })}</span>
+        </p>
       )}
     </div>
   );
@@ -121,9 +124,47 @@ export async function ChartBlockView({ data }: { data: Extract<ResolvedBlock, { 
   const locale = await getLocale();
   const t = (await getTranslations('Dashboard')) as unknown as Translate;
   if (!data.points.length || data.total === 0) return <NoData />;
+  if (data.block.variant === 'stack') return <StackedBar points={data.points} locale={locale} total={data.total} t={t} />;
   if (data.block.variant === 'donut') return <DonutChart points={data.points} locale={locale} total={data.total} t={t} />;
   if (data.block.variant === 'line') return <LineChart points={data.points} locale={locale} t={t} />;
   return <BarChart points={data.points} locale={locale} t={t} />;
+}
+
+/**
+ * Part-to-whole as one horizontal bar split into its categories (2px surface gaps, a
+ * pill end), with a two-column legend carrying the counts — the values are always
+ * printed, so no light-theme slot under 3:1 carries meaning by colour alone.
+ */
+function StackedBar({ points, locale, total, t }: { points: ChartPoint[]; locale: string; total: number; t: Translate }) {
+  const labels = points.map((p) => pointLabel(p, locale, t));
+  const percent = (value: number) => new Intl.NumberFormat(locale, { style: 'percent', maximumFractionDigits: 0 }).format(value / total);
+
+  return (
+    <div className="mt-auto">
+      <div className="flex h-3 gap-0.5 overflow-hidden rounded-full" role="img" aria-label={points.map((p, i) => `${labels[i]} ${p.value}`).join(', ')}>
+        {points.map((point, i) => (
+          <span
+            key={`${point.label}-${i}`}
+            className="h-full min-w-1"
+            style={{ width: `${(point.value / total) * 100}%`, backgroundColor: colorOf(point, i) }}
+            // A plain title attribute: React 19 hoists a <title> element out of HTML into <head>.
+            title={`${labels[i]}: ${formatNumber(point.value, locale)} (${percent(point.value)})`}
+          />
+        ))}
+      </div>
+      <ul className="mt-3.5 grid grid-cols-1 gap-x-5 gap-y-1.5 sm:grid-cols-2">
+        {points.map((point, i) => (
+          <li key={`${point.label}-${i}`} className="flex min-w-0 items-center gap-2 text-xs">
+            <span aria-hidden className="size-2 shrink-0 rounded-full" style={{ backgroundColor: colorOf(point, i) }} />
+            <span className="min-w-0 flex-1 truncate text-fg-2" title={labels[i]}>
+              {labels[i]}
+            </span>
+            <span className="shrink-0 font-medium tabular-nums text-fg">{formatNumber(point.value, locale)}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
 }
 
 /** Horizontal bars: category names stay readable at half-tile width, which a
@@ -139,10 +180,12 @@ function BarChart({ points, locale, t }: { points: ChartPoint[]; locale: string;
           <span className="w-24 shrink-0 truncate text-xs text-fg-3" title={labels[i]}>
             {labels[i]}
           </span>
-          <span className="h-2.5 flex-1 overflow-hidden rounded-sm bg-hover">
+          <span className="h-2.5 flex-1">
+            {/* Anchored at the baseline (left), round only at the data end. */}
             <span
-              className="block h-full rounded-sm"
-              style={{ width: `${Math.max((point.value / max) * 100, 2)}%`, backgroundColor: colorAt(i, point) }}
+              className="block h-full rounded-r-sm"
+              style={{ width: `${Math.max((point.value / max) * 100, 2)}%`, backgroundColor: colorOf(point, i) }}
+              title={`${labels[i]}: ${formatNumber(point.value, locale)}`}
             />
           </span>
           <span className="w-10 shrink-0 text-right text-xs tabular-nums text-fg-2">
@@ -174,8 +217,8 @@ function LineChart({ points, locale, t }: { points: ChartPoint[]; locale: string
   return (
     <div>
       <svg viewBox={`0 0 ${W} ${H}`} className="h-24 w-full" preserveAspectRatio="none" role="img">
-        <polygon points={area} fill={PALETTE[0]} fillOpacity={0.14} />
-        <polyline points={line} fill="none" stroke={PALETTE[0]} strokeWidth={1.75} strokeLinejoin="round" strokeLinecap="round" />
+        <polygon points={area} style={{ fill: 'var(--chart-1)' }} fillOpacity={0.14} />
+        <polyline points={line} fill="none" style={{ stroke: 'var(--chart-1)' }} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
       </svg>
       {/* The middle figure is the series peak. It carries a label because a bare
           number sitting between two date labels reads as a third category. */}
@@ -196,11 +239,14 @@ function DonutChart({ points, locale, total, t }: { points: ChartPoint[]; locale
 
   // Each slice starts where the previous one ended, so the offsets are a
   // running sum rather than a per-point value.
-  const arcs: { dash: number; offset: number; color: string }[] = [];
+  // A 2-unit gap between slices (the surface showing through) keeps neighbours apart.
+  const GAP = points.length > 1 ? 2 : 0;
+  const arcs: { dash: number; offset: number; color: string; label: string }[] = [];
+  let start = 0;
   for (const [i, point] of points.entries()) {
-    const dash = (point.value / total) * circumference;
-    const offset = arcs.length ? arcs[arcs.length - 1].offset + arcs[arcs.length - 1].dash : 0;
-    arcs.push({ dash, offset, color: colorAt(i, point) });
+    const full = (point.value / total) * circumference;
+    arcs.push({ dash: Math.max(full - GAP, 0.5), offset: start, color: colorOf(point, i), label: `${labels[i]}: ${formatNumber(point.value, locale)}` });
+    start += full;
   }
 
   return (
@@ -214,21 +260,23 @@ function DonutChart({ points, locale, total, t }: { points: ChartPoint[]; locale
             cy={55}
             r={R}
             fill="none"
-            stroke={arc.color}
+            style={{ stroke: arc.color }}
             strokeWidth={STROKE}
             strokeDasharray={`${arc.dash} ${circumference - arc.dash}`}
             strokeDashoffset={-arc.offset}
-          />
+          >
+            <title>{arc.label}</title>
+          </circle>
         ))}
       </svg>
       <ul className="min-w-0 flex-1 space-y-1">
         {points.slice(0, 6).map((point, i) => (
           <li key={`${point.label}-${i}`} className="flex items-center gap-2 text-xs">
-            <span className="h-2 w-2 shrink-0 rounded-sm" style={{ backgroundColor: colorAt(i, point) }} />
-            <span className="min-w-0 flex-1 truncate text-fg-3" title={labels[i]}>
+            <span className="size-2 shrink-0 rounded-full" style={{ backgroundColor: colorOf(point, i) }} />
+            <span className="min-w-0 flex-1 truncate text-fg-2" title={labels[i]}>
               {labels[i]}
             </span>
-            <span className="shrink-0 text-fg-2">{formatNumber(point.value, locale)}</span>
+            <span className="shrink-0 font-medium tabular-nums text-fg">{formatNumber(point.value, locale)}</span>
           </li>
         ))}
       </ul>
@@ -274,7 +322,7 @@ export async function ListBlockView({ data }: { data: Extract<ResolvedBlock, { k
           </li>
         ))}
       </ul>
-      {hidden > 0 && <p className="pt-2 text-2xs text-fg-4">{t('andMore', { count: hidden })}</p>}
+      {hidden > 0 && <p className="pt-2 text-xs text-fg-3">{t('andMore', { count: hidden })}</p>}
     </div>
   );
 }
@@ -286,7 +334,7 @@ export async function ListBlockView({ data }: { data: Extract<ResolvedBlock, { k
 const TONE_ICON = {
   default: null,
   info: <Info size={16} className="mt-px shrink-0 text-signal-text" aria-hidden />,
-  warning: <TriangleAlert size={16} className="mt-px shrink-0 text-amber-400" aria-hidden />,
+  warning: <TriangleAlert size={16} className="mt-px shrink-0 text-signal-text" aria-hidden />,
 } as const;
 
 /**
@@ -403,9 +451,9 @@ export async function LinksBlockView({ data }: { data: Extract<ResolvedBlock, { 
             </Link>
           ) : (
             <span className="flex items-center gap-2 py-2 text-ui text-fg-4">
-              <CircleAlert size={14} className="shrink-0 text-amber-400/70" />
+              <CircleAlert size={14} className="shrink-0 text-fg-4" aria-hidden />
               <span className="min-w-0 flex-1 truncate line-through">{link.label}</span>
-              <span className="shrink-0 text-2xs">{t('linkRemoved')}</span>
+              <span className="shrink-0 text-xs">{t('linkRemoved')}</span>
             </span>
           )}
         </li>
@@ -416,30 +464,83 @@ export async function LinksBlockView({ data }: { data: Extract<ResolvedBlock, { 
 
 // -- activity -----------------------------------------------------------------
 
-const WRITE_TOOL = /^(create|update|delete|bulk|move|add)_/;
+function relativeTime(date: Date, locale: string): string {
+  const minutes = Math.round((date.getTime() - Date.now()) / 60000);
+  const rtf = new Intl.RelativeTimeFormat(locale, { numeric: 'auto', style: 'short' });
+  if (Math.abs(minutes) < 60) return rtf.format(minutes, 'minute');
+  const hours = Math.round(minutes / 60);
+  if (Math.abs(hours) < 24) return rtf.format(hours, 'hour');
+  return rtf.format(Math.round(hours / 24), 'day');
+}
 
+/**
+ * Agent activity as sessions (V2 R8.3): each run of one agent's calls is a row — its
+ * mark, its name, how many calls and writes, when it last acted — and opens to the calls
+ * themselves (tool, what it touched, time). The newest session starts open; older ones
+ * are native <details>, so this stays a server component.
+ */
 export async function ActivityBlockView({ data }: { data: Extract<ResolvedBlock, { kind: 'activity' }> }) {
   const t = await getTranslations('Dashboard');
   const locale = await getLocale();
-  if (!data.entries.length) return <NoData />;
+  if (!data.sessions.length) return <NoData />;
 
-  const fmt = new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+  const clock = new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit' });
 
   return (
-    <ul>
-      {data.entries.map((entry) => (
-        <li key={entry.id} className="flex items-center gap-2 border-b border-line py-2 text-ui last:border-b-0">
-          <span
-            className={`h-1.5 w-1.5 shrink-0 rounded-full ${entry.status === 'error' ? 'bg-red-400' : 'bg-green-400/70'}`}
-            aria-hidden
-          />
-          {/* Writes carry the accent: what an agent CHANGED is what a human scans for. */}
-          <span className={`shrink-0 font-mono text-2xs ${WRITE_TOOL.test(entry.tool) ? 'font-semibold text-signal-text' : 'text-fg-2'}`}>{entry.tool}</span>
-          <span className="min-w-0 flex-1 truncate text-fg-3">{entry.actor ?? t('unknownAgent')}</span>
-          <span className="shrink-0 text-2xs text-fg-4">{fmt.format(entry.createdAt)}</span>
-        </li>
+    <div className="-mt-1">
+      {data.sessions.map((session, index) => (
+        <details key={session.key} open={index === 0} className="group/session border-b border-line last:border-b-0">
+          <summary className="-mx-1.5 flex cursor-pointer list-none items-center gap-2 rounded-sm px-1.5 py-2 text-ui transition-colors hover:bg-hover/60 [&::-webkit-details-marker]:hidden">
+            <SessionMark session={session} />
+            {/* Name and numbers share a row where there is room; on a phone the numbers drop under the name. */}
+            <span className="flex min-w-0 flex-1 flex-col sm:flex-row sm:items-center sm:gap-2">
+              <span className="flex min-w-0 items-center gap-2">
+                <span className="min-w-0 truncate font-medium text-fg">{session.actor ?? t('unknownAgent')}</span>
+                {/* Live: a steady signal dot, never a pulse (R8). */}
+                {session.live && <span aria-hidden className="size-1.5 shrink-0 rounded-full bg-signal" />}
+              </span>
+              <span className="text-xs text-fg-3 sm:ml-auto sm:shrink-0">
+                {t('sessionMeta', {
+                  calls: session.callCount,
+                  writes: session.writeCount,
+                  more: session.countsCapped ? 'yes' : 'no',
+                })}
+                {', '}
+                {relativeTime(session.lastAt, locale)}
+              </span>
+            </span>
+            <ChevronRight size={14} aria-hidden className="shrink-0 text-fg-4 transition-transform group-open/session:rotate-90" />
+          </summary>
+          <ol className="mb-2 ml-1 space-y-0.5 border-l border-line pl-3">
+            {session.calls.map((call) => {
+              const write = WRITE_TOOL.test(call.tool);
+              return (
+                <li key={call.id} className="flex min-w-0 items-center gap-2 py-0.5 text-xs">
+                  {/* Writes carry the accent: what an agent CHANGED is what a human scans for. */}
+                  <span className={`shrink-0 font-mono text-2xs ${write ? 'font-semibold text-signal-text' : 'text-fg-3'}`}>{call.tool}</span>
+                  <span className="min-w-0 flex-1 truncate text-fg-2">{call.target ?? ''}</span>
+                  {call.status === 'error' && (
+                    <span className="shrink-0 text-2xs font-medium text-red-400">{t('callFailed')}</span>
+                  )}
+                  <time className="shrink-0 tabular-nums text-fg-4" dateTime={call.createdAt.toISOString()}>
+                    {clock.format(call.createdAt)}
+                  </time>
+                </li>
+              );
+            })}
+          </ol>
+        </details>
       ))}
-    </ul>
+    </div>
+  );
+}
+
+function SessionMark({ session }: { session: ActivitySession }) {
+  const mark = markForId(session.agentName) ?? resolveAgentMark(session.agentName) ?? resolveAgentMark(session.actor);
+  return (
+    <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-sheet shadow-[inset_0_0_0_1px_var(--color-line)]">
+      {mark ? <MarkIcon mark={mark} size={12} /> : <Bot size={12} className="text-fg-3" aria-hidden />}
+    </span>
   );
 }
 

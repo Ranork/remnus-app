@@ -135,7 +135,7 @@ export const DASHBOARD_TEMPLATES: { key: string; name: string; needs: string; bl
       { id: 'open', type: 'metric', title: 'Open', source: { databaseId: '$DB', filters: [{ columnId: '$STATUS', operator: 'not_equals', value: '$DONE' }] } },
       { id: 'done', type: 'metric', title: 'Done', source: { databaseId: '$DB', filters: [{ columnId: '$STATUS', operator: 'equals', value: '$DONE' }] } },
       { id: 'total', type: 'metric', title: 'All', source: { databaseId: '$DB' } },
-      { id: 'mix', type: 'chart', title: 'By status', variant: 'donut', groupBy: '$STATUS', source: { databaseId: '$DB' } },
+      { id: 'mix', type: 'chart', title: 'By status', variant: 'stack', groupBy: '$STATUS', source: { databaseId: '$DB' } },
       { id: 'next', type: 'list', title: 'Still open', source: { databaseId: '$DB', filters: [{ columnId: '$STATUS', operator: 'not_equals', value: '$DONE' }] } },
     ],
   },

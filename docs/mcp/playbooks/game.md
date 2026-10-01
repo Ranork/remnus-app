@@ -61,7 +61,7 @@ The workspace's home (`home: true`), which opens on the **Pano** button:
 - Then, only for the databases you actually built, and only blocks that show something
   today:
   - Enemies / Items: `metric` filter Status equals `In game`; `chart` bar grouped by Zone.
-  - Zones: `chart` donut grouped by Status.
+  - Zones: `chart` stack grouped by Status.
   - Balance parameters: `list` sort Changed descending, showColumns System, Value.
   - Playtest findings: `list` filter Status equals `Open`, showColumns Severity, Area.
 - `links` overview, Zones, Decisions · `activity` · `savings`

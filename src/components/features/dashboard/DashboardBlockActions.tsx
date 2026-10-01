@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { ChevronDown, ChevronUp, SlidersHorizontal, Trash2 } from 'lucide-react';
 import { ConfirmDialog } from '@/components/features/ConfirmDialog';
+import { Tooltip } from '@/components/ui/tooltip';
 import { deleteDashboardBlock, moveDashboardBlock } from '@/lib/actions/dashboard';
 import DashboardBlockEditor from './DashboardBlockEditor';
 
@@ -42,53 +43,51 @@ export default function DashboardBlockActions({
     });
 
   const buttonClass =
-    'p-1 rounded-sm text-fg-4 hover:text-fg hover:bg-hover transition-colors disabled:opacity-30 disabled:hover:text-fg-4 disabled:hover:bg-transparent';
+    'flex size-6 cursor-pointer items-center justify-center rounded text-fg-3 transition-colors hover:bg-hover hover:text-fg disabled:cursor-default disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-fg-3';
 
   return (
     <>
       <div className="flex items-center gap-0.5 opacity-0 transition-opacity focus-within:opacity-100 group-hover/block:opacity-100">
         {block && (
+          <Tooltip content={t('editBlock')}>
+            <button type="button" className={buttonClass} aria-label={t('editBlock')} disabled={pending} onClick={() => setEditing(true)}>
+              <SlidersHorizontal size={14} />
+            </button>
+          </Tooltip>
+        )}
+        <Tooltip content={t('moveUp')}>
           <button
             type="button"
             className={buttonClass}
-            title={t('editBlock')}
-            aria-label={t('editBlock')}
-            disabled={pending}
-            onClick={() => setEditing(true)}
+            aria-label={t('moveUp')}
+            disabled={!canMoveUp || pending}
+            onClick={() => run(() => moveDashboardBlock(itemId, blockId, 'up'))}
           >
-            <SlidersHorizontal size={13} />
+            <ChevronUp size={14} />
           </button>
-        )}
-        <button
-          type="button"
-          className={buttonClass}
-          title={t('moveUp')}
-          aria-label={t('moveUp')}
-          disabled={!canMoveUp || pending}
-          onClick={() => run(() => moveDashboardBlock(itemId, blockId, 'up'))}
-        >
-          <ChevronUp size={13} />
-        </button>
-        <button
-          type="button"
-          className={buttonClass}
-          title={t('moveDown')}
-          aria-label={t('moveDown')}
-          disabled={!canMoveDown || pending}
-          onClick={() => run(() => moveDashboardBlock(itemId, blockId, 'down'))}
-        >
-          <ChevronDown size={13} />
-        </button>
-        <button
-          type="button"
-          className={buttonClass}
-          title={t('removeBlock')}
-          aria-label={t('removeBlock')}
-          disabled={pending}
-          onClick={() => setConfirming(true)}
-        >
-          <Trash2 size={13} />
-        </button>
+        </Tooltip>
+        <Tooltip content={t('moveDown')}>
+          <button
+            type="button"
+            className={buttonClass}
+            aria-label={t('moveDown')}
+            disabled={!canMoveDown || pending}
+            onClick={() => run(() => moveDashboardBlock(itemId, blockId, 'down'))}
+          >
+            <ChevronDown size={14} />
+          </button>
+        </Tooltip>
+        <Tooltip content={t('removeBlock')}>
+          <button
+            type="button"
+            className={`${buttonClass} hover:text-red-400`}
+            aria-label={t('removeBlock')}
+            disabled={pending}
+            onClick={() => setConfirming(true)}
+          >
+            <Trash2 size={14} />
+          </button>
+        </Tooltip>
       </div>
 
       {editing && block && <DashboardBlockEditor itemId={itemId} block={block} onClose={() => setEditing(false)} />}

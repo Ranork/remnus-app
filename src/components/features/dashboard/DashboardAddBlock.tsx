@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Plus } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import DashboardBlockEditor from './DashboardBlockEditor';
 
 /** "Add block" — opens the block editor with nothing selected yet. */
@@ -12,18 +13,10 @@ export default function DashboardAddBlock({ itemId, prominent = false }: { itemI
 
   return (
     <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        className={
-          prominent
-            ? 'inline-flex h-8 items-center gap-1.5 rounded-control bg-ink px-3.5 text-ui font-semibold text-ink-fg transition-colors hover:bg-ink/88'
-            : 'inline-flex h-7 items-center gap-1 rounded-control px-2 text-xs text-fg-3 transition-colors hover:bg-hover hover:text-fg'
-        }
-      >
-        <Plus size={prominent ? 16 : 14} />
+      <Button variant={prominent ? 'primary' : 'ghost'} size={prominent ? 'default' : 'sm'} onClick={() => setOpen(true)}>
+        <Plus />
         {t('addBlock')}
-      </button>
+      </Button>
       {open && <DashboardBlockEditor itemId={itemId} onClose={() => setOpen(false)} />}
     </>
   );

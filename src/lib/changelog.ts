@@ -45,6 +45,31 @@ const FIRST_VISIT_WINDOW_DAYS = 7;
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-10-01-clearer-dashboards',
+    date: '2026-10-01',
+    category: 'improved',
+    title: {
+      en: 'Clearer dashboards',
+      tr: 'Daha anlaşılır panolar',
+      de: 'Übersichtlichere Dashboards',
+      es: 'Paneles más claros',
+      fr: 'Des tableaux de bord plus lisibles',
+      hi: 'और साफ़ डैशबोर्ड',
+      ru: 'Более понятные дашборды',
+      zh: '更清晰的仪表板',
+    },
+    summary: {
+      en: 'Dashboards now show a status mix as one bar you read left to right, group agent activity into sessions with what each agent touched, keep chart colours readable in light and dark themes, and edit blocks in a cleaner side panel.',
+      tr: 'Panolar artık durum dağılımını soldan sağa okunan tek bir çubukla gösteriyor, ajan etkinliğini her ajanın neye dokunduğuyla birlikte oturumlara ayırıyor, grafik renklerini açık ve koyu temada okunur tutuyor ve blokları daha sade bir yan panelde düzenletiyor.',
+      de: 'Dashboards zeigen eine Statusverteilung jetzt als einen Balken, den man von links nach rechts liest, fassen Agentenaktivität mit den berührten Seiten zu Sitzungen zusammen, halten Diagrammfarben im hellen und dunklen Design lesbar und bearbeiten Blöcke in einem aufgeräumteren Seitenpanel.',
+      es: 'Los paneles muestran ahora la distribución por estado como una sola barra que se lee de izquierda a derecha, agrupan la actividad de los agentes en sesiones con lo que tocó cada uno, mantienen legibles los colores de los gráficos en tema claro y oscuro y editan los bloques en un panel lateral más limpio.',
+      fr: 'Les tableaux de bord affichent désormais la répartition par statut en une seule barre qui se lit de gauche à droite, regroupent l’activité des agents en sessions avec ce que chacun a touché, gardent des couleurs de graphiques lisibles en thème clair comme sombre et modifient les blocs dans un panneau latéral plus net.',
+      hi: 'डैशबोर्ड अब स्थिति का बँटवारा बाएँ से दाएँ पढ़ी जाने वाली एक पट्टी में दिखाते हैं, एजेंट गतिविधि को सत्रों में बाँटकर बताते हैं कि हर एजेंट ने क्या बदला, हल्की और गहरी थीम दोनों में चार्ट के रंग पढ़ने लायक रखते हैं और ब्लॉक एक साफ़ साइड पैनल में संपादित होते हैं।',
+      ru: 'Дашборды теперь показывают распределение по статусам одной полосой слева направо, группируют действия агентов в сеансы с тем, что каждый из них затронул, сохраняют читаемые цвета графиков в светлой и тёмной темах и редактируют блоки в более аккуратной боковой панели.',
+      zh: '仪表板现在用一条从左到右阅读的条形显示状态分布，把智能体活动按会话分组并列出每个智能体处理的内容，在浅色和深色主题下都保持图表颜色清晰可读，并在更简洁的侧边面板中编辑区块。',
+    },
+  },
+  {
     id: '2026-10-01-database-defaults-in-your-language',
     date: '2026-10-01',
     category: 'fixed',

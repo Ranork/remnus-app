@@ -55,7 +55,7 @@ The workspace's home (`home: true`), which opens on the **Pano** button:
   from the manifest (framework, database, auth, billing).
 - Then, only for the databases you actually built, and only blocks that show something
   today:
-  - Features: `metric` filter Status equals `Building`, unit "building"; `chart` donut
+  - Features: `metric` filter Status equals `Building`, unit "building"; `chart` stack
     grouped by Status; `list` filter Status equals `Planned`, showColumns Area, Audience.
   - Feedback: `metric` with a trend on Received over 30 days; `chart` bar grouped by Area.
   - Experiments: `list` filter Status equals `Running`, showColumns Metric, Started.
