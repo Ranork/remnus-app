@@ -18,6 +18,7 @@ import { Selection, TextSelection } from '@tiptap/pm/state';
 import { dropPoint } from '@tiptap/pm/transform';
 import { joinTextblockForward } from '@tiptap/pm/commands';
 import { SlashCommand } from './SlashCommandMenu';
+import { SLASH_LABEL_KEYS } from './SlashCommandList';
 import { ChildBlock } from './ChildBlockExtension';
 import Color from '@tiptap/extension-color';
 import { TextStyle } from '@tiptap/extension-text-style';
@@ -352,8 +353,8 @@ const BlockEditor = forwardRef<BlockEditorHandle, Props>(function BlockEditor({
       Markdown,
       Placeholder.configure({
         placeholder: ({ node }) => {
-          if (node.type.name === 'heading') return 'Heading...';
-          return placeholder ?? "Type '/' for commands or start writing...";
+          if (node.type.name === 'heading') return tEditor('headingPlaceholder');
+          return placeholder ?? tEditor('placeholder');
         },
         showOnlyCurrent: true,
       }),
@@ -372,6 +373,9 @@ const BlockEditor = forwardRef<BlockEditorHandle, Props>(function BlockEditor({
       SlashCommand.configure({
         workspaceId: workspaceId ?? null,
         parentId: parentId ?? null,
+        labels: Object.fromEntries(
+          Object.entries(SLASH_LABEL_KEYS).map(([id, key]) => [id, tEditor(key)]),
+        ),
       }),
       YoutubeEmbed,
       ImageBlock.configure({ workspaceId: workspaceId ?? null }),

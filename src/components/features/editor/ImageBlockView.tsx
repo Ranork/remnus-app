@@ -4,6 +4,8 @@ import { createPortal } from 'react-dom';
 import { NodeViewWrapper } from '@tiptap/react';
 import { ImageIcon, Loader2, AlignLeft, AlignCenter, AlignRight, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/cn';
 import { deleteUploadedAsset } from './assetClient';
 
 async function uploadImage(file: File, workspaceId: string | null): Promise<string> {
@@ -96,7 +98,7 @@ export default function ImageBlockView({
   return (
     // IndentGlobal's renderHTML doesn't reach ReactNodeViewRenderer — apply indent directly
     <NodeViewWrapper style={indent ? { paddingLeft: `${indent * 1.5}rem` } : undefined}>
-      <div contentEditable={false} className="group/img relative my-2 select-none">
+      <div contentEditable={false} className="group/img editor-object relative select-none">
         {src ? (
           <div
             className={`flex ${align === 'left' ? 'justify-start' : align === 'right' ? 'justify-end' : 'justify-center'}`}
@@ -106,55 +108,64 @@ export default function ImageBlockView({
               <img
                 src={src}
                 alt={node.attrs.alt || ''}
-                className="w-full rounded-md cursor-zoom-in block"
+                className="block w-full cursor-zoom-in rounded-control"
                 onClick={() => setLightbox(true)}
                 draggable={false}
               />
 
-              {/* Resize label shown while dragging */}
+              {/* Resize label shown while dragging (tooltip look: inverted) */}
               {resizeLabel !== null && (
-                <div className="absolute top-2 left-1/2 -translate-x-1/2 bg-neutral-900/90 text-neutral-100 text-xs font-medium px-2 py-0.5 rounded pointer-events-none">
+                <div className="pointer-events-none absolute top-2 left-1/2 -translate-x-1/2 rounded-control bg-fg px-2 py-0.5 text-2xs font-medium text-desk tabular-nums shadow-float">
                   {resizeLabel}%
                 </div>
               )}
 
               {/* Hover toolbar */}
-              <div className="absolute top-1.5 right-1.5 flex items-center gap-0.5 opacity-0 group-hover/img:opacity-100 transition-opacity rounded bg-neutral-900/80 p-0.5">
+              <div className="absolute top-2 right-2 flex items-center gap-0.5 rounded-control bg-float p-0.5 opacity-0 shadow-float transition-opacity group-hover/img:opacity-100 focus-within:opacity-100">
                 {([
                   ['left', AlignLeft],
                   ['center', AlignCenter],
                   ['right', AlignRight],
-                ] as const).map(([a, Icon]) => (
-                  <button
-                    key={a}
-                    type="button"
-                    onClick={() => updateAttributes({ align: a })}
-                    className={`p-1 rounded transition-colors cursor-pointer ${
-                      align === a ? 'bg-neutral-700 text-neutral-100' : 'text-neutral-400 hover:text-neutral-100'
-                    }`}
-                    title={t(`imageAlign_${a}` as 'imageAlign_left' | 'imageAlign_center' | 'imageAlign_right')}
-                  >
-                    <Icon size={13} />
-                  </button>
-                ))}
+                ] as const).map(([a, Icon]) => {
+                  const label = t(`imageAlign_${a}` as 'imageAlign_left' | 'imageAlign_center' | 'imageAlign_right');
+                  return (
+                    <button
+                      key={a}
+                      type="button"
+                      onClick={() => updateAttributes({ align: a })}
+                      className={cn(
+                        'flex size-6 cursor-pointer items-center justify-center rounded transition-colors',
+                        align === a ? 'bg-hover text-fg' : 'text-fg-3 hover:bg-hover hover:text-fg',
+                      )}
+                      title={label}
+                      aria-label={label}
+                      aria-pressed={align === a}
+                    >
+                      <Icon size={14} />
+                    </button>
+                  );
+                })}
                 <button
                   type="button"
                   onClick={() => { deleteUploadedAsset(src); deleteNode(); }}
-                  className="p-1 rounded text-neutral-400 hover:text-red-400 cursor-pointer text-base leading-none transition-colors"
+                  className="flex size-6 cursor-pointer items-center justify-center rounded text-fg-3 transition-colors hover:bg-red-500/12 hover:text-red-400"
                   title={t('removeImage')}
+                  aria-label={t('removeImage')}
                 >
-                  ×
+                  <X size={14} />
                 </button>
               </div>
 
-              {/* Right-edge drag resize handle */}
+              {/* Right-edge drag resize handle: an ink pill with a ring in the ink's
+                  opposite, so it reads on any photo in any theme. */}
               <button
                 type="button"
                 onMouseDown={onResizeMouseDown}
-                className="absolute inset-y-0 right-0 w-4 flex items-center justify-end pr-0.5 opacity-0 group-hover/img:opacity-100 transition-opacity cursor-ew-resize"
+                className="absolute inset-y-0 right-0 flex w-4 cursor-ew-resize items-center justify-end pr-0.5 opacity-0 transition-opacity group-hover/img:opacity-100"
                 title={t('imageWidthIncrease')}
+                aria-label={t('imageWidthIncrease')}
               >
-                <div className="w-1.5 h-10 rounded-full transition-colors" style={{ background: 'rgba(60,60,60,0.85)', boxShadow: '0 0 0 1.5px rgba(255,255,255,0.45), 0 1px 4px rgba(0,0,0,0.5)' }} />
+                <div className="h-10 w-1.5 rounded-full bg-ink shadow-[0_0_0_1.5px_var(--color-ink-fg),0_1px_4px_rgb(0_0_0/0.4)]" />
               </button>
             </div>
           </div>
@@ -162,31 +173,28 @@ export default function ImageBlockView({
           <div
             onDragOver={e => e.preventDefault()}
             onDrop={e => { e.preventDefault(); handleFile(e.dataTransfer.files?.[0]); }}
-            className="rounded-md border border-neutral-800 bg-neutral-900 px-3 py-3"
+            className="rounded-control border border-line bg-raised p-3"
           >
             <div className="flex items-center gap-2">
-              <ImageIcon size={18} className="shrink-0 text-neutral-400" />
+              <ImageIcon size={18} className="shrink-0 text-fg-3" />
               <input
                 value={url}
                 onChange={e => { setUrl(e.target.value); if (error) setError(false); }}
                 onKeyDown={e => { e.stopPropagation(); if (e.key === 'Enter') { e.preventDefault(); submitUrl(); } }}
                 placeholder={t('imagePlaceholder')}
-                className="flex-1 bg-transparent text-sm text-neutral-100 placeholder:text-neutral-500 focus:outline-none"
+                aria-label={t('imagePlaceholder')}
+                className="min-w-0 flex-1 bg-transparent text-sm text-fg placeholder:text-fg-4 focus:outline-none"
               />
-              <button
-                type="button"
-                onClick={submitUrl}
-                className="shrink-0 text-xs font-medium text-neutral-200 bg-neutral-800 hover:bg-neutral-700 px-2.5 py-1 rounded transition-colors cursor-pointer"
-              >
+              <Button type="button" size="sm" onClick={submitUrl}>
                 {t('imageAdd')}
-              </button>
+              </Button>
             </div>
             <div className="mt-2 flex items-center gap-2">
               <button
                 type="button"
                 onClick={() => fileRef.current?.click()}
                 disabled={loading}
-                className="inline-flex items-center gap-1.5 text-xs text-neutral-400 hover:text-neutral-200 transition-colors cursor-pointer disabled:opacity-50"
+                className="inline-flex cursor-pointer items-center gap-1.5 text-xs text-fg-3 transition-colors hover:text-fg disabled:opacity-50"
               >
                 {loading ? <Loader2 size={13} className="animate-spin" /> : <ImageIcon size={13} />}
                 {t('imageUpload')}
@@ -198,7 +206,7 @@ export default function ImageBlockView({
         )}
       </div>
 
-      {/* Lightbox */}
+      {/* Lightbox — a near-black stage whatever the theme: it is for looking at the picture */}
       {lightbox && src && createPortal(
         <div
           className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/85"
@@ -206,17 +214,18 @@ export default function ImageBlockView({
         >
           <button
             type="button"
-            className="absolute top-4 right-4 p-2 rounded-full bg-neutral-800/80 text-neutral-300 hover:text-white hover:bg-neutral-700 transition-colors cursor-pointer"
+            className="absolute top-4 right-4 flex size-9 cursor-pointer items-center justify-center rounded-full bg-float/85 text-fg-2 shadow-float transition-colors hover:bg-float hover:text-fg"
             onClick={() => setLightbox(false)}
             title={t('imageLightboxClose')}
+            aria-label={t('imageLightboxClose')}
           >
-            <X size={20} />
+            <X size={18} />
           </button>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src={src}
             alt={node.attrs.alt || ''}
-            className="max-w-[90vw] max-h-[90vh] rounded-md object-contain shadow-2xl"
+            className="max-h-[90vh] max-w-[90vw] rounded-control object-contain shadow-modal"
             onClick={e => e.stopPropagation()}
             draggable={false}
           />

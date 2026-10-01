@@ -1,8 +1,10 @@
 'use client';
 import { forwardRef, useEffect, useImperativeHandle, useState } from 'react';
 import { useTranslations } from 'next-intl';
+import { cn } from '@/lib/cn';
 import PageIcon from '../PageIcon';
 import type { PageLinkItem } from './pageLinkData';
+import { MENU_EMPTY, MENU_SURFACE, menuItem } from './menuStyles';
 
 type Props = {
   items: PageLinkItem[];
@@ -37,28 +39,26 @@ const PageMentionList = forwardRef<{ onKeyDown: (props: { event: KeyboardEvent }
 
     if (!items.length) {
       return (
-        <div className="min-w-[220px] bg-neutral-850 border border-neutral-800 rounded-md shadow-xl px-3 py-2 text-xs text-neutral-500">
-          {t('pageLinkEmpty')}
+        <div className={cn(MENU_SURFACE, 'w-60')}>
+          <div className={MENU_EMPTY}>{t('pageLinkEmpty')}</div>
         </div>
       );
     }
 
     return (
-      <div className="min-w-[240px] max-w-[320px] bg-neutral-850 border border-neutral-800 rounded-md shadow-xl overflow-hidden py-1">
+      <div className={cn(MENU_SURFACE, 'w-72 max-w-[calc(100vw-2rem)]')}>
         {items.map((item, index) => (
           <button
+            type="button"
             key={item.id}
             onClick={() => command(item)}
-            className={`w-full flex items-center gap-2.5 px-3 py-1.5 text-left transition-colors ${
-              index === selectedIndex
-                ? 'bg-neutral-800 text-neutral-100'
-                : 'text-neutral-400 hover:bg-neutral-800/60 hover:text-neutral-200'
-            }`}
+            onMouseMove={() => { if (index !== selectedIndex) setSelectedIndex(index); }}
+            className={menuItem(index === selectedIndex)}
           >
-            <span className="shrink-0">
+            <span className="flex shrink-0 items-center">
               <PageIcon icon={item.icon} iconColor={item.iconColor} size={16} fallbackType={item.type} />
             </span>
-            <span className="text-sm font-medium leading-none truncate">{item.title}</span>
+            <span className="flex-1 truncate">{item.title}</span>
           </button>
         ))}
       </div>

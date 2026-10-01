@@ -18,7 +18,8 @@ import { PageHistoryModal } from './PageHistoryModal';
 import PageBacklinksPanel from './PageBacklinksPanel';
 import LocalGraphPanel from './graph/LocalGraphPanel';
 import KnowledgeContextPanel from './KnowledgeContextPanel';
-import PageCommentsPanel from './PageCommentsPanel';
+import PageCommentsPanel, { CommentsJumpLink } from './PageCommentsPanel';
+import { pageContainerClass, scrollToSection } from './pageLayout';
 import { useTabNav } from '@/components/providers/TabsContext';
 import { tabKeys } from './tabs/keys';
 import type { WorkspaceItemRow } from '@/lib/actions/workspace';
@@ -61,6 +62,8 @@ export default function StandalonePageEditor({
   const [showShareModal, setShowShareModal] = useState(false);
   const [markdownDraft, setMarkdownDraft] = useState<string | null>(null);
   const [showHistory, setShowHistory] = useState(false);
+  const [commentCount, setCommentCount] = useState(0);
+  const commentsRef = useRef<HTMLElement>(null);
   const editorRef = useRef<BlockEditorHandle>(null);
 
   // Keep the Tauri keep-alive query cache (TabPane) in sync with each save, so
@@ -157,13 +160,8 @@ export default function StandalonePageEditor({
     [saveContent]
   );
 
-  const containerClass =
-    widthMode === 'full' ? 'px-4 sm:px-8 md:px-16 py-6 sm:py-10' :
-    widthMode === 'wide' ? 'max-w-7xl mx-auto px-4 sm:px-8 lg:px-12 py-6 sm:py-10' :
-    'max-w-4xl mx-auto px-4 sm:px-8 lg:px-16 py-6 sm:py-10';
-
   return (
-    <div className={containerClass}>
+    <div className={pageContainerClass(widthMode)}>
       <div className="mb-8 flex min-h-8 items-center justify-between gap-3">
         <div className="min-w-0">
           {/* Back link only for sub-pages — climbs to the parent page. Top-level
@@ -276,10 +274,12 @@ export default function StandalonePageEditor({
         </div>
       </div>
 
-      {/* Comments — directly under the title, above the body (standalone pages
-          have no attributes section, so this is the closest equivalent to
-          PageEditor's "right under the attributes" placement). */}
-      <PageCommentsPanel workspaceId={item.workspaceId} pageId={item.id} />
+      {/* The thread lives under the body (R8.1); up here only its count, as a way down. */}
+      {commentCount > 0 && (
+        <div className="-mt-3 mb-5">
+          <CommentsJumpLink count={commentCount} onJump={() => scrollToSection(commentsRef.current)} />
+        </div>
+      )}
 
       <BlockEditor
         ref={editorRef}
@@ -293,6 +293,12 @@ export default function StandalonePageEditor({
         onImmediateSave={saveContent}
       />
 
+      <PageCommentsPanel
+        workspaceId={item.workspaceId}
+        pageId={item.id}
+        onCountChange={setCommentCount}
+        sectionRef={commentsRef}
+      />
       <KnowledgeContextPanel workspaceId={item.workspaceId} pageId={item.id} />
       <PageBacklinksPanel workspaceId={item.workspaceId} pageId={item.id} />
       <LocalGraphPanel workspaceId={item.workspaceId} pageId={item.id} />

@@ -1,7 +1,9 @@
 'use client';
-import { forwardRef, useEffect, useImperativeHandle, useState } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
+import { cn } from '@/lib/cn';
 import type { EmojiEntry } from './emojiData';
+import { MENU_EMPTY, MENU_SURFACE, menuItem } from './menuStyles';
 
 type Props = {
   items: EmojiEntry[];
@@ -12,8 +14,14 @@ const EmojiList = forwardRef<{ onKeyDown: (props: { event: KeyboardEvent }) => b
   ({ items, command }, ref) => {
     const t = useTranslations('Editor');
     const [selectedIndex, setSelectedIndex] = useState(0);
+    const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
     useEffect(() => setSelectedIndex(0), [items]);
+
+    // The list scrolls (max-h-64): keep the keyboard highlight in view.
+    useEffect(() => {
+      itemRefs.current[selectedIndex]?.scrollIntoView({ block: 'nearest' });
+    }, [selectedIndex]);
 
     useImperativeHandle(ref, () => ({
       onKeyDown: ({ event }: { event: KeyboardEvent }) => {
@@ -36,26 +44,26 @@ const EmojiList = forwardRef<{ onKeyDown: (props: { event: KeyboardEvent }) => b
 
     if (!items.length) {
       return (
-        <div className="min-w-[220px] bg-neutral-850 border border-neutral-800 rounded-md shadow-xl px-3 py-2 text-xs text-neutral-500">
-          {t('emojiPickerEmpty')}
+        <div className={cn(MENU_SURFACE, 'w-60')}>
+          <div className={MENU_EMPTY}>{t('emojiPickerEmpty')}</div>
         </div>
       );
     }
 
     return (
-      <div className="min-w-[240px] max-w-[260px] bg-neutral-850 border border-neutral-800 rounded-md shadow-xl overflow-hidden py-1 max-h-64 overflow-y-auto">
+      <div className={cn(MENU_SURFACE, 'max-h-64 w-64 overflow-y-auto overscroll-contain')}>
         {items.map((item, index) => (
           <button
+            type="button"
             key={item.name}
+            ref={(el) => { itemRefs.current[index] = el; }}
             onClick={() => command(item)}
-            className={`w-full flex items-center gap-2.5 px-3 py-1.5 text-left transition-colors ${
-              index === selectedIndex
-                ? 'bg-neutral-800 text-neutral-100'
-                : 'text-neutral-400 hover:bg-neutral-800/60 hover:text-neutral-200'
-            }`}
+            onMouseMove={() => { if (index !== selectedIndex) setSelectedIndex(index); }}
+            className={menuItem(index === selectedIndex)}
           >
             <span className="shrink-0 text-base leading-none">{item.emoji}</span>
-            <span className="text-sm font-medium leading-none truncate">:{item.name}:</span>
+            {/* The short name is what you type after ":" — literal text, so mono. */}
+            <span className="flex-1 truncate font-mono text-xs">:{item.name}:</span>
           </button>
         ))}
       </div>

@@ -1,8 +1,9 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import { NodeViewWrapper } from '@tiptap/react';
-import { SquarePlay } from 'lucide-react';
+import { SquarePlay, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { Button } from '@/components/ui/button';
 import { extractYouTubeId } from './YoutubeEmbedExtension';
 
 export default function YoutubeEmbedView({
@@ -46,15 +47,15 @@ export default function YoutubeEmbedView({
     <NodeViewWrapper>
       <div
         contentEditable={false}
-        className="group/yt relative my-2 select-none"
+        className="group/yt editor-object relative select-none"
       >
 
         {videoId ? (
           <div className="relative">
-            <div className="relative w-full overflow-hidden rounded-md bg-black" style={{ paddingBottom: '56.25%' }}>
+            <div className="relative w-full overflow-hidden rounded-control bg-black" style={{ paddingBottom: '56.25%' }}>
               <iframe
                 src={`https://www.youtube.com/embed/${videoId}`}
-                title="YouTube video"
+                title={t('slashVideo')}
                 className="absolute inset-0 h-full w-full"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
                 referrerPolicy="strict-origin-when-cross-origin"
@@ -62,16 +63,18 @@ export default function YoutubeEmbedView({
               />
             </div>
             <button
+              type="button"
               onClick={() => deleteNode()}
-              className="absolute top-1.5 right-1.5 opacity-0 group-hover/yt:opacity-100 transition-opacity p-1 rounded bg-neutral-850/80 text-neutral-300 hover:text-red-400 hover:bg-neutral-850 cursor-pointer text-base leading-none"
+              className="absolute top-2 right-2 flex size-6 cursor-pointer items-center justify-center rounded-control bg-float text-fg-3 opacity-0 shadow-float transition-[opacity,color] group-hover/yt:opacity-100 hover:text-red-400 focus-visible:opacity-100"
               title={t('removeVideo')}
+              aria-label={t('removeVideo')}
             >
-              ×
+              <X size={14} />
             </button>
           </div>
         ) : (
-          <div className="flex items-center gap-2 rounded-md border border-neutral-800 bg-neutral-850 px-3 py-2.5">
-            <SquarePlay size={18} className="shrink-0 text-red-400" />
+          <div className="flex items-center gap-2 rounded-control border border-line bg-raised px-3 py-2">
+            <SquarePlay size={18} className="shrink-0 text-fg-3" />
             <input
               ref={inputRef}
               value={url}
@@ -81,15 +84,13 @@ export default function YoutubeEmbedView({
               }}
               onKeyDown={handleKeyDown}
               placeholder={t('videoPlaceholder')}
-              className="flex-1 bg-transparent text-sm text-neutral-100 placeholder:text-neutral-500 focus:outline-none"
+              aria-label={t('videoPlaceholder')}
+              className="min-w-0 flex-1 bg-transparent text-sm text-fg placeholder:text-fg-4 focus:outline-none"
             />
-            {error && <span className="text-xs text-red-400 shrink-0">{t('videoInvalid')}</span>}
-            <button
-              onClick={submit}
-              className="shrink-0 text-xs font-medium text-neutral-200 bg-neutral-800 hover:bg-neutral-700 px-2.5 py-1 rounded transition-colors cursor-pointer"
-            >
+            {error && <span className="shrink-0 text-xs text-red-400">{t('videoInvalid')}</span>}
+            <Button type="button" size="sm" onClick={submit}>
               {t('videoEmbed')}
-            </button>
+            </Button>
           </div>
         )}
       </div>

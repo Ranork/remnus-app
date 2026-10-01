@@ -1,8 +1,9 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import { NodeViewWrapper } from '@tiptap/react';
-import { Link2, Loader2 } from 'lucide-react';
+import { Link2, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { Button } from '@/components/ui/button';
 
 // Module-level sequential queue so multiple bookmarks on the same page fetch
 // OG metadata one-at-a-time instead of all at once.
@@ -120,7 +121,7 @@ export default function BookmarkBlockView({
 
   return (
     <NodeViewWrapper>
-      <div contentEditable={false} className="group/bm relative my-2 select-none">
+      <div contentEditable={false} className="group/bm editor-object relative select-none">
         {url ? (
           <div className="relative">
             <div
@@ -128,11 +129,10 @@ export default function BookmarkBlockView({
               tabIndex={0}
               onClick={openUrl}
               onKeyDown={e => e.key === 'Enter' && openUrl()}
-              style={{ outline: 'none' }}
-              className="flex items-stretch overflow-hidden rounded-lg border border-neutral-800 bg-neutral-850 hover:border-neutral-700 hover:bg-neutral-800/60 transition-colors cursor-pointer"
+              className="flex cursor-pointer items-stretch overflow-hidden rounded-control border border-line bg-raised transition-colors hover:border-line-strong hover:bg-hover/40"
             >
               {/* Left: OG / YouTube thumbnail or placeholder */}
-              <div className="w-25 sm:w-32.5 shrink-0 relative overflow-hidden rounded-l-lg bg-neutral-800">
+              <div className="relative w-25 shrink-0 overflow-hidden bg-hover sm:w-32.5">
                 {safeImage ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
@@ -144,45 +144,47 @@ export default function BookmarkBlockView({
                   <div className="absolute inset-0 flex items-center justify-center">
                     {safeFavicon ? (
                       // eslint-disable-next-line @next/next/no-img-element
-                      <img src={safeFavicon} alt="" className="w-8 h-8 rounded" />
+                      <img src={safeFavicon} alt="" className="size-8 rounded" />
                     ) : (
-                      <Link2 size={22} className="text-neutral-600" />
+                      <Link2 size={22} className="text-fg-4" />
                     )}
                   </div>
                 )}
               </div>
 
               {/* Right: text */}
-              <div className="flex-1 min-w-0 px-3.5 py-3 flex flex-col justify-center gap-0.5">
-                <p className="text-sm font-semibold text-neutral-100 truncate m-0 leading-snug">
+              <div className="flex min-w-0 flex-1 flex-col justify-center gap-0.5 px-3.5 py-3">
+                <p className="m-0 truncate text-sm leading-snug font-semibold text-fg">
                   {title && title !== url ? title : domain}
                 </p>
                 {description && (
-                  <p className="text-xs text-neutral-400 line-clamp-2 m-0 leading-relaxed">
+                  <p className="m-0 line-clamp-2 text-xs leading-relaxed text-fg-3">
                     {description}
                   </p>
                 )}
                 <div className="mt-1.5 flex items-center gap-1.5">
                   {safeFavicon && (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={safeFavicon} alt="" className="h-3 w-3 rounded-sm shrink-0" />
+                    <img src={safeFavicon} alt="" className="size-3 shrink-0 rounded-sm" />
                   )}
-                  <span className="text-[11px] text-neutral-500 truncate">{domain}</span>
+                  <span className="truncate text-2xs text-fg-3">{domain}</span>
                 </div>
               </div>
             </div>
 
             <button
+              type="button"
               onClick={e => { e.stopPropagation(); deleteNode(); }}
-              className="absolute top-1.5 right-1.5 opacity-0 group-hover/bm:opacity-100 transition-opacity p-1 rounded bg-neutral-850/80 text-neutral-300 hover:text-red-400 cursor-pointer text-base leading-none"
+              className="absolute top-2 right-2 flex size-6 cursor-pointer items-center justify-center rounded-control bg-float text-fg-3 opacity-0 shadow-float transition-[opacity,color] group-hover/bm:opacity-100 hover:text-red-400 focus-visible:opacity-100"
               title={t('bookmarkRemove')}
+              aria-label={t('bookmarkRemove')}
             >
-              ×
+              <X size={14} />
             </button>
           </div>
         ) : (
-          <div className="flex items-center gap-2 rounded-lg border border-neutral-800 bg-neutral-850 px-3 py-2.5">
-            <Link2 size={18} className="shrink-0 text-neutral-400" />
+          <div className="flex items-center gap-2 rounded-control border border-line bg-raised px-3 py-2">
+            <Link2 size={18} className="shrink-0 text-fg-3" />
             <input
               ref={inputRef}
               value={input}
@@ -192,17 +194,13 @@ export default function BookmarkBlockView({
                 if (e.key === 'Enter') { e.preventDefault(); fetchMeta(); }
               }}
               placeholder={t('bookmarkPlaceholder')}
-              className="flex-1 bg-transparent text-sm text-neutral-100 placeholder:text-neutral-500 focus:outline-none"
+              aria-label={t('bookmarkPlaceholder')}
+              className="min-w-0 flex-1 bg-transparent text-sm text-fg placeholder:text-fg-4 focus:outline-none"
             />
-            {error && <span className="text-xs text-red-400 shrink-0">{t('bookmarkInvalid')}</span>}
-            <button
-              onClick={fetchMeta}
-              disabled={loading}
-              className="shrink-0 inline-flex items-center gap-1 text-xs font-medium text-neutral-200 bg-neutral-800 hover:bg-neutral-700 px-2.5 py-1 rounded transition-colors cursor-pointer disabled:opacity-50"
-            >
-              {loading && <Loader2 size={12} className="animate-spin" />}
+            {error && <span className="shrink-0 text-xs text-red-400">{t('bookmarkInvalid')}</span>}
+            <Button type="button" size="sm" onClick={fetchMeta} loading={loading}>
               {t('bookmarkAdd')}
-            </button>
+            </Button>
           </div>
         )}
       </div>

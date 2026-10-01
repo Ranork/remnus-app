@@ -4,9 +4,14 @@ import { MessageSquare, Loader2, Trash2 } from 'lucide-react';
 import { useTranslations, useLocale } from 'next-intl';
 import { addComment, deleteComment, getComments } from '@/lib/actions/comments';
 import type { CommentRow } from '@/lib/services/comments';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { fieldClass } from '@/components/ui/input';
+import { cn } from '@/lib/cn';
 import { ConfirmDialog } from './ConfirmDialog';
 import { UserAvatar } from './PropertyTags';
 import AgentMark from './agents/AgentMark';
+import PageSection from './PageSection';
 
 const MAX_COMMENT_LENGTH = 4_000;
 
@@ -68,17 +73,20 @@ function AutoGrowTextarea({
       onBlur={onBlur}
       onKeyDown={onKeyDown}
       placeholder={placeholder}
+      aria-label={placeholder}
       maxLength={MAX_COMMENT_LENGTH}
       className={className}
     />
   );
 }
 
+// No second colour for agents (R8): an agent is told apart by its mark and the
+// "(agent)" after its name, not by a tint.
 function AuthorAvatar({ comment, size }: { comment: Pick<CommentRow, 'authorKind' | 'authorUserId' | 'authorLabel' | 'authorImage'>; size: number }) {
   if (comment.authorKind === 'agent') {
     return (
       <span
-        className="flex shrink-0 items-center justify-center rounded-full border border-amber-500/30 bg-neutral-800"
+        className="flex shrink-0 items-center justify-center rounded-full bg-raised shadow-[inset_0_0_0_1px_var(--color-line-strong)]"
         style={{ width: size, height: size }}
       >
         <AgentMark hint={comment.authorLabel} size={Math.round(size * 0.6)} fallback="globe" />
@@ -93,11 +101,46 @@ function AuthorAvatar({ comment, size }: { comment: Pick<CommentRow, 'authorKind
   );
 }
 
+/** "3 comments" under the page title — only when there are any; jumps to the thread
+ *  under the body (V2 R8.1: the thread lives there, the title stays next to the text). */
+export function CommentsJumpLink({ count, onJump, className }: { count: number; onJump: () => void; className?: string }) {
+  const t = useTranslations('Comments');
+  if (count <= 0) return null;
+  return (
+    <button
+      type="button"
+      onClick={onJump}
+      className={cn(
+        '-ml-1.5 inline-flex cursor-pointer items-center gap-1.5 rounded px-1.5 py-0.5 text-xs text-fg-3 transition-colors hover:bg-hover hover:text-fg',
+        className,
+      )}
+    >
+      <MessageSquare size={13} aria-hidden />
+      {t('count', { count })}
+    </button>
+  );
+}
+
 // Comment thread attached to a page or database row, separate from its
-// markdown body. Agent comments (via the MCP add_comment tool) are
-// append-only — there is no edit/delete affordance for them here, only for
-// the viewer's own comments or, for any comment, the workspace owner.
-export default function PageCommentsPanel({ workspaceId, pageId, isPeek = false }: { workspaceId: string; pageId: string; isPeek?: boolean }) {
+// markdown body. It sits under the body, open (Hakan, R8.1). Agent comments (via
+// the MCP add_comment tool) are append-only — there is no edit/delete affordance
+// for them here, only for the viewer's own comments or, for any comment, the
+// workspace owner.
+export default function PageCommentsPanel({
+  workspaceId,
+  pageId,
+  isPeek = false,
+  onCountChange,
+  sectionRef,
+}: {
+  workspaceId: string;
+  pageId: string;
+  isPeek?: boolean;
+  /** Reports the number of comments once loaded and after every change (drives CommentsJumpLink). */
+  onCountChange?: (count: number) => void;
+  /** The section element, so the page can scroll to it. */
+  sectionRef?: React.Ref<HTMLElement>;
+}) {
   const t = useTranslations('Comments');
   const locale = useLocale();
   const [comments, setComments] = useState<CommentRow[] | null>(null);
@@ -107,6 +150,9 @@ export default function PageCommentsPanel({ workspaceId, pageId, isPeek = false 
   const [error, setError] = useState('');
   const [pending, startTransition] = useTransition();
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  // Open by default (Hakan, R8.1); the chevron is there so the sections under the
+  // body share one heading shape, and a long thread can be folded away.
+  const [open, setOpen] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
@@ -119,6 +165,11 @@ export default function PageCommentsPanel({ workspaceId, pageId, isPeek = false 
       .catch(() => { if (!cancelled) setComments([]); });
     return () => { cancelled = true; };
   }, [workspaceId, pageId]);
+
+  const count = comments?.length ?? 0;
+  useEffect(() => {
+    if (comments !== null) onCountChange?.(count);
+  }, [comments, count, onCountChange]);
 
   function submit() {
     const body = draft.trim();
@@ -159,113 +210,121 @@ export default function PageCommentsPanel({ workspaceId, pageId, isPeek = false 
     });
   }
 
-  if (comments === null) {
-    return (
-      <div className={isPeek ? 'mb-6' : 'mb-8'}>
-        <Loader2 size={13} className="animate-spin text-neutral-600" />
-      </div>
-    );
-  }
-
-  // Collapsed to a single compact row by default — only grows into the full
+  // Collapsed to a single field-shaped row by default — only grows into the full
   // textarea + submit affordance once the viewer actually starts typing, so a
   // page with zero comments doesn't pay for the compose box's full height.
   const composeExpanded = composeFocused || draft.length > 0;
-  const avatarSize = isPeek ? 18 : 20;
+  const avatarSize = isPeek ? 22 : 24;
 
   return (
-    <div className={isPeek ? 'mb-6' : 'mb-8'}>
-      <div className="flex items-center gap-1.5 text-xs font-medium text-neutral-500">
-        <MessageSquare size={12} />
-        {t('title')}
-        {comments.length > 0 && <span className="text-neutral-600">({comments.length})</span>}
-      </div>
-
-      {comments.length > 0 && (
-        <div className="mt-3 space-y-3">
-          {comments.map((c) => {
-            const canDelete = c.authorUserId === viewer?.id || viewer?.isOwner;
-            const isAgent = c.authorKind === 'agent';
-            return (
-              <div key={c.id} className="group flex items-start gap-2.5">
-                <AuthorAvatar comment={c} size={avatarSize} />
-                <div className="min-w-0 flex-1">
-                  <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
-                    <span className={isAgent ? 'font-medium text-amber-500/90' : 'font-medium text-neutral-300'}>
-                      {isAgent ? t('byAgent', { name: c.authorLabel }) : c.authorLabel}
-                    </span>
-                    <span className="text-neutral-600">·</span>
-                    <span className="text-neutral-600">{relativeTime(new Date(c.createdAt), locale)}</span>
-                    {c.kind === 'closure' && (
-                      <span className="rounded bg-neutral-800 px-1.5 py-0.5 text-[10px] font-medium text-neutral-300">
-                        {t('closureLabel')}
-                      </span>
+    <PageSection
+      ref={sectionRef}
+      icon={<MessageSquare />}
+      title={t('title')}
+      meta={count > 0 ? `(${count})` : undefined}
+      open={open}
+      onToggle={() => setOpen((v) => !v)}
+      className={cn('scroll-mt-6', isPeek ? 'mt-8' : 'mt-12')}
+      aria-busy={comments === null || undefined}
+    >
+      {comments === null ? (
+        <Loader2 size={14} className="mt-3 animate-spin text-fg-4" aria-hidden />
+      ) : (
+        <>
+          {comments.length > 0 && (
+            <ol className="mt-3 space-y-4">
+              {comments.map((c) => {
+                const canDelete = c.authorUserId === viewer?.id || viewer?.isOwner;
+                const isAgent = c.authorKind === 'agent';
+                const created = new Date(c.createdAt);
+                return (
+                  <li key={c.id} className="group flex items-start gap-3">
+                    <AuthorAvatar comment={c} size={avatarSize} />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+                        <span className="text-ui font-medium text-fg">
+                          {isAgent ? t('byAgent', { name: c.authorLabel }) : c.authorLabel}
+                        </span>
+                        <time
+                          dateTime={created.toISOString()}
+                          title={created.toLocaleString(locale)}
+                          className="text-xs text-fg-3"
+                        >
+                          {relativeTime(created, locale)}
+                        </time>
+                        {c.kind === 'closure' && (
+                          <Badge variant="outline" size="sm">{t('closureLabel')}</Badge>
+                        )}
+                      </div>
+                      <p className="mt-0.5 text-sm leading-relaxed wrap-break-word whitespace-pre-wrap text-fg-2">{c.body}</p>
+                    </div>
+                    {canDelete && (
+                      <Button
+                        variant="ghost"
+                        size="icon-sm"
+                        onClick={() => setConfirmDeleteId(c.id)}
+                        title={t('delete')}
+                        aria-label={t('delete')}
+                        className="opacity-0 group-hover:opacity-100 hover:bg-red-500/12 hover:text-red-400 focus-visible:opacity-100"
+                      >
+                        <Trash2 />
+                      </Button>
                     )}
-                  </div>
-                  <p className="mt-0.5 whitespace-pre-wrap text-[13px] leading-relaxed text-neutral-200">{c.body}</p>
-                </div>
-                {canDelete && (
-                  <button
-                    type="button"
-                    onClick={() => setConfirmDeleteId(c.id)}
-                    className="shrink-0 cursor-pointer self-start text-neutral-700 opacity-0 transition-opacity hover:text-red-400 group-hover:opacity-100"
-                  >
-                    <Trash2 size={13} />
-                  </button>
-                )}
-              </div>
-            );
-          })}
-        </div>
-      )}
+                  </li>
+                );
+              })}
+            </ol>
+          )}
 
-      <div className="mt-3 flex items-start gap-2.5">
-        <div className="mt-0.75">
-          <UserAvatar member={viewer ? { id: viewer.id, name: viewer.name, email: null, image: viewer.image } : undefined} size={avatarSize} />
-        </div>
-        <div className="min-w-0 flex-1">
-          {composeExpanded ? (
-            <div className="space-y-1.5">
-              <AutoGrowTextarea
-                value={draft}
-                onChange={(e) => { setDraft(e.target.value); if (error) setError(''); }}
-                onFocus={() => setComposeFocused(true)}
-                onBlur={() => setComposeFocused(false)}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); submit(); }
-                }}
-                placeholder={t('placeholder')}
-                autoFocus
-                className="w-full resize-none overflow-hidden rounded border border-neutral-700 bg-neutral-900 px-3 py-2 text-[13px] text-neutral-200 outline-none focus:border-neutral-600"
-              />
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] text-red-400">{error}</span>
+          <div className="mt-4 flex items-start gap-3">
+            <div className="flex h-9 shrink-0 items-center">
+              <UserAvatar member={viewer ? { id: viewer.id, name: viewer.name, email: null, image: viewer.image } : undefined} size={avatarSize} />
+            </div>
+            <div className="min-w-0 flex-1">
+              {composeExpanded ? (
+                <div className="space-y-2">
+                  <AutoGrowTextarea
+                    value={draft}
+                    onChange={(e) => { setDraft(e.target.value); if (error) setError(''); }}
+                    onFocus={() => setComposeFocused(true)}
+                    onBlur={() => setComposeFocused(false)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); submit(); }
+                    }}
+                    placeholder={t('placeholder')}
+                    autoFocus
+                    className={cn(fieldClass, 'block min-h-9 resize-none overflow-hidden px-3 py-2 text-sm leading-relaxed')}
+                  />
+                  <div className="flex items-center justify-between gap-3">
+                    <span role="alert" className="text-xs text-red-400">{error}</span>
+                    <Button
+                      variant="primary"
+                      size="sm"
+                      // Stops the button from stealing focus (which would blur the
+                      // textarea) so the box stays open after posting, ready for
+                      // the next comment, the same way Enter/Cmd+Enter already does.
+                      onMouseDown={(e) => e.preventDefault()}
+                      onClick={submit}
+                      loading={pending}
+                      disabled={!draft.trim()}
+                    >
+                      {t('submit')}
+                    </Button>
+                  </div>
+                </div>
+              ) : (
                 <button
                   type="button"
-                  // Stops the button from stealing focus (which would blur the
-                  // textarea) so the box stays open after posting, ready for
-                  // the next comment, the same way Enter/Cmd+Enter already does.
-                  onMouseDown={(e) => e.preventDefault()}
-                  onClick={submit}
-                  disabled={pending || !draft.trim()}
-                  className="inline-flex items-center gap-1.5 bg-ink px-3 py-1.5 text-xs font-medium text-ink-fg transition-colors hover:bg-ink/88 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
+                  onClick={() => setComposeFocused(true)}
+                  className={cn(fieldClass, 'flex h-9 cursor-text items-center px-3 text-left text-sm text-fg-4')}
                 >
-                  {pending && <Loader2 size={12} className="animate-spin" />}
-                  {t('submit')}
+                  {t('placeholder')}
                 </button>
-              </div>
+              )}
             </div>
-          ) : (
-            <button
-              type="button"
-              onClick={() => setComposeFocused(true)}
-              className="w-full cursor-pointer rounded border border-neutral-800 bg-neutral-900 px-3 py-1.5 text-left text-[13px] text-neutral-600 transition-colors hover:border-neutral-700 hover:text-neutral-500"
-            >
-              {t('placeholder')}
-            </button>
-          )}
-        </div>
-      </div>
+          </div>
+        </>
+      )}
 
       {confirmDeleteId && (
         <ConfirmDialog
@@ -276,6 +335,6 @@ export default function PageCommentsPanel({ workspaceId, pageId, isPeek = false 
           onCancel={() => setConfirmDeleteId(null)}
         />
       )}
-    </div>
+    </PageSection>
   );
 }

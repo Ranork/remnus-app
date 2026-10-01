@@ -45,6 +45,31 @@ const FIRST_VISIT_WINDOW_DAYS = 7;
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-09-30-pages-easier-to-read',
+    date: '2026-09-30',
+    category: 'improved',
+    title: {
+      en: 'Pages that are easier to read',
+      tr: 'Okuması daha rahat sayfalar',
+      de: 'Seiten, die sich leichter lesen',
+      es: 'Páginas más fáciles de leer',
+      fr: 'Des pages plus faciles à lire',
+      hi: 'पढ़ने में आसान पेज',
+      ru: 'Страницы, которые легче читать',
+      zh: '更易阅读的页面',
+    },
+    summary: {
+      en: 'Pages now read like documents, with a comfortable line length and calmer headings, the slash menu shows each block’s typing shortcut and finds blocks in your language, and comments sit below the page with a link to them under the title.',
+      tr: 'Sayfalar artık bir belge gibi okunuyor; satırlar rahat bir uzunlukta, başlıklar daha sakin, eğik çizgi menüsü her bloğun yazım kısayolunu gösteriyor ve blokları kendi dilinizde buluyor, yorumlar ise sayfanın sonunda duruyor ve başlığın altındaki bağlantıyla ulaşılıyor.',
+      de: 'Seiten lesen sich jetzt wie Dokumente mit angenehmer Zeilenlänge und ruhigeren Überschriften, das Slash-Menü zeigt für jeden Block sein Tippkürzel und findet Blöcke in deiner Sprache, und Kommentare stehen unter der Seite, erreichbar über einen Link unter dem Titel.',
+      es: 'Las páginas ahora se leen como documentos, con una longitud de línea cómoda y títulos más serenos, el menú de barra muestra el atajo de escritura de cada bloque y encuentra bloques en tu idioma, y los comentarios están al final de la página con un enlace bajo el título.',
+      fr: 'Les pages se lisent désormais comme des documents, avec une longueur de ligne confortable et des titres plus calmes, le menu barre oblique affiche le raccourci de saisie de chaque bloc et trouve les blocs dans votre langue, et les commentaires se trouvent sous la page avec un lien juste sous le titre.',
+      hi: 'अब पेज दस्तावेज़ की तरह पढ़े जाते हैं, आरामदायक पंक्ति-लंबाई और शांत शीर्षकों के साथ, स्लैश मेन्यू हर ब्लॉक का टाइपिंग शॉर्टकट दिखाता है और आपकी भाषा में ब्लॉक ढूँढता है, और टिप्पणियाँ पेज के नीचे हैं जिनका लिंक शीर्षक के नीचे मिलता है।',
+      ru: 'Страницы теперь читаются как документы: удобная длина строки и более спокойные заголовки, меню «/» показывает быстрый ввод для каждого блока и находит блоки на вашем языке, а комментарии переехали под страницу, и ссылка на них есть под заголовком.',
+      zh: '页面现在读起来像文档：行宽舒适、标题更克制，斜杠菜单会显示每种块的输入快捷方式并能用你的语言查找，评论移到了页面底部，标题下方有跳转链接。',
+    },
+  },
+  {
     id: '2026-09-30-new-look',
     date: '2026-09-30',
     category: 'improved',

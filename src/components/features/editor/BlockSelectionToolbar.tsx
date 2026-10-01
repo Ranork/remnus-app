@@ -3,10 +3,11 @@ import { useEffect, useRef, useState } from 'react';
 import type { Editor } from '@tiptap/core';
 import {
   Trash2, Copy, CopyPlus, Bold, Italic, Strikethrough, Code, ChevronDown,
-  Pilcrow, Heading1, Heading2, Heading3, List, ListOrdered, Quote, Code2, X,
+  Pilcrow, Heading1, Heading2, Heading3, List, ListOrdered, Quote, Code2,
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useZoom } from '@/components/providers/ZoomProvider';
+import { cn } from '@/lib/cn';
 import {
   blockSelectionKey,
   getBlockSelection,
@@ -14,10 +15,14 @@ import {
   deleteBlockSelection,
   type BlockSelectionState,
 } from './BlockSelectionExtension';
+import EditorColorPanel from './EditorColorPanel';
+import {
+  MENU_ICON, MENU_LABEL, MENU_SURFACE, TOOLBAR_DIVIDER, TOOLBAR_HEIGHT, TOOLBAR_SURFACE, menuItem, toolbarButton,
+} from './menuStyles';
 
 type Props = { editor: Editor };
 
-const TOOLBAR_H = 36;
+const TOOLBAR_H = TOOLBAR_HEIGHT;
 const MARGIN = 8;
 const EMPTY: BlockSelectionState = { selected: [], anchor: null };
 
@@ -42,22 +47,25 @@ const BLOCK_ICONS: Record<BlockType, React.ReactNode> = {
 
 const BLOCK_TYPES: BlockType[] = ['paragraph', 'h1', 'h2', 'h3', 'bullet', 'ordered', 'quote', 'code'];
 
-const Divider = () => <div className="w-px h-4 bg-neutral-700 self-center mx-0.5" />;
+const Divider = () => <div className={TOOLBAR_DIVIDER} />;
 
-// ── Color palettes (mirror BubbleMenuBar) ───────────────────────────────────────
-const TEXT_COLORS: Array<{ label: string; value: string }> = [
-  { label: 'Red', value: '#ef4444' }, { label: 'Orange', value: '#f97316' }, { label: 'Yellow', value: '#eab308' },
-  { label: 'Green', value: '#22c55e' }, { label: 'Blue', value: '#60a5fa' }, { label: 'Purple', value: '#a78bfa' },
-  { label: 'Pink', value: '#f472b6' }, { label: 'Gray', value: '#9ca3af' },
-];
-
-// Semi-transparent so the highlight blends with the theme background — soft on
-// both dark and light themes (see BubbleMenuBar for the rationale).
-const HIGHLIGHT_COLORS: Array<{ label: string; value: string }> = [
-  { label: 'Red', value: 'rgba(248, 113, 113, 0.25)' }, { label: 'Orange', value: 'rgba(251, 146, 60, 0.25)' }, { label: 'Yellow', value: 'rgba(250, 204, 21, 0.28)' },
-  { label: 'Green', value: 'rgba(74, 222, 128, 0.25)' }, { label: 'Blue', value: 'rgba(96, 165, 250, 0.25)' }, { label: 'Purple', value: 'rgba(192, 132, 252, 0.25)' },
-  { label: 'Pink', value: 'rgba(244, 114, 182, 0.25)' },
-];
+// A toolbar button that acts on mousedown, so the block selection survives the click.
+function ActionButton({ onPress, active, label, danger, children }: {
+  onPress: () => void; active?: boolean; label: string; danger?: boolean; children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onMouseDown={(e) => { e.preventDefault(); onPress(); }}
+      className={cn(toolbarButton(active), danger && 'hover:bg-red-500/12 hover:text-red-400')}
+      title={label}
+      aria-label={label}
+      aria-pressed={active}
+    >
+      {children}
+    </button>
+  );
+}
 
 export default function BlockSelectionToolbar({ editor }: Props) {
   const t = useTranslations('Editor');
@@ -238,11 +246,6 @@ export default function BlockSelectionToolbar({ editor }: Props) {
 
   const count = selState.selected.length;
 
-  const btnCls = (active?: boolean) =>
-    `flex items-center justify-center px-2 py-1.5 transition-colors ${
-      active ? 'text-white bg-neutral-700' : 'text-neutral-400 hover:text-neutral-100 hover:bg-neutral-800/60'
-    }`;
-
   return (
     <>
       <div ref={anchorRef} className="absolute inset-0 pointer-events-none" />
@@ -250,140 +253,102 @@ export default function BlockSelectionToolbar({ editor }: Props) {
         <>
           <div
             ref={toolbarRef}
-            className="absolute z-50 flex items-center bg-neutral-850 border border-neutral-800 rounded-md shadow-xl overflow-hidden text-xs select-none"
+            className={cn(TOOLBAR_SURFACE, 'absolute z-50')}
             style={{ top: layout.top, left: layout.left }}
             onMouseDown={(e) => e.preventDefault()}
           >
-            <span className="text-neutral-500 px-2 whitespace-nowrap">
+            <span className="px-1.5 text-xs whitespace-nowrap text-fg-3">
               {t('blockSelectionCount', { count })}
             </span>
             <Divider />
 
             {/* Inline text formatting (applies to all selected blocks) */}
-            <button onMouseDown={(e) => { e.preventDefault(); applyMarks(c => c.toggleBold()); }} className={btnCls(markActive('bold'))} title={t('bubbleBold')}>
-              <Bold size={13} />
-            </button>
-            <button onMouseDown={(e) => { e.preventDefault(); applyMarks(c => c.toggleItalic()); }} className={btnCls(markActive('italic'))} title={t('bubbleItalic')}>
-              <Italic size={13} />
-            </button>
-            <button onMouseDown={(e) => { e.preventDefault(); applyMarks(c => c.toggleStrike()); }} className={btnCls(markActive('strike'))} title={t('bubbleStrike')}>
-              <Strikethrough size={13} />
-            </button>
-            <button onMouseDown={(e) => { e.preventDefault(); applyMarks(c => c.toggleCode()); }} className={btnCls(markActive('code'))} title={t('bubbleCode')}>
-              <Code size={13} />
-            </button>
+            <ActionButton onPress={() => applyMarks(c => c.toggleBold())} active={markActive('bold')} label={t('bubbleBold')}>
+              <Bold size={14} />
+            </ActionButton>
+            <ActionButton onPress={() => applyMarks(c => c.toggleItalic())} active={markActive('italic')} label={t('bubbleItalic')}>
+              <Italic size={14} />
+            </ActionButton>
+            <ActionButton onPress={() => applyMarks(c => c.toggleStrike())} active={markActive('strike')} label={t('bubbleStrike')}>
+              <Strikethrough size={14} />
+            </ActionButton>
+            <ActionButton onPress={() => applyMarks(c => c.toggleCode())} active={markActive('code')} label={t('bubbleCode')}>
+              <Code size={14} />
+            </ActionButton>
 
             <Divider />
 
             {/* Color / highlight */}
             <button
+              type="button"
               onMouseDown={(e) => { e.preventDefault(); setColorOpen(v => !v); setBlockMenuOpen(false); }}
-              className={`flex flex-col items-center justify-center px-2 py-1 transition-colors ${colorOpen ? 'text-white bg-neutral-700' : 'text-neutral-400 hover:text-neutral-100 hover:bg-neutral-800/60'}`}
+              className={cn(toolbarButton(colorOpen), 'flex-col gap-0')}
               title={t('bubbleTextColor')}
+              aria-label={t('bubbleTextColor')}
+              aria-expanded={colorOpen}
             >
-              <span className="text-xs font-bold leading-none px-0.5">A</span>
-              <span className="mt-0.5 rounded-sm" style={{ width: 14, height: 3, backgroundColor: '#cccccc' }} />
+              <span className="px-0.5 text-xs leading-none font-bold">A</span>
+              <span className="mt-0.5 h-0.75 w-3.5 rounded-full bg-current" />
             </button>
 
             <Divider />
 
             {/* Turn into */}
             <button
+              type="button"
               onMouseDown={(e) => { e.preventDefault(); setBlockMenuOpen(v => !v); setColorOpen(false); }}
-              className={`flex items-center gap-1 px-2 py-1.5 transition-colors ${blockMenuOpen ? 'text-neutral-100 bg-neutral-800' : 'text-neutral-500 hover:text-neutral-200 hover:bg-neutral-800/60'}`}
+              className={toolbarButton(blockMenuOpen)}
               title={t('bubbleTurnInto')}
+              aria-label={t('bubbleTurnInto')}
+              aria-expanded={blockMenuOpen}
             >
-              <Pilcrow size={13} />
-              <ChevronDown size={10} />
+              <Pilcrow size={14} />
+              <ChevronDown size={12} />
             </button>
 
             <Divider />
 
             {/* Block actions */}
-            <button onMouseDown={(e) => { e.preventDefault(); copySelected(); }} className={btnCls()} title={t('blockCopy')}>
-              <Copy size={13} />
-            </button>
-            <button onMouseDown={(e) => { e.preventDefault(); duplicateSelected(); }} className={btnCls()} title={t('blockDuplicate')}>
-              <CopyPlus size={13} />
-            </button>
-            <button
-              onMouseDown={(e) => { e.preventDefault(); deleteSelected(); }}
-              className="flex items-center justify-center px-2 py-1.5 text-neutral-400 hover:text-red-400 hover:bg-red-400/10 transition-colors"
-              title={t('blockDelete')}
-            >
-              <Trash2 size={13} />
-            </button>
+            <ActionButton onPress={copySelected} label={t('blockCopy')}>
+              <Copy size={14} />
+            </ActionButton>
+            <ActionButton onPress={duplicateSelected} label={t('blockDuplicate')}>
+              <CopyPlus size={14} />
+            </ActionButton>
+            <ActionButton onPress={deleteSelected} label={t('blockDelete')} danger>
+              <Trash2 size={14} />
+            </ActionButton>
           </div>
 
           {/* Color panel */}
           {colorOpen && (
-            <div
+            <EditorColorPanel
               ref={colorPanelRef}
-              className="absolute z-50 bg-neutral-900 border border-neutral-800 shadow-xl rounded-md p-3 min-w-50"
+              className="absolute z-50"
               style={{ top: layout.top + TOOLBAR_H + 4, left: layout.left }}
-              onMouseDown={(e) => e.preventDefault()}
-            >
-              <div className="text-xs text-neutral-600 font-medium mb-2">{t('bubbleTextColor')}</div>
-              <div className="flex items-center gap-1.5 flex-wrap mb-3">
-                <button
-                  title={t('bubbleColorDefault')}
-                  onMouseDown={(e) => { e.preventDefault(); applyMarks(c => c.unsetColor()); }}
-                  className="w-5 h-5 rounded-full border border-neutral-600 flex items-center justify-center text-neutral-500 hover:border-neutral-400 hover:text-neutral-300 transition-colors shrink-0"
-                >
-                  <X size={9} />
-                </button>
-                {TEXT_COLORS.map(c => (
-                  <button
-                    key={c.value}
-                    title={c.label}
-                    onMouseDown={(e) => { e.preventDefault(); applyMarks(ch => ch.setColor(c.value)); }}
-                    className="w-5 h-5 rounded-full transition-all shrink-0 hover:scale-110"
-                    style={{ backgroundColor: c.value }}
-                  />
-                ))}
-              </div>
-
-              <div className="w-full h-px bg-neutral-800 mb-3" />
-
-              <div className="text-xs text-neutral-600 font-medium mb-2">{t('bubbleHighlight')}</div>
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <button
-                  title={t('bubbleColorNone')}
-                  onMouseDown={(e) => { e.preventDefault(); applyMarks(c => c.unsetHighlight()); }}
-                  className="w-5 h-5 rounded-full border border-neutral-600 flex items-center justify-center text-neutral-500 hover:border-neutral-400 hover:text-neutral-300 transition-colors shrink-0"
-                >
-                  <X size={9} />
-                </button>
-                {HIGHLIGHT_COLORS.map(c => (
-                  <button
-                    key={c.value}
-                    title={c.label}
-                    onMouseDown={(e) => { e.preventDefault(); applyMarks(ch => ch.setHighlight({ color: c.value })); }}
-                    className="w-5 h-5 rounded-full transition-all shrink-0 hover:scale-110"
-                    style={{ backgroundColor: c.value }}
-                  />
-                ))}
-              </div>
-            </div>
+              onText={(value) => applyMarks(c => (value ? c.setColor(value) : c.unsetColor()))}
+              onHighlight={(value) => applyMarks(c => (value ? c.setHighlight({ color: value }) : c.unsetHighlight()))}
+            />
           )}
 
           {/* Turn-into menu */}
           {blockMenuOpen && (
             <div
               ref={blockMenuRef}
-              className="absolute z-50 min-w-49 bg-neutral-900 border border-neutral-800 shadow-xl py-1 rounded-md overflow-hidden"
+              className={cn(MENU_SURFACE, 'absolute z-50 min-w-52')}
               style={{ top: layout.top + TOOLBAR_H + 4, left: layout.left }}
               onMouseDown={(e) => e.preventDefault()}
             >
-              <div className="px-3 py-1.5 text-xs text-neutral-600 font-medium">{t('bubbleTurnInto')}</div>
+              <div className={MENU_LABEL}>{t('bubbleTurnInto')}</div>
               {BLOCK_TYPES.map(type => (
                 <button
+                  type="button"
                   key={type}
                   onMouseDown={(e) => { e.preventDefault(); applyBlockType(type); }}
-                  className="w-full flex items-center gap-3 px-3 py-2 text-left text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/60 transition-colors"
+                  className={menuItem()}
                 >
-                  <span className="text-neutral-600">{BLOCK_ICONS[type]}</span>
-                  <span className="text-sm">{BLOCK_LABELS[type]}</span>
+                  <span className={MENU_ICON}>{BLOCK_ICONS[type]}</span>
+                  <span className="flex-1">{BLOCK_LABELS[type]}</span>
                 </button>
               ))}
             </div>

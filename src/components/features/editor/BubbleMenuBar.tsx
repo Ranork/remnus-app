@@ -7,7 +7,12 @@ import {
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useZoom } from '@/components/providers/ZoomProvider';
+import { cn } from '@/lib/cn';
 import { hasBlockSelection } from './BlockSelectionExtension';
+import EditorColorPanel from './EditorColorPanel';
+import {
+  MENU_ICON, MENU_LABEL, MENU_SURFACE, TOOLBAR_DIVIDER, TOOLBAR_HEIGHT, TOOLBAR_SURFACE, menuItem, toolbarButton,
+} from './menuStyles';
 
 type BlockType = 'paragraph' | 'h1' | 'h2' | 'h3' | 'bullet' | 'ordered' | 'quote' | 'code';
 
@@ -46,36 +51,6 @@ function getActiveType(editor: Editor): BlockType {
   return 'paragraph';
 }
 
-// ── Color palettes ────────────────────────────────────────────────────────────
-
-const TEXT_COLORS: Array<{ label: string; value: string | null }> = [
-  { label: 'Default', value: null },
-  { label: 'Red',    value: '#ef4444' },
-  { label: 'Orange', value: '#f97316' },
-  { label: 'Yellow', value: '#eab308' },
-  { label: 'Green',  value: '#22c55e' },
-  { label: 'Blue',   value: '#60a5fa' },
-  { label: 'Purple', value: '#a78bfa' },
-  { label: 'Pink',   value: '#f472b6' },
-  { label: 'Gray',   value: '#9ca3af' },
-];
-
-// Semi-transparent so the highlight blends with whatever theme background sits
-// behind it — soft/pastel on both dark and light themes (a fixed opaque hex
-// looked garish on dark and far too dark on light). The color is baked into the
-// content (inline style), so it can't be theme-swapped; rgba keeps it tasteful
-// everywhere. `null` = remove highlight.
-const HIGHLIGHT_COLORS: Array<{ label: string; value: string | null }> = [
-  { label: 'None',   value: null },
-  { label: 'Red',    value: 'rgba(248, 113, 113, 0.25)' },
-  { label: 'Orange', value: 'rgba(251, 146, 60, 0.25)' },
-  { label: 'Yellow', value: 'rgba(250, 204, 21, 0.28)' },
-  { label: 'Green',  value: 'rgba(74, 222, 128, 0.25)' },
-  { label: 'Blue',   value: 'rgba(96, 165, 250, 0.25)' },
-  { label: 'Purple', value: 'rgba(192, 132, 252, 0.25)' },
-  { label: 'Pink',   value: 'rgba(244, 114, 182, 0.25)' },
-];
-
 type Bounds = { minTop: number; maxBottom: number; minLeft: number; maxRight: number };
 type Layout = { top: number; left: number; bounds: Bounds };
 type Mode = 'format' | 'link';
@@ -95,20 +70,21 @@ type Props = { editor: Editor };
 function Btn({ onClick, active, children, title }: { onClick: () => void; active: boolean; children: React.ReactNode; title?: string }) {
   return (
     <button
+      type="button"
       onMouseDown={(e) => { e.preventDefault(); onClick(); }}
       title={title}
-      className={`px-2 py-1.5 transition-colors text-xs font-medium ${
-        active ? 'text-white bg-neutral-700' : 'text-neutral-400 hover:text-neutral-100 hover:bg-neutral-800/60'
-      }`}
+      aria-label={title}
+      aria-pressed={active}
+      className={toolbarButton(active)}
     >
       {children}
     </button>
   );
 }
 
-const TOOLBAR_H = 36;
-const DROP_H = BLOCK_TYPES.length * 36 + 28;
-const COLOR_PANEL_H = 160;
+const TOOLBAR_H = TOOLBAR_HEIGHT;
+const DROP_H = BLOCK_TYPES.length * 32 + 40;
+const COLOR_PANEL_H = 120;
 const MARGIN = 6;
 
 function normalizeHref(raw: string): string {
@@ -116,30 +92,6 @@ function normalizeHref(raw: string): string {
   if (!h) return '';
   if (/^(https?:\/\/|\/|#|mailto:)/.test(h)) return h;
   return `https://${h}`;
-}
-
-// Small "×" swatch for removing a color
-function RemoveSwatch({ onClick, title }: { onClick: () => void; title: string }) {
-  return (
-    <button
-      onMouseDown={(e) => { e.preventDefault(); onClick(); }}
-      title={title}
-      className="w-5 h-5 rounded-full border border-neutral-600 flex items-center justify-center text-neutral-500 hover:border-neutral-400 hover:text-neutral-300 transition-colors shrink-0"
-    >
-      <X size={9} />
-    </button>
-  );
-}
-
-function ColorSwatch({ color, active, onClick, title }: { color: string; active: boolean; onClick: () => void; title: string }) {
-  return (
-    <button
-      onMouseDown={(e) => { e.preventDefault(); onClick(); }}
-      title={title}
-      className={`w-5 h-5 rounded-full transition-all shrink-0 ${active ? 'ring-2 ring-offset-1 ring-offset-neutral-900 ring-white' : 'hover:scale-110'}`}
-      style={{ backgroundColor: color }}
-    />
-  );
 }
 
 export default function BubbleMenuBar({ editor }: Props) {
@@ -359,13 +311,10 @@ export default function BubbleMenuBar({ editor }: Props) {
   const activeTextColor: string | null = editor.getAttributes('textStyle').color ?? null;
   const activeHighlight: string | null = editor.getAttributes('highlight').color ?? null;
 
-  // ── Input class helpers ──────────────────────────────────────────────────────
-
-  const inputCls = 'bg-transparent text-neutral-200 text-xs outline-none placeholder-neutral-600 py-1 px-1 min-w-0';
-  const iconBtnCls = (active?: boolean) =>
-    `flex items-center justify-center px-2 py-1.5 transition-colors ${
-      active ? 'text-white bg-neutral-700' : 'text-neutral-400 hover:text-neutral-100 hover:bg-neutral-800/60'
-    }`;
+  // The link editor's two fields: a quiet well inside the toolbar; focus turns the edge
+  // to the focus colour, like the shared Input.
+  const inputCls = 'h-7 min-w-0 rounded-control border border-line bg-transparent px-2 text-xs text-fg outline-none placeholder:text-fg-4 focus-visible:border-focus';
+  const linkLabelCls = 'shrink-0 select-none whitespace-nowrap px-1 text-2xs text-fg-3';
 
   return (
     <>
@@ -380,41 +329,43 @@ export default function BubbleMenuBar({ editor }: Props) {
           ref={menuRef}
           style={{ position: 'fixed', top: layout.top, left: layout.left, zIndex: 9999 }}
           onMouseDown={(e) => e.preventDefault()}
-          className="flex items-center bg-neutral-850 border border-neutral-800 rounded-md shadow-xl overflow-hidden"
+          className={TOOLBAR_SURFACE}
         >
           {modeState === 'format' ? (
             <>
               <Btn onClick={() => editor.chain().focus().toggleBold().run()} active={editor.isActive('bold')} title={t('bubbleBold')}>
-                <Bold size={13} />
+                <Bold size={14} />
               </Btn>
               <Btn onClick={() => editor.chain().focus().toggleItalic().run()} active={editor.isActive('italic')} title={t('bubbleItalic')}>
-                <Italic size={13} />
+                <Italic size={14} />
               </Btn>
               <Btn onClick={() => editor.chain().focus().toggleStrike().run()} active={editor.isActive('strike')} title={t('bubbleStrike')}>
-                <Strikethrough size={13} />
+                <Strikethrough size={14} />
               </Btn>
               <Btn onClick={() => editor.chain().focus().toggleCode().run()} active={editor.isActive('code')} title={t('bubbleCode')}>
-                <Code size={13} />
+                <Code size={14} />
               </Btn>
 
-              <div className="w-px h-4 bg-neutral-700 self-center mx-0.5" />
+              <div className={TOOLBAR_DIVIDER} />
 
               <Btn onClick={openLinkEditor} active={editor.isActive('link')} title={t('bubbleLinkEdit')}>
-                <Link2 size={13} />
+                <Link2 size={14} />
               </Btn>
 
-              <div className="w-px h-4 bg-neutral-700 self-center mx-0.5" />
+              <div className={TOOLBAR_DIVIDER} />
 
-              {/* Combined color button */}
+              {/* Combined color button: the letter shows the current text colour and
+                  highlight, the bar under it the text colour. */}
               <button
+                type="button"
                 onMouseDown={(e) => { e.preventDefault(); setColorPanel((v) => v ? null : 'both'); setBlockMenuOpen(false); }}
                 title={t('bubbleTextColor')}
-                className={`flex flex-col items-center justify-center px-2 py-1 transition-colors ${
-                  colorPanel ? 'text-white bg-neutral-700' : 'text-neutral-400 hover:text-neutral-100 hover:bg-neutral-800/60'
-                }`}
+                aria-label={t('bubbleTextColor')}
+                aria-expanded={!!colorPanel}
+                className={cn(toolbarButton(!!colorPanel), 'flex-col gap-0')}
               >
                 <span
-                  className="text-xs font-bold leading-none px-0.5 rounded-sm"
+                  className="rounded-sm px-0.5 text-xs leading-none font-bold"
                   style={{
                     color: activeTextColor ?? undefined,
                     backgroundColor: activeHighlight ?? 'transparent',
@@ -423,43 +374,42 @@ export default function BubbleMenuBar({ editor }: Props) {
                   A
                 </span>
                 <span
-                  className="mt-0.5 rounded-sm"
-                  style={{
-                    width: 14,
-                    height: 3,
-                    backgroundColor: activeTextColor ?? '#cccccc',
-                  }}
+                  className="mt-0.5 h-0.75 w-3.5 rounded-full"
+                  style={{ backgroundColor: activeTextColor ?? 'currentColor' }}
                 />
               </button>
 
-              <div className="w-px h-4 bg-neutral-700 self-center mx-0.5" />
+              <div className={TOOLBAR_DIVIDER} />
 
               {/* Block-type picker */}
               <button
+                type="button"
                 onMouseDown={(e) => { e.preventDefault(); setBlockMenuOpen((v) => !v); setColorPanel(null); }}
-                className={`flex items-center gap-1 px-2 py-1.5 transition-colors ${
-                  blockMenuOpen ? 'text-neutral-100 bg-neutral-800' : 'text-neutral-500 hover:text-neutral-200 hover:bg-neutral-800/60'
-                }`}
+                className={toolbarButton(blockMenuOpen)}
                 title={t('bubbleTurnInto')}
+                aria-label={t('bubbleTurnInto')}
+                aria-expanded={blockMenuOpen}
               >
                 {currentOpt?.icon}
-                <ChevronDown size={10} />
+                <ChevronDown size={12} />
               </button>
             </>
           ) : (
             <>
               {/* Link editor */}
               <button
+                type="button"
                 onMouseDown={(e) => { e.preventDefault(); cancelLink(); }}
-                className={iconBtnCls()}
-                title="Back"
+                className={toolbarButton()}
+                title={t('linkBack')}
+                aria-label={t('linkBack')}
               >
-                <ArrowLeft size={13} />
+                <ArrowLeft size={14} />
               </button>
 
-              <div className="w-px h-4 bg-neutral-700 self-center" />
+              <div className={TOOLBAR_DIVIDER} />
 
-              <span className="text-xs text-neutral-600 px-1.5 select-none whitespace-nowrap">{t('bubbleLinkText')}</span>
+              <span className={linkLabelCls}>{t('bubbleLinkText')}</span>
               <input
                 ref={linkTextInputRef}
                 value={linkText}
@@ -470,11 +420,10 @@ export default function BubbleMenuBar({ editor }: Props) {
                 }}
                 className={`${inputCls} w-28`}
                 placeholder={t('bubbleLinkText')}
+                aria-label={t('bubbleLinkText')}
               />
 
-              <div className="w-px h-4 bg-neutral-700 self-center" />
-
-              <span className="text-xs text-neutral-600 px-1.5 select-none whitespace-nowrap">{t('bubbleLinkUrl')}</span>
+              <span className={cn(linkLabelCls, 'pl-2')}>{t('bubbleLinkUrl')}</span>
               <input
                 ref={linkHrefInputRef}
                 value={linkHref}
@@ -485,25 +434,30 @@ export default function BubbleMenuBar({ editor }: Props) {
                 }}
                 className={`${inputCls} w-44`}
                 placeholder="https://"
+                aria-label={t('bubbleLinkUrl')}
               />
 
-              <div className="w-px h-4 bg-neutral-700 self-center mx-0.5" />
+              <div className={TOOLBAR_DIVIDER} />
 
               <button
+                type="button"
                 onMouseDown={(e) => { e.preventDefault(); applyLink(); }}
-                className={iconBtnCls()}
-                title="Apply"
+                className={toolbarButton()}
+                title={t('linkApply')}
+                aria-label={t('linkApply')}
               >
-                <Check size={13} />
+                <Check size={14} />
               </button>
 
               {linkWasActive.current && (
                 <button
+                  type="button"
                   onMouseDown={(e) => { e.preventDefault(); removeLink(); }}
-                  className={`${iconBtnCls()} hover:text-red-400`}
+                  className={cn(toolbarButton(), 'hover:text-red-400')}
                   title={t('removeLink')}
+                  aria-label={t('removeLink')}
                 >
-                  <X size={13} />
+                  <X size={14} />
                 </button>
               )}
             </>
@@ -516,68 +470,39 @@ export default function BubbleMenuBar({ editor }: Props) {
           ref={blockMenuRef}
           style={{ position: 'fixed', top: dropTop, left: layout.left, zIndex: 10000 }}
           onMouseDown={(e) => e.preventDefault()}
-          className="min-w-49 bg-neutral-900 border border-neutral-800 shadow-xl py-1 rounded-md overflow-hidden"
+          className={cn(MENU_SURFACE, 'min-w-52')}
         >
-          <div className="px-3 py-1.5 text-xs text-neutral-600 font-medium">{t('bubbleTurnInto')}</div>
+          <div className={MENU_LABEL}>{t('bubbleTurnInto')}</div>
           {BLOCK_OPTIONS.map((opt) => (
             <button
+              type="button"
               key={opt.type}
               onMouseDown={(e) => { e.preventDefault(); opt.apply(editor); setBlockMenuOpen(false); }}
-              className={`w-full flex items-center gap-3 px-3 py-2 text-left transition-colors ${
-                opt.type === activeType ? 'text-neutral-100 bg-neutral-800' : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/60'
-              }`}
+              className={menuItem(opt.type === activeType)}
             >
-              <span className={opt.type === activeType ? 'text-neutral-300' : 'text-neutral-600'}>{opt.icon}</span>
-              <span className="text-sm">{opt.label}</span>
-              {opt.type === activeType && <Check size={12} className="ml-auto text-neutral-400" />}
+              <span className={MENU_ICON}>{opt.icon}</span>
+              <span className="flex-1">{opt.label}</span>
+              {opt.type === activeType && <Check size={14} className="text-fg" aria-hidden />}
             </button>
           ))}
         </div>
       )}
 
       {layout && colorPanel && (
-        <div
+        <EditorColorPanel
           ref={colorPanelRef}
           style={{ position: 'fixed', top: colorPanelTop, left: layout.left, zIndex: 10000 }}
-          onMouseDown={(e) => e.preventDefault()}
-          className="bg-neutral-900 border border-neutral-800 shadow-xl rounded-md overflow-hidden p-3 min-w-50"
-        >
-          <div className="text-xs text-neutral-600 font-medium mb-2">{t('bubbleTextColor')}</div>
-          <div className="flex items-center gap-1.5 flex-wrap mb-3">
-            <RemoveSwatch
-              title={t('bubbleColorDefault')}
-              onClick={() => { editor.chain().focus().unsetColor().run(); }}
-            />
-            {TEXT_COLORS.filter((c) => c.value !== null).map((c) => (
-              <ColorSwatch
-                key={c.value}
-                color={c.value!}
-                active={activeTextColor === c.value}
-                title={c.label}
-                onClick={() => { editor.chain().focus().setColor(c.value!).run(); }}
-              />
-            ))}
-          </div>
-
-          <div className="w-full h-px bg-neutral-800 mb-3" />
-
-          <div className="text-xs text-neutral-600 font-medium mb-2">{t('bubbleHighlight')}</div>
-          <div className="flex items-center gap-1.5 flex-wrap">
-            <RemoveSwatch
-              title={t('bubbleColorNone')}
-              onClick={() => { editor.chain().focus().unsetHighlight().run(); }}
-            />
-            {HIGHLIGHT_COLORS.filter((c) => c.value !== null).map((c) => (
-              <ColorSwatch
-                key={c.value}
-                color={c.value!}
-                active={activeHighlight === c.value}
-                title={c.label}
-                onClick={() => { editor.chain().focus().setHighlight({ color: c.value! }).run(); }}
-              />
-            ))}
-          </div>
-        </div>
+          activeText={activeTextColor}
+          activeHighlight={activeHighlight}
+          onText={(value) => {
+            if (value) editor.chain().focus().setColor(value).run();
+            else editor.chain().focus().unsetColor().run();
+          }}
+          onHighlight={(value) => {
+            if (value) editor.chain().focus().setHighlight({ color: value }).run();
+            else editor.chain().focus().unsetHighlight().run();
+          }}
+        />
       )}
     </>
   );

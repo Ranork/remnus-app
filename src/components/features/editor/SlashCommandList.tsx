@@ -1,9 +1,12 @@
 'use client';
-import { forwardRef, useEffect, useImperativeHandle, useState } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
 import { CheckSquare, Heading1, Heading2, Heading3, List, ListOrdered, Minus, Quote, Code2, Table, FileText, Database, Link2, SquarePlay, ImageIcon, Info, Bookmark, Paperclip } from 'lucide-react';
 import { createStandalonePage, createWorkspaceDatabase } from '@/lib/actions/workspace';
 import { useTranslations } from 'next-intl';
+import { Kbd } from '@/components/ui/kbd';
+import { cn } from '@/lib/cn';
 import { openPagePicker } from './pagePicker';
+import { MENU_ICON, MENU_LABEL, MENU_SURFACE, menuItem } from './menuStyles';
 
 export type SlashCommandItem = {
   id: string;
@@ -85,7 +88,7 @@ export const SLASH_COMMANDS: SlashCommandItem[] = [
   },
   {
     id: 'bullet',
-    label: 'Bullet List',
+    label: 'Bullet list',
     description: 'Unordered list of items',
     icon: <List size={15} />,
     command: ({ editor, range }) =>
@@ -93,7 +96,7 @@ export const SLASH_COMMANDS: SlashCommandItem[] = [
   },
   {
     id: 'ordered',
-    label: 'Numbered List',
+    label: 'Numbered list',
     description: 'Ordered list of items',
     icon: <ListOrdered size={15} />,
     command: ({ editor, range }) =>
@@ -101,7 +104,7 @@ export const SLASH_COMMANDS: SlashCommandItem[] = [
   },
   {
     id: 'task',
-    label: 'Task List',
+    label: 'Task list',
     description: 'Checkbox list for tasks',
     icon: <CheckSquare size={15} />,
     command: ({ editor, range }) =>
@@ -117,7 +120,7 @@ export const SLASH_COMMANDS: SlashCommandItem[] = [
   },
   {
     id: 'code',
-    label: 'Code Block',
+    label: 'Code block',
     description: 'Display code with syntax',
     icon: <Code2 size={15} />,
     command: ({ editor, range }) =>
@@ -134,14 +137,14 @@ export const SLASH_COMMANDS: SlashCommandItem[] = [
   {
     id: 'divider',
     label: 'Divider',
-    description: 'Visual horizontal separator',
+    description: 'A line between sections',
     icon: <Minus size={15} />,
     command: ({ editor, range }) =>
       editor.chain().focus().deleteRange(range).setHorizontalRule().run(),
   },
   {
     id: 'video',
-    label: 'YouTube Video',
+    label: 'YouTube video',
     description: 'Embed a YouTube video',
     icon: <SquarePlay size={15} />,
     command: ({ editor, range }) =>
@@ -229,8 +232,78 @@ export const SLASH_KEYWORDS: Record<string, string[]> = {
   'child-database': ['database', 'db', 'table'],
 };
 
-// Media / embed commands rendered as their own divider-separated group.
+// Media / embed commands rendered as their own group.
 export const MEDIA_IDS = ['video', 'image', 'callout', 'bookmark', 'file'];
+
+/** Editor namespace key of each command's visible name. Also handed to the SlashCommand
+ *  extension (BlockEditor) so typing in the reader's own language finds a command. */
+export const SLASH_LABEL_KEYS: Record<string, string> = {
+  h1: 'slashHeading1',
+  h2: 'slashHeading2',
+  h3: 'slashHeading3',
+  bullet: 'slashBulletList',
+  ordered: 'slashNumberedList',
+  task: 'slashTaskList',
+  quote: 'slashQuote',
+  code: 'slashCodeBlock',
+  table: 'slashTable',
+  divider: 'slashDivider',
+  video: 'slashVideo',
+  image: 'slashImage',
+  callout: 'slashCallout',
+  bookmark: 'slashBookmark',
+  file: 'slashFile',
+  'child-link': 'slashLinkPage',
+  'child-page': 'slashPage',
+  'child-database': 'slashDatabase',
+};
+
+const SLASH_DESC_KEYS: Record<string, string> = {
+  h1: 'slashHeading1Desc',
+  h2: 'slashHeading2Desc',
+  h3: 'slashHeading3Desc',
+  bullet: 'slashBulletListDesc',
+  ordered: 'slashNumberedListDesc',
+  task: 'slashTaskListDesc',
+  quote: 'slashQuoteDesc',
+  code: 'slashCodeBlockDesc',
+  table: 'slashTableDesc',
+  divider: 'slashDividerDesc',
+  video: 'slashVideoDesc',
+  image: 'slashImageDesc',
+  callout: 'slashCalloutDesc',
+  bookmark: 'slashBookmarkDesc',
+  file: 'slashFileDesc',
+  'child-link': 'slashLinkPageDesc',
+  'child-page': 'slashPageDesc',
+  'child-database': 'slashDatabaseDesc',
+};
+
+// The markdown a person can type instead of opening the menu (the editor's input
+// rules), shown at the end of the row the way DropdownMenuShortcut shows a key.
+const SLASH_SHORTCUTS: Record<string, string> = {
+  h1: '#',
+  h2: '##',
+  h3: '###',
+  bullet: '-',
+  ordered: '1.',
+  task: '[]',
+  quote: '>',
+  code: '```',
+  divider: '---',
+};
+
+type SlashGroup = 'basic' | 'media' | 'pages';
+const GROUP_LABEL_KEYS: Record<SlashGroup, string> = {
+  basic: 'slashGroupBasic',
+  media: 'slashGroupMedia',
+  pages: 'slashGroupPages',
+};
+
+function groupOf(id: string): SlashGroup {
+  if (id.startsWith('child-')) return 'pages';
+  return MEDIA_IDS.includes(id) ? 'media' : 'basic';
+}
 
 type Props = {
   items: SlashCommandItem[];
@@ -241,48 +314,14 @@ const SlashCommandList = forwardRef<{ onKeyDown: (props: { event: KeyboardEvent 
   ({ items, command }, ref) => {
     const t = useTranslations('Editor');
     const [selectedIndex, setSelectedIndex] = useState(0);
-
-    const LABEL_KEYS: Record<string, string> = {
-      h1: t('slashHeading1'),
-      h2: t('slashHeading2'),
-      h3: t('slashHeading3'),
-      bullet: t('slashBulletList'),
-      ordered: t('slashNumberedList'),
-      task: t('slashTaskList'),
-      quote: t('slashQuote'),
-      code: t('slashCodeBlock'),
-      table: t('slashTable'),
-      video: t('slashVideo'),
-      image: t('slashImage'),
-      callout: t('slashCallout'),
-      bookmark: t('slashBookmark'),
-      file: t('slashFile'),
-      'child-link': t('slashLinkPage'),
-      'child-page': t('slashPage'),
-      'child-database': t('slashDatabase'),
-    };
-
-    const DESC_KEYS: Record<string, string> = {
-      h1: t('slashHeading1Desc'),
-      h2: t('slashHeading2Desc'),
-      h3: t('slashHeading3Desc'),
-      bullet: t('slashBulletListDesc'),
-      ordered: t('slashNumberedListDesc'),
-      task: t('slashTaskListDesc'),
-      quote: t('slashQuoteDesc'),
-      code: t('slashCodeBlockDesc'),
-      table: t('slashTableDesc'),
-      video: t('slashVideoDesc'),
-      image: t('slashImageDesc'),
-      callout: t('slashCalloutDesc'),
-      bookmark: t('slashBookmarkDesc'),
-      file: t('slashFileDesc'),
-      'child-link': t('slashLinkPageDesc'),
-      'child-page': t('slashPageDesc'),
-      'child-database': t('slashDatabaseDesc'),
-    };
+    const itemRefs = useRef<(HTMLButtonElement | null)[]>([]);
 
     useEffect(() => setSelectedIndex(0), [items]);
+
+    // Arrow keys can move past the visible part of the (scrolling) list.
+    useEffect(() => {
+      itemRefs.current[selectedIndex]?.scrollIntoView({ block: 'nearest' });
+    }, [selectedIndex]);
 
     useImperativeHandle(ref, () => ({
       onKeyDown: ({ event }: { event: KeyboardEvent }) => {
@@ -304,31 +343,30 @@ const SlashCommandList = forwardRef<{ onKeyDown: (props: { event: KeyboardEvent 
 
     if (!items.length) return null;
 
-    const isMedia = (id: string) => MEDIA_IDS.includes(id);
-    const isChild = (id: string) => id.startsWith('child-');
-
     return (
-      <div className="min-w-[220px] bg-neutral-850 border border-neutral-800 rounded-md shadow-xl overflow-hidden py-1">
+      <div className={cn(MENU_SURFACE, 'max-h-80 w-64 overflow-y-auto overscroll-contain')}>
         {items.map((item, index) => {
-          const prevId = index > 0 ? items[index - 1].id : null;
-          // Separator above the first media block and above the first child block,
-          // so /-menu reads as three groups: basic blocks · media · pages.
-          const isFirstMedia = isMedia(item.id) && (index === 0 || !isMedia(prevId!));
-          const isFirstChild = isChild(item.id) && (index === 0 || !isChild(prevId!));
+          const group = groupOf(item.id);
+          const startsGroup = index === 0 || groupOf(items[index - 1].id) !== group;
+          const labelKey = SLASH_LABEL_KEYS[item.id];
+          const descKey = SLASH_DESC_KEYS[item.id];
+          const shortcut = SLASH_SHORTCUTS[item.id];
           return (
             <div key={item.id}>
-              {(isFirstMedia || isFirstChild) && <div className="border-t border-neutral-800 my-1" />}
+              {startsGroup && <div className={MENU_LABEL}>{t(GROUP_LABEL_KEYS[group])}</div>}
               <button
+                type="button"
+                ref={(el) => { itemRefs.current[index] = el; }}
                 onClick={() => command(item)}
-                title={DESC_KEYS[item.id] ?? item.description}
-                className={`w-full flex items-center gap-2.5 px-3 py-1.5 text-left transition-colors ${
-                  index === selectedIndex
-                    ? 'bg-neutral-800 text-neutral-100'
-                    : 'text-neutral-400 hover:bg-neutral-800/60 hover:text-neutral-200'
-                }`}
+                // Pointer MOVE, not enter: a list scrolled by the arrow keys slides items
+                // under a resting pointer, which must not steal the keyboard highlight.
+                onMouseMove={() => { if (index !== selectedIndex) setSelectedIndex(index); }}
+                title={descKey ? t(descKey) : item.description}
+                className={menuItem(index === selectedIndex)}
               >
-                <span className="text-neutral-500 shrink-0">{item.icon}</span>
-                <span className="text-sm font-medium leading-none">{LABEL_KEYS[item.id] ?? item.label}</span>
+                <span className={MENU_ICON}>{item.icon}</span>
+                <span className="flex-1 truncate">{labelKey ? t(labelKey) : item.label}</span>
+                {shortcut && <Kbd>{shortcut}</Kbd>}
               </button>
             </div>
           );

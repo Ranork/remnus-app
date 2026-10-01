@@ -801,39 +801,48 @@ pre,
   font-feature-settings: 'zero', 'ss01';
 }
 
-/* Block Editor — ProseMirror content styles */
+/* Block Editor — ProseMirror content styles (V2 R8.1).
+   The body reads as a document on the sheet: 16px/1.7 text (the editor-size preference
+   sets the px, everything else is in em so it scales with it), headings below the page
+   title (28/34), and ONE vertical rhythm: text blocks sit one --prose-flow apart,
+   objects (code, table, callout, media) one and a half, a divider three. */
 .prose-editor {
-  color: var(--color-neutral-300);
-  line-height: 1.75;
-  caret-color: var(--color-neutral-300);
+  --prose-flow: 0.5em;
+  color: var(--color-fg-2);
+  line-height: 1.7;
+  caret-color: var(--color-fg);
 }
-
+/* The first block starts at the top — headings sit inside a React node-view wrapper
+   (div.react-renderer), whose margin would otherwise collapse up past the title. */
+.prose-editor > :first-child,
+.prose-editor > .react-renderer:first-child > :first-child {
+  font-weight: 600;
+}
 .prose-editor h1 {
+  font-size: 1.5em;
+  line-height: 1.25;
+  margin-top: 0;
+  margin: 1.6em 0 0.35em;
+}
+.prose-editor h1,
+.prose-editor h2,
+.prose-editor h3 {
   position: relative;
-  font-size: 2.25rem;
-  font-weight: 700;
-  line-height: 1.2;
-  margin: 1.5rem 0 0.5rem;
   color: var(--color-fg);
   letter-spacing: -0.02em;
 }
 .prose-editor h2 {
-  position: relative;
-  font-size: 1.5rem;
-  font-weight: 600;
+  font-size: 1.25em;
   line-height: 1.3;
-  margin: 1.25rem 0 0.4rem;
-  color: var(--color-fg);
-  letter-spacing: -0.01em;
+  letter-spacing: -0.015em;
+  margin: 1.5em 0 0.3em;
 }
 
 .prose-editor h3 {
-  position: relative;
-  font-size: 1.2rem;
-  font-weight: 600;
+  font-size: 1.125em;
   line-height: 1.4;
-  margin: 1rem 0 0.35rem;
-  color: var(--color-neutral-100);
+  letter-spacing: -0.01em;
+  margin: 1.3em 0 0.25em;
 }
 
 /* Heading collapse button — appears on heading hover, sits in the left gutter */
@@ -847,8 +856,8 @@ pre,
   justify-content: center;
   width: 18px;
   height: 18px;
-  border-radius: 3px;
-  color: var(--color-neutral-600);
+  border-radius: var(--radius-sm);
+  color: var(--color-fg-4);
   background: transparent;
   border: none;
   padding: 0;
@@ -874,8 +883,8 @@ pre,
 }
 
 .heading-collapse-btn:hover {
-  color: var(--color-neutral-300);
-  background: var(--color-neutral-800);
+  color: var(--color-fg-2);
+  background: var(--color-hover);
 }
 
 /* Touch / no-hover devices (phones, tablets): there is no hover and HTML5 drag
@@ -900,7 +909,7 @@ pre,
 }
 
 .prose-editor p {
-  margin: 0.3rem 0;
+  margin: var(--prose-flow) 0;
 }
 .prose-editor p:first-child {
   margin-top: 0;
@@ -946,6 +955,7 @@ pre,
   display: inline-block;
   width: 0.95em;
   height: 0.95em;
+/* Code is literal machine text: JetBrains Mono, on a raised well with a hairline. */
   margin-right: 0.18em;
   vertical-align: -0.14em;
   /* A mask, so the glyph takes the link's own colour in every theme. */
@@ -955,34 +965,38 @@ pre,
 }
 
 .prose-editor code:not(pre code) {
-  background: var(--color-neutral-800);
-  color: var(--color-neutral-200);
-  font-family: monospace;
-  font-size: 0.875em;
-  padding: 0.125em 0.35em;
-  border: 1px solid var(--color-neutral-700);
+  background: var(--color-raised);
+  color: var(--color-fg);
+  font-family: var(--font-mono);
+  font-size: 0.85em;
+  padding: 0.1em 0.35em;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-sm);
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
 }
 
 .prose-editor pre {
-  background: var(--color-neutral-900);
-  border: 1px solid var(--color-neutral-800);
-  border-radius: 8px;
-  padding: 1rem;
+  background: var(--color-raised);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-control);
+  padding: 0.875em 1em;
   overflow-x: auto;
-  margin: 0.75rem 0;
+  margin: calc(var(--prose-flow) * 1.5) 0;
 }
 .prose-editor pre code {
-  color: var(--color-neutral-300);
-  font-size: 0.875rem;
+  color: var(--color-fg-2);
+  font-family: var(--font-mono);
+  font-size: 0.875em;
+  line-height: 1.6;
   background: none;
   border: none;
   padding: 0;
-  font-family: monospace;
 }
 
 /* Collapsible code blocks (FencedCodeBlock React node view) */
 .prose-editor .code-block-view {
-  margin: 0.75rem 0;
+  margin: calc(var(--prose-flow) * 1.5) 0;
 }
 .prose-editor .code-block-pre-wrap {
   position: relative;
@@ -1004,12 +1018,12 @@ pre,
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
-  color: var(--color-neutral-400);
-  background: var(--color-neutral-850);
-  border: 1px solid var(--color-neutral-800);
-  border-radius: 7px;
+  width: 28px;
+  height: 28px;
+  color: var(--color-fg-3);
+  background: var(--color-sheet);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-control);
   cursor: pointer;
   opacity: 0;
   transition: opacity 0.15s, color 0.15s, background 0.15s, border-color 0.15s;
@@ -1019,9 +1033,9 @@ pre,
   opacity: 1;
 }
 .prose-editor .code-block-copy:hover {
-  color: var(--color-neutral-100);
-  background: var(--color-neutral-800);
-  border-color: var(--color-neutral-700);
+  color: var(--color-fg);
+  background: var(--color-hover);
+  border-color: var(--color-line-strong);
 }
 /* Touch devices have no hover — keep the copy button discoverable. */
 @media (hover: none) {
@@ -1043,12 +1057,14 @@ pre,
   padding-bottom: 0.65rem;
   border: none;
   cursor: pointer;
-  border-radius: 0 0 8px 8px;
+  border-radius: 0 0 var(--radius-control) var(--radius-control);
+  /* Fades into the well's own colour, so it is right in every theme. */
   background: linear-gradient(
     to bottom,
-    var(--code-block-fade-start, rgba(33, 37, 43, 0)) 0%,
-    var(--code-block-fade-mid, rgba(33, 37, 43, 0.7)) 45%,
-    var(--color-neutral-900) 100%
+    color-mix(in srgb, var(--color-raised) 0%, transparent) 0%,
+    color-mix(in srgb, var(--color-raised) 82%, transparent) 45%,
+    var(--color-raised) 100%
+  line-height: 1rem;
   );
 }
 .prose-editor .code-block-expand-label,
@@ -1058,17 +1074,16 @@ pre,
   gap: 0.3rem;
   font-size: 0.75rem;
   font-weight: 500;
-  color: var(--color-neutral-300);
-  padding: 0.28rem 0.75rem;
+  color: var(--color-fg-2);
+  padding: 0.3rem 0.75rem;
   border-radius: 9999px;
-  background: var(--color-neutral-800);
-  border: 1px solid var(--color-neutral-700);
+  background: var(--color-sheet);
+  border: 1px solid var(--color-line-strong);
   transition: color 0.15s, background 0.15s, border-color 0.15s;
 }
 .prose-editor .code-block-expand:hover .code-block-expand-label {
-  color: var(--color-neutral-100);
-  background: var(--color-neutral-700);
-  border-color: var(--color-neutral-600);
+  color: var(--color-fg);
+  background: var(--color-hover);
 }
 
 /* "Show less" — centered pill below the expanded block */
@@ -1079,40 +1094,56 @@ pre,
   cursor: pointer;
 }
 .prose-editor .code-block-collapse:hover {
-  color: var(--color-neutral-100);
-  background: var(--color-neutral-700);
-  border-color: var(--color-neutral-600);
+  color: var(--color-fg);
+  background: var(--color-hover);
 }
 
 .prose-editor ul {
   list-style-type: disc;
-  padding-left: 1.5rem;
-  margin: 0.5rem 0;
+/* A list is one unit: its items sit closer than paragraphs do. */
+  padding-left: 1.5em;
+  margin: var(--prose-flow) 0;
 }
 .prose-editor ol {
   list-style-type: decimal;
-  padding-left: 1.5rem;
-  margin: 0.5rem 0;
+  padding-left: 1.5em;
+.prose-editor li > ul,
+.prose-editor li > ol {
+  margin: 0.25em 0;
+}
+.prose-editor li::marker {
+  color: var(--color-fg-3);
+}
+  margin: var(--prose-flow) 0;
+/* Onest has no italic, so a quote is a rule and a quieter voice, not a slant. */
 }
 .prose-editor li {
-  margin: 0.2rem 0;
+  margin: 0.25em 0;
 }
 .prose-editor li p {
   margin: 0;
 }
 
 .prose-editor blockquote {
-  border-left: 3px solid var(--color-neutral-700);
-  padding-left: 1rem;
-  margin: 0.75rem 0;
-  color: var(--color-neutral-500);
-  font-style: italic;
+  border-left: 2px solid var(--color-line-strong);
+  padding: 0.125em 0 0.125em 1em;
+  margin: var(--prose-flow) 0;
+  color: var(--color-fg-3);
+}
+.prose-editor blockquote p {
+  margin: 0.25em 0;
 }
 
 .prose-editor hr {
   border: none;
-  border-top: 1px solid var(--color-neutral-800);
-  margin: 1.5rem 0;
+  border-top: 1px solid var(--color-line);
+  margin: calc(var(--prose-flow) * 3) 0;
+}
+
+/* Atom blocks drawn by React node views (image, file, bookmark, callout, video) keep
+   the same distance as code blocks and tables. */
+.prose-editor .editor-object {
+  margin: calc(var(--prose-flow) * 1.5) 0;
 }
 
 /* Block indentation — Tab/Shift-Tab nests blocks visually under the previous block */
@@ -1128,7 +1159,7 @@ pre,
 .prose-editor .is-empty::before {
   content: attr(data-placeholder);
   float: left;
-  color: var(--color-neutral-700);
+  color: var(--color-fg-4);
   pointer-events: none;
   height: 0;
 }
@@ -1141,31 +1172,60 @@ pre,
   content: none;
 }
 
-/* Task list */
+/* Task list — a drawn box (the native one ignores the theme): a line edge, filled
+   with the muted text colour once done. Neutral on purpose; yellow is for selection. */
 .prose-editor ul[data-type="taskList"] {
   list-style: none;
-  padding-left: 0.25rem;
-  margin: 0.5rem 0;
+  padding-left: 0.125em;
+  margin: var(--prose-flow) 0;
 }
+  display: flex;
+  align-items: center;
+  /* One line box tall, so the box centres on the first line of the item. */
+  height: 1.7em;
+  user-select: none;
 .prose-editor ul[data-type="taskList"] li {
   display: flex;
+  -webkit-appearance: none;
+  appearance: none;
+  display: grid;
+  place-content: center;
+  width: 1em;
+  height: 1em;
+  margin: 0;
+  border: 1.5px solid var(--color-line-strong);
+  border-radius: var(--radius-sm);
+  background: transparent;
   align-items: flex-start;
-  gap: 0.5rem;
-  margin: 0.25rem 0;
+  gap: 0.625em;
+  margin: 0.25em 0;
 }
 .prose-editor ul[data-type="taskList"] li > label {
-  margin-top: 0.22rem;
   flex-shrink: 0;
 }
 .prose-editor ul[data-type="taskList"] li > label input[type="checkbox"] {
   cursor: pointer;
-  width: 0.9rem;
-  height: 0.9rem;
-  accent-color: var(--color-neutral-500);
+  transition: background-color 0.12s, border-color 0.12s;
+}
+.prose-editor ul[data-type="taskList"] li > label input[type="checkbox"]:hover {
+  border-color: var(--color-fg-4);
+}
+.prose-editor ul[data-type="taskList"] li > label input[type="checkbox"]:checked {
+  background: var(--color-fg-3);
+  border-color: var(--color-fg-3);
+}
+.prose-editor ul[data-type="taskList"] li > label input[type="checkbox"]:checked::before {
+  color: var(--color-fg-3);
+  content: '';
+  width: 0.7em;
+  height: 0.7em;
+  background: var(--color-sheet);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%20fill='none'%20stroke='black'%20stroke-width='3.5'%20stroke-linecap='round'%20stroke-linejoin='round'%3E%3Cpath%20d='M20%206%209%2017l-5-5'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%20fill='none'%20stroke='black'%20stroke-width='3.5'%20stroke-linecap='round'%20stroke-linejoin='round'%3E%3Cpath%20d='M20%206%209%2017l-5-5'/%3E%3C/svg%3E") center / contain no-repeat;
 }
 .prose-editor ul[data-type="taskList"] li[data-checked="true"] > div {
   text-decoration: line-through;
-  color: var(--color-neutral-600);
+  text-decoration-color: var(--color-fg-4);
 }
 .prose-editor ul[data-type="taskList"] li > div {
   flex: 1;
@@ -1178,26 +1238,28 @@ pre,
 .prose-editor table {
   border-collapse: collapse;
   width: 100%;
-  margin: 0.75rem 0;
+  margin: calc(var(--prose-flow) * 1.5) 0;
   table-layout: fixed;
 }
 .prose-editor table th,
 .prose-editor table td {
-  border: 1px solid var(--color-neutral-800);
-  padding: 0.35rem 0.65rem;
+  border: 1px solid var(--color-line);
+  padding: 0.4em 0.65em;
   min-width: 80px;
   vertical-align: top;
   position: relative;
 }
 .prose-editor table th {
-  background: var(--color-neutral-900);
-  color: var(--color-neutral-200);
+  background: var(--color-raised);
+  color: var(--color-fg);
   font-weight: 600;
-  font-size: 0.8rem;
+  font-size: 0.875em;
   text-align: left;
 }
+/* Selected cells take the selection colour. A translucent overlay rather than
+   signal-soft: the light theme's signal-soft is opaque and would hide the text. */
 .prose-editor table td {
-  color: var(--color-neutral-300);
+  color: var(--color-fg-2);
   background: transparent;
 }
 .prose-editor table td p,
@@ -1211,8 +1273,7 @@ pre,
   right: 0;
   top: 0;
   bottom: 0;
-  background: var(--color-neutral-800);
-  opacity: 0.3;
+  background: color-mix(in srgb, var(--color-signal) 16%, transparent);
   pointer-events: none;
 }
 /* Column resize (prosemirror-tables): drag handle on the right edge of a cell. */
@@ -1223,7 +1284,7 @@ pre,
   bottom: -1px;
   width: 4px;
   z-index: 20;
-  background-color: var(--color-blue-500);
+  background-color: var(--color-signal);
   pointer-events: none;
 }
 .prose-editor.resize-cursor,
@@ -1231,16 +1292,11 @@ pre,
   cursor: col-resize;
 }
 
-/* Editor font size preferences */
-[data-editor-size="sm"] .prose-editor { font-size: 13px; line-height: 1.65; }
-[data-editor-size="md"] .prose-editor { font-size: 15px; line-height: 1.75; }
-[data-editor-size="lg"] .prose-editor { font-size: 17px; line-height: 1.8; }
-[data-editor-size="sm"] .prose-editor h1 { font-size: 1.9rem; }
-[data-editor-size="lg"] .prose-editor h1 { font-size: 2.6rem; }
-[data-editor-size="sm"] .prose-editor h2 { font-size: 1.3rem; }
-[data-editor-size="lg"] .prose-editor h2 { font-size: 1.7rem; }
-[data-editor-size="sm"] .prose-editor h3 { font-size: 1.1rem; }
-[data-editor-size="lg"] .prose-editor h3 { font-size: 1.3rem; }
+/* Editor font size preference (Settings → Small / Medium / Large). Medium is the
+   16px body of the type scale; headings and spacing are in em and follow. */
+[data-editor-size="sm"] .prose-editor { font-size: 14px; }
+[data-editor-size="md"] .prose-editor { font-size: 16px; }
+[data-editor-size="lg"] .prose-editor { font-size: 18px; }
 
 /* ProseMirror selection — NodeViews manage their own selected state visually;
    suppress the rectangular outline entirely for all atom node views. */
@@ -1248,15 +1304,15 @@ pre,
   outline: none;
 }
 
-/* Block selection — Notion-style multi-block highlight */
+/* Block selection — Notion-style multi-block highlight, in the selection colour */
 .prose-editor .block-selected {
   background-color: var(--color-signal-soft);
-  border-radius: 8px;
+  border-radius: var(--radius);
 }
 /* List items need a small negative margin to cover the bullet area */
 .prose-editor li.block-selected {
   background-color: var(--color-signal-soft);
-  border-radius: 8px;
+  border-radius: var(--radius);
   margin-left: -0.25rem;
   padding-left: 0.25rem;
 }
@@ -1267,7 +1323,7 @@ pre,
   pointer-events: none;
   background-color: var(--color-signal-soft);
   border: 1px solid color-mix(in srgb, var(--color-signal) 60%, transparent);
-  border-radius: 7px;
+  border-radius: var(--radius);
 }
 /* Suppress native text selection while the marquee is active */
 body.block-marquee-active,
@@ -1280,20 +1336,20 @@ body.block-marquee-active * {
    Shown at the insert point while an image/file upload is running. */
 .upload-skeleton {
   display: block;
-  margin: 0.75rem 0;
-  border: 1px solid var(--color-neutral-800);
-  border-radius: 8px;
+  margin: calc(var(--prose-flow, 0.5em) * 1.5) 0;
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-control);
   padding: 0.75rem;
-  background-color: color-mix(in srgb, var(--color-neutral-900) 60%, transparent);
+  background-color: var(--color-raised);
   user-select: none;
 }
 .upload-skeleton__body {
-  border-radius: 6px;
+  border-radius: var(--radius);
   background: linear-gradient(
     90deg,
-    var(--color-neutral-800) 0%,
-    color-mix(in srgb, var(--color-neutral-800) 55%, var(--color-neutral-900)) 50%,
-    var(--color-neutral-800) 100%
+    var(--color-hover) 0%,
+    color-mix(in srgb, var(--color-hover) 45%, var(--color-raised)) 50%,
+    var(--color-hover) 100%
   );
   background-size: 200% 100%;
   animation: upload-skeleton-shimmer 1.2s ease-in-out infinite;
@@ -1310,14 +1366,14 @@ body.block-marquee-active * {
   line-height: 1rem;
 }
 .upload-skeleton__name {
-  color: var(--color-neutral-100);
+  color: var(--color-fg);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .upload-skeleton__status {
   flex-shrink: 0;
-  color: var(--color-neutral-500);
+  color: var(--color-fg-3);
 }
 @keyframes upload-skeleton-shimmer {
   from { background-position: 200% 0; }

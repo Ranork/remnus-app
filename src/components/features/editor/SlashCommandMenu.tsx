@@ -5,6 +5,12 @@ import Suggestion from '@tiptap/suggestion';
 import tippy, { type Instance } from 'tippy.js';
 import SlashCommandList, { SLASH_COMMANDS, SLASH_KEYWORDS, buildChildCommands, type SlashCommandItem } from './SlashCommandList';
 
+// Case- and accent-insensitive, so "/baslik" finds "Başlık" and "/ozet" finds "Özet".
+// (Dotless ı has no decomposition, hence the explicit map.)
+function fold(value: string): string {
+  return value.normalize('NFKD').replace(/[̀-ͯ]/g, '').replace(/ı/g, 'i').toLowerCase();
+}
+
 export const SlashCommand = Extension.create({
   name: 'slashCommand',
 
@@ -12,6 +18,8 @@ export const SlashCommand = Extension.create({
     return {
       workspaceId: null as string | null,
       parentId: null as string | null,
+      /** Command id → its name in the reader's language (the menu shows these). */
+      labels: {} as Record<string, string>,
       suggestion: {
         char: '/',
         command: ({ editor, range, props }: { editor: any; range: any; props: any }) => {
@@ -38,11 +46,13 @@ export const SlashCommand = Extension.create({
               : [];
           const all = [...SLASH_COMMANDS, ...childCmds];
           if (!query) return all;
-          const q = query.toLowerCase();
-          // Match the (English) label, the id, or any registered shortcut/synonym
-          // so "/h1", "/img", "/todo" resolve even though the visible label differs.
+          const q = fold(query);
+          const labels: Record<string, string> = ext?.options?.labels ?? {};
+          // Match the name the menu shows, the English label, the id, or any
+          // registered shortcut/synonym so "/h1", "/img", "/todo" resolve too.
           return all.filter(item =>
-            item.label.toLowerCase().includes(q) ||
+            (labels[item.id] ? fold(labels[item.id]).includes(q) : false) ||
+            fold(item.label).includes(q) ||
             item.id.toLowerCase().includes(q) ||
             (SLASH_KEYWORDS[item.id] ?? []).some(k => k.includes(q)),
           );

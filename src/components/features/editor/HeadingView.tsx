@@ -1,5 +1,6 @@
 'use client';
 import { NodeViewWrapper, NodeViewContent } from '@tiptap/react';
+import { useTranslations } from 'next-intl';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 
 interface Props {
@@ -10,6 +11,7 @@ interface Props {
 }
 
 export default function HeadingView({ node, getPos, editor, decorations }: Props) {
+  const t = useTranslations('Editor');
   const level = node.attrs.level;
   const Tag = `h${level}` as 'h1' | 'h2' | 'h3';
   const isCollapsed = decorations.some((d) => d.spec?.headingIsCollapsed === true);
@@ -37,8 +39,8 @@ export default function HeadingView({ node, getPos, editor, decorations }: Props
         contentEditable={false}
         onClick={handleToggle}
         className={`heading-collapse-btn${isCollapsed ? ' heading-collapse-btn--collapsed' : ''}`}
-        aria-label={isCollapsed ? 'Expand section' : 'Collapse section'}
-        title={isCollapsed ? 'Expand section' : 'Collapse section'}
+        aria-label={isCollapsed ? t('headingExpand') : t('headingCollapse')}
+        title={isCollapsed ? t('headingExpand') : t('headingCollapse')}
       >
         {isCollapsed ? <ChevronRight size={13} /> : <ChevronDown size={13} />}
       </button>

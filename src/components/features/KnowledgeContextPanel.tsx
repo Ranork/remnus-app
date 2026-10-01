@@ -1,13 +1,18 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { BrainCircuit, Check, ChevronRight, Loader2, ShieldCheck } from 'lucide-react';
+import { BrainCircuit, Check, Loader2, ShieldCheck } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { getPageKnowledge, markPageKnowledgeReviewed, updatePageKnowledge } from '@/lib/actions/knowledge';
 import type { KnowledgeCorpusItem, KnowledgeStatus } from '@/lib/services/knowledge';
+import { Button } from '@/components/ui/button';
+import { Input, Textarea } from '@/components/ui/input';
 import { SimpleSelect } from '@/components/ui/select';
+import PageSection from './PageSection';
 
 const EMPTY_FORM = { conceptType: '', description: '', tags: '', sources: '', status: 'draft' as KnowledgeStatus, staleAfter: '' };
+
+const labelCls = 'flex flex-col gap-1.5 text-xs text-fg-3';
 
 export default function KnowledgeContextPanel({ workspaceId, pageId }: { workspaceId: string; pageId: string }) {
   const t = useTranslations('Page');
@@ -76,71 +81,69 @@ export default function KnowledgeContextPanel({ workspaceId, pageId }: { workspa
   const trustLabel = knowledge ? t(`knowledgeTrust.${knowledge.metadata.trust}`) : t('knowledgeTrust.unverified');
 
   return (
-    <div className="mt-10 border-t border-neutral-800 pt-6">
-      <button type="button" onClick={() => setCollapsed(value => !value)} className="flex items-center gap-1.5 text-xs font-medium text-neutral-500 transition-colors hover:text-neutral-300 cursor-pointer">
-        <ChevronRight size={12} className={`transition-transform ${collapsed ? '' : 'rotate-90'}`} />
-        <BrainCircuit size={12} />
-        {t('knowledgeTitle')}
-        {knowledge && <span className="ml-1 text-[10px] text-neutral-600">{trustLabel}</span>}
-      </button>
-
-      {!collapsed && (
-        <div className="mt-4 space-y-4 border-l border-neutral-800 pl-4">
-          <p className="text-xs leading-relaxed text-neutral-500">{t('knowledgeHint')}</p>
-          {busy === 'load' ? <Loader2 size={14} className="animate-spin text-neutral-500" /> : (
-            <>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <label className="space-y-1 text-[11px] text-neutral-500">
-                  <span>{t('knowledgeType')}</span>
-                  <input value={form.conceptType} onChange={event => setForm(current => ({ ...current, conceptType: event.target.value }))} className="w-full border-b border-neutral-700 bg-transparent px-1 py-1.5 text-xs text-neutral-200 outline-none focus:border-signal" />
-                </label>
-                <label className="space-y-1 text-[11px] text-neutral-500">
-                  <span>{t('knowledgeStatus')}</span>
-                  <SimpleSelect
-                    value={form.status}
-                    onValueChange={value => setForm(current => ({ ...current, status: value as KnowledgeStatus }))}
-                    options={[
-                      { value: 'draft', label: t('knowledgeStatusDraft') },
-                      { value: 'stable', label: t('knowledgeStatusStable') },
-                      { value: 'deprecated', label: t('knowledgeStatusDeprecated') },
-                    ]}
-                    aria-label={t('knowledgeStatus')}
-                    className="w-full"
-                  />
-                </label>
-              </div>
-              <label className="block space-y-1 text-[11px] text-neutral-500">
-                <span>{t('knowledgeDescription')}</span>
-                <textarea value={form.description} onChange={event => setForm(current => ({ ...current, description: event.target.value }))} rows={2} className="w-full resize-y border-b border-neutral-700 bg-transparent px-1 py-1.5 text-xs text-neutral-200 outline-none focus:border-signal" />
+    <PageSection
+      icon={<BrainCircuit />}
+      title={t('knowledgeTitle')}
+      meta={knowledge ? trustLabel : undefined}
+      open={!collapsed}
+      onToggle={() => setCollapsed(value => !value)}
+    >
+      <div className="mt-3 space-y-4">
+        <p className="text-xs leading-relaxed text-fg-3">{t('knowledgeHint')}</p>
+        {busy === 'load' ? <Loader2 size={14} className="animate-spin text-fg-4" aria-hidden /> : (
+          <>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className={labelCls}>
+                <span>{t('knowledgeType')}</span>
+                <Input size="sm" value={form.conceptType} onChange={event => setForm(current => ({ ...current, conceptType: event.target.value }))} />
               </label>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <label className="space-y-1 text-[11px] text-neutral-500">
-                  <span>{t('knowledgeTags')}</span>
-                  <input value={form.tags} onChange={event => setForm(current => ({ ...current, tags: event.target.value }))} placeholder={t('knowledgeTagsHint')} className="w-full border-b border-neutral-700 bg-transparent px-1 py-1.5 text-xs text-neutral-200 outline-none focus:border-signal" />
-                </label>
-                <label className="space-y-1 text-[11px] text-neutral-500">
-                  <span>{t('knowledgeStaleAfter')}</span>
-                  <input type="date" value={form.staleAfter} onChange={event => setForm(current => ({ ...current, staleAfter: event.target.value }))} className="w-full border-b border-neutral-700 bg-transparent px-1 py-1.5 text-xs text-neutral-200 outline-none focus:border-signal" />
-                </label>
-              </div>
-              <label className="block space-y-1 text-[11px] text-neutral-500">
-                <span>{t('knowledgeSources')}</span>
-                <textarea value={form.sources} onChange={event => setForm(current => ({ ...current, sources: event.target.value }))} rows={2} placeholder={t('knowledgeSourcesHint')} className="w-full resize-y border-b border-neutral-700 bg-transparent px-1 py-1.5 text-xs text-neutral-200 outline-none focus:border-signal" />
+              <label className={labelCls}>
+                <span>{t('knowledgeStatus')}</span>
+                <SimpleSelect
+                  value={form.status}
+                  onValueChange={value => setForm(current => ({ ...current, status: value as KnowledgeStatus }))}
+                  options={[
+                    { value: 'draft', label: t('knowledgeStatusDraft') },
+                    { value: 'stable', label: t('knowledgeStatusStable') },
+                    { value: 'deprecated', label: t('knowledgeStatusDeprecated') },
+                  ]}
+                  aria-label={t('knowledgeStatus')}
+                  size="sm"
+                  className="w-full"
+                />
               </label>
-              <div className="flex flex-wrap items-center gap-2">
-                <button type="button" onClick={save} disabled={!!busy} className="inline-flex items-center gap-1.5 bg-ink px-3 py-1.5 text-xs font-medium text-ink-fg transition-colors hover:bg-ink/88 disabled:opacity-50 cursor-pointer">
-                  {busy === 'save' ? <Loader2 size={12} className="animate-spin" /> : <Check size={12} />}{t('knowledgeSave')}
-                </button>
-                <button type="button" onClick={review} disabled={!!busy} className="inline-flex items-center gap-1.5 border border-neutral-700 px-3 py-1.5 text-xs text-neutral-300 transition-colors hover:bg-neutral-800 disabled:opacity-50 cursor-pointer">
-                  {busy === 'review' ? <Loader2 size={12} className="animate-spin" /> : <ShieldCheck size={12} />}{t('knowledgeReview')}
-                </button>
-                <span className="text-[10px] text-neutral-600">{message || trustLabel}</span>
-              </div>
-              <p className="text-[10px] leading-relaxed text-neutral-600">{t('knowledgeReviewHint')}</p>
-            </>
-          )}
-        </div>
-      )}
-    </div>
+            </div>
+            <label className={labelCls}>
+              <span>{t('knowledgeDescription')}</span>
+              <Textarea value={form.description} onChange={event => setForm(current => ({ ...current, description: event.target.value }))} rows={2} className="min-h-16 text-xs" />
+            </label>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className={labelCls}>
+                <span>{t('knowledgeTags')}</span>
+                <Input size="sm" value={form.tags} onChange={event => setForm(current => ({ ...current, tags: event.target.value }))} placeholder={t('knowledgeTagsHint')} />
+              </label>
+              <label className={labelCls}>
+                <span>{t('knowledgeStaleAfter')}</span>
+                <Input size="sm" type="date" value={form.staleAfter} onChange={event => setForm(current => ({ ...current, staleAfter: event.target.value }))} className="scheme-dark" />
+              </label>
+            </div>
+            <label className={labelCls}>
+              <span>{t('knowledgeSources')}</span>
+              <Textarea value={form.sources} onChange={event => setForm(current => ({ ...current, sources: event.target.value }))} rows={2} placeholder={t('knowledgeSourcesHint')} className="min-h-16 font-mono text-xs" />
+            </label>
+            <div className="flex flex-wrap items-center gap-2">
+              <Button variant="primary" size="sm" onClick={save} loading={busy === 'save'} disabled={!!busy}>
+                <Check />{t('knowledgeSave')}
+              </Button>
+              <Button variant="outline" size="sm" onClick={review} loading={busy === 'review'} disabled={!!busy}>
+                <ShieldCheck />{t('knowledgeReview')}
+              </Button>
+              <span role="status" className="text-xs text-fg-3">{message || trustLabel}</span>
+            </div>
+            <p className="text-xs leading-relaxed text-fg-3">{t('knowledgeReviewHint')}</p>
+          </>
+        )}
+      </div>
+    </PageSection>
   );
 }

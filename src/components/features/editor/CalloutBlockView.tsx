@@ -2,22 +2,36 @@
 import { useEffect, useRef, useState } from 'react';
 import { NodeViewWrapper } from '@tiptap/react';
 import { useTranslations } from 'next-intl';
+import { X } from 'lucide-react';
+import { cn } from '@/lib/cn';
 import { CALLOUT_COLORS } from './CalloutBlockExtension';
+import { MENU_SURFACE } from './menuStyles';
 
+// The colour is the writer's choice (user data, blue included); the shape is the
+// app's: a control-radius panel with a hairline in its own tint.
 const COLOR_CLASSES: Record<string, string> = {
-  default: 'bg-neutral-800/40 border-neutral-700',
-  blue: 'bg-blue-500/10 border-blue-500/30',
-  green: 'bg-green-400/10 border-green-400/30',
-  amber: 'bg-amber-500/10 border-amber-500/30',
-  red: 'bg-red-400/10 border-red-400/30',
+  default: 'bg-raised border-line',
+  blue: 'bg-blue-500/10 border-blue-500/25',
+  green: 'bg-green-400/10 border-green-400/25',
+  amber: 'bg-amber-500/10 border-amber-500/25',
+  red: 'bg-red-400/10 border-red-400/25',
 };
 
 const SWATCH: Record<string, string> = {
-  default: 'bg-neutral-500',
+  default: 'bg-fg-4',
   blue: 'bg-blue-500',
   green: 'bg-green-400',
   amber: 'bg-amber-500',
   red: 'bg-red-400',
+};
+
+// Swatch names for tooltips (Editor namespace).
+const SWATCH_LABEL_KEY: Record<string, string> = {
+  default: 'bubbleColorDefault',
+  blue: 'colorBlue',
+  green: 'colorGreen',
+  amber: 'colorOrange',
+  red: 'colorRed',
 };
 
 const EMOJI_CHOICES = ['💡', 'ℹ️', '⚠️', '✅', '❌', '📌', '🔥', '📝'];
@@ -74,26 +88,33 @@ export default function CalloutBlockView({
     <NodeViewWrapper>
       <div
         contentEditable={false}
-        className={`group/callout relative my-2 flex gap-2.5 rounded-md border px-3 py-2.5 select-none ${COLOR_CLASSES[color] || COLOR_CLASSES.blue}`}
+        className={cn(
+          'group/callout editor-object relative flex gap-3 rounded-control border px-4 py-3 select-none',
+          COLOR_CLASSES[color] || COLOR_CLASSES.blue,
+        )}
       >
         <div className="relative shrink-0">
           <button
+            type="button"
             onClick={() => setEmojiOpen(v => !v)}
-            className="text-lg leading-none cursor-pointer hover:opacity-80"
+            className="flex size-6.5 cursor-pointer items-center justify-center rounded text-lg leading-none transition-colors hover:bg-hover"
             title={t('calloutChangeIcon')}
+            aria-label={t('calloutChangeIcon')}
+            aria-expanded={emojiOpen}
           >
             {icon}
           </button>
           {emojiOpen && (
-            <div className="absolute left-0 top-7 z-50 flex flex-wrap gap-1 rounded-md border border-neutral-800 bg-neutral-900 p-1.5 shadow-xl w-[140px]">
+            <div className={cn(MENU_SURFACE, 'absolute top-8 left-0 z-50 grid w-max grid-cols-4 gap-0.5')}>
               {EMOJI_CHOICES.map(e => (
                 <button
+                  type="button"
                   key={e}
                   onClick={() => {
                     updateAttributes({ icon: e });
                     setEmojiOpen(false);
                   }}
-                  className="text-base leading-none p-1 rounded hover:bg-neutral-800 cursor-pointer"
+                  className="flex size-8 cursor-pointer items-center justify-center rounded-control text-base leading-none transition-colors hover:bg-hover"
                 >
                   {e}
                 </button>
@@ -112,24 +133,38 @@ export default function CalloutBlockView({
           onKeyDown={e => e.stopPropagation()}
           rows={1}
           placeholder={t('calloutPlaceholder')}
-          className="flex-1 resize-none bg-transparent text-sm text-neutral-100 placeholder:text-neutral-500 focus:outline-none leading-relaxed overflow-hidden min-h-6"
+          className="min-h-6 flex-1 resize-none overflow-hidden bg-transparent leading-[1.625] text-fg placeholder:text-fg-4 focus:outline-none"
         />
 
-        <div className="flex shrink-0 items-start gap-1 opacity-0 group-hover/callout:opacity-100 transition-opacity">
-          {CALLOUT_COLORS.map(c => (
-            <button
-              key={c}
-              onClick={() => updateAttributes({ color: c })}
-              className={`h-3 w-3 rounded-full ${SWATCH[c]} ${color === c ? 'ring-2 ring-offset-1 ring-offset-neutral-900 ring-white/60' : ''} cursor-pointer`}
-              title={c}
-            />
-          ))}
+        {/* Colour + remove float over the top edge on hover, so the text keeps the
+            whole width of the box instead of wrapping early around hidden controls. */}
+        <div className="pointer-events-none absolute -top-3 right-2 z-10 flex items-center gap-1.5 rounded-control bg-float px-1.5 py-1 opacity-0 shadow-float transition-opacity group-hover/callout:pointer-events-auto group-hover/callout:opacity-100 focus-within:pointer-events-auto focus-within:opacity-100">
+          {CALLOUT_COLORS.map(c => {
+            const label = t(SWATCH_LABEL_KEY[c]);
+            return (
+              <button
+                type="button"
+                key={c}
+                onClick={() => updateAttributes({ color: c })}
+                className={cn(
+                  'size-3 cursor-pointer rounded-full',
+                  SWATCH[c],
+                  color === c && 'ring-2 ring-fg/60 ring-offset-1 ring-offset-float',
+                )}
+                title={label}
+                aria-label={label}
+                aria-pressed={color === c}
+              />
+            );
+          })}
           <button
+            type="button"
             onClick={() => deleteNode()}
-            className="ml-0.5 text-neutral-500 hover:text-red-400 cursor-pointer text-base leading-none"
+            className="ml-0.5 flex size-5 cursor-pointer items-center justify-center rounded text-fg-3 transition-colors hover:bg-hover hover:text-red-400"
             title={t('calloutRemove')}
+            aria-label={t('calloutRemove')}
           >
-            ×
+            <X size={14} />
           </button>
         </div>
       </div>

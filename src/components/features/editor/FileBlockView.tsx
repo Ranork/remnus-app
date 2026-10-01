@@ -1,7 +1,7 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import { NodeViewWrapper } from '@tiptap/react';
-import { Download, Loader2, Upload } from 'lucide-react';
+import { Download, Loader2, Paperclip, Upload, X } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { deleteUploadedAsset } from './assetClient';
 import { useIsTauri } from '@/lib/hooks/useIsTauri';
@@ -123,31 +123,38 @@ export default function FileBlockView({
 
   return (
     <NodeViewWrapper>
-      <div contentEditable={false} className="group/file relative my-2 select-none">
+      <div contentEditable={false} className="group/file editor-object relative select-none">
 
         {url ? (
-          <div className="relative flex items-center gap-3 rounded-md border border-neutral-800 bg-neutral-900 px-3 py-2.5">
-            <div className="flex-1 min-w-0">
-              <div className="text-sm text-neutral-100 truncate">{name || t('fileUntitled')}</div>
-              {size > 0 && <div className="text-xs text-neutral-500">{formatSize(size)}</div>}
+          <div className="relative flex items-center gap-3 rounded-control border border-line bg-raised py-2 pr-2 pl-2.5">
+            <span className="flex size-8 shrink-0 items-center justify-center rounded-control bg-sheet text-fg-3 shadow-[inset_0_0_0_1px_var(--color-line)]">
+              <Paperclip size={15} />
+            </span>
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-sm text-fg">{name || t('fileUntitled')}</div>
+              {size > 0 && <div className="text-xs text-fg-3">{formatSize(size)}</div>}
             </div>
             <button
-              onClick={handleDownload}
-              disabled={downloading || !downloadUrl}
-              className="shrink-0 p-1.5 rounded text-neutral-400 hover:text-neutral-100 hover:bg-neutral-800 transition-colors cursor-pointer disabled:opacity-50"
-              title={t('fileDownload')}
-            >
-              {downloading ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />}
-            </button>
-            <button
+              type="button"
               onClick={() => {
                 deleteUploadedAsset(url);
                 deleteNode();
               }}
-              className="shrink-0 opacity-0 group-hover/file:opacity-100 transition-opacity text-neutral-500 hover:text-red-400 cursor-pointer text-base leading-none"
+              className="flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-control text-fg-3 opacity-0 transition-[opacity,color,background-color] group-hover/file:opacity-100 hover:bg-red-500/12 hover:text-red-400 focus-visible:opacity-100"
               title={t('fileRemove')}
+              aria-label={t('fileRemove')}
             >
-              ×
+              <X size={15} />
+            </button>
+            <button
+              type="button"
+              onClick={handleDownload}
+              disabled={downloading || !downloadUrl}
+              className="flex size-7 shrink-0 cursor-pointer items-center justify-center rounded-control text-fg-3 transition-colors hover:bg-hover hover:text-fg disabled:opacity-50"
+              title={t('fileDownload')}
+              aria-label={t('fileDownload')}
+            >
+              {downloading ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />}
             </button>
           </div>
         ) : (
@@ -157,12 +164,13 @@ export default function FileBlockView({
               e.preventDefault();
               handleFile(e.dataTransfer.files?.[0]);
             }}
-            className="flex items-center gap-2 rounded-md border border-neutral-800 bg-neutral-900 px-3 py-2.5"
+            className="flex items-center gap-2 rounded-control border border-line bg-raised px-3 py-2.5"
           >
             <button
+              type="button"
               onClick={() => fileRef.current?.click()}
               disabled={loading}
-              className="inline-flex items-center gap-1.5 text-sm text-neutral-300 hover:text-neutral-100 transition-colors cursor-pointer disabled:opacity-50"
+              className="inline-flex cursor-pointer items-center gap-1.5 text-sm text-fg-2 transition-colors hover:text-fg disabled:opacity-50"
             >
               {loading ? <Loader2 size={15} className="animate-spin" /> : <Upload size={15} />}
               {t('fileUpload')}

@@ -1,8 +1,10 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
+import { cn } from '@/lib/cn';
 import PageIcon from '../PageIcon';
 import { searchPageItems, type PageLinkItem } from './pageLinkData';
+import { MENU_EMPTY, MENU_SURFACE, menuItem } from './menuStyles';
 
 type Props = {
   onSelect: (item: PageLinkItem) => void;
@@ -79,35 +81,34 @@ export default function PagePickerPanel({ onSelect, onClose }: Props) {
   }, [items, selectedIndex, onSelect, onClose]);
 
   return (
-    <div className="w-[280px] bg-neutral-850 border border-neutral-800 rounded-md shadow-xl overflow-hidden">
-      <div className="p-1.5 border-b border-neutral-800">
+    <div className={cn(MENU_SURFACE, 'w-72 max-w-[calc(100vw-2rem)] p-0')}>
+      {/* The search field is the panel's header: no well of its own, a hairline below. */}
+      <div className="border-b border-line p-1">
         <input
           ref={inputRef}
           value={query}
           onChange={e => setQuery(e.target.value)}
           placeholder={t('pageLinkSearchPlaceholder')}
-          className="w-full bg-neutral-850 text-sm text-neutral-100 placeholder:text-neutral-500 px-2.5 py-1.5 rounded focus:outline-none"
+          aria-label={t('pageLinkSearchPlaceholder')}
+          className="h-8 w-full rounded-control bg-transparent px-2.5 text-ui text-fg placeholder:text-fg-4 focus:outline-none"
         />
       </div>
-      <div className="max-h-[260px] overflow-y-auto py-1">
+      <div className="max-h-64 overflow-y-auto overscroll-contain p-1">
         {items.length === 0 ? (
-          <div className="px-3 py-2 text-xs text-neutral-500">{t('pageLinkEmpty')}</div>
+          <div className={MENU_EMPTY}>{t('pageLinkEmpty')}</div>
         ) : (
           items.map((item, index) => (
             <button
+              type="button"
               key={item.id}
               onClick={() => onSelect(item)}
-              onMouseEnter={() => setSelectedIndex(index)}
-              className={`w-full flex items-center gap-2.5 px-3 py-1.5 text-left transition-colors ${
-                index === selectedIndex
-                  ? 'bg-neutral-800 text-neutral-100'
-                  : 'text-neutral-400 hover:bg-neutral-800/60 hover:text-neutral-200'
-              }`}
+              onMouseMove={() => { if (index !== selectedIndex) setSelectedIndex(index); }}
+              className={menuItem(index === selectedIndex)}
             >
-              <span className="shrink-0">
+              <span className="flex shrink-0 items-center">
                 <PageIcon icon={item.icon} iconColor={item.iconColor} size={16} fallbackType={item.type} />
               </span>
-              <span className="text-sm font-medium leading-none truncate">{item.title}</span>
+              <span className="flex-1 truncate">{item.title}</span>
             </button>
           ))
         )}

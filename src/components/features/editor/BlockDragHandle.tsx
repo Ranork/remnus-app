@@ -15,12 +15,14 @@ import {
   Pilcrow, Heading1, Heading2, Heading3, List, ListOrdered, Quote, Code2,
   Link2, Image as ImageIcon, SquarePlay, File as FileIcon,
 } from 'lucide-react';
-import { createPortal } from 'react-dom';
 import { useTranslations } from 'next-intl';
 import { useZoom } from '@/components/providers/ZoomProvider';
+import { cn } from '@/lib/cn';
+import { ConfirmDialog } from '../ConfirmDialog';
 import { extractYouTubeId } from './YoutubeEmbedExtension';
 import { deleteWorkspaceItem, checkItemHasContent } from '@/lib/actions/workspace';
 import SlashCommandList, { SLASH_COMMANDS, buildChildCommands, type SlashCommandItem } from './SlashCommandList';
+import { MENU_ICON, MENU_SEPARATOR, MENU_SURFACE, menuItem } from './menuStyles';
 
 // ── Coarse-pointer (touch) detection via useSyncExternalStore ───────────────────
 // On touch there is no hover and HTML5 drag-and-drop doesn't fire, so the handle
@@ -519,37 +521,18 @@ export default function BlockDragHandle({ editor }: Props) {
     setHandle(null);
   };
 
-  const confirmModal = confirmChild
-    ? createPortal(
-        <div
-          className="fixed inset-0 bg-black/60 z-500 flex items-center justify-center p-4"
-          onClick={() => setConfirmChild(null)}
-        >
-          <div
-            className="bg-neutral-850 border border-neutral-800 rounded-lg p-5 max-w-sm w-full shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <h3 className="text-sm font-semibold text-neutral-100 mb-2 truncate">{t('deleteChildTitle')}</h3>
-            <p className="text-xs text-neutral-400 leading-relaxed mb-5">{t('deleteChildDesc')}</p>
-            <div className="flex items-center justify-end gap-2">
-              <button
-                onClick={() => setConfirmChild(null)}
-                className="text-xs text-neutral-400 hover:text-neutral-200 px-3 py-1.5 rounded transition-colors cursor-pointer"
-              >
-                {t('deleteChildCancel')}
-              </button>
-              <button
-                onClick={confirmDeleteChild}
-                className="text-xs bg-red-500/20 hover:bg-red-500/30 text-red-400 px-3 py-1.5 rounded font-medium transition-colors cursor-pointer border border-red-500/20"
-              >
-                {t('deleteChildConfirm')}
-              </button>
-            </div>
-          </div>
-        </div>,
-        document.body,
-      )
-    : null;
+  // Rendered whether or not the handle is showing (the occlusion probe hides the handle
+  // as soon as the dialog covers the editor); the dialog portals itself to <body>.
+  const confirmModal = confirmChild ? (
+    <ConfirmDialog
+      title={t('deleteChildTitle')}
+      description={t('deleteChildDesc')}
+      confirmLabel={t('deleteChildConfirm')}
+      cancelLabel={t('deleteChildCancel')}
+      onConfirm={confirmDeleteChild}
+      onCancel={() => setConfirmChild(null)}
+    />
+  ) : null;
 
   if (!handle) return confirmModal;
 
@@ -782,7 +765,7 @@ export default function BlockDragHandle({ editor }: Props) {
     setHandle(null);
   };
 
-  const SUB_W = 196;
+  const SUB_W = 220;
   const openSub = (e: React.MouseEvent<HTMLElement>) => {
     if (subTimer.current) { clearTimeout(subTimer.current); subTimer.current = null; }
     const r = e.currentTarget.getBoundingClientRect();
@@ -856,13 +839,17 @@ export default function BlockDragHandle({ editor }: Props) {
           right-click, same as the grip itself. */}
       {!menuAnchor && !isCoarse && (
       <button
+        type="button"
         onClick={openAddMenu}
         onMouseEnter={() => { if (hideTimer.current) { clearTimeout(hideTimer.current); hideTimer.current = null; } }}
         style={{ position: 'fixed', top: handle.top, left: handle.left - 20, zIndex: 100 }}
-        className={`flex items-center justify-center p-1 rounded transition-colors cursor-pointer ${
-          addMenuOpen ? 'text-neutral-100 bg-neutral-800' : 'text-neutral-600 hover:text-neutral-200 hover:bg-neutral-800/60'
-        }`}
+        className={cn(
+          'flex cursor-pointer items-center justify-center rounded p-1 transition-colors',
+          addMenuOpen ? 'bg-hover text-fg' : 'text-fg-4 hover:bg-hover hover:text-fg-2',
+        )}
         title={t('blockAddBelowTooltip')}
+        aria-label={t('blockAddBelowTooltip')}
+        aria-expanded={addMenuOpen}
       >
         <Plus size={16} />
       </button>
@@ -871,7 +858,8 @@ export default function BlockDragHandle({ editor }: Props) {
       {addMenuOpen && (
         <div
           ref={addMenuRef}
-          style={{ position: 'fixed', top: Math.min(handle.top + 26, vh - 300), left: Math.min(Math.max(4, handle.left - 26), vw - 230), zIndex: 9998 }}
+          // SlashCommandList is w-64 / max-h-80: keep all of it on screen.
+          style={{ position: 'fixed', top: Math.max(4, Math.min(handle.top + 26, vh - 336)), left: Math.min(Math.max(4, handle.left - 26), vw - 264), zIndex: 9998 }}
         >
           <SlashCommandList ref={addMenuListRef} items={addMenuItems} command={applyAddCommand} />
         </div>
@@ -892,8 +880,14 @@ export default function BlockDragHandle({ editor }: Props) {
         onClick={(e) => { e.preventDefault(); setAddMenuOpen(false); setMenuAnchor(null); setMenuOpen((v) => !v); }}
         onMouseEnter={() => { if (hideTimer.current) { clearTimeout(hideTimer.current); hideTimer.current = null; } }}
         style={{ position: 'fixed', top: handle.top, left: handle.left, zIndex: 100 }}
-        className={`block-drag-handle flex items-center justify-center p-1 text-neutral-600 hover:text-neutral-200 hover:bg-neutral-800/60 rounded transition-colors ${isCoarse ? 'cursor-pointer' : 'cursor-grab active:cursor-grabbing'}`}
+        className={cn(
+          'block-drag-handle flex items-center justify-center rounded p-1 transition-colors',
+          menuOpen ? 'bg-hover text-fg' : 'text-fg-4 hover:bg-hover hover:text-fg-2',
+          isCoarse ? 'cursor-pointer' : 'cursor-grab active:cursor-grabbing',
+        )}
         title={t('blockHandleTooltip')}
+        aria-label={t('blockHandleTooltip')}
+        aria-expanded={menuOpen}
       >
         {isCoarse ? <MoreVertical size={16} /> : <GripVertical size={16} />}
       </button>
@@ -930,81 +924,61 @@ export default function BlockDragHandle({ editor }: Props) {
         <div
           ref={menuRef}
           style={{ position: 'fixed', top: menuTop, left: menuLeft, zIndex: 9998 }}
-          className="min-w-50 bg-neutral-850 border border-neutral-800 shadow-xl py-1 rounded-md overflow-hidden"
+          className={cn(MENU_SURFACE, 'min-w-52')}
         >
           {isCoarse && hovNode?.type.name === 'heading' && (
-            <button
-              onClick={toggleCollapse}
-              className="w-full flex items-center gap-3 px-3 py-2 text-left text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/60 transition-colors"
-            >
-              <ChevronsDownUp size={14} className="text-neutral-600" />
-              <span className="text-sm">{t('blockToggleCollapse')}</span>
+            <button type="button" onClick={toggleCollapse} className={menuItem()}>
+              <span className={MENU_ICON}><ChevronsDownUp size={16} /></span>
+              <span className="flex-1">{t('blockToggleCollapse')}</span>
             </button>
           )}
           {isCoarse && (
             <>
-              <button
-                onClick={() => moveBlock(-1)}
-                className="w-full flex items-center gap-3 px-3 py-2 text-left text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/60 transition-colors"
-              >
-                <ArrowUp size={14} className="text-neutral-600" />
-                <span className="text-sm">{t('blockMoveUp')}</span>
+              <button type="button" onClick={() => moveBlock(-1)} className={menuItem()}>
+                <span className={MENU_ICON}><ArrowUp size={16} /></span>
+                <span className="flex-1">{t('blockMoveUp')}</span>
               </button>
-              <button
-                onClick={() => moveBlock(1)}
-                className="w-full flex items-center gap-3 px-3 py-2 text-left text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/60 transition-colors"
-              >
-                <ArrowDown size={14} className="text-neutral-600" />
-                <span className="text-sm">{t('blockMoveDown')}</span>
+              <button type="button" onClick={() => moveBlock(1)} className={menuItem()}>
+                <span className={MENU_ICON}><ArrowDown size={16} /></span>
+                <span className="flex-1">{t('blockMoveDown')}</span>
               </button>
-              <div className="my-1 h-px bg-neutral-800" />
+              <div className={MENU_SEPARATOR} />
             </>
           )}
           {showCut && (
-            <button
-              onClick={doCut}
-              className="w-full flex items-center gap-3 px-3 py-2 text-left text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/60 transition-colors"
-            >
-              <Scissors size={14} className="text-neutral-600" />
-              <span className="text-sm">{t('blockCut')}</span>
+            <button type="button" onClick={doCut} className={menuItem()}>
+              <span className={MENU_ICON}><Scissors size={16} /></span>
+              <span className="flex-1">{t('blockCut')}</span>
             </button>
           )}
-          <button
-            onClick={doCopy}
-            className="w-full flex items-center gap-3 px-3 py-2 text-left text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/60 transition-colors"
-          >
-            <Copy size={14} className="text-neutral-600" />
-            <span className="text-sm">{t('blockCopy')}</span>
+          <button type="button" onClick={doCopy} className={menuItem()}>
+            <span className={MENU_ICON}><Copy size={16} /></span>
+            <span className="flex-1">{t('blockCopy')}</span>
           </button>
-          <button
-            onClick={doDuplicate}
-            className="w-full flex items-center gap-3 px-3 py-2 text-left text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/60 transition-colors"
-          >
-            <CopyPlus size={14} className="text-neutral-600" />
-            <span className="text-sm">{t('blockDuplicate')}</span>
+          <button type="button" onClick={doDuplicate} className={menuItem()}>
+            <span className={MENU_ICON}><CopyPlus size={16} /></span>
+            <span className="flex-1">{t('blockDuplicate')}</span>
           </button>
-          <button
-            onClick={doDelete}
-            className="w-full flex items-center gap-3 px-3 py-2 text-left text-neutral-400 hover:text-red-400 hover:bg-neutral-800/60 transition-colors"
-          >
-            <Trash2 size={14} className="text-neutral-600" />
-            <span className="text-sm">{t('blockDelete')}</span>
+          <button type="button" onClick={doDelete} className={menuItem(false, true)}>
+            <span className={cn(MENU_ICON, 'text-red-400')}><Trash2 size={16} /></span>
+            <span className="flex-1">{t('blockDelete')}</span>
           </button>
 
-          {showTurnInto && <div className="my-1 h-px bg-neutral-800" />}
+          {showTurnInto && <div className={MENU_SEPARATOR} />}
 
           {showTurnInto && (
           <button
+            type="button"
             onMouseEnter={openSub}
             onMouseLeave={scheduleCloseSub}
             onClick={openSub}
-            className={`w-full flex items-center gap-3 px-3 py-2 text-left transition-colors ${
-              subOpen ? 'text-neutral-100 bg-neutral-800' : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/60'
-            }`}
+            aria-haspopup="menu"
+            aria-expanded={subOpen}
+            className={menuItem(subOpen)}
           >
-            <span className="text-neutral-600">{currentTurnInto}</span>
-            <span className="text-sm">{t('bubbleTurnInto')}</span>
-            <ChevronRight size={14} className="ml-auto text-neutral-600" />
+            <span className={MENU_ICON}>{currentTurnInto}</span>
+            <span className="flex-1">{t('bubbleTurnInto')}</span>
+            <ChevronRight size={14} className="text-fg-4" />
           </button>
           )}
 
@@ -1013,19 +987,13 @@ export default function BlockDragHandle({ editor }: Props) {
               onMouseEnter={cancelCloseSub}
               onMouseLeave={scheduleCloseSub}
               style={{ position: 'fixed', top: subPos.top, left: subPos.left, width: SUB_W, zIndex: 9999 }}
-              className="bg-neutral-850 border border-neutral-800 shadow-xl py-1 rounded-md"
+              className={MENU_SURFACE}
             >
               {turnOptions.map((opt) => (
-                <button
-                  key={opt.key}
-                  onClick={opt.apply}
-                  className={`w-full flex items-center gap-3 px-3 py-2 text-left transition-colors ${
-                    opt.active ? 'text-neutral-100 bg-neutral-800' : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/60'
-                  }`}
-                >
-                  <span className={opt.active ? 'text-neutral-300' : 'text-neutral-600'}>{opt.icon}</span>
-                  <span className="text-sm">{opt.label}</span>
-                  {opt.active && <Check size={12} className="ml-auto text-neutral-400" />}
+                <button type="button" key={opt.key} onClick={opt.apply} className={menuItem(opt.active)}>
+                  <span className={MENU_ICON}>{opt.icon}</span>
+                  <span className="flex-1">{opt.label}</span>
+                  {opt.active && <Check size={14} className="text-fg" aria-hidden />}
                 </button>
               ))}
             </div>

@@ -1,9 +1,10 @@
 'use client';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { ChevronRight, Link2, FileText, Database as DatabaseIcon, LayoutDashboard } from 'lucide-react';
+import { Link2, FileText, Database as DatabaseIcon, LayoutDashboard } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { getPageRelations, type RelatedPageRef } from '@/lib/actions/workspace';
+import PageSection from './PageSection';
 
 const TYPE_ICON: Record<RelatedPageRef['type'], typeof FileText> = {
   page: FileText,
@@ -42,33 +43,29 @@ export default function PageBacklinksPanel({ workspaceId, pageId }: { workspaceI
   if (!backlinks || backlinks.length === 0) return null;
 
   return (
-    <div className="mt-10 pt-6 border-t border-neutral-800">
-      <button
-        onClick={() => setCollapsed((c) => !c)}
-        className="flex items-center gap-1.5 text-xs font-medium text-neutral-500 hover:text-neutral-300 transition-colors cursor-pointer"
-      >
-        <ChevronRight size={12} className={`transition-transform ${collapsed ? '' : 'rotate-90'}`} />
-        <Link2 size={12} />
-        {t('backlinksTitle', { count: backlinks.length })}
-      </button>
-
-      {!collapsed && (
-        <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
-          {backlinks.map((ref) => {
-            const Icon = TYPE_ICON[ref.type];
-            return (
+    <PageSection
+      icon={<Link2 />}
+      title={t('backlinksTitle', { count: backlinks.length })}
+      open={!collapsed}
+      onToggle={() => setCollapsed((c) => !c)}
+    >
+      {/* Rows, not cards: an icon and a title, lifted on hover. */}
+      <ul className="mt-2 grid grid-cols-1 gap-x-4 sm:grid-cols-2">
+        {backlinks.map((ref) => {
+          const Icon = TYPE_ICON[ref.type];
+          return (
+            <li key={ref.id} className="min-w-0">
               <Link
-                key={ref.id}
                 href={hrefFor(ref)}
-                className="flex items-center gap-2 px-3 py-2 text-sm text-neutral-300 bg-neutral-900 border border-neutral-800 hover:border-neutral-700 hover:text-white rounded transition-colors truncate"
+                className="-mx-2 flex items-center gap-2 rounded-control px-2 py-1.5 text-sm text-fg-2 transition-colors hover:bg-hover hover:text-fg"
               >
-                <Icon size={13} className="text-neutral-500 shrink-0" />
+                <Icon size={14} className="shrink-0 text-fg-3" aria-hidden />
                 <span className="truncate">{ref.title || t('untitled')}</span>
               </Link>
-            );
-          })}
-        </div>
-      )}
-    </div>
+            </li>
+          );
+        })}
+      </ul>
+    </PageSection>
   );
 }
