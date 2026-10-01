@@ -12,6 +12,7 @@ import {
   deletedItems,
   agentActivity,
 } from '@/db/schema';
+import { AGENT_ACTIVE_WINDOW_MS } from '@/lib/agentPresence';
 
 /**
  * The "did anything change?" signal behind live UI refresh.
@@ -170,8 +171,10 @@ export function signalExtras(version: number, visibleCount: number, now = Date.n
   return now < (version + 1) * 1000 + 250 ? { n: visibleCount, h: 1 } : { n: visibleCount };
 }
 
-/** How recently an agent must have called Remnus for a normal tab to watch closely. */
-export const AGENT_ACTIVE_WINDOW_MS = 3 * 60 * 1000;
+/** How recently an agent must have called Remnus for a normal tab to watch closely.
+ *  Defined with the presence layer (`lib/agentPresence.ts`): the sidebar's "working"
+ *  is this same window, so the two can never disagree. */
+export { AGENT_ACTIVE_WINDOW_MS };
 
 /**
  * The heartbeat's answer: the change version plus whether an agent has called

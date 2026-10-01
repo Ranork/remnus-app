@@ -93,6 +93,18 @@ export function changeIsHot(): boolean {
   return lastBroadcastHot;
 }
 
+/**
+ * The heartbeat's `agent: true`, passed on for the presence layer (the sidebar's agents
+ * card): an agent called Remnus in one of these workspaces within the last three
+ * minutes. Fired only when the flag flips; read the current value with
+ * `agentIsActive()`. Costs nothing — it is the answer the heartbeat already carries.
+ */
+export const AGENT_EVENT = 'remnus:agent';
+let lastAgentActive = false;
+export function agentIsActive(): boolean {
+  return lastAgentActive;
+}
+
 export default function ActivityTracker({
   isProjectWindow = false,
   renderedAt,
@@ -200,6 +212,10 @@ export default function ActivityTracker({
         const data = await res.json().catch(() => null);
         if (!data) return;
         agentActive = data.agent === true;
+        if (agentActive !== lastAgentActive) {
+          lastAgentActive = agentActive;
+          window.dispatchEvent(new CustomEvent(AGENT_EVENT, { detail: agentActive }));
+        }
         const advanced = broadcast(data.changeVersion, data.n, data.h);
         if (advanced || agentActive || unsettled()) quicken();
       } catch {

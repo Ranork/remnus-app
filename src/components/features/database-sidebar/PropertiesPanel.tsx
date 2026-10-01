@@ -12,7 +12,7 @@ import {
   SELECT_COLOR_ORDER,
   SELECT_COLORS,
   STATUS_GROUP_DEFAULT_COLOR,
-  DEFAULT_STATUS_OPTIONS,
+  defaultStatusOptions,
 } from '@/lib/types/properties';
 import { getPropertyIcon } from './shared';
 import { Button } from '@/components/ui/button';
@@ -86,7 +86,13 @@ export default function PropertiesPanel({
                 value={col.type}
                 onValueChange={(nextType) => {
                   // Seed sensible defaults so the new type is usable immediately.
-                  const options = nextType === 'status' ? DEFAULT_STATUS_OPTIONS : [];
+                  const options = nextType === 'status'
+                    ? defaultStatusOptions({
+                        notStarted: t('statusOptionNotStarted'),
+                        inProgress: t('statusOptionInProgress'),
+                        done: t('statusOptionDone'),
+                      })
+                    : [];
                   onUpdateColumn(idx, { type: nextType, options, defaultValue: undefined });
                 }}
                 disabled={isTitle || isIdColumn}

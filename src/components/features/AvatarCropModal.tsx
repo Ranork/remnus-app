@@ -1,8 +1,9 @@
 'use client';
 import { useState, useRef, useEffect, useCallback } from 'react';
-import { createPortal } from 'react-dom';
-import { X, Check, ZoomIn, ZoomOut } from 'lucide-react';
+import { Check, ZoomIn, ZoomOut } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
 
 const PREVIEW_SIZE = 220;
 const OUTPUT_SIZE = 256;
@@ -51,6 +52,7 @@ interface AvatarCropModalProps {
 
 export default function AvatarCropModal({ objectUrl, onConfirm, onCancel }: AvatarCropModalProps) {
   const t = useTranslations('UserSettings');
+  const tWs = useTranslations('Workspace');
   const previewCanvasRef = useRef<HTMLCanvasElement>(null);
   const imgRef = useRef<HTMLImageElement | null>(null);
   const [imgLoaded, setImgLoaded] = useState(false);
@@ -171,29 +173,17 @@ export default function AvatarCropModal({ objectUrl, onConfirm, onCancel }: Avat
     );
   }
 
-  const content = (
-    <div
-      className="fixed inset-0 bg-black/70 z-[200] flex items-center justify-center p-4"
-      onClick={onCancel}
-    >
-      <div
-        className="bg-neutral-850 border border-neutral-800 rounded-lg modal-shadow p-5 flex flex-col items-center gap-4 w-full max-w-xs"
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between w-full">
-          <span className="text-sm font-semibold text-neutral-100">{t('cropTitle')}</span>
-          <button
-            onClick={onCancel}
-            className="p-1 text-neutral-500 hover:text-neutral-200 rounded hover:bg-neutral-800 cursor-pointer transition-colors"
-          >
-            <X size={15} />
-          </button>
-        </div>
+  return (
+    <Dialog open onOpenChange={(open) => { if (!open) onCancel(); }}>
+      <DialogContent className="items-center">
+        <DialogHeader className="w-full">
+          <DialogTitle>{t('cropTitle')}</DialogTitle>
+          <DialogDescription>{t('cropHint')}</DialogDescription>
+        </DialogHeader>
 
         {/* Circular preview canvas */}
         <div
-          className="relative rounded-full overflow-hidden border-2 border-neutral-700 bg-neutral-800"
+          className="relative overflow-hidden rounded-full bg-hover shadow-[inset_0_0_0_1px_var(--color-line-strong)]"
           style={{ width: PREVIEW_SIZE, height: PREVIEW_SIZE }}
         >
           <canvas
@@ -210,27 +200,21 @@ export default function AvatarCropModal({ objectUrl, onConfirm, onCancel }: Avat
             onTouchMove={handleTouchMove}
             onTouchEnd={stopDrag}
           />
-          {!imgLoaded && (
-            <div className="absolute inset-0 bg-neutral-700 animate-pulse" />
-          )}
+          {!imgLoaded && <div className="absolute inset-0 bg-hover" />}
         </div>
 
-        <p className="text-[11px] text-neutral-500 text-center">{t('cropHint')}</p>
-
         {/* Zoom slider */}
-        <div className="flex items-center gap-2 w-full">
-          <button
-            onClick={() => applyZoom(-0.2)}
-            className="p-1.5 text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800 rounded transition-colors cursor-pointer shrink-0"
-          >
-            <ZoomOut size={14} />
-          </button>
+        <div className="flex w-full items-center gap-2">
+          <Button variant="ghost" size="icon-sm" onClick={() => applyZoom(-0.2)} aria-label={tWs('zoomOut')}>
+            <ZoomOut />
+          </Button>
           <input
             type="range"
             min={100}
             max={500}
             step={5}
             value={Math.round(zoom * 100)}
+            aria-label={tWs('zoom')}
             onChange={(e) => {
               const img = imgRef.current;
               if (!img) return;
@@ -240,36 +224,21 @@ export default function AvatarCropModal({ objectUrl, onConfirm, onCancel }: Avat
               setPanX(clamped.x);
               setPanY(clamped.y);
             }}
-            className="flex-1 accent-signal cursor-pointer"
+            className="flex-1 cursor-pointer accent-signal"
           />
-          <button
-            onClick={() => applyZoom(0.2)}
-            className="p-1.5 text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800 rounded transition-colors cursor-pointer shrink-0"
-          >
-            <ZoomIn size={14} />
-          </button>
+          <Button variant="ghost" size="icon-sm" onClick={() => applyZoom(0.2)} aria-label={tWs('zoomIn')}>
+            <ZoomIn />
+          </Button>
         </div>
 
-        {/* Actions */}
-        <div className="flex items-center gap-2 w-full justify-end">
-          <button
-            onClick={onCancel}
-            className="text-xs px-4 py-2 border border-neutral-700 rounded-md text-neutral-400 hover:text-neutral-200 hover:border-neutral-600 transition-colors cursor-pointer"
-          >
-            {t('cropCancel')}
-          </button>
-          <button
-            onClick={handleConfirm}
-            disabled={!imgLoaded}
-            className="text-xs font-semibold px-4 py-2 rounded-md bg-ink hover:bg-ink/88 text-ink-fg disabled:opacity-40 transition-colors cursor-pointer flex items-center gap-1.5"
-          >
-            <Check size={12} />
+        <DialogFooter className="w-full">
+          <Button onClick={onCancel}>{t('cropCancel')}</Button>
+          <Button variant="primary" onClick={handleConfirm} disabled={!imgLoaded}>
+            <Check />
             {t('cropApply')}
-          </button>
-        </div>
-      </div>
-    </div>
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
-
-  return typeof document !== 'undefined' ? createPortal(content, document.body) : null;
 }

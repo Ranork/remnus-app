@@ -3,7 +3,10 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { useTranslations } from 'next-intl';
 import { usePostHog } from 'posthog-js/react';
-import { Download, ArrowRight, Smartphone } from 'lucide-react';
+import { Download, Smartphone } from 'lucide-react';
+import { Button, buttonVariants } from '@/components/ui/button';
+import { cn } from '@/lib/cn';
+import PageHead from './site/PageHead';
 import {
   subscribeInstallPrompt,
   getInstallPromptStatus,
@@ -89,238 +92,167 @@ export default function DownloadView() {
   };
 
   return (
-    <section className="relative overflow-hidden px-4 sm:px-8 lg:px-14 pt-16 pb-20 lg:pt-24 lg:pb-28">
-      <div
-        className="absolute top-10 -right-60 w-[700px] h-[700px] pointer-events-none"
-        style={{ background: 'radial-gradient(circle, rgba(68,92,149,0.16), transparent 60%)' }}
-      />
+    <section className="px-4 sm:px-8">
+      <div className="mx-auto max-w-[1200px] pt-14 pb-24 sm:pt-20 lg:pb-32">
+        <div className="grid gap-10 lg:grid-cols-12 lg:items-end">
+          <div className="lg:col-span-7">
+            <PageHead title={t('title')} lede={t('subtitle')} />
+          </div>
 
-      <div className="relative max-w-3xl mx-auto text-center">
-        <span className="font-mono text-[11px] text-dim uppercase tracking-[0.18em]">
-          {t('eyebrow')}
-        </span>
-        <h1
-          className="mt-4 font-sans font-semibold text-neutral-100 leading-[1.02] text-[40px] sm:text-[56px] lg:text-[64px]"
-          style={{ letterSpacing: '-0.035em' }}
-        >
-          {t('title')}
-        </h1>
-        <p className="mt-5 text-base lg:text-[17px] leading-[1.55] text-neutral-50 max-w-xl mx-auto">
-          {t('subtitle')}
-        </p>
-
-        {/* Smart primary button */}
-        <div className="mt-9 flex flex-col items-center gap-3">
-          {!ready ? (
-            <span className="font-mono text-[13px] text-dim animate-pulse">{t('detecting')}</span>
-          ) : isMobileOs ? (
-            <>
-              {installStatus === 'installed' ? (
-                <span className="font-mono text-[13px] text-green-400">{t('pwaInstalledBadge')}</span>
-              ) : installStatus === 'available' ? (
-                <button
-                  onClick={handleInstall}
-                  className="inline-flex items-center gap-2.5 bg-blue-500 hover:bg-accent-strong text-white px-7 py-4 rounded-md text-[15px] font-medium transition-colors duration-150"
-                >
-                  <Smartphone size={18} aria-hidden />
-                  {t('pwaInstallCta')}
-                </button>
-              ) : (
+          {/* Smart primary action for this device */}
+          <div className="flex flex-col items-start gap-3 lg:col-span-5 lg:items-end">
+            {!ready ? (
+              <span className="text-ui text-fg-3">{t('detecting')}</span>
+            ) : isMobileOs ? (
+              <>
+                {installStatus === 'installed' ? (
+                  <span className="text-ui font-medium text-green-400">{t('pwaInstalledBadge')}</span>
+                ) : installStatus === 'available' ? (
+                  <Button variant="signal" size="lg" onClick={handleInstall} className="h-11 px-5 text-[15px]">
+                    <Smartphone aria-hidden />
+                    {t('pwaInstallCta')}
+                  </Button>
+                ) : (
+                  <a href="#mobile-install" className={cn(buttonVariants({ variant: 'signal', size: 'lg' }), 'h-11 px-5 text-[15px]')}>
+                    <Smartphone aria-hidden />
+                    {t('pwaInstallCta')}
+                  </a>
+                )}
+                <span className="text-ui text-fg-3">{t('yourSystemBadge')}</span>
+              </>
+            ) : primary ? (
+              <>
                 <a
-                  href="#mobile-install"
-                  className="inline-flex items-center gap-2.5 bg-blue-500 hover:bg-accent-strong text-white px-7 py-4 rounded-md text-[15px] font-medium transition-colors duration-150"
+                  href={downloadUrl(primary.file)}
+                  onClick={() => posthog?.capture('desktop_download_clicked', { os, file: primary.file, surface: 'download_page_primary' })}
+                  className={cn(buttonVariants({ variant: 'signal', size: 'lg' }), 'h-11 px-5 text-[15px]')}
                 >
-                  <Smartphone size={18} aria-hidden />
-                  {t('pwaInstallCta')}
+                  <OsLogo src={primary.logo} className="size-[18px]" />
+                  {t('downloadFor', { os: t(primary.osKey as Parameters<typeof t>[0]) })}
                 </a>
-              )}
-              <span className="font-mono text-[11px] text-dim">{t('yourSystemBadge')}</span>
-            </>
-          ) : primary ? (
-            <>
+                <span className="text-ui text-fg-3">{t('yourSystemBadge')}</span>
+              </>
+            ) : (
+              <span className="text-ui text-fg-3">{t('chooseBelow')}</span>
+            )}
+          </div>
+        </div>
+
+        <div className="mt-16 grid gap-14 lg:mt-20 lg:grid-cols-2 lg:gap-12">
+          {/* All desktop platforms */}
+          <div>
+            <h2 className={headCls}>{t('allPlatforms')}</h2>
+            <ul className={listCls}>
+              {PLATFORMS.map((p) => (
+                <li key={p.id}>
+                  <a
+                    href={downloadUrl(p.file)}
+                    onClick={() => posthog?.capture('desktop_download_clicked', { os: coarseOs(p.id), file: p.file, surface: 'download_page_grid' })}
+                    className="group flex items-center gap-4 px-5 py-4 transition-colors duration-150 hover:bg-hover/50"
+                  >
+                    <OsLogo src={p.logo} className="size-5 text-fg-2" />
+                    <span className="flex min-w-0 flex-col">
+                      <span className="text-sm font-medium text-fg">{t(p.labelKey as Parameters<typeof t>[0])}</span>
+                      <span className="font-mono text-xs text-fg-3">{t(p.hintKey as Parameters<typeof t>[0])}</span>
+                    </span>
+                    <Download size={16} className="ml-auto shrink-0 text-fg-3 transition-colors group-hover:text-fg" aria-hidden />
+                  </a>
+                </li>
+              ))}
+            </ul>
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3">
+              <span className="text-ui text-fg-3">{t('latestNote')}</span>
               <a
-                href={downloadUrl(primary.file)}
-                onClick={() => posthog?.capture('desktop_download_clicked', { os, file: primary.file, surface: 'download_page_primary' })}
-                className="inline-flex items-center gap-2.5 bg-blue-500 hover:bg-accent-strong text-white px-7 py-4 rounded-md text-[15px] font-medium transition-colors duration-150"
+                href={RELEASES_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm font-medium text-fg underline decoration-line-strong underline-offset-4 hover:decoration-fg-3"
               >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={primary.logo} alt="" width={18} height={18} className="brightness-0 invert" aria-hidden />
-                {t('downloadFor', { os: t(primary.osKey as Parameters<typeof t>[0]) })}
+                {t('viewAllReleases')}
               </a>
-              <span className="font-mono text-[11px] text-dim">{t('yourSystemBadge')}</span>
-            </>
-          ) : (
-            <span className="font-mono text-[13px] text-dim">{t('chooseBelow')}</span>
-          )}
-        </div>
-      </div>
-
-      {/* All platforms */}
-      <div className="relative max-w-3xl mx-auto mt-16">
-        <div className="flex items-center gap-3 mb-6">
-          <span className="font-mono text-[11px] text-dim uppercase tracking-[0.16em]">
-            {t('allPlatforms')}
-          </span>
-          <span className="flex-1 h-px bg-neutral-800" />
-        </div>
-
-        <div className="grid gap-px bg-neutral-800 border border-neutral-800 rounded-md overflow-hidden">
-          {PLATFORMS.map((p) => {
-            return (
-              <a
-                key={p.id}
-                href={downloadUrl(p.file)}
-                onClick={() => posthog?.capture('desktop_download_clicked', { os: coarseOs(p.id), file: p.file, surface: 'download_page_grid' })}
-                className="flex items-center gap-4 px-5 py-4 bg-neutral-900 hover:bg-neutral-850 transition-colors duration-150 group"
-              >
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={p.logo} alt="" width={22} height={22} className="shrink-0 opacity-90" aria-hidden />
-                <div className="flex flex-col min-w-0">
-                  <span className="text-[14px] text-neutral-100 font-medium">
-                    {t(p.labelKey as Parameters<typeof t>[0])}
-                  </span>
-                  <span className="font-mono text-[11px] text-dim">
-                    {t(p.hintKey as Parameters<typeof t>[0])}
-                  </span>
-                </div>
-                <Download
-                  size={16}
-                  className="ml-auto text-dim group-hover:text-neutral-100 transition-colors duration-150 shrink-0"
-                  aria-hidden
-                />
-              </a>
-            );
-          })}
-        </div>
-
-        <div className="mt-6 flex items-center justify-center">
-          <a
-            href={RELEASES_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 text-[13px] text-neutral-50 border-b border-neutral-800 pb-1 hover:border-neutral-100 hover:text-neutral-100 transition-colors duration-150"
-          >
-            {t('viewAllReleases')}
-            <ArrowRight size={13} aria-hidden />
-          </a>
-        </div>
-
-        <p className="mt-6 text-center font-mono text-[11px] text-dimmer leading-relaxed">
-          {t('latestNote')}
-        </p>
-      </div>
-
-      {/* Phone & tablet — installable web app (PWA) */}
-      <div id="mobile-install" className="relative max-w-3xl mx-auto mt-20 scroll-mt-24 text-left">
-        <div className="flex items-center gap-3 mb-6">
-          <span className="font-mono text-[11px] text-dim uppercase tracking-[0.16em]">
-            {t('pwaHeading')}
-          </span>
-          <span className="flex-1 h-px bg-neutral-800" />
-        </div>
-        <p className="text-[15px] leading-[1.7] text-neutral-50">{t('pwaIntro')}</p>
-
-        {installStatus === 'available' && (
-          <button
-            onClick={handleInstall}
-            className="mt-6 inline-flex items-center gap-2.5 bg-blue-500 hover:bg-accent-strong text-white px-6 py-3.5 rounded-md text-[14px] font-medium transition-colors duration-150"
-          >
-            <Smartphone size={16} aria-hidden />
-            {t('pwaInstallCta')}
-          </button>
-        )}
-        {installStatus === 'installed' && (
-          <p className="mt-6 font-mono text-[12px] text-green-400">{t('pwaInstalledBadge')}</p>
-        )}
-
-        <div className="mt-6 grid gap-px bg-neutral-800 border border-neutral-800 rounded-md overflow-hidden">
-          <div className="flex items-start gap-4 px-5 py-4 bg-neutral-900">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/os/apple.svg" alt="" width={22} height={22} className="shrink-0 opacity-90 mt-0.5" aria-hidden />
-            <div className="flex flex-col min-w-0">
-              <span className="text-[14px] text-neutral-100 font-medium">{t('pwaIosTitle')}</span>
-              <span className="text-[13px] text-neutral-50 leading-[1.6] mt-0.5">{t('pwaIosBody')}</span>
             </div>
           </div>
-          <div className="flex items-start gap-4 px-5 py-4 bg-neutral-900">
-            <Smartphone size={22} className="shrink-0 text-neutral-100 opacity-90 mt-0.5" aria-hidden />
-            <div className="flex flex-col min-w-0">
-              <span className="text-[14px] text-neutral-100 font-medium">{t('pwaAndroidTitle')}</span>
-              <span className="text-[13px] text-neutral-50 leading-[1.6] mt-0.5">{t('pwaAndroidBody')}</span>
-            </div>
+
+          {/* Phone & tablet — installable web app (PWA) */}
+          <div id="mobile-install" className="scroll-mt-24">
+            <h2 className={headCls}>{t('pwaHeading')}</h2>
+            <p className="m-0 mb-5 text-[15px] leading-[1.65] text-fg-2">{t('pwaIntro')}</p>
+            {installStatus === 'available' && (
+              <Button variant="signal" size="lg" onClick={handleInstall} className="mb-5">
+                <Smartphone aria-hidden />
+                {t('pwaInstallCta')}
+              </Button>
+            )}
+            {installStatus === 'installed' && <p className="m-0 mb-5 text-ui font-medium text-green-400">{t('pwaInstalledBadge')}</p>}
+            <ul className={listCls}>
+              <li className="flex items-start gap-4 px-5 py-4">
+                <OsLogo src="/os/apple.svg" className="mt-0.5 size-5 text-fg-2" />
+                <span className="flex min-w-0 flex-col">
+                  <span className="text-sm font-medium text-fg">{t('pwaIosTitle')}</span>
+                  <span className="mt-0.5 text-ui leading-[1.6] text-fg-2">{t('pwaIosBody')}</span>
+                </span>
+              </li>
+              <li className="flex items-start gap-4 px-5 py-4">
+                <Smartphone size={20} className="mt-0.5 shrink-0 text-fg-2" aria-hidden />
+                <span className="flex min-w-0 flex-col">
+                  <span className="text-sm font-medium text-fg">{t('pwaAndroidTitle')}</span>
+                  <span className="mt-0.5 text-ui leading-[1.6] text-fg-2">{t('pwaAndroidBody')}</span>
+                </span>
+              </li>
+            </ul>
           </div>
         </div>
-      </div>
 
-      {/* About + requirements + install — helpful content (also gives crawlers real text to index) */}
-      <div className="relative max-w-3xl mx-auto mt-20 space-y-14 text-left">
-        {/* What is Remnus Desktop */}
-        <div>
-          <div className="flex items-center gap-3 mb-5">
-            <span className="font-mono text-[11px] text-dim uppercase tracking-[0.16em]">
-              {t('aboutHeading')}
-            </span>
-            <span className="flex-1 h-px bg-neutral-800" />
+        {/* About + requirements + install — helpful content (also gives crawlers real text to index) */}
+        <div className="mt-20 grid gap-14 border-t border-line-strong pt-14 lg:grid-cols-3 lg:gap-10">
+          <div>
+            <h2 className={headCls}>{t('aboutHeading')}</h2>
+            <p className="m-0 text-[15px] leading-[1.65] text-fg-2">{t('aboutBody')}</p>
           </div>
-          <p className="text-[15px] leading-[1.7] text-neutral-50">{t('aboutBody')}</p>
-        </div>
-
-        {/* System requirements */}
-        <div>
-          <div className="flex items-center gap-3 mb-5">
-            <span className="font-mono text-[11px] text-dim uppercase tracking-[0.16em]">
-              {t('requirementsHeading')}
-            </span>
-            <span className="flex-1 h-px bg-neutral-800" />
+          <div>
+            <h2 className={headCls}>{t('requirementsHeading')}</h2>
+            <ul className="m-0 list-none space-y-4 p-0">
+              {[
+                { logo: '/os/windows.svg', title: 'reqWindowsTitle', body: 'reqWindowsBody' },
+                { logo: '/os/apple.svg', title: 'reqMacTitle', body: 'reqMacBody' },
+                { logo: '/os/linux.svg', title: 'reqLinuxTitle', body: 'reqLinuxBody' },
+              ].map((r) => (
+                <li key={r.title} className="flex items-start gap-3">
+                  <OsLogo src={r.logo} className="mt-0.5 size-4 text-fg-3" />
+                  <span className="flex min-w-0 flex-col">
+                    <span className="text-sm font-medium text-fg">{t(r.title as Parameters<typeof t>[0])}</span>
+                    <span className="text-ui leading-[1.6] text-fg-2">{t(r.body as Parameters<typeof t>[0])}</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
           </div>
-          <div className="grid gap-px bg-neutral-800 border border-neutral-800 rounded-md overflow-hidden">
-            {[
-              { logo: '/os/windows.svg', title: 'reqWindowsTitle', body: 'reqWindowsBody' },
-              { logo: '/os/apple.svg', title: 'reqMacTitle', body: 'reqMacBody' },
-              { logo: '/os/linux.svg', title: 'reqLinuxTitle', body: 'reqLinuxBody' },
-            ].map((r) => (
-              <div key={r.title} className="flex items-start gap-4 px-5 py-4 bg-neutral-900">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src={r.logo} alt="" width={22} height={22} className="shrink-0 opacity-90 mt-0.5" aria-hidden />
-                <div className="flex flex-col min-w-0">
-                  <span className="text-[14px] text-neutral-100 font-medium">
-                    {t(r.title as Parameters<typeof t>[0])}
-                  </span>
-                  <span className="text-[13px] text-neutral-50 leading-[1.6] mt-0.5">
-                    {t(r.body as Parameters<typeof t>[0])}
-                  </span>
+          <div>
+            <h2 className={headCls}>{t('installHeading')}</h2>
+            <div className="space-y-4">
+              {[
+                { title: 'installWindowsTitle', body: 'installWindowsBody' },
+                { title: 'installMacTitle', body: 'installMacBody' },
+                { title: 'installLinuxTitle', body: 'installLinuxBody' },
+              ].map((s) => (
+                <div key={s.title}>
+                  <h3 className="m-0 text-sm font-medium text-fg">{t(s.title as Parameters<typeof t>[0])}</h3>
+                  <p className="m-0 mt-0.5 text-ui leading-[1.6] text-fg-2">{t(s.body as Parameters<typeof t>[0])}</p>
                 </div>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Installation notes */}
-        <div>
-          <div className="flex items-center gap-3 mb-5">
-            <span className="font-mono text-[11px] text-dim uppercase tracking-[0.16em]">
-              {t('installHeading')}
-            </span>
-            <span className="flex-1 h-px bg-neutral-800" />
-          </div>
-          <div className="space-y-5">
-            {[
-              { title: 'installWindowsTitle', body: 'installWindowsBody' },
-              { title: 'installMacTitle', body: 'installMacBody' },
-              { title: 'installLinuxTitle', body: 'installLinuxBody' },
-            ].map((s) => (
-              <div key={s.title}>
-                <h3 className="text-[14px] text-neutral-100 font-medium mb-1">
-                  {t(s.title as Parameters<typeof t>[0])}
-                </h3>
-                <p className="text-[13px] text-neutral-50 leading-[1.7]">
-                  {t(s.body as Parameters<typeof t>[0])}
-                </p>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         </div>
       </div>
     </section>
   );
+}
+
+const headCls = 'm-0 mb-4 text-lg font-semibold tracking-[-0.015em] text-fg';
+const listCls = 'm-0 list-none divide-y divide-line overflow-hidden rounded-[14px] bg-sheet p-0 shadow-sheet';
+
+/** The OS marks are single-colour SVGs; drawn as a mask so they take the text colour in both themes. */
+function OsLogo({ src, className }: { src: string; className?: string }) {
+  const mask = `url(${src}) center / contain no-repeat`;
+  return <span aria-hidden className={cn('inline-block shrink-0 bg-current', className)} style={{ mask, WebkitMask: mask }} />;
 }

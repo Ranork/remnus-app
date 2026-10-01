@@ -6,6 +6,7 @@ import { Repeat, Unlink } from 'lucide-react';
 import { parseDateValue, type RecurrenceRule } from '@/lib/recurrence/rule';
 import { formatRuleSummary } from '@/lib/recurrence/summary';
 import { detachPageFromSeries, loadRecurrenceState } from '@/lib/actions/recurrence';
+import { Button } from '@/components/ui/button';
 import { useRecurrenceControls } from './useRecurrenceControls';
 
 // The recurrence surface inside an opened card.
@@ -81,46 +82,37 @@ export default function SeriesPanel({
   return (
     <div className={isPeek ? 'mb-5' : 'mb-10'}>
       {inSeries ? (
-        <div className="flex items-start gap-2.5 rounded-lg border border-signal/20 bg-signal/[0.06] px-3.5 py-3">
-          <Repeat size={14} className="text-signal-text shrink-0 mt-0.5" />
+        <div className="flex items-start gap-3 rounded-control bg-raised px-3.5 py-3 shadow-[inset_0_0_0_1px_var(--color-line)]">
+          <Repeat size={16} className="text-fg-3 shrink-0 mt-0.5" aria-hidden />
           <div className="min-w-0 flex-1">
-            <p className="m-0 text-xs font-medium text-neutral-100">{t('seriesPanelTitle')}</p>
-            {summary && <p className="m-0 mt-0.5 text-[11px] text-signal-text/80 leading-snug">{summary}</p>}
-            <div className="flex flex-wrap items-center gap-1.5 mt-2">
-              <button
-                onClick={() => recurrence.openRepeat(page.id)}
-                className="text-[11px] font-medium text-neutral-200 bg-neutral-800 hover:bg-neutral-750 px-2.5 py-1 rounded-md transition-colors"
-              >
+            <p className="m-0 text-ui font-medium text-fg">{t('seriesPanelTitle')}</p>
+            {summary && <p className="m-0 mt-0.5 text-xs text-fg-3 leading-snug">{summary}</p>}
+            <div className="flex flex-wrap items-center gap-1.5 mt-2.5">
+              <Button variant="secondary" size="xs" onClick={() => recurrence.openRepeat(page.id)}>
                 {t('seriesPanelEdit')}
-              </button>
-              <button
-                onClick={() => recurrence.run(() => detachPageFromSeries(page.id))}
-                className="flex items-center gap-1 text-[11px] font-medium text-neutral-400 hover:text-neutral-200 px-2.5 py-1 rounded-md hover:bg-neutral-800 transition-colors"
-              >
-                <Unlink size={11} />
+              </Button>
+              <Button variant="ghost" size="xs" onClick={() => recurrence.run(() => detachPageFromSeries(page.id))}>
+                <Unlink />
                 {t('menuDetach')}
-              </button>
+              </Button>
             </div>
           </div>
         </div>
       ) : wasInSeries ? (
-        <div className="flex items-center gap-2 rounded-lg border border-neutral-800 bg-neutral-900/40 px-3.5 py-2.5">
-          <span className="relative inline-flex items-center shrink-0">
-            <Repeat size={12} className="text-neutral-600" />
-            <span className="absolute inset-0 flex items-center justify-center" aria-hidden>
-              <span className="w-4 h-px bg-neutral-500 rotate-45" />
+        <div className="flex items-center gap-2.5 rounded-control bg-raised px-3.5 py-2.5 shadow-[inset_0_0_0_1px_var(--color-line)]">
+          <span className="relative inline-flex items-center shrink-0" aria-hidden>
+            <Repeat size={14} className="text-fg-4" />
+            <span className="absolute inset-0 flex items-center justify-center">
+              <span className="w-4 h-px bg-fg-4 rotate-45" />
             </span>
           </span>
-          <p className="m-0 text-[11px] text-neutral-500">{t('seriesPanelDetached')}</p>
+          <p className="m-0 text-xs text-fg-3">{t('seriesPanelDetached')}</p>
         </div>
       ) : (
-        <button
-          onClick={() => recurrence.openRepeat(page.id)}
-          className="flex items-center gap-1.5 text-[11px] font-medium text-neutral-400 hover:text-neutral-100 border border-dashed border-neutral-800 hover:border-neutral-700 px-3 py-1.5 rounded-lg transition-colors"
-        >
-          <Repeat size={12} />
+        <Button variant="ghost" size="sm" onClick={() => recurrence.openRepeat(page.id)} className="-ml-2.5">
+          <Repeat />
           {t('seriesPanelAdd')}
-        </button>
+        </Button>
       )}
 
       {recurrence.node}

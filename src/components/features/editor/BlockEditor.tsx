@@ -1010,7 +1010,7 @@ const BlockEditor = forwardRef<BlockEditorHandle, Props>(function BlockEditor({
             itemId: item.id,
             databaseId: item.databaseId ?? null,
             itemType: item.type,
-            title: item.title || 'Untitled',
+            title: item.title ?? '',
             icon: item.icon ?? null,
             iconColor: item.iconColor ?? null,
             linkOnly: false,

@@ -7,6 +7,10 @@ import { normalizeNotionDate, type ImportItem, type ImportSpacePayload } from '@
 import { createPageInWorkspace, createDatabaseInWorkspace } from '@/lib/services/workspace';
 import { SELECT_COLOR_ORDER, type SelectOptionColor } from '@/lib/types/properties';
 import { createImportedWorkspaceForUser } from '@/lib/import/workspace-import';
+import { getTranslations } from 'next-intl/server';
+import { getRequestLocale } from '@/i18n/requestLocale';
+import { getTemplateText } from '@/lib/starterContent';
+import type { TemplateText } from '@/lib/starterContent/types';
 
 // ── Import flow ──────────────────────────────────────────────────────────────────
 // The Notion export ZIP is parsed ENTIRELY in the browser (JSZip) and images are
@@ -45,11 +49,14 @@ function randomIconColor(): string {
   return ICON_PALETTE[Math.floor(Math.random() * ICON_PALETTE.length)];
 }
 
+// The names the import gives things itself, in the importing user's language.
+type ImportLabels = { untitled: string; views: TemplateText['views']; stock: TemplateText['stock'] };
+
 // Notion's CSV export carries no view metadata, so infer useful views from the
 // column types: always a Table, plus a Kanban grouped by the first select column
 // and a Calendar on the first date column when present. Returns null (→ default
 // Table) when there's nothing extra to add.
-function inferViews(schema: { id: string; name: string; type: string }[]) {
+function inferViews(schema: { id: string; name: string; type: string }[], names: ImportLabels['views']) {
   const uid = () => crypto.randomUUID().slice(0, 8);
   const selects = schema.filter(c => c.type === 'select');
   const firstSelect = selects[0];
@@ -57,7 +64,7 @@ function inferViews(schema: { id: string; name: string; type: string }[]) {
   if (!firstSelect && !firstDate) return null;
 
   const views: any[] = [
-    { id: uid(), name: 'Table', config: { type: 'table', columnOrder: [], hiddenColumns: [], filters: [], sorts: [], openBehavior: 'center' } },
+    { id: uid(), name: names.table, config: { type: 'table', columnOrder: [], hiddenColumns: [], filters: [], sorts: [], openBehavior: 'center' } },
   ];
 
   if (firstSelect) {
@@ -66,7 +73,7 @@ function inferViews(schema: { id: string; name: string; type: string }[]) {
     const cardColorCol = (selects.find(c => c.id !== firstSelect.id) ?? firstSelect).id;
     views.push({
       id: uid(),
-      name: 'Board',
+      name: names.board,
       config: {
         type: 'kanban', groupByCol: firstSelect.id, groupOrder: [], filters: [], sorts: [],
         openBehavior: 'center', cardBgCol: firstSelect.id, cardColorCol, groupColBg: true,
@@ -81,7 +88,7 @@ function inferViews(schema: { id: string; name: string; type: string }[]) {
       .map(c => c.id);
     views.push({
       id: uid(),
-      name: 'Calendar',
+      name: names.calendar,
       config: {
         type: 'calendar', dateCol: firstDate.id, viewMode: 'month', filters: [], sorts: [],
         openBehavior: 'center',
@@ -99,24 +106,26 @@ async function importItems(
   workspaceId: string,
   parentId: string | undefined,
   counters: { pages: number; databases: number; rows: number },
+  labels: ImportLabels,
 ) {
   for (const item of items) {
     if (item.type === 'page') {
       const result = await createPageInWorkspace(workspaceId, {
-        title: item.title || 'Untitled',
+        title: item.title || labels.untitled,
         content: item.content,
         parentId,
         iconColor: randomIconColor(),
       });
       counters.pages++;
       if (item.children.length > 0) {
-        await importItems(item.children, workspaceId, result.id, counters);
+        await importItems(item.children, workspaceId, result.id, counters, labels);
       }
     } else {
       const { databaseId } = await createDatabaseInWorkspace(workspaceId, {
-        name: item.title || 'Untitled',
+        name: item.title || labels.untitled,
         parentId,
         iconColor: randomIconColor(),
+        stockText: labels.stock,
         schema: item.columns.length > 0
           ? item.columns.map(col => ({
               name: col.name,
@@ -142,7 +151,7 @@ async function importItems(
       }
 
       // Auto-create Kanban/Calendar views inferred from the column types.
-      const views = inferViews(resolvedSchema);
+      const views = inferViews(resolvedSchema, labels.views);
       if (views) {
         await db.update(databases).set({ views }).where(eq(databases.id, databaseId));
       }
@@ -168,7 +177,7 @@ async function importItems(
 
         await createPageInWorkspace(workspaceId, {
           databaseId,
-          title: row.title || 'Untitled',
+          title: row.title || labels.untitled,
           content: row.content,
           properties: Object.keys(properties).length > 0 ? properties : undefined,
         });
@@ -195,9 +204,17 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'Invalid import payload' }, { status: 400 });
     }
 
+    // A route handler: the intl middleware did not run, so resolve the language here.
+    const locale = await getRequestLocale();
+    const [templateText, tPage] = await Promise.all([
+      getTemplateText(locale),
+      getTranslations({ locale, namespace: 'Page' }),
+    ]);
+    const labels: ImportLabels = { untitled: tPage('untitled'), views: templateText.views, stock: templateText.stock };
+
     const workspaceId = await createImportedWorkspaceForUser(user.id, space.name);
     const counters = { pages: 0, databases: 0, rows: 0 };
-    await importItems(space.items, workspaceId, undefined, counters);
+    await importItems(space.items, workspaceId, undefined, counters, labels);
 
     return NextResponse.json({ ok: true, name: space.name, workspaceId, imported: counters });
   } catch (err: any) {

@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { Check, RotateCcw } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 import AIMark from '@/components/marketing/AIMark';
 import { buildClaudeCmd } from '@/lib/mcp/deeplinks';
 
@@ -98,32 +99,28 @@ export default function ClaudeConnectAnimation({ mcpUrl }: { mcpUrl: string }) {
   const showCaret = phase === 'type' || phase === 'click';
 
   return (
-    <div className="relative rounded-xl border border-neutral-800 bg-neutral-950 overflow-hidden select-none">
+    <div className="relative overflow-hidden rounded-surface bg-desk shadow-[inset_0_0_0_1px_var(--color-line)] select-none">
       {/* title bar */}
-      <div className="flex items-center gap-2 px-3 py-2 border-b border-neutral-800 bg-neutral-900/60">
+      <div className="flex items-center gap-2 border-b border-line bg-raised px-3 py-1.5">
         <span className="flex gap-1.5">
           <span className="w-2.5 h-2.5 rounded-full bg-red-400/70" />
           <span className="w-2.5 h-2.5 rounded-full bg-amber-500/70" />
           <span className="w-2.5 h-2.5 rounded-full bg-green-400/70" />
         </span>
-        <span className="flex items-center gap-1.5 text-[10px] font-mono text-neutral-500">
+        <span className="flex items-center gap-1.5 font-mono text-2xs text-fg-3">
           <AIMark name="claude" size={11} /> Claude Code
         </span>
-        <button
-          onClick={() => setRunKey(k => k + 1)}
-          className="ml-auto flex items-center gap-1 text-[9px] text-neutral-600 hover:text-neutral-300 transition-colors"
-          title={t('connectAnimReplay')}
-        >
-          <RotateCcw size={10} /> {t('connectAnimReplay')}
-        </button>
+        <Button variant="ghost" size="xs" onClick={() => setRunKey(k => k + 1)} className="ml-auto">
+          <RotateCcw /> {t('connectAnimReplay')}
+        </Button>
       </div>
 
       {/* terminal body */}
-      <div className="relative h-44 px-3.5 py-3 font-mono text-[11px] leading-relaxed">
+      <div className="relative h-44 px-3.5 py-3 font-mono text-2xs leading-relaxed">
         {/* command line */}
         <div className="flex items-start gap-1.5">
           <span className="text-green-400 shrink-0">$</span>
-          <span className="text-neutral-200 break-all">
+          <span className="break-all text-fg">
             {cmd.slice(0, typed)}
             {showCaret && <span className="connect-anim-caret">▋</span>}
           </span>
@@ -135,7 +132,7 @@ export default function ClaudeConnectAnimation({ mcpUrl }: { mcpUrl: string }) {
             <div
               key={i}
               className={`connect-anim-line ${
-                l.tone === 'ok' ? 'text-green-400' : 'text-neutral-500'
+                l.tone === 'ok' ? 'text-green-400' : 'text-fg-3'
               }`}
             >
               {l.text}
@@ -163,25 +160,25 @@ export default function ClaudeConnectAnimation({ mcpUrl }: { mcpUrl: string }) {
 
         {/* OAuth browser popup */}
         {browser && (
-          <div className="connect-anim-browser absolute right-3 bottom-3 w-44 rounded-lg border border-neutral-700 bg-neutral-900 shadow-2xl overflow-hidden">
-            <div className="flex items-center gap-1 px-2 py-1 bg-neutral-800/80 border-b border-neutral-700">
-              <span className="w-1.5 h-1.5 rounded-full bg-neutral-600" />
-              <span className="w-1.5 h-1.5 rounded-full bg-neutral-600" />
-              <span className="flex-1 text-center text-[8px] text-neutral-500 truncate">
+          <div className="connect-anim-browser absolute right-3 bottom-3 w-52 overflow-hidden rounded-control bg-float shadow-float">
+            <div className="flex items-center gap-1 border-b border-line bg-raised px-2 py-1">
+              <span className="size-1.5 rounded-full bg-line-strong" />
+              <span className="size-1.5 rounded-full bg-line-strong" />
+              <span className="flex-1 truncate text-center text-2xs text-fg-3">
                 remnus.com
               </span>
             </div>
             <div className="p-2.5 flex flex-col items-center gap-1.5 text-center">
-              <span className="text-[11px] font-semibold text-neutral-100 tracking-tight lowercase">
+              <span className="text-xs font-semibold tracking-tight text-fg lowercase">
                 remnus
               </span>
-              <span className="text-[8px] text-neutral-400 leading-tight">
+              <span className="text-2xs leading-tight text-fg-3">
                 {t('connectAnimAuthorize')}
               </span>
               <span
-                className={`mt-0.5 w-full rounded-md py-1 text-[8px] font-semibold transition-colors ${
+                className={`mt-0.5 w-full rounded-sm py-1 text-2xs font-semibold transition-colors ${
                   authorized
-                    ? 'bg-green-600 text-white'
+                    ? 'bg-green-500 text-white'
                     : 'connect-anim-authbtn bg-ink text-ink-fg'
                 }`}
               >
@@ -193,14 +190,14 @@ export default function ClaudeConnectAnimation({ mcpUrl }: { mcpUrl: string }) {
 
         {/* success overlay */}
         {phase === 'success' && (
-          <div className="connect-anim-success absolute inset-0 flex flex-col items-center justify-center gap-2 bg-neutral-950/95 backdrop-blur-[1px]">
-            <span className="connect-anim-check flex items-center justify-center w-11 h-11 rounded-full bg-green-500/15 border border-green-500/40 text-green-400">
+          <div className="connect-anim-success absolute inset-0 flex flex-col items-center justify-center gap-2 bg-desk/95 backdrop-blur-[1px]">
+            <span className="connect-anim-check flex size-11 items-center justify-center rounded-full bg-green-500/15 text-green-400">
               <Check size={22} strokeWidth={3} />
             </span>
-            <span className="text-xs font-semibold text-neutral-100">
+            <span className="text-xs font-semibold text-fg">
               {t('connectAnimSuccess')}
             </span>
-            <span className="text-[10px] text-neutral-400">{t('connectAnimSuccessSub')}</span>
+            <span className="text-2xs text-fg-3">{t('connectAnimSuccessSub')}</span>
           </div>
         )}
       </div>

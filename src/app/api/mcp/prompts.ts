@@ -7,16 +7,37 @@ import {
   listWorkspaceItems,
   buildContentOutline,
   getRelatedPages,
+  getDatabaseSchema,
   type RelatedPageRef,
 } from '@/lib/services/workspace';
+import { routing } from '@/i18n/routing';
+import { getTemplateText } from '@/lib/starterContent';
 import type { TokenContext } from './context';
 
-const MEMORY_TYPE_LABELS: Record<string, string> = {
+type MemoryType = 'decision' | 'preference' | 'gotcha' | 'fact';
+
+const MEMORY_TYPE_LABELS: Record<MemoryType, string> = {
   decision: 'Decision',
   preference: 'Preference',
   gotcha: 'Gotcha',
   fact: 'Fact',
 };
+
+// The Agent Memory template is created in the UI language (V2 R8.9): "Ajan Hafızası"
+// with a Tür column whose options read Karar / Tercih… The prompt finds such a
+// database by its name in any of the eight languages and writes in its own words.
+const MEMORY_DB_NAME = /memor|mémoire|hafıza|gedächtnis|मेमोरी|记忆|памят/i;
+
+type MemoryColumn = { id: string; name: string; options?: (string | { value: string })[] };
+
+/** The option of the database's Type column that means `type`, whichever language made it. */
+async function memoryTypeOption(column: MemoryColumn | undefined, type: MemoryType): Promise<string | null> {
+  if (!column?.options?.length) return null;
+  const words = new Set([MEMORY_TYPE_LABELS[type]]);
+  for (const locale of routing.locales) words.add((await getTemplateText(locale)).agentMemory.type[type]);
+  const values = column.options.map((o) => (typeof o === 'string' ? o : o.value));
+  return values.find((v) => words.has(v)) ?? null;
+}
 
 export function registerPrompts(server: McpServer, ctx: TokenContext) {
   // 1. summarize-page
@@ -195,7 +216,7 @@ export function registerPrompts(server: McpServer, ctx: TokenContext) {
       },
     },
     async ({ content, memory_type, tags, database_id }) => {
-      const typeLabel = MEMORY_TYPE_LABELS[memory_type ?? 'fact'] ?? 'Fact';
+      const typeLabel = MEMORY_TYPE_LABELS[(memory_type ?? 'fact') as MemoryType] ?? 'Fact';
       const tagList = (tags ?? '')
         .split(',')
         .map(s => s.trim())
@@ -211,7 +232,7 @@ export function registerPrompts(server: McpServer, ctx: TokenContext) {
       if (!targetDbId) {
         try {
           const { items } = await listWorkspaceItems(ctx.workspaceId, undefined, 200);
-          const memDb = items.find(i => i.type === 'database' && /memor/i.test(i.title) && i.databaseId);
+          const memDb = items.find(i => i.type === 'database' && MEMORY_DB_NAME.test(i.title) && i.databaseId);
           if (memDb?.databaseId) {
             targetDbId = memDb.databaseId;
             targetDbTitle = memDb.title;
@@ -221,15 +242,34 @@ export function registerPrompts(server: McpServer, ctx: TokenContext) {
         }
       }
 
+      // The target's own column names and Type option: a template made in another
+      // language calls them Tür / Etiketler / Tarih and Karar… (the template's column
+      // ids stay type / tags / date). Best-effort: unreadable → the English names.
+      const names = { type: 'Type', tags: 'Tags', date: 'Date', typeValue: typeLabel };
+      if (targetDbId) {
+        try {
+          const schema = ((await getDatabaseSchema(ctx.workspaceId, targetDbId)).schema ?? []) as MemoryColumn[];
+          const column = (id: string, english: string) =>
+            schema.find(c => c.id === id) ?? schema.find(c => c.name?.toLowerCase() === english.toLowerCase());
+          const typeColumn = column('type', 'Type');
+          names.type = typeColumn?.name ?? names.type;
+          names.tags = column('tags', 'Tags')?.name ?? names.tags;
+          names.date = column('date', 'Date')?.name ?? names.date;
+          names.typeValue = (await memoryTypeOption(typeColumn, (memory_type ?? 'fact') as MemoryType)) ?? typeLabel;
+        } catch {
+          // keep the English names
+        }
+      }
+
       const text = targetDbId
         ? `Save the following as a new memory in the "${targetDbTitle ?? 'Agent Memory'}" database.\n\n`
           + `Use the create_page write tool:\n`
           + `- databaseId: "${targetDbId}"\n`
           + `- title: a concise one-line summary of the memory (understandable on its own, ≤ 80 chars)\n`
           + `- properties:\n`
-          + `    - Type: "${typeLabel}"\n`
-          + `    - Tags: ${tagsJson}\n`
-          + `    - Date: "${today}"\n`
+          + `    - ${names.type}: "${names.typeValue}"\n`
+          + `    - ${names.tags}: ${tagsJson}\n`
+          + `    - ${names.date}: "${today}"\n`
           + `- content: the full memory below, plus any extra context worth keeping.\n\n`
           + `Memory to save:\n${content}\n\n`
           + `Keep it human-readable — someone scanning the database later should understand the memory from the title alone.`

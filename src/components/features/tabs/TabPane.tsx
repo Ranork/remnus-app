@@ -79,6 +79,7 @@ function StandalonePagePane({ itemId, isAdmin }: { itemId: string; isAdmin: bool
         // refetch never signals "no children" and wipes the body's child list.
         subItems={subItemsQ.isSuccess ? subItemsQ.data ?? [] : undefined}
         isAdmin={isAdmin}
+        provenance={pageQ.data.provenance}
       />
     </div>
   );

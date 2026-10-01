@@ -1,9 +1,13 @@
 'use client';
 
 import { useState } from 'react';
-import { useTranslations } from 'next-intl';
-import Link from 'next/link';
-import { ArrowLeft, Clock, Eye, Lock, Terminal } from 'lucide-react';
+import { useLocale, useTranslations } from 'next-intl';
+import { AlertCircle, Clock, Eye, Lock } from 'lucide-react';
+import { AuthCard, AuthNotice, AuthScreen, AuthSection } from '@/components/features/auth/AuthScreen';
+import { ProjectChip, SubmitButton } from '@/components/features/auth/parts';
+import { RadioCard, RadioCards } from '@/components/ui/radio-cards';
+import { Textarea } from '@/components/ui/input';
+import { Field } from '@/components/ui/settings';
 
 /**
  * The `remnus join` screen — a teammate connecting to a workspace someone else
@@ -31,9 +35,11 @@ interface Props {
 
 export function JoinForm({ projectName, userName, authMode, access, error, onJoin }: Props) {
   const t = useTranslations('Install');
+  const locale = useLocale();
 
   const isMember = access.state === 'member';
   const viewerOnly = isMember && access.viewer;
+  const denied = access.state === 'denied';
 
   // A viewer cannot hold a write token at all, so the control is not offered rather
   // than offered-and-rejected. The server clamps this again regardless.
@@ -46,164 +52,76 @@ export function JoinForm({ projectName, userName, authMode, access, error, onJoi
 
   const retryDate =
     access.state === 'denied'
-      ? new Date(access.retryAt).toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' })
+      ? new Date(access.retryAt).toLocaleDateString(locale, { day: 'numeric', month: 'long', year: 'numeric' })
       : null;
-
-  const permissions = scope === 'write' ? [t('permRead'), t('permWrite')] : [t('permRead')];
 
   // Even a refusal gets a submit button: the CLI is sitting on the poll channel, and
   // the only way it hears "denied" instead of timing out after five minutes is if this
   // page reports back. The action re-checks and refuses to create anything.
   const submitLabel = isMember
     ? t('joinConnect')
-    : access.state === 'denied'
+    : denied
       ? t('deniedContinue')
       : access.state === 'pending'
         ? t('requestResend')
         : t('requestSubmit');
 
   return (
-    <div className="min-h-screen bg-neutral-950 flex items-center justify-center p-4 relative">
-      <div className="absolute top-4 left-4">
-        <Link
-          href="/"
-          className="flex items-center gap-1.5 text-sm text-neutral-500 hover:text-neutral-300 transition-colors"
-        >
-          <ArrowLeft size={14} />
-          <span>Remnus</span>
-        </Link>
-      </div>
+    <AuthScreen footer={t('disclaimer')}>
+      <AuthCard
+        title={heading}
+        description={isMember ? t('joinIntro') : t('requestIntro')}
+        meta={
+          <>
+            <ProjectChip name={projectName} />
+            <span className="text-xs text-fg-3">{t('signedInAs', { user: userName })}</span>
+          </>
+        }
+      >
+        {error && <AuthNotice tone="danger" icon={<AlertCircle />}>{error}</AuthNotice>}
 
-      <div className="w-full max-w-sm">
-        <div className="flex flex-col items-center mb-8">
-          <Link href="/" className="flex flex-col items-center hover:opacity-80 transition-opacity">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/logo-square-dark.png"
-              alt="Remnus"
-              className="w-14 h-14 object-contain rounded-xl mb-4 shadow-lg"
-            />
-            <h1 className="text-2xl font-bold text-neutral-50 tracking-tight">{heading}</h1>
-          </Link>
-          <div className="flex items-center gap-2 mt-3 px-3 py-1.5 rounded-lg bg-neutral-900 border border-neutral-800">
-            <Terminal size={13} className="text-neutral-500 shrink-0" />
-            <span className="text-sm text-neutral-300 font-mono truncate max-w-[16rem]">{projectName}</span>
-          </div>
-          <p className="text-neutral-600 text-xs mt-3">{t('signedInAs', { user: userName })}</p>
-        </div>
-
-        {error && (
-          <div className="mb-4 px-4 py-3 rounded-xl bg-red-500/10 border border-red-500/30 text-sm text-red-300">
-            {error}
-          </div>
+        {denied && retryDate && (
+          <AuthNotice icon={<Lock />}>{t('deniedRetryHint', { date: retryDate })}</AuthNotice>
         )}
 
-        {access.state === 'denied' && retryDate && (
-          <div className="mb-4 px-4 py-3 rounded-xl bg-neutral-900 border border-neutral-800 text-sm text-neutral-400 flex gap-2.5">
-            <Lock size={15} className="text-neutral-500 shrink-0 mt-0.5" />
-            <span>{t('deniedRetryHint', { date: retryDate })}</span>
-          </div>
-        )}
+        {access.state === 'pending' && <AuthNotice icon={<Clock />}>{t('pendingHint')}</AuthNotice>}
 
-        {access.state === 'pending' && (
-          <div className="mb-4 px-4 py-3 rounded-xl bg-amber-500/5 border border-amber-500/25 text-sm text-amber-200/80 flex gap-2.5">
-            <Clock size={15} className="text-amber-400/80 shrink-0 mt-0.5" />
-            <span>{t('pendingHint')}</span>
-          </div>
-        )}
+        <form action={onJoin} className="flex flex-col gap-6">
+          <input type="hidden" name="scope" value={viewerOnly ? 'read' : scope} />
 
-        <div className="bg-neutral-900 border border-neutral-800 rounded-xl overflow-hidden">
-          <div className="px-6 pt-5 pb-4 border-b border-neutral-800">
-            <p className="text-sm text-neutral-400 leading-relaxed">
-              {isMember ? t('joinIntro') : t('requestIntro')}
-            </p>
-          </div>
-
-          {isMember && authMode === 'oauth' ? (
-            <div className="px-6 pt-5 pb-4 border-b border-neutral-800">
-              <p className="text-xs text-neutral-500 mb-2.5">{t('accessLevel')}</p>
-              <p className="text-sm text-neutral-400 leading-relaxed">{t('oauthScopeHint')}</p>
-            </div>
-          ) : (
-            <div className="px-6 pt-5 pb-4 border-b border-neutral-800">
-              <p className="text-xs text-neutral-500 mb-2.5">{t('accessLevel')}</p>
-
-              {viewerOnly ? (
-                <p className="text-sm text-neutral-400 leading-relaxed flex gap-2.5">
-                  <Eye size={15} className="text-signal-text/80 shrink-0 mt-0.5" />
-                  <span>{t('viewerScopeHint')}</span>
-                </p>
+          {!denied && (
+            <AuthSection label={t('accessLevel')} labelId="join-scope">
+              {isMember && authMode === 'oauth' ? (
+                <p className="text-ui leading-relaxed text-fg-3">{t('oauthScopeHint')}</p>
+              ) : viewerOnly ? (
+                <AuthNotice icon={<Eye />}>{t('viewerScopeHint')}</AuthNotice>
               ) : (
-                <div className="flex gap-2 mb-3">
-                  {(['read', 'write'] as const).map((s) => (
-                    <button
-                      key={s}
-                      type="button"
-                      onClick={() => setScope(s)}
-                      className={`flex-1 px-3 py-2 rounded-lg border text-xs font-semibold transition-all ${
-                        scope === s
-                          ? s === 'write'
-                            ? 'bg-amber-500/10 border-amber-500/40 text-amber-300'
-                            : 'bg-signal/10 border-signal/40 text-signal-text'
-                          : 'bg-neutral-800 border-neutral-700 text-neutral-400 hover:text-neutral-200 hover:border-neutral-600'
-                      }`}
-                    >
-                      {s === 'read' ? t('scopeReadLabel') : t('scopeWriteLabel')}
-                    </button>
-                  ))}
-                </div>
+                <RadioCards value={scope} onValueChange={setScope} aria-labelledby="join-scope">
+                  <RadioCard value="read" title={t('scopeReadLabel')} description={t('permRead')} />
+                  <RadioCard value="write" title={t('scopeWriteLabel')} description={t('permWrite')} />
+                </RadioCards>
               )}
-
-              {!viewerOnly && (
-                <ul className="space-y-2">
-                  {permissions.map((perm) => (
-                    <li key={perm} className="flex items-center gap-2.5 text-sm text-neutral-300">
-                      <svg viewBox="0 0 24 24" fill="none" stroke="#7fc36d" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 shrink-0">
-                        <polyline points="20 6 9 17 4 12" />
-                      </svg>
-                      {perm}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
+            </AuthSection>
           )}
 
-          <form action={onJoin} className="px-6 py-5">
-            <input type="hidden" name="scope" value={viewerOnly ? 'read' : scope} />
+          {!isMember && !denied && (
+            <Field label={t('noteLabel')} htmlFor="join-note">
+              <Textarea
+                id="join-note"
+                name="note"
+                rows={3}
+                maxLength={280}
+                value={note}
+                onChange={(e) => setNote(e.target.value)}
+                placeholder={t('notePlaceholder')}
+                className="resize-none"
+              />
+            </Field>
+          )}
 
-            {!isMember && access.state !== 'denied' && (
-              <>
-                <label className="text-xs text-neutral-500 mb-2 block">
-                  {t('noteLabel')}
-                </label>
-                <textarea
-                  name="note"
-                  rows={3}
-                  maxLength={280}
-                  value={note}
-                  onChange={(e) => setNote(e.target.value)}
-                  placeholder={t('notePlaceholder')}
-                  className="w-full bg-neutral-800 border border-neutral-700 text-neutral-100 text-sm px-3 py-2.5 rounded-lg focus:outline-none focus:border-signal mb-4 placeholder:text-neutral-600 resize-none"
-                />
-              </>
-            )}
-
-            <button
-              type="submit"
-              className={`w-full font-medium text-sm py-2.5 rounded-lg transition-colors ${
-                access.state === 'denied'
-                  ? 'bg-neutral-800 hover:bg-neutral-700 text-neutral-300 border border-neutral-700'
-                  : 'bg-ink hover:bg-ink/88 active:bg-ink/80 text-ink-fg'
-              }`}
-            >
-              {submitLabel}
-            </button>
-          </form>
-        </div>
-
-        <p className="text-xs text-neutral-700 mt-4 px-4 text-center">{t('disclaimer')}</p>
-      </div>
-    </div>
+          <SubmitButton variant={denied ? 'secondary' : 'primary'}>{submitLabel}</SubmitButton>
+        </form>
+      </AuthCard>
+    </AuthScreen>
   );
 }

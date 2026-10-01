@@ -164,7 +164,12 @@ The human reads this in a sidebar, so the shape is part of the work.
   database pass `knowledge` with `conceptType`, `tags` — the words someone would search
   for, in the team's language *and* English — and `sources`, the repo files it rests on:
   `"knowledge": {"conceptType": "decision", "tags": ["davet", "invitation", "auth"], "sources": [{"resource": "src/auth.ts"}]}`.
-  `bulk_create_pages`, `create_page` and `create_database` all take it.
+  `bulk_create_pages`, `create_page` and `create_database` all take it. **`sources` is not
+  optional decoration:** it is what lets a later agent ask `get_related_pages` with a file
+  path ("what did the team decide about this file?") before it edits that file. A concept
+  without it is invisible to that question. Use repo-relative paths (`src/auth.ts`, a
+  folder, or `src/auth.ts#L40`), or a URL for something outside the repo; a concept you
+  cannot tie to any file or URL is one you invented — leave it out.
 - **The home dashboard — every calibration builds one.** It is pinned above the tree in the
   sidebar (the **Pano** button) and is the first screen a person opens, so it answers
   "what is this project and where do I look" before any number. Read
@@ -207,7 +212,9 @@ what the next session starts from. Fix until every line holds:
 4. You can name the source of every item you built. Delete what you can't, or move it
    to the log as an open question.
 5. 2b is answered: domain databases exist, or the log says why none do.
-6. Concept items carry `knowledge` tags and sources.
+6. Concept items carry `knowledge` tags **and** sources. Check it, don't assume: sample
+   three concept pages or rows with `get_related_pages` (`pageId`) and confirm each lists `sources`; if one
+   doesn't, add them with `update_page` (`knowledge.sources`) before you finish.
 7. Every log step is ticked; open questions are listed.
 
 ## Finish

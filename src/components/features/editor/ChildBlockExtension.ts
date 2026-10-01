@@ -22,7 +22,8 @@ export const ChildBlock = Node.create({
     return {
       itemId: { default: null },
       databaseId: { default: null },
-      title: { default: 'Untitled' },
+      // '' when the item has no title: ChildBlockView shows the viewer's "Untitled".
+      title: { default: '' },
       itemType: { default: 'page' },
       icon: { default: null },
       iconColor: { default: null },
@@ -44,7 +45,7 @@ export const ChildBlock = Node.create({
             itemId: e.getAttribute('data-cb-id'),
             databaseId: e.getAttribute('data-cb-dbid') || null,
             itemType: e.getAttribute('data-cb-type') || 'page',
-            title: e.getAttribute('data-cb-title') || 'Untitled',
+            title: e.getAttribute('data-cb-title') || '',
             icon: e.getAttribute('data-cb-icon') || null,
             iconColor: e.getAttribute('data-cb-iconcolor') || null,
             linkOnly: e.getAttribute('data-cb-link') === '1',

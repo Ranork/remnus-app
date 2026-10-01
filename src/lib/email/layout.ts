@@ -13,9 +13,9 @@ export function escapeHtml(str: unknown): string {
     .replace(/"/g, '&quot;');
 }
 
-/** Primary CTA button (accent background, white label). */
+/** Primary CTA button (ink fill, dark label — the app's primary). */
 export function button(label: string, url: string, { block = false } = {}): string {
-  return `<a href="${escapeHtml(url)}" style="display:${block ? 'block' : 'inline-block'};background:${P.accent};color:#ffffff;font-family:${FONT};font-size:14px;font-weight:600;text-decoration:none;padding:12px 26px;border-radius:8px;${block ? 'text-align:center;' : ''}">${escapeHtml(label)}</a>`;
+  return `<a href="${escapeHtml(url)}" style="display:${block ? 'block' : 'inline-block'};background:${P.ink};color:${P.inkFg};font-family:${FONT};font-size:14px;font-weight:600;text-decoration:none;padding:12px 26px;border-radius:8px;${block ? 'text-align:center;' : ''}">${escapeHtml(label)}</a>`;
 }
 
 /** A soft "card" row used by templates for tips / example prompts. */
@@ -23,11 +23,11 @@ export function card(innerHtml: string): string {
   return `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:0 0 10px;"><tr><td style="background:${P.canvas};border:1px solid ${P.border};border-radius:10px;padding:14px 16px;">${innerHtml}</td></tr></table>`;
 }
 
-/** Numbered/bulleted step row with an accent chip. */
+/** Numbered/bulleted step row with a signal chip. */
 export function step(n: string, title: string, body: string): string {
   return card(
     `<table role="presentation" width="100%" cellpadding="0" cellspacing="0"><tr>` +
-      `<td width="34" valign="top"><div style="width:24px;height:24px;line-height:24px;border-radius:999px;background:${P.accentTint};color:#ffffff;font-family:${FONT};font-size:12px;font-weight:700;text-align:center;">${escapeHtml(n)}</div></td>` +
+      `<td width="34" valign="top"><div style="width:24px;height:24px;line-height:24px;border-radius:999px;background:${P.signal};color:${P.signalFg};font-family:${FONT};font-size:12px;font-weight:700;text-align:center;">${escapeHtml(n)}</div></td>` +
       `<td valign="top"><div style="font-family:${FONT};color:${P.soft};font-size:14px;font-weight:600;line-height:1.4;">${escapeHtml(title)}</div>` +
       `<p style="margin:4px 0 0;color:${P.body};font-size:13px;line-height:1.6;">${body}</p></td>` +
     `</tr></table>`

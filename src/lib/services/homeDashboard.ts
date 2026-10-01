@@ -32,8 +32,8 @@ export type HomeComposeLabels = {
   agentActivity: string;
 };
 
-const STATUS_NAME = /^(status|state|stage|durum|aşama|asama|estado|statut|zustand|статус|状态)$/i;
-const DONE_WORDS = /done|complete|closed|shipped|resolved|cancel|finished|merged|released|tamam|bitti|kapal|iptal|terminé|erledigt|hecho|готов|完成/i;
+const STATUS_NAME = /^(status|state|stage|durum|aşama|asama|estado|statut|zustand|статус|状态|स्थिति)$/i;
+const DONE_WORDS = /done|complete|closed|shipped|resolved|cancel|finished|merged|released|tamam|bitti|kapal|iptal|terminé|erledigt|hecho|готов|完成|पूर्ण|पूरा/i;
 
 function optionEntries(column: Column): { value: string; group?: string }[] {
   return (column.options ?? [])

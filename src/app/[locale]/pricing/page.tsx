@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import MarketingShell from '@/components/marketing/MarketingShell';
-import LandingPricing from '@/components/marketing/LandingPricing';
+import SitePricingPage from '@/components/marketing/site/SitePricingPage';
 import { METADATA_BASE_URL, DEFAULT_OG_IMAGE, DEFAULT_TWITTER_IMAGE } from '@/lib/metadata';
 
 export const metadata: Metadata = {
@@ -27,7 +27,7 @@ export const metadata: Metadata = {
 export default async function PricingPage() {
   return (
     <MarketingShell>
-      <LandingPricing showComparison />
+      <SitePricingPage />
     </MarketingShell>
   );
 }

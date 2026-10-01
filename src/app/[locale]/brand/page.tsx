@@ -1,12 +1,14 @@
 import type { Metadata } from 'next';
 import { getTranslations } from 'next-intl/server';
 import MarketingShell from '@/components/marketing/MarketingShell';
+import PageHead from '@/components/marketing/site/PageHead';
+import { RemnusMark } from '@/components/ui/remnus-mark';
 import { METADATA_BASE_URL, DEFAULT_OG_IMAGE, DEFAULT_TWITTER_IMAGE } from '@/lib/metadata';
 
 export const metadata: Metadata = {
   metadataBase: new URL(METADATA_BASE_URL),
   title: 'Brand Kit',
-  description: 'Remnus brand kit — the color palette and typography behind the app and landing page. A reference for visuals and press.',
+  description: 'Remnus brand kit: the logo, colour roles and typography behind the app and this site. A reference for visuals and press.',
   alternates: { canonical: 'https://remnus.com/brand' },
   openGraph: {
     title: 'Brand Kit | Remnus',
@@ -24,129 +26,142 @@ export const metadata: Metadata = {
   },
 };
 
-// Values mirror the `@theme` tokens in globals.css (the source of truth). Kept as
-// literal hex here on purpose: a brand-kit reference must show the fixed brand
-// colors, not whatever the active runtime theme resolves the token to.
-type Swatch = { token: string; hex: string };
+// Values mirror the role tokens in globals.css (the source of truth): the default dark
+// theme ("remnus") and Remnus's own light theme ("catppuccin" is its stored id). Kept as
+// literal hex on purpose: a brand-kit reference shows the fixed brand colours, not
+// whatever the active theme resolves a token to.
+type Swatch = { token: string; dark: string; light: string };
 
 export default async function BrandPage() {
   const t = await getTranslations('Brand');
 
-  const colorGroups: { name: string; colors: Swatch[] }[] = [
+  const colorGroups: { name: string; desc: string; colors: Swatch[] }[] = [
     {
-      name: t('groupNeutrals'),
+      name: t('groupSurfaces'),
+      desc: t('groupSurfacesDesc'),
       colors: [
-        { token: 'neutral-950', hex: '#111315' },
-        { token: 'neutral-900', hex: '#1d2025' },
-        { token: 'neutral-850', hex: '#171a1e' },
-        { token: 'neutral-800', hex: '#383b41' },
-        { token: 'neutral-500', hex: '#80838a' },
-        { token: 'neutral-100', hex: '#cccfd5' },
-        { token: 'neutral-50', hex: '#d7dae0' },
+        { token: 'desk', dark: '#111316', light: '#eceef1' },
+        { token: 'sheet', dark: '#191b1f', light: '#ffffff' },
+        { token: 'raised', dark: '#1f2226', light: '#f7f8fa' },
+        { token: 'line', dark: '#2a2d33', light: '#e4e6ea' },
+        { token: 'line-strong', dark: '#3c4047', light: '#d2d6dc' },
       ],
     },
     {
-      name: t('groupAccent'),
+      name: t('groupText'),
+      desc: t('groupTextDesc'),
       colors: [
-        { token: 'blue-300', hex: '#7a94c5' },
-        { token: 'blue-400', hex: '#5e75b0' },
-        { token: 'blue-500', hex: '#445c95' },
-        { token: 'blue-600', hex: '#3a4f82' },
+        { token: 'fg', dark: '#eceef1', light: '#15171b' },
+        { token: 'fg-2', dark: '#b0b4bc', light: '#454a53' },
+        { token: 'fg-3', dark: '#979ca5', light: '#5f6570' },
+        { token: 'fg-4', dark: '#5d626b', light: '#9ba0a9' },
+      ],
+    },
+    {
+      name: t('groupInk'),
+      desc: t('groupInkDesc'),
+      colors: [
+        { token: 'ink', dark: '#eceef1', light: '#15171b' },
+        { token: 'signal', dark: '#f0b43c', light: '#f5b300' },
+        { token: 'signal-text', dark: '#f0b43c', light: '#5c4600' },
       ],
     },
     {
       name: t('groupSemantic'),
+      desc: t('groupSemanticDesc'),
       colors: [
-        { token: 'red-400', hex: '#cd4d55' },
-        { token: 'green-400', hex: '#7fc36d' },
-        { token: 'amber-500', hex: '#cc7d45' },
+        { token: 'red-400', dark: '#cd4d55', light: '#d33c3c' },
+        { token: 'green-400', dark: '#7fc36d', light: '#1a7f4b' },
+        { token: 'amber-400', dark: '#d9914d', light: '#b86a0a' },
       ],
     },
     {
-      name: t('groupOptions'),
+      name: t('groupData'),
+      desc: t('groupDataDesc'),
       colors: [
-        { token: 'opt-yellow', hex: '#d2b350' },
-        { token: 'opt-teal', hex: '#4cb5a8' },
-        { token: 'opt-purple', hex: '#8a6dba' },
-        { token: 'opt-pink', hex: '#c66d99' },
+        { token: 'chart-1', dark: '#3987e5', light: '#2a78d6' },
+        { token: 'chart-2', dark: '#d95926', light: '#eb6834' },
+        { token: 'chart-3', dark: '#199e70', light: '#1baf7a' },
+        { token: 'chart-4', dark: '#c98500', light: '#eda100' },
+        { token: 'chart-5', dark: '#d55181', light: '#e87ba4' },
+        { token: 'chart-6', dark: '#008300', light: '#008300' },
+        { token: 'chart-7', dark: '#9085e9', light: '#4a3aa7' },
+        { token: 'chart-8', dark: '#e66767', light: '#e34948' },
       ],
     },
   ];
 
   const fonts: { name: string; role: string; className: string }[] = [
     { name: 'Onest', role: t('fontSansRole'), className: 'font-sans' },
-    { name: 'Fraunces', role: t('fontSerifRole'), className: 'font-serif' },
     { name: 'JetBrains Mono', role: t('fontMonoRole'), className: 'font-mono' },
   ];
 
   return (
     <MarketingShell>
-      <section className="px-4 sm:px-8 lg:px-14 py-16 lg:py-24">
-        <div className="max-w-5xl mx-auto">
-          {/* Header */}
-          <div className="text-center mb-16">
-            <p className="font-mono text-[11px] uppercase tracking-widest text-neutral-500 mb-3">
-              {t('eyebrow')}
-            </p>
-            <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-neutral-100 mb-4 tracking-tight">
-              {t('title')}
-            </h1>
-            <p className="text-neutral-300 text-[14.5px] leading-relaxed max-w-2xl mx-auto">
-              {t('intro')}
-            </p>
-          </div>
+      <section className="px-4 sm:px-8">
+        <div className="mx-auto max-w-[1200px] pt-14 pb-24 sm:pt-20 lg:pb-32">
+          <PageHead title={t('title')} lede={t('intro')} />
 
-          {/* Colors */}
-          <div className="mb-20">
-            <h2 className="text-lg font-semibold text-neutral-100 mb-1">{t('colorsTitle')}</h2>
-            <p className="text-neutral-400 text-[13.5px] mb-8">{t('colorsSubtitle')}</p>
-
-            <div className="flex flex-col gap-10">
-              {colorGroups.map((group) => (
-                <div key={group.name}>
-                  <h3 className="font-mono text-[11px] uppercase tracking-[0.12em] text-neutral-500 mb-4">
-                    {group.name}
-                  </h3>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-4">
-                    {group.colors.map((c) => (
-                      <div key={c.token} className="flex flex-col gap-2">
-                        <div
-                          className="h-16 rounded-lg border border-neutral-800"
-                          style={{ backgroundColor: c.hex }}
-                        />
-                        <div className="flex flex-col leading-tight">
-                          <span className="font-mono text-[11px] text-neutral-200">{c.token}</span>
-                          <span className="font-mono text-[11px] text-neutral-500 uppercase">{c.hex}</span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ))}
+          {/* Logo */}
+          <div className="mt-14 grid gap-4 sm:grid-cols-2">
+            <div className="flex h-44 items-center justify-center gap-3 rounded-[14px] bg-[#111316] text-[#eceef1] ring-1 ring-line-strong">
+              <RemnusMark className="size-9" />
+              <span className="text-[28px] font-semibold tracking-[-0.02em]">Remnus</span>
+            </div>
+            <div className="flex h-44 items-center justify-center gap-3 rounded-[14px] bg-white text-[#15171b] ring-1 ring-line-strong">
+              <RemnusMark className="size-9" />
+              <span className="text-[28px] font-semibold tracking-[-0.02em]">Remnus</span>
             </div>
           </div>
 
-          {/* Typography */}
-          <div>
-            <h2 className="text-lg font-semibold text-neutral-100 mb-1">{t('typographyTitle')}</h2>
-            <p className="text-neutral-400 text-[13.5px] mb-8">{t('typographySubtitle')}</p>
+          {/* Colors */}
+          <div className="mt-20">
+            <h2 className="m-0 text-[28px] leading-tight font-semibold tracking-[-0.03em] text-fg sm:text-[34px]">{t('colorsTitle')}</h2>
+            <p className="m-0 mt-3 max-w-[38rem] text-[15px] leading-[1.6] text-fg-2">{t('colorsSubtitle')}</p>
 
-            <div className="flex flex-col gap-5">
-              {fonts.map((f) => (
-                <div
-                  key={f.name}
-                  className="p-6 sm:p-8 rounded-xl border border-neutral-800 bg-neutral-900/40"
-                >
-                  <div className="flex items-baseline justify-between gap-4 mb-4 flex-wrap">
-                    <span className={`${f.className} text-neutral-100 text-xl font-semibold`}>{f.name}</span>
-                    <span className="font-mono text-[11px] uppercase tracking-[0.12em] text-neutral-500">
-                      {f.role}
-                    </span>
+            <div className="mt-6">
+              {colorGroups.map((group) => (
+                <div key={group.name} className="grid gap-5 border-t border-line-strong py-8 lg:grid-cols-12 lg:gap-10">
+                  <div className="lg:col-span-4">
+                    <h3 className="m-0 text-lg font-semibold tracking-[-0.015em] text-fg">{group.name}</h3>
+                    <p className="m-0 mt-1.5 text-ui leading-relaxed text-fg-3">{group.desc}</p>
                   </div>
-                  <p className={`${f.className} text-neutral-200 text-2xl sm:text-3xl leading-snug mb-3`}>
-                    {t('fontSampleHeading')}
-                  </p>
-                  <p className={`${f.className} text-neutral-500 text-sm tracking-wide`}>
+                  <ul className="m-0 grid list-none grid-cols-2 gap-4 p-0 sm:grid-cols-3 md:grid-cols-4 lg:col-span-8">
+                    {group.colors.map((c) => (
+                      <li key={c.token} className="flex flex-col gap-2">
+                        <div className="flex h-16 overflow-hidden rounded-control ring-1 ring-line-strong">
+                          <span className="flex-1" style={{ backgroundColor: c.dark }} title={`${t('dark')} ${c.dark}`} />
+                          <span className="flex-1" style={{ backgroundColor: c.light }} title={`${t('light')} ${c.light}`} />
+                        </div>
+                        <div className="flex flex-col leading-tight">
+                          <span className="font-mono text-xs text-fg">{c.token}</span>
+                          <span className="mt-0.5 font-mono text-xs text-fg-3">
+                            {c.dark} <span className="text-fg-4">/</span> {c.light}
+                          </span>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
+            </div>
+            <p className="m-0 text-ui text-fg-3">{t('swatchNote')}</p>
+          </div>
+
+          {/* Typography */}
+          <div className="mt-20">
+            <h2 className="m-0 text-[28px] leading-tight font-semibold tracking-[-0.03em] text-fg sm:text-[34px]">{t('typographyTitle')}</h2>
+            <p className="m-0 mt-3 max-w-[38rem] text-[15px] leading-[1.6] text-fg-2">{t('typographySubtitle')}</p>
+
+            <div className="mt-8 grid gap-4 lg:grid-cols-2">
+              {fonts.map((f) => (
+                <div key={f.name} className="rounded-[14px] bg-sheet p-6 shadow-sheet sm:p-8">
+                  <div className="flex flex-wrap items-baseline justify-between gap-3">
+                    <span className={`${f.className} text-xl font-semibold text-fg`}>{f.name}</span>
+                    <span className="text-ui text-fg-3">{f.role}</span>
+                  </div>
+                  <p className={`${f.className} m-0 mt-5 text-2xl leading-snug text-fg sm:text-3xl`}>{t('fontSampleHeading')}</p>
+                  <p className={`${f.className} m-0 mt-3 text-sm break-words text-fg-3`}>
                     ABCDEFGHIJKLMNOPQRSTUVWXYZ abcdefghijklmnopqrstuvwxyz 0123456789
                   </p>
                 </div>

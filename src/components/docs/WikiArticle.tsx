@@ -24,14 +24,12 @@ export default function WikiArticle({
   breadcrumb: BreadcrumbItem[];
 }) {
   return (
-    <div className="flex gap-12">
-      <article className="min-w-0 flex-1 max-w-4xl">
+    <div className="flex gap-12 rounded-[14px] bg-sheet px-5 py-8 shadow-sheet sm:px-10 sm:py-10 lg:px-12">
+      <article className="min-w-0 max-w-[46rem] flex-1">
         <header className="mb-8">
           <BreadcrumbTrail items={breadcrumb} />
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-500/10 text-blue-500 mb-4">
-            <Icon size={22} />
-          </div>
-          <h1 className="text-3xl sm:text-4xl font-bold text-neutral-100 tracking-tight m-0">
+          <Icon size={24} className="mb-4 text-fg-3" aria-hidden />
+          <h1 className="m-0 text-[32px] leading-[1.1] font-semibold tracking-[-0.03em] text-fg sm:text-[40px]">
             {title}
           </h1>
         </header>

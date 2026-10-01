@@ -1,4 +1,19 @@
 import type { DatabaseView } from '@/lib/types/views';
+import type {
+  BookKey,
+  EventRowKey,
+  MemoryRowKey,
+  StockDatabaseText,
+  TaskTrackerRowKey,
+  TemplateText,
+} from '@/lib/starterContent/types';
+
+// Item templates. This file is the language-free structure — ids, icons, column ids
+// and types, which option sits in which status group, which seed row has which value.
+// Every word comes from a `TemplateText` (`src/lib/starterContent/templates/<locale>.ts`)
+// and is filled in on the server at creation time, in the request's language
+// (`createFromTemplate`, actions/templates.ts). The picker only needs the catalog below,
+// so the client bundle carries no template text.
 
 export interface SchemaColumn {
   id: string;
@@ -27,23 +42,62 @@ export interface SeedRow {
   properties: Record<string, unknown>;
 }
 
-export interface PageTemplateDefinition {
-  id: string;
-  category: 'page';
-  name: string;
-  description: string;
+export type TemplateId =
+  | 'page-blank'
+  | 'page-meeting-notes'
+  | 'page-project-brief'
+  | 'dashboard-blank'
+  | 'db-blank'
+  | 'db-task-tracker'
+  | 'db-event-calendar'
+  | 'db-reading-list'
+  | 'db-agent-memory';
+
+export type TemplateCategory = 'page' | 'database' | 'dashboard';
+
+/** What the picker shows. The name and description are `Templates.<nameKey>` / `<nameKey>Desc`. */
+export interface TemplateCatalogEntry {
+  id: TemplateId;
+  category: TemplateCategory;
   icon: string;
   iconColor?: string;
+  nameKey:
+    | 'blankPage'
+    | 'meetingNotes'
+    | 'projectBrief'
+    | 'blankDashboard'
+    | 'blankDatabase'
+    | 'taskTracker'
+    | 'eventCalendar'
+    | 'readingList'
+    | 'agentMemory';
+}
+
+export const TEMPLATE_CATALOG: TemplateCatalogEntry[] = [
+  { id: 'page-blank', category: 'page', icon: '📄', nameKey: 'blankPage' },
+  { id: 'page-meeting-notes', category: 'page', icon: '🗓️', nameKey: 'meetingNotes' },
+  { id: 'page-project-brief', category: 'page', icon: '📋', nameKey: 'projectBrief' },
+  { id: 'dashboard-blank', category: 'dashboard', icon: '📊', nameKey: 'blankDashboard' },
+  { id: 'db-blank', category: 'database', icon: '🗃️', nameKey: 'blankDatabase' },
+  { id: 'db-task-tracker', category: 'database', icon: '✅', nameKey: 'taskTracker' },
+  { id: 'db-event-calendar', category: 'database', icon: '📅', nameKey: 'eventCalendar' },
+  { id: 'db-reading-list', category: 'database', icon: '📚', nameKey: 'readingList' },
+  { id: 'db-agent-memory', category: 'database', icon: '🧠', nameKey: 'agentMemory' },
+];
+
+export function getCatalogEntry(id: string): TemplateCatalogEntry | undefined {
+  return TEMPLATE_CATALOG.find((entry) => entry.id === id);
+}
+
+export interface PageTemplateDefinition {
+  id: TemplateId;
+  category: 'page';
   initialContent: string;
 }
 
 export interface DatabaseTemplateDefinition {
-  id: string;
+  id: TemplateId;
   category: 'database';
-  name: string;
-  description: string;
-  icon: string;
-  iconColor?: string;
   schema: SchemaColumn[];
   views: DatabaseView[];
   seedRows?: SeedRow[];
@@ -57,12 +111,8 @@ export interface DatabaseTemplateDefinition {
  * from an agent that can see the workspace.
  */
 export interface DashboardTemplateDefinition {
-  id: string;
+  id: TemplateId;
   category: 'dashboard';
-  name: string;
-  description: string;
-  icon: string;
-  iconColor?: string;
   /** Validated by `dashboardSpecSchema` before it reaches the database. */
   spec: { version: 1; blocks: unknown[] };
 }
@@ -72,387 +122,357 @@ export type TemplateDefinition =
   | DatabaseTemplateDefinition
   | DashboardTemplateDefinition;
 
-export const TEMPLATES: TemplateDefinition[] = [
-  // ── Pages ──────────────────────────────────────────────────────────────────
-  {
-    id: 'page-blank',
-    category: 'page',
-    name: 'Blank Page',
-    description: 'Start with a clean slate',
-    icon: '📄',
-    initialContent: '',
-  },
-  {
-    id: 'page-meeting-notes',
-    category: 'page',
-    name: 'Meeting Notes',
-    description: 'Structured notes with agenda and action items',
-    icon: '🗓️',
-    initialContent: `## Attendees
+/**
+ * The stock database's columns, in one language. Its status options carry their
+ * status group even though the column is a plain `select`: that is how a new row
+ * finds its first "to do" option (`createPage`) and how the home dashboard knows which
+ * value means finished — in any language, without matching English words.
+ */
+export function stockDatabaseSchema(text: StockDatabaseText): SchemaColumn[] {
+  return [
+    { id: 'title', name: text.title, type: 'text' },
+    {
+      id: 'status',
+      name: text.status,
+      type: 'select',
+      options: [
+        { value: text.todo, group: 'todo' },
+        { value: text.inProgress, group: 'in_progress' },
+        { value: text.done, group: 'complete' },
+      ],
+    },
+    { id: 'id', name: text.id, type: 'id' },
+  ];
+}
 
-- Sarah Chen (PM)
-- Marcus Johnson (Engineering Lead)
-- Aisha Patel (Designer)
+/**
+ * A new row's value for the stock `status` column (the blank database, the templates):
+ * its first option in the "to do" group, in whatever language the database was made
+ * ("To Do", "Yapılacak", "Backlog"). Stock columns from before the options carried a
+ * group are plain strings — there the old "To Do" still applies.
+ */
+export function stockStatusDefault(
+  options: readonly (string | { value: string; group?: string })[] | undefined,
+): string | undefined {
+  const entries = (options ?? []).map((o) => (typeof o === 'string' ? { value: o, group: undefined } : o));
+  return entries.find((o) => o.group === 'todo')?.value ?? entries.find((o) => o.value === 'To Do')?.value;
+}
 
-## Agenda
-
-1. Sprint review & velocity check
-2. Q3 roadmap priorities
-3. Design system updates
-
-## Notes
-
-Sprint went well overall. Velocity was slightly above estimate. The new auth flow is live and performing as expected.
-
-Q3 priorities: focus on onboarding improvements and mobile responsiveness. Marketing needs the new dashboard by end of July.
-
-Design system: Aisha will share updated component library next week.
-
-## Action Items
-
-- [ ] Marcus: set up staging environment by Friday
-- [ ] Aisha: share design system v2 draft by next Tuesday
-- [ ] Sarah: send Q3 roadmap draft for team review
-`,
-  },
-  {
-    id: 'page-project-brief',
-    category: 'page',
-    name: 'Project Brief',
-    description: 'Overview, goals, timeline and team',
-    icon: '📋',
-    initialContent: `## Overview
-
-A next-generation analytics dashboard that helps teams track key metrics in real time. The goal is to replace the current spreadsheet-based reporting with a centralized, automated solution.
-
-## Goals
-
-- Reduce manual reporting time by 80%
-- Provide real-time visibility into team KPIs
-- Support data exports to PDF and CSV
-
-## Timeline
-
-| Milestone | Date |
-|-----------|------|
-| Kickoff | June 2, 2026 |
-| Design complete | June 20, 2026 |
-| Beta release | July 15, 2026 |
-| Launch | August 1, 2026 |
-
-## Team
-
-- Product: Sarah Chen
-- Engineering: Marcus Johnson, Kai Rivera
-- Design: Aisha Patel
-`,
-  },
-
-  // ── Dashboards ─────────────────────────────────────────────────────────────
-  {
-    id: 'dashboard-blank',
-    category: 'dashboard',
-    name: 'Blank Dashboard',
-    description: 'A status screen built from your databases',
-    icon: '📊',
-    spec: { version: 1, blocks: [] },
-  },
-
-  // ── Databases ──────────────────────────────────────────────────────────────
-  {
-    id: 'db-blank',
-    category: 'database',
-    name: 'Blank Database',
-    description: 'Empty table with Title and Status',
-    icon: '🗃️',
-    schema: [
-      { id: 'title', name: 'Title', type: 'text' },
-      {
-        id: 'status',
-        name: 'Status',
-        type: 'select',
-        options: ['To Do', 'In Progress', 'Done'],
-      },
-      { id: 'id', name: 'ID', type: 'id' },
-    ],
-    views: [
-      {
-        id: 'v1',
-        name: 'Table',
-        config: {
-          type: 'table',
-          columnOrder: [],
-          hiddenColumns: ['id'],
-          filters: [],
-          sorts: [],
-          openBehavior: 'center',
-        },
-      },
-    ],
-  },
-  {
-    id: 'db-task-tracker',
-    category: 'database',
-    name: 'Task Tracker',
-    description: 'Kanban board with priority, assignee, and due date',
-    icon: '✅',
-    schema: [
-      { id: 'title', name: 'Title', type: 'text' },
-      {
-        id: 'status',
-        name: 'Status',
-        type: 'status',
-        options: [
-          { value: 'Backlog', color: 'default', group: 'todo' },
-          { value: 'In Progress', color: 'blue', group: 'in_progress' },
-          { value: 'Review', color: 'yellow', group: 'in_progress' },
-          { value: 'Done', color: 'green', group: 'complete' },
-        ],
-      },
-      {
-        id: 'priority',
-        name: 'Priority',
-        type: 'select',
-        options: [
-          { value: 'Low', color: 'green' },
-          { value: 'Medium', color: 'yellow' },
-          { value: 'High', color: 'red' },
-        ],
-      },
-      { id: 'assignee', name: 'Assignee', type: 'text' },
-      { id: 'dueDate', name: 'Due Date', type: 'date', dateFormat: 'default' },
-    ],
-    views: [
-      {
-        id: 'v1',
-        name: 'Board',
-        config: {
-          type: 'kanban',
-          groupByCol: 'status',
-          groupOrder: ['Backlog', 'In Progress', 'Review', 'Done'],
-          filters: [],
-          sorts: [],
-          openBehavior: 'center',
-          cardProperties: ['priority', 'assignee', 'dueDate'],
-          showPropertyLabels: true,
-          propertyTextClamp: 'truncate',
-          cardColorCol: 'priority',
-          groupColBg: true,
-        },
-      },
-      {
-        id: 'v2',
-        name: 'Table',
-        config: {
-          type: 'table',
-          columnOrder: ['title', 'status', 'priority', 'assignee', 'dueDate'],
-          hiddenColumns: [],
-          filters: [],
-          sorts: [],
-          openBehavior: 'center',
-        },
-      },
-    ],
-    seedRows: [
-      { title: 'Design landing page mockups', properties: { status: 'Backlog', priority: 'High', assignee: 'Aisha Patel', dueDate: '2026-06-10' } },
-      { title: 'Set up CI/CD pipeline', properties: { status: 'In Progress', priority: 'High', assignee: 'Marcus Johnson', dueDate: '2026-05-28' } },
-      { title: 'Write unit tests for auth module', properties: { status: 'In Progress', priority: 'Medium', assignee: 'Kai Rivera', dueDate: '2026-05-30' } },
-      { title: 'Code review for feature/payments branch', properties: { status: 'Review', priority: 'Medium', assignee: 'Marcus Johnson', dueDate: '2026-05-22' } },
-      { title: 'Update API documentation', properties: { status: 'Backlog', priority: 'Low', assignee: '', dueDate: '' } },
-      { title: 'Deploy to staging environment', properties: { status: 'Done', priority: 'High', assignee: 'Marcus Johnson', dueDate: '2026-05-19' } },
-      { title: 'Fix login redirect bug', properties: { status: 'Done', priority: 'High', assignee: 'Kai Rivera', dueDate: '2026-05-18' } },
-    ],
-  },
-  {
-    id: 'db-event-calendar',
-    category: 'database',
-    name: 'Event Calendar',
-    description: 'Monthly calendar for meetings, conferences, and deadlines',
-    icon: '📅',
-    schema: [
-      { id: 'title', name: 'Title', type: 'text' },
-      { id: 'eventDate', name: 'Event Date', type: 'date', dateFormat: 'default' },
-      {
-        id: 'category',
-        name: 'Category',
-        type: 'select',
-        options: [
-          { value: 'Meeting', color: 'blue' },
-          { value: 'Conference', color: 'purple' },
-          { value: 'Deadline', color: 'red' },
-          { value: 'Personal', color: 'green' },
-        ],
-      },
-      { id: 'notes', name: 'Notes', type: 'text' },
-    ],
-    views: [
-      {
-        id: 'v1',
-        name: 'Calendar',
-        config: {
-          type: 'calendar',
-          dateCol: 'eventDate',
-          viewMode: 'month',
-          firstDayOfWeek: 'monday',
-          filters: [],
-          sorts: [],
-          openBehavior: 'center',
-          cardColorCol: 'category',
-          cardProperties: ['category'],
-          showPropertyLabels: false,
-          propertyTextClamp: 'truncate',
-        },
-      },
-      {
-        id: 'v2',
-        name: 'Table',
-        config: {
-          type: 'table',
-          columnOrder: ['title', 'eventDate', 'category', 'notes'],
-          hiddenColumns: [],
-          filters: [],
-          sorts: [],
-          openBehavior: 'center',
-        },
-      },
-    ],
-    seedRows: [
-      { title: 'Weekly team standup', properties: { eventDate: '2026-05-21', category: 'Meeting', notes: 'Recurring every Monday' } },
-      { title: 'Sprint planning', properties: { eventDate: '2026-05-22', category: 'Meeting', notes: 'Sprint 14 kickoff' } },
-      { title: 'Q3 product review', properties: { eventDate: '2026-05-26', category: 'Meeting', notes: 'Review roadmap with stakeholders' } },
-      { title: 'Project MVP deadline', properties: { eventDate: '2026-05-30', category: 'Deadline', notes: 'All features must be merged to main' } },
-      { title: 'Frontend Summit 2026', properties: { eventDate: '2026-06-05', category: 'Conference', notes: 'Remote — register at frontendsummit.io' } },
-      { title: 'Design system handoff', properties: { eventDate: '2026-06-03', category: 'Deadline', notes: 'Aisha delivers v2 components' } },
-      { title: 'Team offsite', properties: { eventDate: '2026-06-12', category: 'Personal', notes: 'Istanbul — 2 nights' } },
-    ],
-  },
-  {
-    id: 'db-reading-list',
-    category: 'database',
-    name: 'Reading List',
-    description: 'Track books with status, rating, and genre',
-    icon: '📚',
-    schema: [
-      { id: 'title', name: 'Title', type: 'text' },
-      {
-        id: 'status',
-        name: 'Status',
-        type: 'select',
-        options: [
-          { value: 'Want to Read', color: 'default' },
-          { value: 'Reading', color: 'blue' },
-          { value: 'Done', color: 'green' },
-        ],
-      },
-      { id: 'rating', name: 'Rating', type: 'number' },
-      {
-        id: 'genre',
-        name: 'Genre',
-        type: 'select',
-        options: [
-          { value: 'Fiction', color: 'purple' },
-          { value: 'Non-Fiction', color: 'teal' },
-          { value: 'Tech', color: 'blue' },
-          { value: 'Science', color: 'green' },
-        ],
-      },
-      { id: 'author', name: 'Author', type: 'text' },
-    ],
-    views: [
-      {
-        id: 'v1',
-        name: 'Table',
-        config: {
-          type: 'table',
-          columnOrder: ['title', 'status', 'rating', 'genre', 'author'],
-          hiddenColumns: [],
-          filters: [],
-          sorts: [],
-          openBehavior: 'center',
-          rowColorCol: 'status',
-        },
-      },
-    ],
-    seedRows: [
-      { title: 'The Pragmatic Programmer', properties: { status: 'Done', rating: 5, genre: 'Tech', author: 'David Thomas & Andrew Hunt' } },
-      { title: 'Dune', properties: { status: 'Done', rating: 5, genre: 'Fiction', author: 'Frank Herbert' } },
-      { title: 'Sapiens', properties: { status: 'Reading', rating: null, genre: 'Non-Fiction', author: 'Yuval Noah Harari' } },
-      { title: 'Clean Code', properties: { status: 'Want to Read', rating: null, genre: 'Tech', author: 'Robert C. Martin' } },
-      { title: 'The Three-Body Problem', properties: { status: 'Want to Read', rating: null, genre: 'Fiction', author: 'Liu Cixin' } },
-      { title: 'A Brief History of Time', properties: { status: 'Done', rating: 4, genre: 'Science', author: 'Stephen Hawking' } },
-      { title: 'Thinking, Fast and Slow', properties: { status: 'Want to Read', rating: null, genre: 'Non-Fiction', author: 'Daniel Kahneman' } },
-    ],
-  },
-  {
-    id: 'db-agent-memory',
-    category: 'database',
-    name: 'Agent Memory',
-    description: 'Durable, human-readable memory your AI agent saves and recalls over MCP',
-    icon: '🧠',
-    schema: [
-      { id: 'title', name: 'Title', type: 'text' },
-      {
-        id: 'type',
-        name: 'Type',
-        type: 'select',
-        options: [
-          { value: 'Decision', color: 'blue' },
-          { value: 'Preference', color: 'purple' },
-          { value: 'Gotcha', color: 'red' },
-          { value: 'Fact', color: 'green' },
-        ],
-      },
-      {
-        id: 'tags',
-        name: 'Tags',
-        type: 'multi_select',
-        options: [
-          { value: 'architecture', color: 'teal' },
-          { value: 'conventions', color: 'yellow' },
-          { value: 'api', color: 'blue' },
-          { value: 'database', color: 'purple' },
-          { value: 'infra', color: 'green' },
-        ],
-      },
-      { id: 'date', name: 'Date', type: 'date', dateFormat: 'default' },
-    ],
-    views: [
-      {
-        id: 'v1',
-        name: 'Table',
-        config: {
-          type: 'table',
-          columnOrder: ['title', 'type', 'tags', 'date'],
-          hiddenColumns: [],
-          filters: [],
-          sorts: [],
-          openBehavior: 'center',
-          rowColorCol: 'type',
-        },
-      },
-      {
-        id: 'v2',
-        name: 'By Type',
-        config: {
-          type: 'kanban',
-          groupByCol: 'type',
-          groupOrder: ['Decision', 'Preference', 'Gotcha', 'Fact'],
-          filters: [],
-          sorts: [],
-          openBehavior: 'center',
-          cardProperties: ['tags', 'date'],
-          showPropertyLabels: false,
-          propertyTextClamp: 'truncate',
-          cardColorCol: 'type',
-          groupColBg: true,
-        },
-      },
-    ],
-    seedRows: [
-      { title: 'Use PostgreSQL for the primary datastore', properties: { type: 'Decision', tags: ['architecture', 'database'], date: '2026-07-01' } },
-      { title: 'Prefer functional React components over class components', properties: { type: 'Preference', tags: ['conventions'], date: '2026-07-02' } },
-      { title: 'Staging API rate-limits at 100 req/min — batch writes', properties: { type: 'Gotcha', tags: ['api', 'infra'], date: '2026-07-04' } },
-      { title: 'Design tokens live in tokens.css, not the Tailwind config', properties: { type: 'Fact', tags: ['conventions'], date: '2026-07-05' } },
-    ],
-  },
+const TASK_TRACKER_ROWS: {
+  key: TaskTrackerRowKey;
+  status: keyof TemplateText['taskTracker']['status'];
+  priority: keyof TemplateText['taskTracker']['priority'];
+  assignee: string;
+  dueDate: string;
+}[] = [
+  { key: 'landing', status: 'backlog', priority: 'high', assignee: 'Aisha Patel', dueDate: '2026-06-10' },
+  { key: 'ci', status: 'inProgress', priority: 'high', assignee: 'Marcus Johnson', dueDate: '2026-05-28' },
+  { key: 'tests', status: 'inProgress', priority: 'medium', assignee: 'Kai Rivera', dueDate: '2026-05-30' },
+  { key: 'review', status: 'review', priority: 'medium', assignee: 'Marcus Johnson', dueDate: '2026-05-22' },
+  { key: 'docs', status: 'backlog', priority: 'low', assignee: '', dueDate: '' },
+  { key: 'staging', status: 'done', priority: 'high', assignee: 'Marcus Johnson', dueDate: '2026-05-19' },
+  { key: 'loginBug', status: 'done', priority: 'high', assignee: 'Kai Rivera', dueDate: '2026-05-18' },
 ];
+
+const EVENT_ROWS: { key: EventRowKey; eventDate: string; category: keyof TemplateText['eventCalendar']['category'] }[] = [
+  { key: 'standup', eventDate: '2026-05-21', category: 'meeting' },
+  { key: 'planning', eventDate: '2026-05-22', category: 'meeting' },
+  { key: 'productReview', eventDate: '2026-05-26', category: 'meeting' },
+  { key: 'mvp', eventDate: '2026-05-30', category: 'deadline' },
+  { key: 'summit', eventDate: '2026-06-05', category: 'conference' },
+  { key: 'handoff', eventDate: '2026-06-03', category: 'deadline' },
+  { key: 'offsite', eventDate: '2026-06-12', category: 'personal' },
+];
+
+const BOOK_ROWS: {
+  key: BookKey;
+  status: keyof TemplateText['readingList']['status'];
+  rating: number | null;
+  genre: keyof TemplateText['readingList']['genre'];
+  author: string;
+}[] = [
+  { key: 'pragmatic', status: 'done', rating: 5, genre: 'tech', author: 'David Thomas & Andrew Hunt' },
+  { key: 'dune', status: 'done', rating: 5, genre: 'fiction', author: 'Frank Herbert' },
+  { key: 'sapiens', status: 'reading', rating: null, genre: 'nonFiction', author: 'Yuval Noah Harari' },
+  { key: 'cleanCode', status: 'wantToRead', rating: null, genre: 'tech', author: 'Robert C. Martin' },
+  { key: 'threeBody', status: 'wantToRead', rating: null, genre: 'fiction', author: 'Liu Cixin' },
+  { key: 'briefHistory', status: 'done', rating: 4, genre: 'science', author: 'Stephen Hawking' },
+  { key: 'thinking', status: 'wantToRead', rating: null, genre: 'nonFiction', author: 'Daniel Kahneman' },
+];
+
+const MEMORY_ROWS: {
+  key: MemoryRowKey;
+  type: keyof TemplateText['agentMemory']['type'];
+  tags: (keyof TemplateText['agentMemory']['tags'])[];
+  date: string;
+}[] = [
+  { key: 'postgres', type: 'decision', tags: ['architecture', 'database'], date: '2026-07-01' },
+  { key: 'functional', type: 'preference', tags: ['conventions'], date: '2026-07-02' },
+  { key: 'rateLimit', type: 'gotcha', tags: ['api', 'infra'], date: '2026-07-04' },
+  { key: 'tokens', type: 'fact', tags: ['conventions'], date: '2026-07-05' },
+];
+
+const TABLE_DEFAULTS = { filters: [], sorts: [], openBehavior: 'center' as const };
+
+/** One template, filled in with one language's words. */
+export function buildTemplate(id: TemplateId, text: TemplateText): TemplateDefinition {
+  const title: SchemaColumn = { id: 'title', name: text.stock.title, type: 'text' };
+
+  switch (id) {
+    case 'page-blank':
+      return { id, category: 'page', initialContent: '' };
+    case 'page-meeting-notes':
+      return { id, category: 'page', initialContent: text.meetingNotes };
+    case 'page-project-brief':
+      return { id, category: 'page', initialContent: text.projectBrief };
+    case 'dashboard-blank':
+      return { id, category: 'dashboard', spec: { version: 1, blocks: [] } };
+
+    case 'db-blank':
+      return {
+        id,
+        category: 'database',
+        schema: stockDatabaseSchema(text.stock),
+        views: [
+          {
+            id: 'v1',
+            name: text.views.table,
+            config: { type: 'table', columnOrder: [], hiddenColumns: ['id'], ...TABLE_DEFAULTS },
+          },
+        ],
+      };
+
+    case 'db-task-tracker': {
+      const t = text.taskTracker;
+      const status = [
+        { value: t.status.backlog, color: 'default', group: 'todo' as const },
+        { value: t.status.inProgress, color: 'blue', group: 'in_progress' as const },
+        { value: t.status.review, color: 'yellow', group: 'in_progress' as const },
+        { value: t.status.done, color: 'green', group: 'complete' as const },
+      ];
+      return {
+        id,
+        category: 'database',
+        schema: [
+          title,
+          { id: 'status', name: text.stock.status, type: 'status', options: status },
+          {
+            id: 'priority',
+            name: t.columns.priority,
+            type: 'select',
+            options: [
+              { value: t.priority.low, color: 'green' },
+              { value: t.priority.medium, color: 'yellow' },
+              { value: t.priority.high, color: 'red' },
+            ],
+          },
+          { id: 'assignee', name: t.columns.assignee, type: 'text' },
+          { id: 'dueDate', name: t.columns.dueDate, type: 'date', dateFormat: 'default' },
+        ],
+        views: [
+          {
+            id: 'v1',
+            name: text.views.board,
+            config: {
+              type: 'kanban',
+              groupByCol: 'status',
+              groupOrder: status.map((o) => o.value),
+              ...TABLE_DEFAULTS,
+              cardProperties: ['priority', 'assignee', 'dueDate'],
+              showPropertyLabels: true,
+              propertyTextClamp: 'truncate',
+              cardColorCol: 'priority',
+            },
+          },
+          {
+            id: 'v2',
+            name: text.views.table,
+            config: {
+              type: 'table',
+              columnOrder: ['title', 'status', 'priority', 'assignee', 'dueDate'],
+              hiddenColumns: [],
+              ...TABLE_DEFAULTS,
+            },
+          },
+        ],
+        seedRows: TASK_TRACKER_ROWS.map((row) => ({
+          title: t.rows[row.key],
+          properties: {
+            status: t.status[row.status],
+            priority: t.priority[row.priority],
+            assignee: row.assignee,
+            dueDate: row.dueDate,
+          },
+        })),
+      };
+    }
+
+    case 'db-event-calendar': {
+      const t = text.eventCalendar;
+      return {
+        id,
+        category: 'database',
+        schema: [
+          title,
+          { id: 'eventDate', name: t.columns.eventDate, type: 'date', dateFormat: 'default' },
+          {
+            id: 'category',
+            name: t.columns.category,
+            type: 'select',
+            options: [
+              { value: t.category.meeting, color: 'blue' },
+              { value: t.category.conference, color: 'purple' },
+              { value: t.category.deadline, color: 'red' },
+              { value: t.category.personal, color: 'green' },
+            ],
+          },
+          { id: 'notes', name: t.columns.notes, type: 'text' },
+        ],
+        views: [
+          {
+            id: 'v1',
+            name: text.views.calendar,
+            config: {
+              type: 'calendar',
+              dateCol: 'eventDate',
+              viewMode: 'month',
+              firstDayOfWeek: 'monday',
+              ...TABLE_DEFAULTS,
+              cardColorCol: 'category',
+              cardProperties: ['category'],
+              showPropertyLabels: false,
+              propertyTextClamp: 'truncate',
+            },
+          },
+          {
+            id: 'v2',
+            name: text.views.table,
+            config: {
+              type: 'table',
+              columnOrder: ['title', 'eventDate', 'category', 'notes'],
+              hiddenColumns: [],
+              ...TABLE_DEFAULTS,
+            },
+          },
+        ],
+        seedRows: EVENT_ROWS.map((row) => ({
+          title: t.rows[row.key].title,
+          properties: { eventDate: row.eventDate, category: t.category[row.category], notes: t.rows[row.key].notes },
+        })),
+      };
+    }
+
+    case 'db-reading-list': {
+      const t = text.readingList;
+      return {
+        id,
+        category: 'database',
+        schema: [
+          title,
+          {
+            id: 'status',
+            name: text.stock.status,
+            type: 'select',
+            options: [
+              { value: t.status.wantToRead, color: 'default', group: 'todo' },
+              { value: t.status.reading, color: 'blue', group: 'in_progress' },
+              { value: t.status.done, color: 'green', group: 'complete' },
+            ],
+          },
+          { id: 'rating', name: t.columns.rating, type: 'number' },
+          {
+            id: 'genre',
+            name: t.columns.genre,
+            type: 'select',
+            options: [
+              { value: t.genre.fiction, color: 'purple' },
+              { value: t.genre.nonFiction, color: 'teal' },
+              { value: t.genre.tech, color: 'blue' },
+              { value: t.genre.science, color: 'green' },
+            ],
+          },
+          { id: 'author', name: t.columns.author, type: 'text' },
+        ],
+        views: [
+          {
+            id: 'v1',
+            name: text.views.table,
+            config: {
+              type: 'table',
+              columnOrder: ['title', 'status', 'rating', 'genre', 'author'],
+              hiddenColumns: [],
+              ...TABLE_DEFAULTS,
+              rowColorCol: 'status',
+            },
+          },
+        ],
+        seedRows: BOOK_ROWS.map((row) => ({
+          title: t.books[row.key],
+          properties: { status: t.status[row.status], rating: row.rating, genre: t.genre[row.genre], author: row.author },
+        })),
+      };
+    }
+
+    case 'db-agent-memory': {
+      const t = text.agentMemory;
+      const types = [
+        { value: t.type.decision, color: 'blue' },
+        { value: t.type.preference, color: 'purple' },
+        { value: t.type.gotcha, color: 'red' },
+        { value: t.type.fact, color: 'green' },
+      ];
+      return {
+        id,
+        category: 'database',
+        schema: [
+          title,
+          { id: 'type', name: t.columns.type, type: 'select', options: types },
+          {
+            id: 'tags',
+            name: t.columns.tags,
+            type: 'multi_select',
+            options: [
+              { value: t.tags.architecture, color: 'teal' },
+              { value: t.tags.conventions, color: 'yellow' },
+              { value: t.tags.api, color: 'blue' },
+              { value: t.tags.database, color: 'purple' },
+              { value: t.tags.infra, color: 'green' },
+            ],
+          },
+          { id: 'date', name: t.columns.date, type: 'date', dateFormat: 'default' },
+        ],
+        views: [
+          {
+            id: 'v1',
+            name: text.views.table,
+            config: {
+              type: 'table',
+              columnOrder: ['title', 'type', 'tags', 'date'],
+              hiddenColumns: [],
+              ...TABLE_DEFAULTS,
+              rowColorCol: 'type',
+            },
+          },
+          {
+            id: 'v2',
+            name: t.byType,
+            config: {
+              type: 'kanban',
+              groupByCol: 'type',
+              groupOrder: types.map((o) => o.value),
+              ...TABLE_DEFAULTS,
+              cardProperties: ['tags', 'date'],
+              showPropertyLabels: false,
+              propertyTextClamp: 'truncate',
+              cardColorCol: 'type',
+            },
+          },
+        ],
+        seedRows: MEMORY_ROWS.map((row) => ({
+          title: t.rows[row.key],
+          properties: { type: t.type[row.type], tags: row.tags.map((tag) => t.tags[tag]), date: row.date },
+        })),
+      };
+    }
+  }
+}

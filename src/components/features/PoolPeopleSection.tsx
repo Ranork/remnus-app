@@ -1,10 +1,14 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Users, Mail, Trash, Copy, Loader2 } from 'lucide-react';
+import { Mail, Trash, Copy, Loader2, Check } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { getPoolMembers, removeUserFromPool } from '@/lib/actions/billing';
 import { revokeWorkspaceInvite } from '@/lib/actions/invites';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Tooltip } from '@/components/ui/tooltip';
+import { SettingsSection } from '@/components/ui/settings';
 
 type Pool = Awaited<ReturnType<typeof getPoolMembers>>;
 
@@ -35,67 +39,85 @@ export default function PoolPeopleSection() {
   };
 
   if (!pool) {
-    return <div className="py-4 flex justify-center"><Loader2 size={16} className="animate-spin text-neutral-600" /></div>;
+    return (
+      <div role="status" className="flex justify-center py-4">
+        <Loader2 size={16} className="animate-spin text-fg-3" />
+      </div>
+    );
   }
 
   return (
-    <div>
-      <div className="flex items-center justify-between mb-2">
-        <span className="flex items-center gap-1.5 text-xs text-neutral-500">
-          <Users size={12} /> {t('peopleTitle')}
-        </span>
-        <span className="text-[11px] text-neutral-500">{pool.usage.used} / {isFinite(pool.usage.limit) ? pool.usage.limit : '∞'}</span>
-      </div>
-
-      <div className="divide-y divide-neutral-800 border border-neutral-800 rounded-lg overflow-hidden">
+    <SettingsSection
+      title={t('peopleTitle')}
+      action={<Badge variant="outline">{pool.usage.used} / {isFinite(pool.usage.limit) ? pool.usage.limit : '∞'}</Badge>}
+    >
+      <ul className="flex flex-col divide-y divide-line rounded-surface shadow-[inset_0_0_0_1px_var(--color-line)]">
         {pool.members.map((m) => (
-          <div key={m.userId} className="flex items-center gap-2.5 px-3 py-2">
-            <div className="w-6 h-6 rounded-full bg-neutral-800 flex items-center justify-center text-[10px] text-neutral-300 shrink-0 overflow-hidden">
-              {m.image ? <img src={m.image} alt="" className="w-full h-full object-cover" /> : (m.name || m.email || '?').slice(0, 1).toUpperCase()}
-            </div>
+          <li key={m.userId} className="flex items-center gap-2.5 px-3 py-2">
+            <span className="flex size-6 shrink-0 items-center justify-center overflow-hidden rounded-full bg-hover text-2xs font-semibold text-fg-2">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              {m.image ? <img src={m.image} alt="" className="size-full object-cover" /> : (m.name || m.email || '?').slice(0, 1).toUpperCase()}
+            </span>
             <div className="min-w-0 flex-1">
-              <p className="m-0 text-[12.5px] text-neutral-100 truncate">{m.name || m.email}</p>
-              <p className="m-0 text-[10.5px] text-neutral-500 truncate">
-                {m.workspaces.map((w) => w.name).join(', ')}
-              </p>
+              <p className="truncate text-ui text-fg">{m.name || m.email}</p>
+              <p className="truncate text-xs text-fg-3">{m.workspaces.map((w) => w.name).join(', ')}</p>
             </div>
             {m.isOwner ? (
-              <span className="text-[10px] text-neutral-500 shrink-0">{t('youOwner')}</span>
+              <span className="shrink-0 text-xs text-fg-3">{t('youOwner')}</span>
             ) : (
-              <button
-                onClick={() => removeMember(m.userId)}
-                disabled={busy === m.userId}
-                className="shrink-0 text-neutral-500 hover:text-red-400 disabled:opacity-50 transition-colors"
-                title={t('removeFromAll')}
-              >
-                {busy === m.userId ? <Loader2 size={13} className="animate-spin" /> : <Trash size={13} />}
-              </button>
+              <Tooltip content={t('removeFromAll')}>
+                <Button
+                  size="icon-sm"
+                  variant="ghost"
+                  onClick={() => removeMember(m.userId)}
+                  disabled={!!busy && busy !== m.userId}
+                  loading={busy === m.userId}
+                  aria-label={t('removeFromAll')}
+                  className="hover:text-red-400"
+                >
+                  <Trash />
+                </Button>
+              </Tooltip>
             )}
-          </div>
+          </li>
         ))}
 
         {pool.invites.map((inv) => (
-          <div key={inv.id} className="flex items-center gap-2.5 px-3 py-2 bg-signal/5">
-            <Mail size={13} className="text-signal-text shrink-0 ml-1" />
+          <li key={inv.id} className="flex items-center gap-2.5 px-3 py-2">
+            <span className="flex size-6 shrink-0 items-center justify-center">
+              <Mail size={14} className="text-fg-3" />
+            </span>
             <div className="min-w-0 flex-1">
-              <p className="m-0 text-[12.5px] text-neutral-200 truncate">{inv.email}</p>
-              <p className="m-0 text-[10.5px] text-neutral-500 truncate">{t('pendingIn', { workspace: inv.workspaceName })}</p>
+              <p className="truncate text-ui text-fg-2">{inv.email}</p>
+              <p className="truncate text-xs text-fg-3">{t('pendingIn', { workspace: inv.workspaceName })}</p>
             </div>
-            <button onClick={() => copy(inv.inviteLink, inv.id)} className="shrink-0 text-neutral-500 hover:text-neutral-200 transition-colors" title={t('copy')}>
-              {copied === inv.id ? <span className="text-[10px] text-green-400">{t('copied')}</span> : <Copy size={13} />}
-            </button>
-            <button onClick={() => revoke(inv.id)} disabled={busy === inv.id} className="shrink-0 text-neutral-500 hover:text-red-400 disabled:opacity-50 transition-colors" title={t('revokeInvite')}>
-              {busy === inv.id ? <Loader2 size={13} className="animate-spin" /> : <Trash size={13} />}
-            </button>
-          </div>
+            <Tooltip content={copied === inv.id ? t('copied') : t('copy')}>
+              <Button size="icon-sm" variant="ghost" onClick={() => copy(inv.inviteLink, inv.id)} aria-label={t('copy')}>
+                {copied === inv.id ? <Check className="text-green-400" /> : <Copy />}
+              </Button>
+            </Tooltip>
+            <Tooltip content={t('revokeInvite')}>
+              <Button
+                size="icon-sm"
+                variant="ghost"
+                onClick={() => revoke(inv.id)}
+                disabled={!!busy && busy !== inv.id}
+                loading={busy === inv.id}
+                aria-label={t('revokeInvite')}
+                className="hover:text-red-400"
+              >
+                <Trash />
+              </Button>
+            </Tooltip>
+          </li>
         ))}
 
         {pool.members.length === 0 && pool.invites.length === 0 && (
-          <div className="px-3 py-3 text-[12px] text-neutral-500">{t('peopleEmpty')}</div>
+          <li className="px-3 py-3 text-xs text-fg-3">{t('peopleEmpty')}</li>
         )}
-      </div>
+      </ul>
 
-      <p className="m-0 mt-2 text-[10.5px] text-neutral-600 leading-relaxed">{t('peopleHint')}</p>
-    </div>
+      <p className="text-xs leading-relaxed text-fg-3">{t('peopleHint')}</p>
+    </SettingsSection>
   );
 }

@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Loader2 } from 'lucide-react';
+import { AlertCircle, Loader2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { acceptInvite } from '@/lib/actions/invites';
+import { AuthNotice } from '@/components/features/auth/AuthScreen';
 
 // Auto-accepts the invite for an already-logged-in user, then sends them to the app.
 export default function InviteAcceptClient({ token }: { token: string }) {
@@ -24,10 +25,10 @@ export default function InviteAcceptClient({ token }: { token: string }) {
     return () => { done = true; };
   }, [token, router, t]);
 
-  if (error) return <p className="text-sm text-red-400">{error}</p>;
+  if (error) return <AuthNotice tone="danger" icon={<AlertCircle />}>{error}</AuthNotice>;
   return (
-    <div className="flex items-center gap-2 text-sm text-neutral-400">
-      <Loader2 size={16} className="animate-spin" /> {t('inviteAccepting')}
-    </div>
+    <p className="flex items-center gap-2 text-sm text-fg-3" role="status">
+      <Loader2 className="size-4 animate-spin" aria-hidden /> {t('inviteAccepting')}
+    </p>
   );
 }

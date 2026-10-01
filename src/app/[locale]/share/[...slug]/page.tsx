@@ -134,9 +134,9 @@ async function getNormalRoute(pageId: string): Promise<string> {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const result = await resolveShare(slug);
-  if (!result) return { title: 'Not Found' };
+  if (!result) return { title: (await getTranslations('Sharing'))('notFound') };
   const { page } = result;
-  const title = page.title || 'Untitled';
+  const title = page.title || (await getTranslations('Page'))('untitled');
   const description = (page.content || '').replace(/[#*`\[\]]/g, '').slice(0, 160) || undefined;
   return {
     metadataBase: new URL(METADATA_BASE_URL),

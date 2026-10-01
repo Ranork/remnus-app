@@ -1,77 +1,53 @@
 import { getTranslations } from 'next-intl/server';
 import { GitBranch, Mail, MessageSquare } from 'lucide-react';
+import PageHead from './site/PageHead';
 import ContactForm from './ContactForm';
 
 export default async function ContactSection() {
   const t = await getTranslations('Contact');
 
   const channels = [
-    {
-      icon: GitBranch,
-      title: t('githubTitle'),
-      desc: t('githubDesc'),
-      label: t('githubLabel'),
-      href: 'https://github.com',
-    },
-    {
-      icon: Mail,
-      title: t('emailTitle'),
-      desc: t('emailDesc'),
-      label: t('emailLabel'),
-      href: 'mailto:info@remnus.com',
-    },
-    {
-      icon: MessageSquare,
-      title: t('communityTitle'),
-      desc: t('communityDesc'),
-      label: t('communityLabel'),
-      href: null,
-    },
+    { icon: GitBranch, title: t('githubTitle'), desc: t('githubDesc'), label: 'github.com/Ranork/remnus-app', href: 'https://github.com/Ranork/remnus-app' },
+    { icon: Mail, title: t('emailTitle'), desc: t('emailDesc'), label: t('emailLabel'), href: 'mailto:info@remnus.com' },
+    { icon: MessageSquare, title: t('communityTitle'), desc: t('communityDesc'), label: t('communityLabel'), href: null },
   ];
 
   return (
-    <section>
-      <div className="mx-auto max-w-6xl px-6 py-20 md:py-28">
-        <div className="text-center mb-14">
-          <h1 className="text-3xl md:text-5xl font-bold text-neutral-100">{t('title')}</h1>
-          <p className="mt-3 text-neutral-400 max-w-xl mx-auto leading-relaxed">{t('subtitle')}</p>
-        </div>
+    <section className="px-4 sm:px-8">
+      <div className="mx-auto max-w-[1200px] pt-14 pb-24 sm:pt-20 lg:pb-32">
+        <PageHead title={t('title')} lede={t('subtitle')} />
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 max-w-4xl mx-auto">
-          {channels.map(({ icon: Icon, title, desc, label, href }) => (
-            <div
-              key={title}
-              className="rounded-xl border border-neutral-800 bg-neutral-900 p-8 flex flex-col gap-4 hover:border-neutral-700 transition-colors"
-            >
-              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-500/10 text-blue-500">
-                <Icon size={20} />
-              </div>
-              <div>
-                <h3 className="text-base font-semibold text-neutral-100 mb-1">{title}</h3>
-                <p className="text-sm text-neutral-400 leading-relaxed">{desc}</p>
-              </div>
-              {href ? (
-                <a
-                  href={href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="mt-auto text-sm text-blue-500 hover:text-blue-400 transition-colors break-all"
-                >
-                  {label}
-                </a>
-              ) : (
-                <p className="mt-auto text-sm text-neutral-600">{label}</p>
-              )}
-            </div>
-          ))}
-        </div>
+        <div className="mt-12 grid gap-10 lg:mt-16 lg:grid-cols-12 lg:gap-12">
+          <ul className="m-0 list-none space-y-0 p-0 lg:col-span-5">
+            {channels.map(({ icon: Icon, title, desc, label, href }) => (
+              <li key={title} className="flex gap-4 border-t border-line-strong py-6">
+                <Icon className="mt-0.5 size-5 shrink-0 text-fg-3" aria-hidden />
+                <div className="min-w-0">
+                  <h2 className="m-0 text-[15px] font-semibold text-fg">{title}</h2>
+                  <p className="m-0 mt-1 text-[15px] leading-relaxed text-fg-2">{desc}</p>
+                  {href ? (
+                    <a
+                      href={href}
+                      target={href.startsWith('http') ? '_blank' : undefined}
+                      rel="noopener noreferrer"
+                      className="mt-2 inline-flex text-sm font-medium break-all text-fg underline decoration-line-strong underline-offset-4 hover:decoration-fg-3"
+                    >
+                      {label}
+                    </a>
+                  ) : (
+                    <p className="m-0 mt-2 text-sm text-fg-3">{label}</p>
+                  )}
+                </div>
+              </li>
+            ))}
+          </ul>
 
-        <div className="mt-16 max-w-xl mx-auto">
-          <h2 className="text-center text-lg font-semibold text-neutral-100 mb-6">{t('formHeading')}</h2>
-          <ContactForm />
+          <div className="lg:col-span-7">
+            <h2 className="m-0 mb-5 text-lg font-semibold tracking-[-0.015em] text-fg">{t('formHeading')}</h2>
+            <ContactForm />
+            <p className="m-0 mt-5 text-ui text-fg-3">{t('responseNote')}</p>
+          </div>
         </div>
-
-        <p className="text-center text-xs text-neutral-600 mt-10">{t('responseNote')}</p>
       </div>
     </section>
   );

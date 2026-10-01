@@ -1,10 +1,14 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { X, Trash2, FileText, Database as DatabaseIcon, LayoutDashboard, Loader2, RotateCcw, ChevronRight } from 'lucide-react';
+import { Trash2, FileText, Database as DatabaseIcon, LayoutDashboard, Loader2, RotateCcw, ChevronRight } from 'lucide-react';
 import { useTranslations, useLocale } from 'next-intl';
 import PageIcon from '@/components/features/PageIcon';
 import AgentMark from './agents/AgentMark';
 import { getMyTrash, restoreTrashItem, type TrashWorkspaceGroup, type TrashEntry } from '@/lib/actions/trash';
+import { Dialog, DialogBody, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { EmptyState } from '@/components/ui/empty-state';
 
 const TYPE_ICON: Record<TrashEntry['itemType'], typeof FileText> = {
   page: FileText,
@@ -43,43 +47,37 @@ function TrashRow({
   const isAgent = entry.deletedByKind === 'agent';
 
   return (
-    <div className="flex items-center gap-2.5 px-3 py-2.5">
-      <Icon size={14} className="shrink-0 text-neutral-500" />
+    <li className="flex items-center gap-3 px-3 py-2.5">
+      <Icon size={16} className="shrink-0 text-fg-3" />
       <div className="min-w-0 flex-1">
         {entry.breadcrumb.length > 0 && (
-          <div className="mb-0.5 flex items-center gap-1 truncate text-[10px] text-neutral-600">
+          <div className="mb-0.5 flex items-center gap-1 truncate text-xs text-fg-4">
             {entry.breadcrumb.map((crumb, i) => (
               <span key={i} className="flex items-center gap-1 truncate">
-                {i > 0 && <ChevronRight size={9} className="shrink-0" />}
+                {i > 0 && <ChevronRight size={12} className="shrink-0" />}
                 <span className="truncate">{crumb}</span>
               </span>
             ))}
           </div>
         )}
-        <p className="truncate text-[13px] text-neutral-200">{entry.title || t('trashUntitled')}</p>
-        <div className="mt-0.5 flex items-center gap-1.5 text-[11px]">
+        <p className="truncate text-ui text-fg">{entry.title || t('trashUntitled')}</p>
+        <div className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-fg-3">
           {isAgent ? (
-            <span className="flex items-center gap-1 font-medium text-amber-500/90">
-              <AgentMark hint={entry.deletedByLabel} size={11} fallback="globe" />
+            <span className="flex items-center gap-1 text-fg-2">
+              <AgentMark hint={entry.deletedByLabel} size={12} fallback="globe" />
               {t('trashDeletedByAgent', { name: entry.deletedByLabel })}
             </span>
           ) : (
-            <span className="text-neutral-400">{t('trashDeletedByHuman', { name: entry.deletedByLabel })}</span>
+            <span>{t('trashDeletedByHuman', { name: entry.deletedByLabel })}</span>
           )}
-          <span className="text-neutral-600">·</span>
-          <span className="text-neutral-600">{relativeTime(new Date(entry.createdAt), locale)}</span>
+          <span>{relativeTime(new Date(entry.createdAt), locale)}</span>
         </div>
       </div>
-      <button
-        type="button"
-        onClick={() => onRestore(entry.id)}
-        disabled={restoring}
-        className="inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded border border-neutral-800 px-2.5 py-1 text-[11px] font-medium text-neutral-300 transition-colors hover:border-neutral-700 hover:text-neutral-100 disabled:cursor-not-allowed disabled:opacity-50"
-      >
-        {restoring ? <Loader2 size={11} className="animate-spin" /> : <RotateCcw size={11} />}
+      <Button size="sm" onClick={() => onRestore(entry.id)} loading={restoring} className="shrink-0">
+        <RotateCcw />
         {t('trashRestore')}
-      </button>
-    </div>
+      </Button>
+    </li>
   );
 }
 
@@ -94,25 +92,23 @@ function WorkspaceSection({
 }) {
   const { workspace: ws, entries } = group;
   return (
-    <div className="space-y-1">
-      <div className="mb-1 flex items-center gap-2 px-1">
+    <section className="flex flex-col gap-2">
+      <h3 className="flex items-center gap-2 px-1 text-xs font-medium text-fg-3">
         {ws.icon
-          ? <PageIcon icon={ws.icon} iconColor={ws.iconColor} size={13} />
-          : <div className="flex h-3.5 w-3.5 items-center justify-center rounded bg-neutral-700 text-[8px] font-bold text-neutral-400">
+          ? <PageIcon icon={ws.icon} iconColor={ws.iconColor} size={14} />
+          : <span className="flex size-3.5 items-center justify-center rounded-sm bg-hover text-2xs leading-none font-semibold text-fg-3">
               {ws.name.charAt(0).toUpperCase()}
-            </div>
+            </span>
         }
-        <span className="flex-1 truncate text-2xs font-medium text-neutral-400">
-          {ws.name}
-        </span>
-      </div>
-      <div className="divide-y divide-neutral-800 overflow-hidden rounded-lg border border-neutral-800 bg-neutral-900/20">
-        {entries.length === 0 ? (
-          <div className="px-3 py-2.5">
-            <span className="text-[11px] italic text-neutral-600">{t('trashWorkspaceEmpty')}</span>
-          </div>
-        ) : (
-          entries.map((entry) => (
+        <span className="truncate">{ws.name}</span>
+      </h3>
+      {entries.length === 0 ? (
+        <p className="rounded-surface px-3 py-2.5 text-xs text-fg-3 shadow-[inset_0_0_0_1px_var(--color-line)]">
+          {t('trashWorkspaceEmpty')}
+        </p>
+      ) : (
+        <ul className="flex flex-col divide-y divide-line rounded-surface shadow-[inset_0_0_0_1px_var(--color-line)]">
+          {entries.map((entry) => (
             <TrashRow
               key={entry.id}
               entry={entry}
@@ -121,10 +117,10 @@ function WorkspaceSection({
               restoring={restoringId === entry.id}
               onRestore={(id) => onRestore(ws.id, id)}
             />
-          ))
-        )}
-      </div>
-    </div>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }
 
@@ -147,12 +143,6 @@ export default function TrashModal({ onClose }: { onClose: () => void }) {
   };
 
   useEffect(load, []);
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [onClose]);
 
   const totalEntries = groups?.reduce((sum, g) => sum + g.entries.length, 0) ?? 0;
 
@@ -177,53 +167,28 @@ export default function TrashModal({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <div
-      className="fixed inset-0 z-100 flex items-center justify-center bg-black/60 p-4 md:p-6"
-      onClick={onClose}
-    >
-      <div
-        className="modal-shadow flex w-full max-w-full animate-scale-in flex-col overflow-hidden rounded-lg border border-neutral-800 bg-neutral-850 sm:max-w-2xl"
-        style={{ maxHeight: '88vh' }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="flex shrink-0 items-center justify-between border-b border-neutral-800 bg-neutral-900/30 px-6 py-4">
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-7 w-7 items-center justify-center rounded-md border border-neutral-700 bg-neutral-800">
-              <Trash2 size={14} className="text-neutral-400" />
-            </div>
-            <span className="text-sm font-semibold text-neutral-100">{t('trashModalTitle')}</span>
-            {totalEntries > 0 && (
-              <span className="rounded-full border border-neutral-700 bg-neutral-800 px-1.5 py-0.5 text-[10px] font-bold text-neutral-400">
-                {totalEntries}
-              </span>
-            )}
-          </div>
-          <button
-            onClick={onClose}
-            className="cursor-pointer rounded p-1 text-neutral-500 transition-colors hover:bg-neutral-800 hover:text-neutral-200"
-          >
-            <X size={16} />
-          </button>
-        </div>
+    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent size="lg">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            {t('trashModalTitle')}
+            {totalEntries > 0 && <Badge>{totalEntries}</Badge>}
+          </DialogTitle>
+        </DialogHeader>
 
-        {/* Body */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-5">
+        <DialogBody className="flex flex-col gap-6">
           {notice && (
-            <div className="rounded border border-amber-500/20 bg-amber-500/5 px-3 py-2 text-xs text-amber-300">
+            <p role="status" className="rounded-control bg-hover px-3 py-2 text-xs leading-relaxed text-fg-2">
               {notice}
-            </div>
+            </p>
           )}
 
           {groups === null ? (
-            <div className="flex justify-center py-16">
-              <div className="h-5 w-5 animate-spin rounded-full border-2 border-neutral-800 border-t-neutral-500" />
+            <div role="status" className="flex justify-center py-16">
+              <Loader2 size={18} className="animate-spin text-fg-3" />
             </div>
           ) : totalEntries === 0 ? (
-            <div className="flex flex-col items-center gap-2 py-16 text-center">
-              <Trash2 size={20} className="text-neutral-700" />
-              <p className="text-xs text-neutral-500">{t('trashEmpty')}</p>
-            </div>
+            <EmptyState icon={<Trash2 />} title={t('trashEmpty')} />
           ) : (
             groups.map((group) => (
               <WorkspaceSection
@@ -236,8 +201,8 @@ export default function TrashModal({ onClose }: { onClose: () => void }) {
               />
             ))
           )}
-        </div>
-      </div>
-    </div>
+        </DialogBody>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -8,6 +8,8 @@ import { redirect } from 'next/navigation';
 import { auth } from '@/auth';
 import { createDemoSeedData } from '@/lib/seed';
 import { deleteWorkspaceData } from '@/lib/services/workspaceDeletion';
+import { getRequestLocale } from '@/i18n/requestLocale';
+import { getSampleText } from '@/lib/starterContent';
 
 // Each "Try the demo" click provisions its OWN throwaway demo account
 // (`demo+<uuid>@remnus.com`, role 'demo') with a freshly seeded workspace.
@@ -86,9 +88,11 @@ export async function loginAsDemo(_prevState: unknown, _formData: FormData): Pro
   // Reap expired demo accounts so the table doesn't grow unbounded.
   await cleanupStaleDemoUsers(session?.user?.id);
 
-  // Provision a fresh, isolated demo account for this visitor.
+  // Provision a fresh, isolated demo account for this visitor — named, and its
+  // workspace written, in the visitor's language.
+  const sample = await getSampleText(await getRequestLocale());
   const demoUserId = crypto.randomUUID();
-  const demoName = 'Demo User';
+  const demoName = sample.demoUserName;
   await db.insert(users).values({
     id: demoUserId,
     name: demoName,
@@ -98,7 +102,7 @@ export async function loginAsDemo(_prevState: unknown, _formData: FormData): Pro
   });
 
   // Seed this visitor's own workspace (pages + databases).
-  await createDemoSeedData(demoUserId, demoName);
+  await createDemoSeedData(demoUserId, sample);
 
   // Durable usage log — this account gets reaped in 6h (and its user_sessions
   // rows with it), so the admin panel's demo history has to be written to a

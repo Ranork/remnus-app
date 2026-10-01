@@ -182,7 +182,7 @@ export function blogIndexJsonLd() {
 export function blogIndexBreadcrumbJsonLd() {
   return breadcrumbJsonLd([
     { name: 'Home', url: METADATA_BASE_URL },
-    { name: 'Docs', url: `${METADATA_BASE_URL}/docs` },
+    { name: 'Blog', url: `${METADATA_BASE_URL}/docs` },
   ]);
 }
 
@@ -192,7 +192,7 @@ export function blogBreadcrumbJsonLd(slug: string) {
   if (!post) return null;
   return breadcrumbJsonLd([
     { name: 'Home', url: METADATA_BASE_URL },
-    { name: 'Docs', url: `${METADATA_BASE_URL}/docs` },
+    { name: 'Blog', url: `${METADATA_BASE_URL}/docs` },
     { name: post.meta.title, url: docsUrl(slug) },
   ]);
 }

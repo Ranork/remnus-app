@@ -2,6 +2,7 @@
 import { useState, useEffect, useTransition } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import WorkspaceSidebar from './WorkspaceSidebar';
+import type { AgentPresence } from '@/lib/agentPresence';
 import type { WorkspaceItemRow } from '@/lib/actions/workspace';
 import { logout } from '@/lib/actions/auth';
 import { createPage } from '@/lib/actions/page';
@@ -82,6 +83,7 @@ export default function MobileNavWrapper({
   activeWorkspace,
   currentUser,
   isProjectWindow = false,
+  presence,
 }: {
   items: WorkspaceItemRow[];
   workspaces: WorkspaceType[];
@@ -90,6 +92,8 @@ export default function MobileNavWrapper({
   /** Session locked to one workspace (`npx remnus open`) — leave out everything
    *  account-level, which the server denies anyway. See the `(app)` layout. */
   isProjectWindow?: boolean;
+  /** Agent presence for the drawer's copy of the sidebar (see `WorkspaceSidebar`). */
+  presence?: AgentPresence;
 }) {
   const t = useTranslations('MobileNav');
   const tLang = useTranslations('LanguageSwitcher');
@@ -179,6 +183,7 @@ export default function MobileNavWrapper({
             currentUser={currentUser}
             hideBrandHeader
             isProjectWindow={isProjectWindow}
+            presence={presence}
           />
         </div>
       </BottomSheet>

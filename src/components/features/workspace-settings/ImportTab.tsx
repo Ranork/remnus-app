@@ -2,7 +2,13 @@
 import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { Upload, FileArchive, CheckCircle, AlertCircle, Loader2, Layers, FileText, Database, Image, ArrowLeft, BookOpen } from 'lucide-react';
+import { CheckCircle, Layers, FileText, Database, Image as ImageIcon, BookOpen, ChevronRight } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
+import { SettingsPage, SettingsSection } from '@/components/ui/settings';
+import { cn } from '@/lib/cn';
+import { DropZone, ImportError, ImportHeader, Working, formatBytes } from './importParts';
 import OkfImport from '@/components/features/workspace-settings/OkfImport';
 import {
   parseNotionExport,
@@ -11,13 +17,6 @@ import {
   type NotionParseResult,
   type NotionSpace,
 } from '@/lib/import/notion-parser';
-
-function formatBytes(bytes: number): string {
-  if (bytes === 0) return '0 B';
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
-  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
-}
 
 // ── Brand icons ────────────────────────────────────────────────────────────────
 
@@ -258,223 +257,167 @@ function NotionImport({ onBack }: { onBack: () => void }) {
   );
 
   return (
-    <div className="space-y-5">
-      {/* Back + header */}
-      <div className="flex items-center gap-2">
-        <button onClick={onBack} className="p-1 rounded text-neutral-500 hover:text-neutral-200 hover:bg-neutral-800 transition-colors cursor-pointer">
-          <ArrowLeft size={14} />
-        </button>
-        <div className="flex items-center gap-2">
-          <NotionIcon size={18} />
-          <div>
-            <h3 className="text-sm font-semibold text-neutral-100">{t('importTitle')}</h3>
-            <p className="text-xs text-neutral-400">{t('importHint')}</p>
-          </div>
-        </div>
-      </div>
+    <SettingsPage>
+      <ImportHeader
+        icon={<NotionIcon size={20} />}
+        title={t('importTitle')}
+        hint={t('importHint')}
+        backLabel={t('okfImportBack')}
+        onBack={onBack}
+      />
 
       {/* How-to steps */}
       {step === 'idle' && (
-        <div className="bg-neutral-900 border border-neutral-800 p-4 space-y-2">
-          <p className="text-xs font-semibold text-neutral-300">{t('importStepsTitle')}</p>
-          <ol className="space-y-1">
+        <SettingsSection title={t('importStepsTitle')}>
+          <ol className="flex flex-col gap-1.5">
             {(['importStep1', 'importStep2', 'importStep3', 'importStep4'] as const).map((key, i) => (
-              <li key={key} className="flex gap-2 text-xs text-neutral-400">
-                <span className="text-neutral-600 shrink-0">{i + 1}.</span>
+              <li key={key} className="flex gap-2 text-xs leading-relaxed text-fg-2">
+                <span className="w-4 shrink-0 text-fg-4">{i + 1}.</span>
                 <span>{t(key)}</span>
               </li>
             ))}
           </ol>
-          <p className="text-xs text-neutral-500 mt-2">{t('importNote')}</p>
-        </div>
+          <p className="text-xs leading-relaxed text-fg-3">{t('importNote')}</p>
+        </SettingsSection>
       )}
 
       {/* Drop zone */}
       {(step === 'idle' || step === 'error') && (
-        <div
-          className={`border-2 border-dashed p-8 text-center transition-colors cursor-pointer ${
-            file ? 'border-signal/50 bg-signal/5' : 'border-neutral-700 hover:border-neutral-500'
-          }`}
-          onClick={() => inputRef.current?.click()}
-          onDragOver={e => e.preventDefault()}
+        <DropZone
+          file={file}
+          onPick={() => inputRef.current?.click()}
           onDrop={handleDrop}
+          label={t('importDropZone')}
+          hint={t('importDropHint')}
         >
           <input ref={inputRef} type="file" accept=".zip" className="hidden" onChange={handleFileChange} />
-          {file ? (
-            <div className="flex flex-col items-center gap-2">
-              <FileArchive size={24} className="text-signal-text" />
-              <p className="text-sm text-neutral-200 font-medium truncate max-w-xs">{file.name}</p>
-              <p className="text-xs text-neutral-500">{formatBytes(file.size)}</p>
-            </div>
-          ) : (
-            <div className="flex flex-col items-center gap-2">
-              <Upload size={24} className="text-neutral-600" />
-              <p className="text-sm text-neutral-400">{t('importDropZone')}</p>
-              <p className="text-xs text-neutral-600">{t('importDropHint')}</p>
-            </div>
-          )}
-        </div>
+        </DropZone>
       )}
 
       {/* Analyzing */}
-      {step === 'analyzing' && (
-        <div className="flex items-center gap-3 py-6 justify-center text-neutral-400">
-          <Loader2 size={16} className="animate-spin" />
-          <span className="text-sm">{t('importAnalyzing')}</span>
-        </div>
-      )}
+      {step === 'analyzing' && <Working label={t('importAnalyzing')} />}
 
       {/* Space selection */}
       {step === 'preview' && spaces.length > 0 && (
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <p className="text-xs font-semibold text-neutral-300">{t('importSpacesFound', { count: spaces.length })}</p>
-            <div className="flex gap-3 text-xs text-neutral-500">
-              <button onClick={() => setSelected(new Set(spaces.map(s => s.name)))} className="hover:text-neutral-300 cursor-pointer">{t('importSelectAll')}</button>
-              <button onClick={() => setSelected(new Set())} className="hover:text-neutral-300 cursor-pointer">{t('importSelectNone')}</button>
-            </div>
-          </div>
-
-          <div className="space-y-1">
+        <SettingsSection
+          title={t('importSpacesFound', { count: spaces.length })}
+          action={
+            <>
+              <Button variant="ghost" size="xs" onClick={() => setSelected(new Set(spaces.map(s => s.name)))}>{t('importSelectAll')}</Button>
+              <Button variant="ghost" size="xs" onClick={() => setSelected(new Set())}>{t('importSelectNone')}</Button>
+            </>
+          }
+        >
+          <div className="flex flex-col divide-y divide-line rounded-surface shadow-[inset_0_0_0_1px_var(--color-line)]">
             {spaces.map(space => {
               const isSelected = selected.has(space.name);
               return (
-                <button
+                <label
                   key={space.name}
-                  onClick={() => toggleSpace(space.name)}
-                  className={`w-full flex items-center gap-3 px-3 py-2.5 border transition-colors text-left cursor-pointer ${
-                    isSelected
-                      ? 'border-signal/40 bg-signal/5 text-neutral-100'
-                      : 'border-neutral-800 text-neutral-400 hover:border-neutral-700'
-                  }`}
+                  className="flex cursor-pointer items-center gap-3 px-3 py-2.5 transition-colors hover:bg-hover/50"
                 >
-                  <div className={`w-3.5 h-3.5 shrink-0 border rounded-sm flex items-center justify-center transition-colors ${isSelected ? 'bg-signal border-signal' : 'border-neutral-600'}`}>
-                    {isSelected && <span className="text-signal-fg text-2xs font-bold leading-none">✓</span>}
-                  </div>
-                  <Layers size={13} className="shrink-0 text-neutral-500" />
-                  <span className="flex-1 text-sm font-medium truncate">{space.name}</span>
-                  <div className="flex items-center gap-3 shrink-0 text-[11px] text-neutral-500">
+                  <Checkbox checked={isSelected} onCheckedChange={() => toggleSpace(space.name)} />
+                  <Layers size={14} className="shrink-0 text-fg-3" />
+                  <span className={cn('min-w-0 flex-1 truncate text-ui font-medium', isSelected ? 'text-fg' : 'text-fg-2')}>{space.name}</span>
+                  <span className="flex shrink-0 items-center gap-3 text-xs text-fg-3">
                     {space.stats.pages > 0 && (
-                      <span className="flex items-center gap-1"><FileText size={10} />{space.stats.pages}</span>
+                      <span className="flex items-center gap-1"><FileText size={12} />{space.stats.pages}</span>
                     )}
                     {space.stats.databases > 0 && (
-                      <span className="flex items-center gap-1"><Database size={10} />{space.stats.databases}</span>
+                      <span className="flex items-center gap-1"><Database size={12} />{space.stats.databases}</span>
                     )}
                     {space.stats.imageCount > 0 && (
-                      <span className={`flex items-center gap-1 ${isSelected && importImages ? 'text-amber-400' : ''}`}>
-                        <Image size={10} />
+                      <span className="flex items-center gap-1" title={formatBytes(space.stats.imageBytes)}>
+                        <ImageIcon size={12} />
                         {space.stats.imageCount}
-                        <span className="text-neutral-600">({formatBytes(space.stats.imageBytes)})</span>
                       </span>
                     )}
-                  </div>
-                </button>
+                  </span>
+                </label>
               );
             })}
           </div>
 
           {totalSelected.imageCount > 0 && (
-            <div className="pt-3 mt-1 border-t border-neutral-800">
-              <button onClick={() => setImportImages(v => !v)} className="w-full flex items-center gap-3 text-left cursor-pointer group">
-                <div className={`w-4 h-4 shrink-0 border rounded-sm flex items-center justify-center transition-colors ${importImages ? 'bg-amber-500 border-amber-500' : 'border-neutral-600 group-hover:border-neutral-400'}`}>
-                  {importImages && <span className="text-white text-2xs font-bold leading-none">✓</span>}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <span className="text-xs font-medium text-neutral-300 group-hover:text-neutral-200 transition-colors">{t('importIncludeImages')}</span>
-                  <span className="ml-1.5 text-[11px] text-neutral-600">{totalSelected.imageCount} {t('importImageCount')} · {formatBytes(totalSelected.imageBytes)}</span>
-                </div>
-              </button>
-              {importImages && <p className="text-[11px] text-amber-400/60 mt-2 pl-7">{t('importImagesWarning')}</p>}
+            <div className="flex flex-col gap-1.5">
+              <label className="flex cursor-pointer items-start gap-2.5">
+                <Checkbox checked={importImages} onCheckedChange={(v) => setImportImages(v)} className="mt-0.5" />
+                <span className="min-w-0">
+                  <span className="text-ui font-medium text-fg">{t('importIncludeImages')}</span>
+                  <span className="mt-0.5 block text-xs text-fg-3">
+                    {totalSelected.imageCount} {t('importImageCount')}, {formatBytes(totalSelected.imageBytes)}
+                  </span>
+                </span>
+              </label>
+              {importImages && <p className="pl-6.5 text-xs leading-relaxed text-amber-400">{t('importImagesWarning')}</p>}
             </div>
           )}
 
           {selected.size > 0 && (
-            <p className="text-xs text-neutral-500">
-              {t('importWillCreate', { count: selected.size })}
-              {' · '}
-              {t('importTotalItems', { pages: totalSelected.pages, databases: totalSelected.databases, rows: totalSelected.rows })}
-              {importImages && totalSelected.imageCount > 0 && (
-                <> · <span className="text-amber-400">{totalSelected.imageCount} {t('importImageCount')}</span></>
-              )}
-            </p>
+            <div className="flex flex-col gap-0.5 text-xs text-fg-3">
+              <p>{t('importWillCreate', { count: selected.size })}</p>
+              <p>{t('importTotalItems', { pages: totalSelected.pages, databases: totalSelected.databases, rows: totalSelected.rows })}</p>
+            </div>
           )}
-        </div>
+        </SettingsSection>
       )}
 
       {/* Importing */}
       {step === 'importing' && (
-        <div className="flex flex-col items-center gap-2 py-8 text-neutral-400">
-          <Loader2 size={16} className="animate-spin" />
-          <span className="text-sm">{t('importRunning')}</span>
-          {importImages && <span className="text-xs text-neutral-600">{t('importImagesUploading')}</span>}
-        </div>
+        <Working label={t('importRunning')} hint={importImages ? t('importImagesUploading') : undefined} />
       )}
 
       {/* Results */}
       {step === 'done' && results.length > 0 && (
-        <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            <CheckCircle size={15} className="text-green-400" />
-            <p className="text-sm font-semibold text-green-300">{t('importSuccess')}</p>
-          </div>
-          <div className="space-y-1">
+        <SettingsSection>
+          <p className="flex items-center gap-2 text-sm font-semibold text-fg">
+            <CheckCircle size={16} className="text-green-400" />
+            {t('importSuccess')}
+          </p>
+          <div className="flex flex-col divide-y divide-line rounded-surface shadow-[inset_0_0_0_1px_var(--color-line)]">
             {results.map(r => (
-              <div key={r.workspaceId} className="flex items-center justify-between px-3 py-2 bg-neutral-900 border border-neutral-800 text-xs">
-                <div className="flex items-center gap-2">
-                  <Layers size={12} className="text-neutral-500" />
-                  <span className="text-neutral-200 font-medium">{r.name}</span>
-                </div>
-                <span className="text-neutral-500 flex items-center gap-2">
-                  <span>{r.imported.pages}p · {r.imported.databases}db · {r.imported.rows}r</span>
+              <div key={r.workspaceId} className="flex flex-col gap-0.5 px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+                <span className="flex min-w-0 items-center gap-2 text-ui font-medium text-fg">
+                  <Layers size={14} className="shrink-0 text-fg-3" />
+                  <span className="truncate">{r.name}</span>
+                </span>
+                <span className="flex items-center gap-3 text-xs text-fg-3">
+                  <span>{t('importTotalItems', { pages: r.imported.pages, databases: r.imported.databases, rows: r.imported.rows })}</span>
                   {r.imported.images > 0 && (
-                    <span className="flex items-center gap-1 text-amber-400/70"><Image size={10} />{r.imported.images}</span>
+                    <span className="flex items-center gap-1"><ImageIcon size={12} />{r.imported.images}</span>
                   )}
                 </span>
               </div>
             ))}
           </div>
-          <p className="text-xs text-neutral-500">{t('importRefreshHint')}</p>
-        </div>
+          <p className="text-xs text-fg-3">{t('importRefreshHint')}</p>
+        </SettingsSection>
       )}
 
       {/* Error */}
       {step === 'error' && (
-        <div className="flex items-start gap-3 bg-red-500/10 border border-red-500/30 p-4">
-          <AlertCircle size={16} className="text-red-400 mt-0.5 shrink-0" />
-          <div className="text-xs text-red-300">
-            <p className="font-semibold">{t('importFailed')}</p>
-            <p className="text-red-400/80 mt-0.5">{error}</p>
-          </div>
-        </div>
+        <ImportError title={t('importFailed')} message={error} />
       )}
 
       {/* Actions */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2">
         {(step === 'idle' || step === 'error') && (
-          <button
-            onClick={handleAnalyze}
-            disabled={!file}
-            className="px-4 py-2 bg-neutral-700 hover:bg-neutral-600 disabled:opacity-40 disabled:cursor-not-allowed text-white text-xs font-semibold transition-colors cursor-pointer"
-          >
+          <Button variant="primary" onClick={handleAnalyze} disabled={!file}>
             {t('importAnalyze')}
-          </button>
+          </Button>
         )}
         {step === 'preview' && (
-          <button
-            onClick={handleImport}
-            disabled={selected.size === 0}
-            className="flex items-center gap-2 px-4 py-2 bg-ink hover:bg-ink/88 disabled:opacity-40 disabled:cursor-not-allowed text-ink-fg text-xs font-semibold transition-colors cursor-pointer"
-          >
+          <Button variant="primary" onClick={handleImport} disabled={selected.size === 0}>
             {t('importStart')} ({selected.size})
-          </button>
+          </Button>
         )}
         {(step !== 'idle' && step !== 'analyzing' && step !== 'importing') && (
-          <button onClick={reset} className="text-xs text-neutral-500 hover:text-neutral-300 transition-colors cursor-pointer">
+          <Button variant="ghost" onClick={reset}>
             {t('importReset')}
-          </button>
+          </Button>
         )}
       </div>
-    </div>
+    </SettingsPage>
   );
 }
 
@@ -502,28 +445,28 @@ export default function ImportTab({ workspaceId: _workspaceId }: ImportTabProps)
   const sources: SourceCard[] = [
     {
       id: 'okf',
-      icon: <BookOpen size={32} className="text-signal-text" />,
+      icon: <BookOpen size={28} className="text-fg-2" />,
       name: t('importSourceOkfName'),
       description: t('importSourceOkfDesc'),
       available: true,
     },
     {
       id: 'notion',
-      icon: <NotionIcon size={32} />,
+      icon: <NotionIcon size={28} />,
       name: 'Notion',
       description: t('importSourceNotionDesc'),
       available: true,
     },
     {
       id: null,
-      icon: <ExcelIcon size={32} />,
+      icon: <ExcelIcon size={28} />,
       name: 'Microsoft Excel',
       description: t('importSourceExcelDesc'),
       available: false,
     },
     {
       id: null,
-      icon: <GoogleDriveIcon size={32} />,
+      icon: <GoogleDriveIcon size={28} />,
       name: 'Google Drive',
       description: t('importSourceDriveDesc'),
       available: false,
@@ -531,42 +474,30 @@ export default function ImportTab({ workspaceId: _workspaceId }: ImportTabProps)
   ];
 
   return (
-    <div className="space-y-4">
-      <div>
-        <h3 className="text-sm font-semibold text-neutral-100">{t('importSourceTitle')}</h3>
-        <p className="text-xs text-neutral-400 mt-1">{t('importSourceHint')}</p>
-      </div>
-
-      <div className="grid grid-cols-1 gap-2">
-        {sources.map((src, i) => (
-          <button
-            key={i}
-            onClick={() => src.available && src.id && setSource(src.id)}
-            disabled={!src.available}
-            className={`flex items-center gap-4 px-4 py-3.5 border text-left transition-colors ${
-              src.available
-                ? 'border-neutral-700 hover:border-neutral-500 hover:bg-neutral-800/40 cursor-pointer'
-                : 'border-neutral-800 opacity-50 cursor-default'
-            }`}
-          >
-            <div className="shrink-0">{src.icon}</div>
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-semibold text-neutral-200">{src.name}</span>
-                {!src.available && (
-                  <span className="text-[9px] font-bold px-1.5 py-0.5 bg-neutral-800 text-neutral-500 border border-neutral-700 shrink-0">
-                    {t('importSourceComingSoon')}
-                  </span>
-                )}
-              </div>
-              <p className="text-xs text-neutral-500 mt-0.5">{src.description}</p>
-            </div>
-            {src.available && (
-              <span className="text-neutral-600 shrink-0">›</span>
-            )}
-          </button>
-        ))}
-      </div>
-    </div>
+    <SettingsPage>
+      <SettingsSection title={t('importSourceTitle')} description={t('importSourceHint')}>
+        <div className="flex flex-col divide-y divide-line rounded-surface shadow-[inset_0_0_0_1px_var(--color-line)]">
+          {sources.map((src, i) => (
+            <button
+              key={i}
+              type="button"
+              onClick={() => src.available && src.id && setSource(src.id)}
+              disabled={!src.available}
+              className="flex items-center gap-4 px-4 py-3.5 text-left transition-colors first:rounded-t-surface last:rounded-b-surface enabled:cursor-pointer enabled:hover:bg-hover/50 disabled:opacity-50"
+            >
+              <span className="shrink-0">{src.icon}</span>
+              <span className="min-w-0 flex-1">
+                <span className="flex items-center gap-2">
+                  <span className="text-ui font-medium text-fg">{src.name}</span>
+                  {!src.available && <Badge size="sm">{t('importSourceComingSoon')}</Badge>}
+                </span>
+                <span className="mt-0.5 block text-xs leading-relaxed text-fg-3">{src.description}</span>
+              </span>
+              {src.available && <ChevronRight size={16} className="shrink-0 text-fg-4" />}
+            </button>
+          ))}
+        </div>
+      </SettingsSection>
+    </SettingsPage>
   );
 }

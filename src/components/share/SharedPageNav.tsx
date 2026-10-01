@@ -1,18 +1,25 @@
 'use client';
 import { useState } from 'react';
 import Link from 'next/link';
-import { ChevronRight, ChevronDown, List, X } from 'lucide-react';
+import { useTranslations } from 'next-intl';
+import { ChevronRight, ChevronDown, List } from 'lucide-react';
 import PageIcon from '@/components/features/PageIcon';
 import type { SharedNavItem } from '@/app/[locale]/share/[...slug]/page';
+import { cn } from '@/lib/cn';
+
+// The shared tree of a public page, drawn like the app's sidebar: rows on the desk, the
+// open page lifted (sheet + lift shadow), hover a partial lift.
 
 function NavNode({
   item,
   currentPageId,
   depth,
+  untitled,
 }: {
   item: SharedNavItem;
   currentPageId: string;
   depth: number;
+  untitled: string;
 }) {
   const isCurrent = item.id === currentPageId;
   const hasChildren = item.children.length > 0;
@@ -25,44 +32,45 @@ function NavNode({
   return (
     <div>
       <div
-        className={`group flex items-center gap-1 rounded-md py-1 pr-2 text-[13px] transition-colors ${
-          isCurrent
-            ? 'bg-neutral-800 text-neutral-100 font-medium'
-            : 'text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/50'
-        }`}
-        style={{ paddingLeft: `${8 + depth * 14}px` }}
+        className={cn(
+          'group flex items-center gap-1 rounded-control py-1 pr-2 text-ui transition-[background-color,box-shadow]',
+          isCurrent ? 'bg-sheet font-medium text-fg shadow-lift' : 'text-fg-2 hover:bg-sheet/55 hover:text-fg',
+        )}
+        style={{ paddingLeft: `${4 + depth * 14}px` }}
       >
         {/* Expand toggle */}
         <button
+          type="button"
           onClick={() => setOpen(v => !v)}
-          className={`shrink-0 p-0.5 rounded transition-colors ${
-            hasChildren ? 'hover:bg-neutral-700 cursor-pointer' : 'cursor-default opacity-0 pointer-events-none'
-          }`}
+          aria-expanded={hasChildren ? open : undefined}
+          className={cn(
+            'flex size-5 shrink-0 items-center justify-center rounded-sm text-fg-3 transition-colors',
+            hasChildren ? 'cursor-pointer hover:bg-hover hover:text-fg' : 'pointer-events-none opacity-0',
+          )}
           tabIndex={hasChildren ? 0 : -1}
         >
-          {open ? <ChevronDown size={11} /> : <ChevronRight size={11} />}
+          {open ? <ChevronDown className="size-3.5" /> : <ChevronRight className="size-3.5" />}
         </button>
 
-        {/* Icon */}
         {item.icon && (
           <span className="shrink-0">
             <PageIcon icon={item.icon} iconColor={item.iconColor} size={14} fallbackType="page" />
           </span>
         )}
 
-        {/* Title link */}
         <Link
           href={`/share/${item.slug}`}
-          className="flex-1 truncate leading-5"
+          aria-current={isCurrent ? 'page' : undefined}
+          className="flex-1 truncate leading-6"
         >
-          {item.title || 'Untitled'}
+          {item.title || untitled}
         </Link>
       </div>
 
       {hasChildren && open && (
-        <div>
+        <div className="mt-px flex flex-col gap-px">
           {item.children.map(child => (
-            <NavNode key={child.id} item={child} currentPageId={currentPageId} depth={depth + 1} />
+            <NavNode key={child.id} item={child} currentPageId={currentPageId} depth={depth + 1} untitled={untitled} />
           ))}
         </div>
       )}
@@ -81,20 +89,22 @@ export default function SharedPageNav({
   mobileOnly?: boolean;
   desktopOnly?: boolean;
 }) {
+  const t = useTranslations('Sharing');
+  const tPage = useTranslations('Page');
   const [mobileOpen, setMobileOpen] = useState(false);
 
   const tree = (
-    <div className="py-2 px-1">
+    <nav aria-label={t('contents')} className="flex flex-col gap-px">
       {navTree.map(item => (
-        <NavNode key={item.id} item={item} currentPageId={currentPageId} depth={0} />
+        <NavNode key={item.id} item={item} currentPageId={currentPageId} depth={0} untitled={tPage('untitled')} />
       ))}
-    </div>
+    </nav>
   );
 
   if (desktopOnly) {
     return (
-      <aside className="hidden md:block w-56 shrink-0 border-r border-neutral-800 bg-neutral-900/30">
-        <div className="sticky top-12 max-h-[calc(100vh-3rem)] overflow-y-auto">
+      <aside className="hidden w-60 shrink-0 lg:block">
+        <div className="sticky top-12 max-h-[calc(100dvh-3rem)] overflow-y-auto px-2 pt-1 pb-4">
           {tree}
         </div>
       </aside>
@@ -103,23 +113,21 @@ export default function SharedPageNav({
 
   if (mobileOnly) {
     return (
-      <div className="md:hidden border-b border-neutral-800 bg-neutral-900/40">
+      <div className="border-b border-line lg:hidden">
         <button
+          type="button"
           onClick={() => setMobileOpen(v => !v)}
-          className="w-full flex items-center gap-2 px-4 py-2.5 text-xs text-neutral-400 hover:text-neutral-200 transition-colors"
+          aria-expanded={mobileOpen}
+          className="flex w-full items-center gap-2 px-4 py-2.5 text-ui font-medium text-fg-2 transition-colors hover:text-fg"
         >
-          {mobileOpen ? <X size={13} /> : <List size={13} />}
-          <span className="font-medium">Contents</span>
+          <List className="size-4 text-fg-3" aria-hidden />
+          <span>{t('contents')}</span>
           <ChevronDown
-            size={11}
-            className={`ml-auto transition-transform ${mobileOpen ? 'rotate-180' : ''}`}
+            aria-hidden
+            className={cn('ml-auto size-4 text-fg-3 transition-transform', mobileOpen && 'rotate-180')}
           />
         </button>
-        {mobileOpen && (
-          <div className="border-t border-neutral-800 bg-neutral-950 pb-2">
-            {tree}
-          </div>
-        )}
+        {mobileOpen && <div className="px-2 pb-3">{tree}</div>}
       </div>
     );
   }

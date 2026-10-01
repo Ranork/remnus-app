@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { usePostHog } from 'posthog-js/react';
-import { Check, Copy, ArrowRight, ChevronLeft, ChevronDown, X, KeyRound, Globe, AlertCircle, AlertTriangle, Plug, Sparkles, Loader2, Wrench, PartyPopper, Send, BookOpen } from 'lucide-react';
+import { Check, Copy, ChevronLeft, ChevronDown, X, KeyRound, Globe, AlertCircle, AlertTriangle, Plug, Sparkles, Wrench, PartyPopper, Send, BookOpen } from 'lucide-react';
 import AIMark from '@/components/marketing/AIMark';
 import { VscodeMark } from '@/components/features/agents/AgentMark';
 import ClaudeConnectAnimation from '@/components/features/agents/ClaudeConnectAnimation';
@@ -14,45 +14,52 @@ import {
   buildCursorUrl, buildVscodeUrl, buildClaudeCmd, buildJsonConfig, buildCodexToml,
   type EditorId, type OS,
 } from '@/lib/mcp/deeplinks';
+import { Badge } from '@/components/ui/badge';
+import { Button, buttonVariants } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { SegmentedControl, SegmentedControlItem } from '@/components/ui/segmented-control';
+import { cn } from '@/lib/cn';
 
 /** Workspaces the user can mint a PAT in (passed down through ConnectModal from AgentsModal). */
 export interface MintTarget { id: string; name: string; icon?: string | null; iconColor?: string | null }
 
+/** A block of the flow that is one choice or one set of instructions. */
+const PANEL = 'flex flex-col gap-3 rounded-surface p-4 shadow-[inset_0_0_0_1px_var(--color-line)]';
+const LABEL = 'text-xs font-medium text-fg-2';
+
 // ── Workspace picker — icon list (mirrors the OAuth authorize page's picker) ──
 function WorkspacePicker({
-  targets, value, onChange, accent,
+  targets, value, onChange, label,
 }: {
   targets: MintTarget[];
   value: string;
   onChange: (id: string) => void;
-  accent: 'blue' | 'emerald';
+  label: string;
 }) {
-  const activeCls = accent === 'emerald' ? 'bg-emerald-500/10 border-emerald-500/40' : 'bg-signal/10 border-signal/40';
-  const activeText = accent === 'emerald' ? 'text-emerald-400' : 'text-signal-text';
-  const activeCheck = accent === 'emerald' ? 'text-emerald-400' : 'text-signal-text';
   return (
-    <div className="space-y-1 max-h-40 overflow-y-auto pr-0.5">
+    <div role="radiogroup" aria-label={label} className="flex max-h-40 flex-col gap-0.5 overflow-y-auto">
       {targets.map(w => {
         const active = value === w.id;
         return (
           <button
             key={w.id}
             type="button"
+            role="radio"
+            aria-checked={active}
             onClick={() => onChange(w.id)}
-            className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md border text-left transition-all ${
-              active ? activeCls : 'bg-neutral-900 border-neutral-800 hover:border-neutral-700'
-            }`}
+            className={cn(
+              'flex w-full cursor-pointer items-center gap-2 rounded-control px-2.5 py-1.5 text-left transition-colors',
+              active ? 'bg-hover text-fg' : 'text-fg-2 hover:bg-hover/50 hover:text-fg',
+            )}
           >
             {w.icon
               ? <PageIcon icon={w.icon} iconColor={w.iconColor} size={15} />
-              : <span className="w-4 h-4 rounded bg-neutral-700 flex items-center justify-center text-[9px] font-bold text-neutral-300 shrink-0">
+              : <span className="flex size-4 shrink-0 items-center justify-center rounded-sm bg-hover text-2xs leading-none font-semibold text-fg-3">
                   {w.name.charAt(0).toUpperCase()}
                 </span>
             }
-            <span className={`flex-1 text-xs truncate ${active ? activeText : 'text-neutral-300'}`}>
-              {w.name}
-            </span>
-            {active && <Check size={13} className={`${activeCheck} shrink-0`} />}
+            <span className="flex-1 truncate text-ui">{w.name}</span>
+            {active && <Check size={14} className="shrink-0 text-signal-text" />}
           </button>
         );
       })}
@@ -62,9 +69,73 @@ function WorkspacePicker({
 
 function EditorMark({ id, size = 14 }: { id: EditorId; size?: number }) {
   const meta = EDITORS.find(e => e.id === id);
-  if (id === 'custom') return <Plug size={size} className="text-signal-text" />;
+  if (id === 'custom') return <Plug size={size} className="text-fg-2" />;
   if (id === 'vscode' || !meta?.aiMark) return <VscodeMark size={size} />;
   return <AIMark name={meta.aiMark} size={size} />;
+}
+
+/** The editor's name as shown; the catch-all entry is named in the UI language. */
+function editorLabel(id: EditorId, t: ReturnType<typeof useTranslations>): string {
+  if (id === 'custom') return t('connectOtherTool');
+  return EDITORS.find(e => e.id === id)?.label ?? id;
+}
+
+/** Where the flow is: "Step 2 of 3" over three bars. The steps are a real sequence. */
+function StepHeading({
+  step, title, hint, t, children,
+}: {
+  step: 1 | 2 | 3;
+  title: React.ReactNode;
+  hint?: React.ReactNode;
+  t: ReturnType<typeof useTranslations>;
+  children?: React.ReactNode;
+}) {
+  return (
+    <div className="flex flex-col gap-1.5">
+      <div className="flex items-center gap-3">
+        <div aria-hidden className="flex w-20 gap-1">
+          {[1, 2, 3].map(n => (
+            <span key={n} className={cn('h-1 flex-1 rounded-full', n <= step ? 'bg-fg' : 'bg-line-strong')} />
+          ))}
+        </div>
+        <p className="text-xs text-fg-3">{t('connectStep', { current: step, total: 3 })}</p>
+      </div>
+      <h3 className="flex items-center gap-2 text-sm font-semibold text-fg">
+        {title}
+        {children}
+      </h3>
+      {hint && <p className="text-xs leading-relaxed text-fg-3">{hint}</p>}
+    </div>
+  );
+}
+
+/** Opens or closes a part of the flow most people don't need. */
+function Disclosure({
+  icon, label, open, onToggle, children,
+}: {
+  icon: React.ReactNode;
+  label: React.ReactNode;
+  open: boolean;
+  onToggle: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className="rounded-surface shadow-[inset_0_0_0_1px_var(--color-line)]">
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-expanded={open}
+        className="group flex w-full cursor-pointer items-center justify-between gap-2 rounded-surface px-4 py-2.5"
+      >
+        <span className="flex items-center gap-2 text-ui font-medium text-fg-2 transition-colors group-hover:text-fg [&_svg]:size-3.5 [&_svg]:text-fg-3">
+          {icon}
+          {label}
+        </span>
+        <ChevronDown size={16} className={cn('text-fg-3 transition-transform duration-150', open && 'rotate-180')} />
+      </button>
+      {open && <div className="flex flex-col gap-4 px-4 pb-4">{children}</div>}
+    </div>
+  );
 }
 
 // ── Copyable code/command block ──────────────────────────────────────────────
@@ -84,33 +155,23 @@ function CodeBlock({
       setTimeout(() => setCopied(false), 2000);
     });
   };
+  const codeClass = 'rounded-control bg-raised px-3 py-2.5 pr-20 font-mono text-xs leading-relaxed text-fg shadow-[inset_0_0_0_1px_var(--color-line)]';
   return (
-    <div className="space-y-1.5">
-      <div className="flex items-center justify-between gap-2 flex-wrap">
-        <p className="text-[10px] text-neutral-400">{hint}</p>
-        {filePath && (
-          <code className="shrink-0 text-[10px] text-neutral-300 font-mono bg-neutral-800 px-1.5 py-0.5 rounded border border-neutral-700">
-            {filePath}
-          </code>
-        )}
+    <div className="flex flex-col gap-1.5">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <p className="text-xs text-fg-3">{hint}</p>
+        {filePath && <Badge variant="outline" className="font-mono">{filePath}</Badge>}
       </div>
       <div className="relative">
         {isCmd ? (
-          <code className="block bg-neutral-950 border border-neutral-800 rounded-lg px-4 py-3 text-[11px] text-sky-400 font-mono break-all leading-relaxed pr-20">
-            {code}
-          </code>
+          <code className={cn('block break-all', codeClass)}>{code}</code>
         ) : (
-          <pre className="bg-neutral-950 border border-neutral-800 rounded-lg px-4 py-3 text-[11px] text-sky-400 font-mono overflow-x-auto leading-relaxed">
-            {code}
-          </pre>
+          <pre className={cn('overflow-x-auto', codeClass)}>{code}</pre>
         )}
-        <button
-          onClick={copy}
-          className="absolute top-2 right-2 flex items-center gap-1 text-[10px] bg-neutral-800 hover:bg-neutral-700 text-neutral-300 px-2 py-1 rounded border border-neutral-700 transition-colors"
-        >
-          {copied ? <Check size={11} className="text-sky-400" /> : <Copy size={11} />}
+        <Button size="xs" onClick={copy} className="absolute top-2 right-2">
+          {copied ? <Check /> : <Copy />}
           {copied ? t('copied') : t('copyToken')}
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -127,58 +188,38 @@ function StepChoose({
   detected?: Record<string, boolean> | null;
 }) {
   return (
-    <div className="space-y-4">
-      <div className="space-y-0.5">
-        <p className="text-2xs font-medium text-neutral-500">
-          {t('connectStep', { current: 1, total: 3 })}
-        </p>
-        <h3 className="text-sm font-semibold text-neutral-100">{t('connectChooseTitle')}</h3>
-        <p className="text-[11px] text-neutral-400">{t('connectChooseHint')}</p>
-      </div>
+    <div className="flex flex-col gap-4">
+      <StepHeading step={1} title={t('connectChooseTitle')} hint={t('connectChooseHint')} t={t} />
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        {EDITORS.map(({ id, label, descKey }) => {
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+        {EDITORS.map(({ id, descKey }) => {
           const selected = current === id;
           const isDetected = !!detected?.[id];
           return (
             <button
               key={id}
+              type="button"
               onClick={() => onSelect(id)}
-              className={`group relative flex items-start gap-3 p-4 rounded-xl border text-left transition-all ${
+              aria-pressed={selected}
+              className={cn(
+                'group flex cursor-pointer items-start gap-3 rounded-surface bg-raised p-3.5 text-left transition-shadow',
                 selected
-                  ? 'bg-signal/15 border-signal/50'
-                  : 'bg-neutral-900 border-neutral-800 hover:bg-neutral-800 hover:border-neutral-700 hover:-translate-y-0.5'
-              }`}
+                  ? 'shadow-[inset_0_0_0_1.5px_var(--color-signal)]'
+                  : 'shadow-[inset_0_0_0_1px_var(--color-line)] hover:shadow-[inset_0_0_0_1px_var(--color-line-strong)]',
+              )}
             >
-              <span
-                className={`shrink-0 flex items-center justify-center w-10 h-10 rounded-lg border transition-colors ${
-                  selected
-                    ? 'bg-signal/10 border-signal/30'
-                    : 'bg-neutral-950/60 border-neutral-800 group-hover:border-neutral-700'
-                }`}
-              >
-                <EditorMark id={id} size={22} />
+              <span className="flex size-9 shrink-0 items-center justify-center rounded-control bg-float shadow-[inset_0_0_0_1px_var(--color-line)]">
+                <EditorMark id={id} size={20} />
               </span>
-              <span className="min-w-0 flex flex-col gap-0.5">
+              <span className="flex min-w-0 flex-col gap-0.5">
                 <span className="flex items-center gap-1.5">
-                  <span className={`text-sm font-semibold ${selected ? 'text-signal-text' : 'text-neutral-200 group-hover:text-neutral-50'}`}>
-                    {label}
-                  </span>
-                  {isDetected && (
-                    <span className="shrink-0 text-[8px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-1 py-0.5 rounded-full leading-none">
-                      {t('connectDetectedBadge')}
-                    </span>
-                  )}
+                  <span className="text-ui font-semibold text-fg">{editorLabel(id, t)}</span>
+                  {isDetected && <Badge variant="signal" size="sm">{t('connectDetectedBadge')}</Badge>}
                 </span>
-                <span className="text-[11px] leading-snug text-neutral-400">
+                <span className="text-xs leading-snug text-fg-3">
                   {t(descKey as Parameters<typeof t>[0])}
                 </span>
               </span>
-              {selected && (
-                <span className="absolute top-2.5 right-2.5 flex items-center justify-center w-5 h-5 rounded-full bg-ink text-ink-fg">
-                  <Check size={12} />
-                </span>
-              )}
             </button>
           );
         })}
@@ -215,6 +256,7 @@ function StepConnect({
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [showManual, setShowManual] = useState(false);
   const meta = EDITORS.find(e => e.id === editor)!;
+  const toolName = editorLabel(editor, t);
   const oauthReady = OAUTH_READY[editor];
   // Editors Remnus can connect for the user directly from the desktop shell:
   // json/toml editors get their config file written, Claude Code gets its CLI
@@ -300,12 +342,12 @@ function StepConnect({
       setAutoResult({
         ok: true,
         message: skillInstalled
-          ? t('connectAutoSuccessWithSkill', { tool: meta.label })
-          : t('connectAutoSuccess', { tool: meta.label }),
+          ? t('connectAutoSuccessWithSkill', { tool: toolName })
+          : t('connectAutoSuccess', { tool: toolName }),
       });
       // Let the success message land for a beat, then advance automatically —
       // the user already has a working connection, no need to make them click Next.
-      onAutoConnected?.(meta.label);
+      onAutoConnected?.(toolName);
       setTimeout(onNext, 900);
     } catch (err) {
       setAutoResult({ ok: false, message: t('connectAutoError', { error: err instanceof Error ? err.message : String(err) }) });
@@ -329,8 +371,8 @@ function StepConnect({
       return (
         <>
           <CodeBlock code={buildClaudeCmd(mcpUrl)} isCmd hint={t('connectRunCommand')} t={t} />
-          <p className="text-[11px] text-neutral-400 flex items-start gap-1.5">
-            <Globe size={12} className="text-signal-text shrink-0 mt-0.5" />
+          <p className="flex items-start gap-1.5 text-xs leading-relaxed text-fg-3">
+            <Globe size={14} className="mt-0.5 shrink-0 text-fg-4" />
             {t('connectClaudeOAuthHint')}
           </p>
         </>
@@ -339,17 +381,14 @@ function StepConnect({
     if (meta.kind === 'deeplink') {
       const href = editor === 'cursor' ? buildCursorUrl(mcpUrl) : buildVscodeUrl(mcpUrl);
       return (
-        <div className="space-y-2">
-          <a
-            href={href}
-            className="inline-flex items-center gap-2 text-xs font-semibold text-ink-fg bg-ink hover:bg-ink/88 px-4 py-2.5 rounded-lg transition-colors"
-          >
+        <div className="flex flex-col gap-2">
+          <a href={href} className={cn(buttonVariants({ variant: 'primary' }), 'self-start')}>
             <EditorMark id={editor} size={14} />
-            {t('connectOpenIn', { tool: meta.label })}
+            {t('connectOpenIn', { tool: toolName })}
           </a>
           {editor === 'cursor' && (
-            <p className="text-[11px] text-amber-400/90 flex items-start gap-1.5">
-              <AlertCircle size={12} className="shrink-0 mt-0.5" />
+            <p className="flex items-start gap-1.5 text-xs leading-relaxed text-amber-400">
+              <AlertCircle size={14} className="mt-0.5 shrink-0" />
               {t('connectCursorOAuthWarn')}
             </p>
           )}
@@ -359,7 +398,7 @@ function StepConnect({
     if (meta.kind === 'toml') {
       // Codex — add the server to config.toml, then sign in with one command.
       return (
-        <div className="space-y-3">
+        <div className="flex flex-col gap-3">
           <CodeBlock
             code={buildCodexToml(mcpUrl)}
             isCmd={false}
@@ -374,9 +413,9 @@ function StepConnect({
     if (meta.kind === 'generic') {
       // Any other MCP-capable tool — give them the raw endpoint + a standard config.
       return (
-        <div className="space-y-3">
+        <div className="flex flex-col gap-3">
           <CodeBlock code={mcpUrl} isCmd hint={t('connectEndpointLabel')} t={t} />
-          <p className="text-[11px] text-neutral-400 leading-relaxed">{t('connectCustomHint')}</p>
+          <p className="text-xs leading-relaxed text-fg-3">{t('connectCustomHint')}</p>
           <CodeBlock code={buildJsonConfig('custom', mcpUrl)} isCmd={false} hint={t('connectGenericConfig')} t={t} />
         </div>
       );
@@ -399,12 +438,9 @@ function StepConnect({
     if (meta.kind === 'deeplink') {
       const href = editor === 'cursor' ? buildCursorUrl(mcpUrl, token) : buildVscodeUrl(mcpUrl, token);
       return (
-        <a
-          href={href}
-          className="inline-flex items-center gap-2 text-xs font-semibold text-white bg-neutral-700 hover:bg-neutral-600 px-4 py-2 rounded-lg transition-colors"
-        >
+        <a href={href} className={cn(buttonVariants({ variant: 'secondary' }), 'self-start')}>
           <EditorMark id={editor} size={14} />
-          {t('connectOpenIn', { tool: meta.label })}
+          {t('connectOpenIn', { tool: toolName })}
         </a>
       );
     }
@@ -439,27 +475,24 @@ function StepConnect({
   // ── Advanced section body: mint form → minted-token artifact ──
   const renderToken = () => {
     if (!canMint) {
-      return <p className="text-[11px] text-neutral-500 italic">{t('connectTokenNoAccess')}</p>;
+      return <p className="text-xs text-fg-3">{t('connectTokenNoAccess')}</p>;
     }
 
     if (mintedToken) {
       return (
-        <div className="space-y-3">
-          <div className="flex items-start gap-1.5 text-[11px] text-amber-400">
-            <AlertTriangle size={12} className="shrink-0 mt-0.5" />
+        <div className="flex flex-col gap-3">
+          <p className="flex items-start gap-1.5 text-xs leading-relaxed text-amber-400">
+            <AlertTriangle size={14} className="mt-0.5 shrink-0" />
             <span>{t('connectTokenCreated')}</span>
-          </div>
+          </p>
           <div className="flex gap-2">
-            <code className="flex-1 bg-neutral-950 border border-neutral-800 rounded px-2.5 py-1.5 text-[11px] text-sky-400 font-mono break-all select-all">
+            <code className="flex-1 rounded-control bg-raised px-2.5 py-1.5 font-mono text-xs break-all text-fg shadow-[inset_0_0_0_1px_var(--color-line)] select-all">
               {mintedToken}
             </code>
-            <button
-              onClick={copyToken}
-              className="shrink-0 flex items-center gap-1 text-xs bg-neutral-800 hover:bg-neutral-700 text-neutral-200 px-2.5 py-1.5 rounded border border-neutral-700 transition-colors"
-            >
-              {tokenCopied ? <Check size={12} className="text-sky-400" /> : <Copy size={12} />}
+            <Button size="sm" onClick={copyToken}>
+              {tokenCopied ? <Check /> : <Copy />}
               {tokenCopied ? t('copied') : t('copyToken')}
-            </button>
+            </Button>
           </div>
           {renderTokenArtifact(mintedToken)}
         </div>
@@ -467,57 +500,36 @@ function StepConnect({
     }
 
     return (
-      <div className="space-y-3">
-        <p className="text-[11px] text-neutral-400 leading-relaxed">{t('connectTokenHint')}</p>
+      <div className="flex flex-col gap-3">
+        <p className="text-xs leading-relaxed text-fg-3">{t('connectTokenHint')}</p>
 
         {/* Workspace picker (only when more than one) */}
         {mintTargets.length > 1 && (
-          <div className="space-y-1">
-            <label className="block text-2xs font-medium text-neutral-500">
-              {t('connectTokenWorkspaceLabel')}
-            </label>
-            <WorkspacePicker targets={mintTargets} value={selectedWs} onChange={setSelectedWs} accent="blue" />
+          <div className="flex flex-col gap-1.5">
+            <span className={LABEL}>{t('connectTokenWorkspaceLabel')}</span>
+            <WorkspacePicker targets={mintTargets} value={selectedWs} onChange={setSelectedWs} label={t('connectTokenWorkspaceLabel')} />
           </div>
         )}
 
         {/* Scope */}
-        <div className="space-y-1">
-          <label className="block text-2xs font-medium text-neutral-500">
-            {t('mcpCreateScopeLabel')}
-          </label>
-          <div className="flex gap-2">
-            {(['read', 'write'] as const).map(s => (
-              <button
-                key={s}
-                onClick={() => setScope(s)}
-                className={`flex-1 px-3 py-1.5 rounded-md border text-[11px] font-semibold transition-all ${
-                  scope === s
-                    ? s === 'write'
-                      ? 'bg-amber-500/10 border-amber-500/40 text-amber-300'
-                      : 'bg-signal/10 border-signal/40 text-signal-text'
-                    : 'bg-neutral-900 border-neutral-700 text-neutral-400 hover:text-neutral-200 hover:border-neutral-600'
-                }`}
-              >
-                {s === 'read' ? t('tokenScopeRead') : t('tokenScopeWrite')}
-              </button>
-            ))}
-          </div>
+        <div className="flex flex-col gap-1.5">
+          <span className={LABEL}>{t('mcpCreateScopeLabel')}</span>
+          <SegmentedControl value={scope} onValueChange={setScope} aria-label={t('mcpCreateScopeLabel')}>
+            <SegmentedControlItem value="read">{t('tokenScopeRead')}</SegmentedControlItem>
+            <SegmentedControlItem value="write">{t('tokenScopeWrite')}</SegmentedControlItem>
+          </SegmentedControl>
         </div>
 
         {mintError && (
-          <p className="text-[11px] text-red-400 flex items-center gap-1">
-            <AlertCircle size={11} /> {mintError}
+          <p role="alert" className="flex items-center gap-1.5 text-xs text-red-400">
+            <AlertCircle size={12} /> {mintError}
           </p>
         )}
 
-        <button
-          onClick={handleMint}
-          disabled={minting || !selectedWs}
-          className="flex items-center gap-1.5 text-[11px] font-semibold text-white bg-neutral-700 hover:bg-neutral-600 disabled:opacity-50 px-3 py-1.5 rounded-md transition-colors"
-        >
-          <KeyRound size={12} />
-          {minting ? t('creating') : t('connectGenerateToken')}
-        </button>
+        <Button size="sm" className="self-start" onClick={handleMint} disabled={!selectedWs} loading={minting}>
+          <KeyRound />
+          {t('connectGenerateToken')}
+        </Button>
       </div>
     );
   };
@@ -533,152 +545,115 @@ function StepConnect({
     <>
       {/* OS selector (only when a file path is shown) */}
       {needsOs && (
-        <div className="flex items-center gap-1.5">
-          <span className="text-[10px] text-neutral-500 mr-1">OS</span>
-          {(['mac', 'linux', 'windows'] as OS[]).map(k => (
-            <button
-              key={k}
-              onClick={() => setOs(k)}
-              className={`px-2.5 py-1 rounded text-[10px] font-semibold border transition-colors ${
-                os === k ? 'bg-neutral-700 border-neutral-600 text-neutral-100' : 'border-neutral-700 text-neutral-500 hover:text-neutral-200 hover:border-neutral-600'
-              }`}
-            >
-              {k === 'mac' ? 'macOS' : k === 'linux' ? 'Linux' : 'Windows'}
-            </button>
-          ))}
-        </div>
+        <SegmentedControl value={os} onValueChange={setOs} aria-label="OS">
+          <SegmentedControlItem value="mac">macOS</SegmentedControlItem>
+          <SegmentedControlItem value="linux">Linux</SegmentedControlItem>
+          <SegmentedControlItem value="windows">Windows</SegmentedControlItem>
+        </SegmentedControl>
       )}
 
       {/* Animated walkthrough — Claude Code only, above Quick connect */}
       {editor === 'claude' && (
-        <div className="space-y-1.5">
-          <p className="text-2xs font-medium text-neutral-500">
-            {t('connectAnimTitle')}
-          </p>
+        <div className="flex flex-col gap-1.5">
+          <p className={LABEL}>{t('connectAnimTitle')}</p>
           <ClaudeConnectAnimation mcpUrl={mcpUrl} />
         </div>
       )}
 
       {/* Primary: OAuth */}
-      <div className="border border-signal/20 rounded-xl p-4 bg-signal/5 space-y-3">
+      <div className={PANEL}>
         <div className="flex items-center gap-2">
-          <Globe size={13} className="text-signal-text" />
-          <span className="text-xs font-semibold text-neutral-100">
+          <Globe size={14} className="text-fg-3" />
+          <span className="text-ui font-semibold text-fg">
             {oauthReady ? t('connectOAuthTitle') : t('connectConfigTitle')}
           </span>
-          {oauthReady && (
-            <span className="text-[9px] font-bold text-signal-text bg-signal/10 border border-signal/20 px-1.5 py-0.5 rounded-full">
-              {t('connectRecommended')}
-            </span>
-          )}
+          {oauthReady && <Badge variant="signal" size="sm">{t('connectRecommended')}</Badge>}
         </div>
-        {oauthReady && <p className="text-[11px] text-neutral-400 leading-relaxed">{t('connectOAuthDesc')}</p>}
+        {oauthReady && <p className="text-xs leading-relaxed text-fg-3">{t('connectOAuthDesc')}</p>}
         {renderOAuth()}
       </div>
 
       {/* Advanced: token */}
-      <div className="border border-neutral-800 rounded-xl overflow-hidden">
-        <button
-          onClick={() => setShowAdvanced(v => !v)}
-          className="w-full flex items-center justify-between px-4 py-2.5 group"
-        >
-          <span className="flex items-center gap-2 text-[11px] font-semibold text-neutral-400 group-hover:text-neutral-200 transition-colors">
-            <KeyRound size={12} />
-            {t('connectAdvancedToggle')}
-          </span>
-          <ChevronDown size={13} className={`text-neutral-500 transition-transform ${showAdvanced ? 'rotate-180' : ''}`} />
-        </button>
-        {showAdvanced && <div className="px-4 pb-4">{renderToken()}</div>}
-      </div>
+      <Disclosure
+        icon={<KeyRound />}
+        label={t('connectAdvancedToggle')}
+        open={showAdvanced}
+        onToggle={() => setShowAdvanced(v => !v)}
+      >
+        {renderToken()}
+      </Disclosure>
 
       {/* Manual completion — only needed here: unlike auto-connect, these steps
           don't self-report success, so the user tells us when they're done.
           Lives in the main Nav row when auto-connect isn't available (see below). */}
       {autoAvailable && (
-        <div className="flex justify-end">
-          <button
-            onClick={onNext}
-            className="flex items-center gap-2 text-xs font-semibold text-ink-fg bg-ink hover:bg-ink/88 px-4 py-2 rounded-md transition-colors"
-          >
-            {t('connectNext')} <ArrowRight size={13} />
-          </button>
-        </div>
+        <Button variant="primary" className="self-end" onClick={onNext}>
+          {t('connectNext')}
+        </Button>
       )}
     </>
   );
 
   return (
-    <div className="space-y-4">
-      <div className="space-y-0.5">
-        <p className="text-2xs font-medium text-neutral-500">
-          {t('connectStep', { current: 2, total: 3 })}
-        </p>
-        <h3 className="text-sm font-semibold text-neutral-100 flex items-center gap-2">
-          {t('connectConnectTitle', { tool: meta.label })}
-          <EditorMark id={editor} size={14} />
-        </h3>
-      </div>
+    <div className="flex flex-col gap-4">
+      <StepHeading step={2} title={t('connectConnectTitle', { tool: toolName })} t={t}>
+        <EditorMark id={editor} size={14} />
+      </StepHeading>
 
       {/* Desktop-only: one-click auto-connect via Tauri. The primary path when
           available — everything manual moves into the collapse below. */}
       {autoAvailable && (
-        <div className="border border-emerald-500/25 rounded-xl p-4 bg-emerald-500/5 space-y-3">
+        <div className="flex flex-col gap-3 rounded-surface bg-signal-soft p-4">
           <div className="flex items-center gap-2">
-            <Sparkles size={13} className="text-emerald-400" />
-            <span className="text-xs font-semibold text-neutral-100">{t('connectAutoHeading')}</span>
-            {detected && (
-              <span className="text-[9px] font-bold text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.5 rounded-full">
-                {t('connectDetectedBadge')}
-              </span>
-            )}
+            <Sparkles size={14} className="text-signal-text" />
+            <span className="text-ui font-semibold text-fg">{t('connectAutoHeading')}</span>
+            {detected && <Badge variant="signal" size="sm">{t('connectDetectedBadge')}</Badge>}
           </div>
-          <p className="text-[11px] text-neutral-400 leading-relaxed">{t('connectAutoDesc', { tool: meta.label })}</p>
+          <p className="text-xs leading-relaxed text-fg-2">{t('connectAutoDesc', { tool: toolName })}</p>
 
           {!canMint ? (
-            <p className="text-[11px] text-neutral-500 italic">{t('connectTokenNoAccess')}</p>
+            <p className="text-xs text-fg-3">{t('connectTokenNoAccess')}</p>
           ) : (
             <>
               {mintTargets.length > 1 && (
-                <div className="space-y-1">
-                  <label className="block text-2xs font-medium text-neutral-500">
-                    {t('connectTokenWorkspaceLabel')}
-                  </label>
-                  <WorkspacePicker targets={mintTargets} value={selectedWs} onChange={setSelectedWs} accent="emerald" />
+                <div className="flex flex-col gap-1.5">
+                  <span className={LABEL}>{t('connectTokenWorkspaceLabel')}</span>
+                  <WorkspacePicker targets={mintTargets} value={selectedWs} onChange={setSelectedWs} label={t('connectTokenWorkspaceLabel')} />
                 </div>
               )}
 
               {editor === 'claude' && (
-                <label className="flex items-start gap-2 text-[11px] text-neutral-300 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={installSkill}
-                    onChange={e => setInstallSkill(e.target.checked)}
-                    className="mt-0.5 accent-emerald-500"
-                  />
-                  <span className="flex items-start gap-1.5">
-                    <BookOpen size={12} className="text-emerald-400 shrink-0 mt-0.5" />
-                    <span>
-                      <span className="font-semibold text-neutral-200">{t('connectInstallSkillLabel')}</span>{' '}
-                      <span className="text-neutral-500">{t('connectInstallSkillHint')}</span>
-                    </span>
+                <label className="flex cursor-pointer items-start gap-2.5">
+                  <Checkbox checked={installSkill} onCheckedChange={(v) => setInstallSkill(v)} className="mt-0.5" />
+                  <span className="min-w-0 text-xs leading-relaxed">
+                    <span className="inline-flex items-center gap-1 font-medium text-fg">
+                      <BookOpen size={12} className="shrink-0 text-fg-3" />
+                      {t('connectInstallSkillLabel')}
+                    </span>{' '}
+                    <span className="text-fg-3">{t('connectInstallSkillHint')}</span>
                   </span>
                 </label>
               )}
 
-              <button
+              <Button
+                variant="primary"
+                className="self-start"
                 onClick={handleAutoConnect}
-                disabled={autoConnecting || !selectedWs}
-                className="flex items-center gap-1.5 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 px-3 py-1.5 rounded-md transition-colors"
+                disabled={!selectedWs}
+                loading={autoConnecting}
               >
-                {autoConnecting ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />}
+                <Sparkles />
                 {autoConnecting ? t('connectAutoRunning') : t('connectAutoButton')}
-              </button>
+              </Button>
             </>
           )}
 
           {autoResult && (
-            <p className={`text-[11px] flex items-start gap-1.5 ${autoResult.ok ? 'text-emerald-400' : 'text-red-400'}`}>
-              {autoResult.ok ? <Check size={12} className="shrink-0 mt-0.5" /> : <AlertCircle size={12} className="shrink-0 mt-0.5" />}
+            <p
+              role={autoResult.ok ? 'status' : 'alert'}
+              className={cn('flex items-start gap-1.5 text-xs leading-relaxed', autoResult.ok ? 'text-green-400' : 'text-red-400')}
+            >
+              {autoResult.ok ? <Check size={14} className="mt-0.5 shrink-0" /> : <AlertCircle size={14} className="mt-0.5 shrink-0" />}
               {autoResult.message}
             </p>
           )}
@@ -688,40 +663,30 @@ function StepConnect({
       {/* Manual path: direct when auto-connect isn't available, collapsed behind
           a toggle when it is (auto-connect is the primary path in that case). */}
       {autoAvailable ? (
-        <div className="border border-neutral-800 rounded-xl overflow-hidden">
-          <button
-            onClick={() => setShowManual(v => !v)}
-            className="w-full flex items-center justify-between px-4 py-2.5 group"
-          >
-            <span className="flex items-center gap-2 text-[11px] font-semibold text-neutral-400 group-hover:text-neutral-200 transition-colors">
-              <Wrench size={12} />
-              {t('connectManualToggle')}
-            </span>
-            <ChevronDown size={13} className={`text-neutral-500 transition-transform ${showManual ? 'rotate-180' : ''}`} />
-          </button>
-          {showManual && <div className="px-4 pb-4 space-y-4">{manualContent}</div>}
-        </div>
+        <Disclosure
+          icon={<Wrench />}
+          label={t('connectManualToggle')}
+          open={showManual}
+          onToggle={() => setShowManual(v => !v)}
+        >
+          {manualContent}
+        </Disclosure>
       ) : (
         manualContent
       )}
 
       {/* Nav — the primary "Next" moves into the manual collapse above when
           auto-connect is available (it already advances on its own success). */}
-      <div className="flex items-center gap-3 flex-wrap pt-1">
+      <div className="flex flex-wrap items-center gap-2 pt-1">
         {!autoAvailable && (
-          <button
-            onClick={onNext}
-            className="flex items-center gap-2 text-xs font-semibold text-ink-fg bg-ink hover:bg-ink/88 px-4 py-2 rounded-md transition-colors"
-          >
-            {t('connectNext')} <ArrowRight size={13} />
-          </button>
+          <Button variant="primary" onClick={onNext}>
+            {t('connectNext')}
+          </Button>
         )}
-        <button
-          onClick={onBack}
-          className="flex items-center gap-1 text-[11px] text-neutral-500 hover:text-neutral-300 transition-colors"
-        >
-          <ChevronLeft size={12} /> {t('mcpOnboardBack')}
-        </button>
+        <Button variant="ghost" onClick={onBack}>
+          <ChevronLeft />
+          {t('mcpOnboardBack')}
+        </Button>
       </div>
     </div>
   );
@@ -748,58 +713,43 @@ function StepTest({
     });
   };
   return (
-    <div className="space-y-4">
-      <div className="space-y-0.5">
-        <p className="text-2xs font-medium text-neutral-500">
-          {t('connectStep', { current: 3, total: 3 })}
-        </p>
-        <h3 className="text-sm font-semibold text-neutral-100">{t('connectTestTitle')}</h3>
-        <p className="text-[11px] text-neutral-400">{t('connectTestHint')}</p>
-      </div>
+    <div className="flex flex-col gap-4">
+      <StepHeading step={3} title={t('connectTestTitle')} hint={t('connectTestHint')} t={t} />
 
       {autoConnectedTool && (
-        <div className="flex items-center gap-3 rounded-xl border border-emerald-500/25 bg-emerald-500/10 px-4 py-3">
-          <span className="w-9 h-9 rounded-lg bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center shrink-0">
-            <PartyPopper size={17} className="text-emerald-400" />
-          </span>
+        <div role="status" className="flex items-center gap-3 rounded-surface bg-green-500/10 px-4 py-3">
+          <PartyPopper size={18} className="shrink-0 text-green-400" />
           <div className="min-w-0">
-            <p className="text-sm font-semibold text-emerald-400">{t('connectAutoCompleteTitle')}</p>
-            <p className="text-[11px] text-emerald-400/80">{t('connectAutoCompleteHint', { tool: autoConnectedTool })}</p>
+            <p className="text-ui font-semibold text-fg">{t('connectAutoCompleteTitle')}</p>
+            <p className="text-xs text-fg-2">{t('connectAutoCompleteHint', { tool: autoConnectedTool })}</p>
           </div>
         </div>
       )}
 
       <div className="flex items-stretch gap-2">
-        <p className="flex-1 text-[11px] text-neutral-200 italic bg-neutral-950 border border-neutral-700 rounded-lg px-3 py-3 leading-relaxed">
+        <p className="flex-1 rounded-control bg-raised px-3 py-3 text-ui leading-relaxed text-fg shadow-[inset_0_0_0_1px_var(--color-line)]">
           &ldquo;{testPrompt}&rdquo;
         </p>
-        <button
-          onClick={copy}
-          className="shrink-0 flex flex-col items-center justify-center gap-1 text-[10px] bg-neutral-800 hover:bg-neutral-700 text-neutral-400 hover:text-neutral-200 px-3 rounded-lg border border-neutral-700 transition-colors"
-        >
-          {copied ? <Check size={13} className="text-sky-400" /> : <Copy size={13} />}
-          <span>{copied ? t('copied') : t('copyToken')}</span>
-        </button>
+        <Button onClick={copy} className="h-auto flex-col gap-1 px-3 text-xs">
+          {copied ? <Check /> : <Copy />}
+          {copied ? t('copied') : t('copyToken')}
+        </Button>
       </div>
 
-      <p className="text-[11px] text-neutral-500 leading-relaxed flex items-start gap-1.5">
-        <Send size={12} className="text-neutral-600 shrink-0 mt-0.5" />
+      <p className="flex items-start gap-1.5 text-xs leading-relaxed text-fg-3">
+        <Send size={14} className="mt-0.5 shrink-0 text-fg-4" />
         {t('connectTestAction', { tool: toolLabel })}
       </p>
 
-      <div className="flex items-center gap-3 flex-wrap pt-1">
-        <button
-          onClick={onDone}
-          className="flex items-center gap-2 text-xs font-semibold text-white bg-green-600 hover:bg-green-500 px-4 py-2 rounded-md transition-colors"
-        >
-          <Check size={13} /> {t('connectDone')}
-        </button>
-        <button
-          onClick={onBack}
-          className="flex items-center gap-1 text-[11px] text-neutral-500 hover:text-neutral-300 transition-colors ml-auto"
-        >
-          <ChevronLeft size={12} /> {t('mcpOnboardBack')}
-        </button>
+      <div className="flex flex-wrap items-center gap-2 pt-1">
+        <Button variant="primary" onClick={onDone}>
+          <Check />
+          {t('connectDone')}
+        </Button>
+        <Button variant="ghost" onClick={onBack}>
+          <ChevronLeft />
+          {t('mcpOnboardBack')}
+        </Button>
       </div>
     </div>
   );
@@ -819,6 +769,7 @@ interface Props {
 
 export default function ConnectFlow({ mcpUrl, onClose, mintTargets = [], bare = false, source = 'unknown' }: Props) {
   const t = useTranslations('WorkspaceSettings');
+  const tUi = useTranslations('UI');
   const posthog = usePostHog();
   const isTauri = useIsTauri();
   const [step, setStep] = useState<1 | 2 | 3>(1);
@@ -904,7 +855,7 @@ export default function ConnectFlow({ mcpUrl, onClose, mintTargets = [], bare = 
           onDone={finish}
           onBack={() => setStep(2)}
           autoConnectedTool={autoConnectedTool}
-          toolLabel={EDITORS.find(e => e.id === editor)?.label ?? ''}
+          toolLabel={editorLabel(editor, t)}
         />
       )}
     </div>
@@ -913,12 +864,12 @@ export default function ConnectFlow({ mcpUrl, onClose, mintTargets = [], bare = 
   if (bare) return steps;
 
   return (
-    <div className="border border-neutral-800 rounded-xl bg-neutral-900/30 overflow-hidden">
-      <div className="flex items-center justify-between px-5 pt-4 pb-3 border-b border-neutral-800">
-        <span className="text-xs font-semibold text-neutral-200">{t('connectTitle')}</span>
-        <button onClick={onClose} className="p-1 text-neutral-500 hover:text-neutral-200 transition-colors rounded">
-          <X size={14} />
-        </button>
+    <div className="overflow-hidden rounded-surface shadow-[inset_0_0_0_1px_var(--color-line)]">
+      <div className="flex items-center justify-between border-b border-line px-5 pt-4 pb-3">
+        <span className="text-ui font-semibold text-fg">{t('connectTitle')}</span>
+        <Button variant="ghost" size="icon-sm" onClick={onClose} aria-label={tUi('close')}>
+          <X />
+        </Button>
       </div>
 
       <div className="px-5 py-5">{steps}</div>

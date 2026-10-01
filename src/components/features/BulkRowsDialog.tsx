@@ -3,8 +3,12 @@
 import { useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import { X, Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Loader2, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { SimpleSelect } from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/input';
+import { Tabs, TabsList, TabsTab } from '@/components/ui/tabs';
 import { parseTabularPaste } from '@/lib/utils/parseTabularPaste';
 import { CONTENT_HEADER } from '@/lib/utils/propertyCoercion';
 import { bulkCreatePages, bulkUpdatePagesByMatch } from '@/lib/actions/page';
@@ -119,20 +123,16 @@ export function BulkRowsDialog({ databaseId, schema, onClose }: BulkRowsDialogPr
   }
 
   return (
-    <>
-      <div onClick={onClose} className="fixed inset-0 z-300 bg-black/60" />
-      <div className="fixed z-300 inset-x-4 top-1/2 -translate-y-1/2 sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:w-full sm:max-w-2xl max-h-[85vh] bg-neutral-850 border border-neutral-800 rounded-xl shadow-[0_8px_40px_rgba(0,0,0,0.6)] flex flex-col animate-in fade-in zoom-in-95 duration-150">
-        <div className="flex items-center justify-between px-5 py-3.5 border-b border-neutral-800 shrink-0">
-          <p className="text-sm font-semibold text-neutral-100">{t('bulkImport.title')}</p>
-          <button onClick={onClose} className="text-neutral-500 hover:text-neutral-200 p-1 rounded cursor-pointer transition-colors">
-            <X size={16} />
-          </button>
-        </div>
+    <Dialog open onOpenChange={(open) => { if (!open && step !== 'committing') onClose(); }}>
+      <DialogContent size="lg">
+        <DialogHeader>
+          <DialogTitle>{t('bulkImport.title')}</DialogTitle>
+        </DialogHeader>
 
-        <div className="flex-1 overflow-y-auto px-5 py-4 space-y-4">
+        <DialogBody className="space-y-4">
           {step === 'committing' && (
-            <div className="flex flex-col items-center gap-2 py-10 text-neutral-400">
-              <Loader2 size={18} className="animate-spin" />
+            <div className="flex flex-col items-center gap-2 py-10 text-fg-3">
+              <Loader2 size={20} className="animate-spin" aria-hidden />
               <span className="text-sm">{t('bulkImport.committing')}</span>
             </div>
           )}
@@ -141,21 +141,21 @@ export function BulkRowsDialog({ databaseId, schema, onClose }: BulkRowsDialogPr
             <div className="space-y-3">
               <div className="flex items-center gap-2">
                 <CheckCircle2 size={16} className="text-green-400" />
-                <p className="text-sm font-semibold text-green-300">
+                <p className="text-sm font-semibold text-fg">
                   {summary.mode === 'add'
                     ? t('bulkImport.summaryCreated', { count: summary.created ?? 0 })
                     : t('bulkImport.summaryUpdated', { count: summary.updated ?? 0 })}
                 </p>
               </div>
               {summary.mode === 'update' && (summary.unmatched ?? 0) > 0 && (
-                <p className="text-xs text-amber-400">{t('bulkImport.summaryUnmatched', { count: summary.unmatched ?? 0 })}</p>
+                <p className="text-xs text-fg-2">{t('bulkImport.summaryUnmatched', { count: summary.unmatched ?? 0 })}</p>
               )}
               {summary.errors > 0 && (
                 <p className="text-xs text-red-400">{t('bulkImport.summaryErrors', { count: summary.errors })}</p>
               )}
               {summary.addedOptions.length > 0 && (
-                <div className="text-xs text-neutral-400">
-                  <p className="font-medium text-neutral-300 mb-1">{t('bulkImport.summaryNewOptions')}</p>
+                <div className="text-xs text-fg-3">
+                  <p className="font-medium text-fg-2 mb-1">{t('bulkImport.summaryNewOptions')}</p>
                   <ul className="space-y-0.5">
                     {summary.addedOptions.map((o) => (
                       <li key={o.column}>{o.column}: {o.values.join(', ')}</li>
@@ -168,28 +168,16 @@ export function BulkRowsDialog({ databaseId, schema, onClose }: BulkRowsDialogPr
 
           {step === 'input' && (
             <>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setMode('add')}
-                  className={`flex-1 px-3 py-2 text-xs font-medium rounded border transition-colors cursor-pointer ${
-                    mode === 'add' ? 'border-signal/40 bg-signal/10 text-signal-text' : 'border-neutral-800 text-neutral-400 hover:border-neutral-700'
-                  }`}
-                >
-                  {t('bulkImport.modeAdd')}
-                </button>
-                <button
-                  onClick={() => setMode('update')}
-                  className={`flex-1 px-3 py-2 text-xs font-medium rounded border transition-colors cursor-pointer ${
-                    mode === 'update' ? 'border-signal/40 bg-signal/10 text-signal-text' : 'border-neutral-800 text-neutral-400 hover:border-neutral-700'
-                  }`}
-                >
-                  {t('bulkImport.modeUpdate')}
-                </button>
-              </div>
+              <Tabs value={mode} onValueChange={(v) => setMode(v as Mode)} variant="segmented">
+                <TabsList>
+                  <TabsTab value="add">{t('bulkImport.modeAdd')}</TabsTab>
+                  <TabsTab value="update">{t('bulkImport.modeUpdate')}</TabsTab>
+                </TabsList>
+              </Tabs>
 
               {mode === 'update' && (
                 <div className="flex items-center gap-2">
-                  <label className="text-xs text-neutral-400 shrink-0">{t('bulkImport.matchColumn')}</label>
+                  <label className="text-xs text-fg-3 shrink-0">{t('bulkImport.matchColumn')}</label>
                   <SimpleSelect
                     value={matchColumnId}
                     onValueChange={setMatchColumnId}
@@ -201,28 +189,30 @@ export function BulkRowsDialog({ databaseId, schema, onClose }: BulkRowsDialogPr
               )}
 
               <div>
-                <label className="text-xs text-neutral-400 mb-1 block">{t('bulkImport.textareaLabel')}</label>
-                <textarea
+                <label htmlFor="bulk-rows-paste" className="text-xs text-fg-3 mb-1.5 block">{t('bulkImport.textareaLabel')}</label>
+                <Textarea
+                  id="bulk-rows-paste"
                   value={raw}
                   onChange={(e) => setRaw(e.target.value)}
                   placeholder={t('bulkImport.textareaPlaceholder')}
                   rows={8}
-                  className="w-full bg-neutral-900 border border-neutral-800 rounded px-3 py-2 text-xs text-neutral-200 font-mono resize-y focus:outline-none focus:border-signal/50"
+                  spellCheck={false}
+                  className="font-mono text-xs"
                 />
                 {!raw.trim() && (
                   <>
-                    <p className="text-[11px] text-neutral-600 mt-1">{t('bulkImport.emptyInput')}</p>
+                    <p className="text-xs text-fg-3 mt-1.5">{t('bulkImport.emptyInput')}</p>
                     {!hasContentColumn && (
-                      <p className="text-[11px] text-neutral-600 mt-1">{t('bulkImport.contentColumn')}</p>
+                      <p className="text-xs text-fg-3 mt-1">{t('bulkImport.contentColumn')}</p>
                     )}
                   </>
                 )}
               </div>
 
               {commitError && (
-                <div className="flex items-start gap-2 bg-red-500/10 border border-red-500/30 rounded px-3 py-2">
+                <div className="flex items-start gap-2 rounded-control bg-red-500/10 px-3 py-2">
                   <AlertCircle size={14} className="text-red-400 mt-0.5 shrink-0" />
-                  <p className="text-xs text-red-300">{commitError}</p>
+                  <p className="text-xs text-red-400">{commitError}</p>
                 </div>
               )}
 
@@ -236,29 +226,29 @@ export function BulkRowsDialog({ databaseId, schema, onClose }: BulkRowsDialogPr
 
               {!parsed.error && parsed.rows.length > 0 && (
                 <div className="space-y-2">
-                  <p className="text-xs font-semibold text-neutral-300">{t('bulkImport.previewRowsSummary', { count: parsed.rows.length })}</p>
+                  <p className="text-xs font-semibold text-fg-2">{t('bulkImport.previewRowsSummary', { count: parsed.rows.length })}</p>
                   {contentHeader && (
-                    <p className="text-[11px] text-neutral-400">{t('bulkImport.contentColumn')}</p>
+                    <p className="text-xs text-fg-3">{t('bulkImport.contentColumn')}</p>
                   )}
                   {ignoredHeaders.length > 0 && (
-                    <p className="text-[11px] text-neutral-500">
-                      {ignoredHeaders.join(', ')} — {t('bulkImport.ignoredColumn')}
+                    <p className="text-xs text-fg-3">
+                      {t('bulkImport.ignoredColumns', { columns: ignoredHeaders.join(', ') })}
                     </p>
                   )}
-                  <div className="border border-neutral-800 rounded overflow-x-auto max-h-48">
-                    <table className="w-full text-[11px]">
-                      <thead className="bg-neutral-900 sticky top-0">
+                  <div className="rounded-control border border-line overflow-x-auto max-h-48">
+                    <table className="w-full text-xs">
+                      <thead className="bg-raised sticky top-0">
                         <tr>
                           {matchedHeaders.map((h) => (
-                            <th key={h} className="text-left px-2 py-1.5 font-medium text-neutral-400 whitespace-nowrap">{h}</th>
+                            <th key={h} className="text-left px-2 py-1.5 font-medium text-fg-3 whitespace-nowrap">{h}</th>
                           ))}
                         </tr>
                       </thead>
                       <tbody>
                         {parsed.rows.slice(0, PREVIEW_ROW_LIMIT).map((row, i) => (
-                          <tr key={i} className="border-t border-neutral-800/60">
+                          <tr key={i} className="border-t border-line">
                             {matchedHeaders.map((h) => (
-                              <td key={h} className="px-2 py-1.5 text-neutral-300 whitespace-nowrap max-w-[180px] truncate">{row[h]}</td>
+                              <td key={h} className="px-2 py-1.5 text-fg-2 whitespace-nowrap max-w-45 truncate">{row[h]}</td>
                             ))}
                           </tr>
                         ))}
@@ -266,43 +256,38 @@ export function BulkRowsDialog({ databaseId, schema, onClose }: BulkRowsDialogPr
                     </table>
                   </div>
                   {parsed.rows.length > PREVIEW_ROW_LIMIT && (
-                    <p className="text-[11px] text-neutral-600">+{parsed.rows.length - PREVIEW_ROW_LIMIT}</p>
+                    <p className="text-xs text-fg-3">{t('bulkImport.moreRows', { count: parsed.rows.length - PREVIEW_ROW_LIMIT })}</p>
                   )}
                 </div>
               )}
             </>
           )}
-        </div>
+        </DialogBody>
 
-        <div className="flex items-center justify-end gap-2 px-5 py-3.5 border-t border-neutral-800 shrink-0">
+        <DialogFooter>
           {step === 'done' ? (
-            <button
-              onClick={onClose}
-              className="px-4 py-2 text-xs font-semibold text-white bg-neutral-700 hover:bg-neutral-600 rounded-lg transition-colors cursor-pointer"
-            >
+            <Button variant="primary" onClick={onClose}>
               {t('bulkImport.close')}
-            </button>
+            </Button>
           ) : (
             <>
-              <button
-                onClick={onClose}
-                className="px-4 py-2 text-xs font-medium text-neutral-400 hover:text-neutral-200 bg-neutral-800 hover:bg-neutral-700 rounded-lg transition-colors cursor-pointer"
-              >
+              <Button variant="secondary" onClick={onClose} disabled={step === 'committing'}>
                 {t('bulkImport.cancel')}
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="primary"
                 onClick={handleCommit}
-                disabled={!canCommit || step === 'committing'}
-                className="px-4 py-2 text-xs font-semibold text-ink-fg bg-ink hover:bg-ink/88 disabled:opacity-40 disabled:cursor-not-allowed rounded-lg transition-colors cursor-pointer"
+                disabled={!canCommit}
+                loading={step === 'committing'}
               >
                 {mode === 'add'
                   ? t('bulkImport.confirmAdd', { count: parsed.rows.length })
                   : t('bulkImport.confirmUpdate', { count: parsed.rows.length })}
-              </button>
+              </Button>
             </>
           )}
-        </div>
-      </div>
-    </>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -3,7 +3,7 @@ import { forwardRef, useEffect, useImperativeHandle, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { cn } from '@/lib/cn';
 import PageIcon from '../PageIcon';
-import type { PageLinkItem } from './pageLinkData';
+import { withTitle, type PageLinkItem } from './pageLinkData';
 import { MENU_EMPTY, MENU_SURFACE, menuItem } from './menuStyles';
 
 type Props = {
@@ -14,6 +14,7 @@ type Props = {
 const PageMentionList = forwardRef<{ onKeyDown: (props: { event: KeyboardEvent }) => boolean }, Props>(
   ({ items, command }, ref) => {
     const t = useTranslations('Editor');
+    const untitled = useTranslations('Page')('untitled');
     const [selectedIndex, setSelectedIndex] = useState(0);
 
     useEffect(() => setSelectedIndex(0), [items]);
@@ -30,7 +31,7 @@ const PageMentionList = forwardRef<{ onKeyDown: (props: { event: KeyboardEvent }
           return true;
         }
         if (event.key === 'Enter') {
-          if (items[selectedIndex]) command(items[selectedIndex]);
+          if (items[selectedIndex]) command(withTitle(items[selectedIndex], untitled));
           return true;
         }
         return false;
@@ -51,14 +52,14 @@ const PageMentionList = forwardRef<{ onKeyDown: (props: { event: KeyboardEvent }
           <button
             type="button"
             key={item.id}
-            onClick={() => command(item)}
+            onClick={() => command(withTitle(item, untitled))}
             onMouseMove={() => { if (index !== selectedIndex) setSelectedIndex(index); }}
             className={menuItem(index === selectedIndex)}
           >
             <span className="flex shrink-0 items-center">
               <PageIcon icon={item.icon} iconColor={item.iconColor} size={16} fallbackType={item.type} />
             </span>
-            <span className="flex-1 truncate">{item.title}</span>
+            <span className="flex-1 truncate">{item.title || untitled}</span>
           </button>
         ))}
       </div>

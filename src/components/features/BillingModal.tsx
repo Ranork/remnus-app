@@ -1,12 +1,16 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { X, CreditCard, Users, Bot, HardDrive, ExternalLink, Loader2 } from 'lucide-react';
+import { Users, Bot, HardDrive, ExternalLink, Loader2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { getMySubscription, createPortalSession } from '@/lib/actions/billing';
 import PlanPickerModal from './PlanPickerModal';
 import PoolPeopleSection from './PoolPeopleSection';
-import type { PlanTier } from '@/lib/billing/plans';
+import { Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { SettingsPage, SettingsSection } from '@/components/ui/settings';
+import { cn } from '@/lib/cn';
 
 type Usage = Awaited<ReturnType<typeof getMySubscription>>;
 
@@ -17,13 +21,6 @@ function formatBytes(n: number): string {
   if (n >= 1024) return `${Math.round(n / 1024)} KB`;
   return `${n} B`;
 }
-
-const TIER_ACCENT: Record<PlanTier, string> = {
-  free: 'var(--color-green-400)',
-  startup: 'var(--color-blue-500)',
-  professional: 'var(--color-accent-strong)',
-  enterprise: 'var(--color-amber-500)',
-};
 
 export default function BillingModal({ isDemo = false, initialPickerOpen = false, onClose }: { isDemo?: boolean; initialPickerOpen?: boolean; onClose: () => void }) {
   const t = useTranslations('Billing');
@@ -58,92 +55,70 @@ export default function BillingModal({ isDemo = false, initialPickerOpen = false
   const tierLabel = t(`tier_${tier}` as 'tier_free');
 
   return (
-    <>
-      <div className="fixed inset-0 z-100 bg-black/60" onClick={onClose} />
-      <div className="fixed inset-x-4 top-1/2 -translate-y-1/2 z-100 sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:w-full sm:max-w-md bg-neutral-900 border border-neutral-800 rounded-xl shadow-[0_8px_40px_rgba(0,0,0,0.6)] flex flex-col max-h-[85vh]">
-        {/* Header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b border-neutral-800">
-          <div className="flex items-center gap-2">
-            <CreditCard size={15} className="text-neutral-300" />
-            <span className="text-sm font-semibold text-neutral-100">{t('title')}</span>
-          </div>
-          <button onClick={onClose} className="text-neutral-500 hover:text-neutral-200 transition-colors">
-            <X size={16} />
-          </button>
-        </div>
+    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent size="md">
+        <DialogHeader>
+          <DialogTitle>{t('title')}</DialogTitle>
+        </DialogHeader>
 
-        <div className="p-5 overflow-y-auto">
+        <DialogBody>
           {loading ? (
-            <div className="flex items-center justify-center py-10 text-neutral-500">
-              <Loader2 size={18} className="animate-spin" />
+            <div role="status" className="flex justify-center py-10">
+              <Loader2 size={18} className="animate-spin text-fg-3" />
             </div>
           ) : !data ? (
-            <p className="text-sm text-red-400">{error ?? t('loadError')}</p>
+            <p role="alert" className="text-ui text-red-400">{error ?? t('loadError')}</p>
           ) : (
-            <>
-              {/* Current plan */}
-              <div className="flex items-center justify-between mb-5">
-                <div>
-                  <p className="m-0 text-xs text-neutral-500">{t('currentPlan')}</p>
-                  <p className="m-0 mt-0.5 text-lg font-semibold text-neutral-100" style={{ color: TIER_ACCENT[tier] }}>
-                    {tierLabel}
-                  </p>
+            <SettingsPage>
+              <SettingsSection>
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-xs text-fg-3">{t('currentPlan')}</p>
+                    <p className="mt-0.5 text-lg font-semibold text-fg">{tierLabel}</p>
+                  </div>
+                  {data.status !== 'active' && (
+                    <Badge variant="warning">{t(`status_${data.status}` as 'status_past_due')}</Badge>
+                  )}
                 </div>
-                {data.status !== 'active' && (
-                  <span className="text-[11px] font-medium px-2 py-1 rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/25">
-                    {t(`status_${data.status}` as 'status_past_due')}
-                  </span>
-                )}
-              </div>
+                <div className="flex flex-col gap-3">
+                  <Meter icon={<Users size={14} />} label={t('seats')} used={data.usage.seats.used} limit={data.usage.seats.limit} />
+                  <Meter icon={<Bot size={14} />} label={t('agents')} used={data.usage.agents.used} limit={data.usage.agents.limit} />
+                  <Meter
+                    icon={<HardDrive size={14} />}
+                    label={t('storage')}
+                    used={data.usage.storageBytes.used}
+                    limit={data.usage.storageBytes.limit}
+                    format={formatBytes}
+                  />
+                </div>
+              </SettingsSection>
 
-              {/* Usage meters */}
-              <div className="flex flex-col gap-3 mb-6">
-                <Meter icon={<Users size={13} />} label={t('seats')} used={data.usage.seats.used} limit={data.usage.seats.limit} />
-                <Meter icon={<Bot size={13} />} label={t('agents')} used={data.usage.agents.used} limit={data.usage.agents.limit} />
-                <Meter
-                  icon={<HardDrive size={13} />}
-                  label={t('storage')}
-                  used={data.usage.storageBytes.used}
-                  limit={data.usage.storageBytes.limit}
-                  format={formatBytes}
-                />
-              </div>
+              <PoolPeopleSection />
 
-              {/* People & seats */}
-              <div className="mb-6">
-                <PoolPeopleSection />
-              </div>
-
-              {error && <p className="m-0 mb-3 text-xs text-red-400">{error}</p>}
-
-              {/* Actions */}
-              <div className="flex flex-col gap-2">
-                <button
-                  onClick={() => setPickerOpen(true)}
-                  className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-[13px] font-semibold text-ink-fg bg-ink hover:opacity-90 transition-opacity"
-                >
-                  {t('changePlan')}
-                </button>
-                {!isDemo && (
-                  <button
-                    onClick={() => go(createPortalSession, 'portal')}
-                    disabled={!!busy}
-                    className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-[13px] font-medium text-neutral-300 hover:text-neutral-100 hover:bg-neutral-800 disabled:opacity-50 transition-colors"
-                  >
-                    {busy === 'portal' ? <Loader2 size={14} className="animate-spin" /> : <ExternalLink size={13} />}
-                    {t('manageBilling')}
-                  </button>
-                )}
-              </div>
-            </>
+              {error && <p role="alert" className="text-xs text-red-400">{error}</p>}
+            </SettingsPage>
           )}
-        </div>
-      </div>
+        </DialogBody>
 
-      {pickerOpen && data && (
-        <PlanPickerModal currentTier={tier} isDemo={isDemo} onClose={() => setPickerOpen(false)} />
-      )}
-    </>
+        {data && (
+          <DialogFooter>
+            {!isDemo && (
+              <Button onClick={() => go(createPortalSession, 'portal')} disabled={!!busy && busy !== 'portal'} loading={busy === 'portal'}>
+                <ExternalLink />
+                {t('manageBilling')}
+              </Button>
+            )}
+            <Button variant="primary" onClick={() => setPickerOpen(true)}>
+              {t('changePlan')}
+            </Button>
+          </DialogFooter>
+        )}
+
+        {pickerOpen && data && (
+          <PlanPickerModal currentTier={tier} isDemo={isDemo} onClose={() => setPickerOpen(false)} />
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -157,17 +132,17 @@ function Meter({
   const over = !unlimited && used >= limit;
   return (
     <div>
-      <div className="flex items-center justify-between mb-1.5 text-[12.5px]">
-        <span className="flex items-center gap-1.5 text-neutral-300">{icon}{label}</span>
-        <span className={over ? 'text-amber-400 font-medium' : 'text-neutral-400'}>
+      <div className="mb-1.5 flex items-center justify-between text-xs">
+        <span className="flex items-center gap-1.5 text-fg-2 [&_svg]:text-fg-3">{icon}{label}</span>
+        <span className={over ? 'font-medium text-amber-400' : 'text-fg-3'}>
           {fmt(used)} / {unlimited ? t('unlimited') : fmt(limit)}
         </span>
       </div>
       {!unlimited && (
-        <div className="h-1.5 rounded-full bg-neutral-800 overflow-hidden">
+        <div className="h-1.5 overflow-hidden rounded-full bg-hover">
           <div
-            className="h-full rounded-full transition-all"
-            style={{ width: `${pct}%`, background: over ? 'var(--color-amber-500)' : 'var(--color-blue-500)' }}
+            className={cn('h-full rounded-full transition-[width] duration-300', over ? 'bg-amber-400' : 'bg-fg-2')}
+            style={{ width: `${pct}%` }}
           />
         </div>
       )}

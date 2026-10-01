@@ -42,14 +42,14 @@ function NavList({
             href={href}
             onClick={onNavigate}
             aria-current={active ? 'page' : undefined}
-            className={`group flex items-center gap-2.5 rounded-md px-2.5 py-1.5 text-[13.5px] transition-colors duration-150 ${
+            className={`group flex h-8 items-center gap-2.5 rounded-control px-2.5 text-ui transition-colors duration-150 ${
               active
-                ? 'bg-blue-500/10 text-neutral-100 font-medium'
-                : 'text-neutral-50 hover:text-neutral-100 hover:bg-neutral-900'
+                ? 'bg-sheet font-medium text-fg shadow-lift'
+                : 'text-fg-2 hover:bg-sheet/55 hover:text-fg'
             }`}
           >
             {Icon && (
-              <Icon size={14} className={`shrink-0 ${active ? 'text-blue-500' : 'text-neutral-500'}`} />
+              <Icon size={15} className={`shrink-0 ${active ? 'text-fg' : 'text-fg-3'}`} />
             )}
             <span className="truncate">{item.title}</span>
           </Link>
@@ -74,9 +74,9 @@ export default function WikiSidebar({
   return (
     <>
       {/* Desktop: sticky left rail */}
-      <aside className="hidden lg:block w-60 shrink-0">
+      <aside className="hidden w-60 shrink-0 lg:block">
         <div className="sticky top-24 max-h-[calc(100vh-7rem)] overflow-y-auto pr-2">
-          <p className="font-mono text-[10.5px] uppercase tracking-[0.14em] text-neutral-500 px-2.5 mb-2.5">
+          <p className="m-0 mb-2 px-2.5 text-ui font-medium text-fg-3">
             {heading}
           </p>
           <NavList items={items} pathname={pathname} />
@@ -84,10 +84,10 @@ export default function WikiSidebar({
       </aside>
 
       {/* Mobile: collapsible menu */}
-      <div className="lg:hidden mb-6 rounded-lg border border-neutral-800 bg-neutral-900/40">
+      <div className="mb-4 rounded-[14px] bg-sheet shadow-sheet lg:hidden">
         <button
           onClick={() => setMobileOpen((v) => !v)}
-          className="w-full flex items-center gap-2 px-4 py-3 text-[13px] text-neutral-50 hover:text-neutral-100 transition-colors"
+          className="flex w-full items-center gap-2 px-4 py-3 text-ui text-fg-2 transition-colors hover:text-fg"
         >
           {mobileOpen ? <X size={14} /> : <List size={14} />}
           <span className="font-medium">{menuLabel}</span>
@@ -97,7 +97,7 @@ export default function WikiSidebar({
           />
         </button>
         {mobileOpen && (
-          <div className="border-t border-neutral-800 p-2">
+          <div className="border-t border-line p-2">
             <NavList items={items} pathname={pathname} onNavigate={() => setMobileOpen(false)} />
           </div>
         )}

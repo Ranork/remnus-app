@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import { createPortal } from 'react-dom';
+import { useMemo, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
-import { Repeat, X } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Dialog, DialogBody, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import {
   DEFAULT_HORIZON_DAYS,
   WEEKDAYS,
@@ -147,12 +148,6 @@ export default function RecurrenceDialog({
     }
   };
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [onClose]);
-
   const choosePreset = (next: PresetId) => {
     setPreset(next);
     if (next === 'custom') {
@@ -178,43 +173,19 @@ export default function RecurrenceDialog({
   const monthlyMode: MonthlyMode = draft.monthlyMode ?? 'dayOfMonth';
   const endType = draft.end.type;
 
-  if (typeof document === 'undefined') return null;
+  return (
+    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent size="md">
+        <DialogHeader>
+          <DialogTitle>{t('title')}</DialogTitle>
+        </DialogHeader>
 
-  return createPortal(
-    <div
-      className="fixed inset-0 bg-black/60 z-300 flex items-center justify-center p-4 md:p-6"
-      onClick={onClose}
-    >
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label={t('title')}
-        onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-full sm:max-w-lg max-h-full bg-neutral-850 border border-neutral-800 rounded-xl modal-shadow flex flex-col overflow-hidden animate-scale-in"
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between gap-3 px-5 py-3.5 border-b border-neutral-800 shrink-0">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-7 h-7 rounded-lg bg-signal/10 border border-signal/20 flex items-center justify-center shrink-0">
-              <Repeat size={13} className="text-signal-text" />
-            </div>
-            <h2 className="m-0 text-sm font-semibold text-neutral-100 truncate">{t('title')}</h2>
-          </div>
-          <button
-            onClick={onClose}
-            aria-label={t('cancel')}
-            className="shrink-0 p-1.5 rounded-md text-neutral-500 hover:text-neutral-200 hover:bg-neutral-800 transition-colors"
-          >
-            <X size={15} />
-          </button>
-        </div>
-
-        <div className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-4">
+        <DialogBody className="flex flex-col gap-4">
           {/* Live answer, up top where it gets read — not a footnote. */}
           {preset !== 'none' && (
-            <div className="rounded-lg bg-signal/[0.07] border border-signal/20 px-4 py-3">
-              <p className="m-0 text-[13px] font-medium text-neutral-50 leading-snug">{summary}</p>
-              <p className="m-0 mt-1 text-[11px] text-signal-text/70">
+            <div className="rounded-control bg-raised px-4 py-3 shadow-[inset_0_0_0_1px_var(--color-line)]">
+              <p className="m-0 text-ui font-medium text-fg leading-snug">{summary}</p>
+              <p className="m-0 mt-1 text-xs text-fg-3">
                 {t('previewCount', { count: preview, days: DEFAULT_HORIZON_DAYS })}
               </p>
             </div>
@@ -246,10 +217,10 @@ export default function RecurrenceDialog({
 
           {/* Custom builder */}
           {preset === 'custom' && (
-            <div className="flex flex-col gap-4 rounded-lg border border-neutral-800 bg-neutral-900/40 p-4">
+            <div className="flex flex-col gap-4 rounded-control bg-raised p-4 shadow-[inset_0_0_0_1px_var(--color-line)]">
               {/* Frequency + interval */}
               <div className="flex flex-wrap items-center gap-2">
-                <span className="text-[11px] text-neutral-500">{t('every')}</span>
+                <span className="text-xs text-fg-3">{t('every')}</span>
                 <Stepper
                   value={draft.interval}
                   min={1}
@@ -282,10 +253,10 @@ export default function RecurrenceDialog({
                         onClick={() => toggleWeekday(wd)}
                         aria-pressed={active}
                         aria-label={dayNamesLong[wd]}
-                        className={`w-9 h-9 rounded-full text-[10px] font-semibold border transition-colors ${
+                        className={`size-9 cursor-pointer rounded-full text-xs font-semibold transition-colors ${
                           active
-                            ? 'bg-ink border-signal text-ink-fg'
-                            : 'bg-neutral-900 border-neutral-800 text-neutral-500 hover:text-neutral-200 hover:border-neutral-700'
+                            ? 'bg-ink text-ink-fg'
+                            : 'bg-sheet text-fg-3 shadow-[inset_0_0_0_1px_var(--color-line)] hover:text-fg hover:shadow-[inset_0_0_0_1px_var(--color-line-strong)]'
                         }`}
                       >
                         {dayNames[wd].slice(0, 2)}
@@ -315,7 +286,7 @@ export default function RecurrenceDialog({
                   {/* The 31st simply has no match in a 30-day month; say so
                       rather than silently producing fewer cards than expected. */}
                   {monthlyMode === 'dayOfMonth' && (draft.byMonthDay ?? 1) > 28 && (
-                    <p className="m-0 text-[10px] text-amber-400/80 leading-snug">
+                    <p className="m-0 text-xs text-fg-3 leading-snug">
                       {t('monthDaySkipNote', { day: draft.byMonthDay ?? 1 })}
                     </p>
                   )}
@@ -323,8 +294,8 @@ export default function RecurrenceDialog({
               )}
 
               {/* End condition */}
-              <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-neutral-800">
-                <span className="text-[11px] text-neutral-500">{t('endsLabel')}</span>
+              <div className="flex flex-wrap items-center gap-2 pt-3 border-t border-line">
+                <span className="text-xs text-fg-3">{t('endsLabel')}</span>
                 <Segmented
                   value={endType}
                   onChange={(type) => {
@@ -340,12 +311,14 @@ export default function RecurrenceDialog({
                 />
 
                 {draft.end.type === 'onDate' && (
-                  <input
+                  <Input
+                    size="sm"
                     type="date"
                     value={draft.end.date}
                     min={startDate}
                     onChange={(e) => patch({ end: { type: 'onDate', date: e.target.value || defaultHorizon() } })}
-                    className="bg-neutral-900 border border-neutral-800 rounded-lg px-2.5 py-1.5 text-[11px] text-neutral-100 focus:outline-none focus:border-neutral-600 scheme-dark"
+                    aria-label={t('endsOn')}
+                    className="w-auto scheme-dark"
                   />
                 )}
 
@@ -359,43 +332,31 @@ export default function RecurrenceDialog({
                       decreaseLabel={t('decrease')}
                       increaseLabel={t('increase')}
                     />
-                    <span className="text-[11px] text-neutral-500">{t('occurrences')}</span>
+                    <span className="text-xs text-fg-3">{t('occurrences')}</span>
                   </div>
                 )}
               </div>
             </div>
           )}
-        </div>
+        </DialogBody>
 
-        {/* Footer */}
-        <div className="flex items-center justify-between gap-2 px-5 py-3 border-t border-neutral-800 shrink-0">
+        <DialogFooter className="justify-between">
           {onRemove ? (
-            <button
-              onClick={onRemove}
-              className="text-[11px] font-medium text-red-400 hover:text-red-300 px-2 py-1.5 rounded-md hover:bg-red-500/10 transition-colors"
-            >
+            <Button variant="ghost" onClick={onRemove} className="text-red-400 hover:bg-red-500/10 hover:text-red-400">
               {t('removeRepeat')}
-            </button>
+            </Button>
           ) : <span />}
 
           <div className="flex items-center gap-2">
-            <button
-              onClick={onClose}
-              className="px-4 py-2 text-xs font-medium text-neutral-400 hover:text-neutral-200 bg-neutral-800 hover:bg-neutral-750 rounded-lg transition-colors"
-            >
+            <Button variant="secondary" onClick={onClose}>
               {t('cancel')}
-            </button>
-            <button
-              onClick={() => onSave({ ...draft, startDate })}
-              disabled={preset === 'none'}
-              className="px-4 py-2 text-xs font-semibold text-ink-fg bg-ink hover:bg-ink/88 disabled:opacity-40 disabled:hover:bg-ink rounded-lg transition-colors"
-            >
+            </Button>
+            <Button variant="primary" onClick={() => onSave({ ...draft, startDate })} disabled={preset === 'none'}>
               {t('save')}
-            </button>
+            </Button>
           </div>
-        </div>
-      </div>
-    </div>,
-    document.body,
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

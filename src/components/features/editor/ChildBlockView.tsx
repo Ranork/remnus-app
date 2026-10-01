@@ -20,6 +20,7 @@ export default function ChildBlockView({
   const router = useRouter();
   const tabs = useTabs();
   const t = useTranslations('Editor');
+  const tPage = useTranslations('Page');
   // Set by TrashedTargetsExtension: the target is in the Trash, not gone.
   const trashed = !!decorations?.some((decoration) => decoration.spec?.trashed);
 
@@ -82,7 +83,7 @@ export default function ChildBlockView({
                 : 'cursor-pointer text-fg decoration-line-strong group-hover/child:decoration-fg-3',
           )}
         >
-          {title}
+          {title || tPage('untitled')}
         </button>
 
         {trashed && (

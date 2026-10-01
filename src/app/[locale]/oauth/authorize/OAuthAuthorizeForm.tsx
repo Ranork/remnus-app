@@ -1,11 +1,19 @@
 'use client';
 
 import { useState } from 'react';
+import { useFormStatus } from 'react-dom';
 import { useTranslations } from 'next-intl';
-import Link from 'next/link';
-import { ArrowLeft, Check } from 'lucide-react';
-import PageIcon from '@/components/features/PageIcon';
+import { Eye } from 'lucide-react';
+import { AuthCard, AuthNotice, AuthScreen, AuthSection } from '@/components/features/auth/AuthScreen';
+import { WorkspaceGlyph } from '@/components/features/auth/parts';
 import { AGENT_MARKS, MarkIcon, resolveAgentMark } from '@/components/features/agents/AgentMark';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { RadioCard, RadioCards } from '@/components/ui/radio-cards';
+import { Field } from '@/components/ui/settings';
+import { Tooltip } from '@/components/ui/tooltip';
+import { cn } from '@/lib/cn';
 
 interface Workspace {
   id: string;
@@ -28,10 +36,11 @@ interface Props {
 export function OAuthAuthorizeForm({ clientName, scope, workspaces, userName, onApprove, onDeny }: Props) {
   const t = useTranslations('OAuthAuthorize');
 
-  // Default to the scope the client requested, but let the user choose (incl. upgrading to write).
+  // Default to the scope the client requested (read unless it asked for exactly
+  // `write`), but let the user choose — including upgrading to write. The preselected
+  // option is labelled, so what happens on a plain "Authorize" is never a guess.
   const [selectedScope, setSelectedScope] = useState<'read' | 'write'>(scope);
 
-  // Workspace selection (icon picker grid instead of a bare <select>).
   const [selectedWorkspace, setSelectedWorkspace] = useState<string>(workspaces[0]?.id ?? '');
 
   // Agent brand (icon). Default to whatever we can infer from the client name.
@@ -46,177 +55,154 @@ export function OAuthAuthorizeForm({ clientName, scope, workspaces, userName, on
   const viewerOnly = workspaces.find((ws) => ws.id === selectedWorkspace)?.viewer === true;
   const effectiveScope = viewerOnly ? 'read' : selectedScope;
 
-  const scopePermissions = effectiveScope === 'write'
-    ? [t('permReadWrite'), t('permCreateEdit')]
-    : [t('permReadOnly')];
+  const defaultBadge = <Badge variant="outline" size="sm">{t('scopeDefault')}</Badge>;
+  const pinned = workspaces.length === 1 ? workspaces[0] : null;
 
   return (
-    <div className="min-h-screen bg-neutral-950 flex items-center justify-center p-4 relative">
-      <div className="absolute top-4 left-4">
-        <Link
-          href="/"
-          className="flex items-center gap-1.5 text-sm text-neutral-500 hover:text-neutral-300 transition-colors"
-        >
-          <ArrowLeft size={14} />
-          <span>Remnus</span>
-        </Link>
-      </div>
+    <AuthScreen footer={t('disclaimer')}>
+      <AuthCard
+        title={t('heading', { client: clientName })}
+        description={t('headingHint')}
+        meta={<span className="text-xs text-fg-3">{t('signedInAs', { user: userName })}</span>}
+      >
+        <form action={onApprove} className="flex flex-col gap-6">
+          <input type="hidden" name="scope" value={effectiveScope} />
+          <input type="hidden" name="workspace_id" value={selectedWorkspace} />
+          <input type="hidden" name="agent_name" value={selectedAgent ?? ''} />
 
-      <div className="w-full max-w-sm">
-        {/* Logo */}
-        <div className="flex flex-col items-center mb-8">
-          <Link href="/" className="flex flex-col items-center hover:opacity-80 transition-opacity">
-            <img
-              src="/logo-square-dark.png"
-              alt="Remnus"
-              className="w-14 h-14 object-contain rounded-xl mb-4 shadow-lg"
-            />
-            <h1 className="text-2xl font-bold text-neutral-50 tracking-tight">Remnus</h1>
-          </Link>
-          <p className="text-neutral-400 text-sm mt-2 text-center px-2">
-            {t('subtitle', { client: clientName })}
-          </p>
-          <p className="text-neutral-600 text-xs mt-1">{t('signedInAs', { user: userName })}</p>
-        </div>
-
-        {/* Card */}
-        <div className="bg-neutral-900 border border-neutral-800 rounded-xl overflow-hidden">
-          {/* Access level selector */}
-          <div className="px-6 pt-5 pb-4 border-b border-neutral-800">
-            <p className="text-xs text-neutral-500 mb-2.5">{t('accessLevel')}</p>
-            <div className="flex gap-2 mb-3">
-              {(['read', 'write'] as const).map((s) => (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => setSelectedScope(s)}
-                  disabled={viewerOnly && s === 'write'}
-                  className={`flex-1 px-3 py-2 rounded-lg border text-xs font-semibold transition-all disabled:opacity-40 disabled:cursor-not-allowed ${
-                    effectiveScope === s
-                      ? s === 'write'
-                        ? 'bg-amber-500/10 border-amber-500/40 text-amber-300'
-                        : 'bg-signal/10 border-signal/40 text-signal-text'
-                      : 'bg-neutral-800 border-neutral-700 text-neutral-400 hover:text-neutral-200 hover:border-neutral-600'
-                  }`}
-                >
-                  {s === 'read' ? t('scopeReadLabel') : t('scopeWriteLabel')}
-                </button>
-              ))}
-            </div>
-            {viewerOnly && (
-              <p className="text-xs text-neutral-500 leading-relaxed mb-3">{t('viewerScopeHint')}</p>
+          <AuthSection label={t('selectWorkspace')} labelId="oauth-workspace">
+            {pinned ? (
+              // A project-pinned connection (`resource` names one workspace): nothing to pick.
+              <div className="flex items-center gap-3 rounded-control bg-raised px-3 py-2.5 shadow-[inset_0_0_0_1px_var(--color-line)]">
+                <WorkspaceGlyph name={pinned.name} icon={pinned.icon} iconColor={pinned.iconColor} />
+                <span className="truncate text-ui font-medium text-fg">{pinned.name}</span>
+              </div>
+            ) : (
+              <div className="-m-1 max-h-56 overflow-y-auto p-1">
+                <RadioCards value={selectedWorkspace} onValueChange={setSelectedWorkspace} aria-labelledby="oauth-workspace">
+                  {workspaces.map((ws) => (
+                    <RadioCard
+                      key={ws.id}
+                      value={ws.id}
+                      size="sm"
+                      icon={<WorkspaceGlyph name={ws.name} icon={ws.icon} iconColor={ws.iconColor} />}
+                      title={ws.name}
+                    />
+                  ))}
+                </RadioCards>
+              </div>
             )}
-            <ul className="space-y-2">
-              {scopePermissions.map((perm) => (
-                <li key={perm} className="flex items-center gap-2.5 text-sm text-neutral-300">
-                  <svg viewBox="0 0 24 24" fill="none" stroke="#7fc36d" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4 shrink-0">
-                    <polyline points="20 6 9 17 4 12" />
-                  </svg>
-                  {perm}
-                </li>
-              ))}
-            </ul>
-          </div>
+          </AuthSection>
 
-          <form action={onApprove} className="px-6 py-5">
-            <input type="hidden" name="scope" value={effectiveScope} />
-            <input type="hidden" name="workspace_id" value={selectedWorkspace} />
-            <input type="hidden" name="agent_name" value={selectedAgent ?? ''} />
+          <AuthSection label={t('accessLevel')} labelId="oauth-scope">
+            {viewerOnly && <AuthNotice icon={<Eye />}>{t('viewerScopeHint')}</AuthNotice>}
+            <RadioCards value={effectiveScope} onValueChange={setSelectedScope} aria-labelledby="oauth-scope">
+              <RadioCard
+                value="read"
+                title={t('scopeReadLabel')}
+                description={t('permReadOnly')}
+                badge={scope === 'read' ? defaultBadge : undefined}
+              />
+              <RadioCard
+                value="write"
+                disabled={viewerOnly}
+                title={t('scopeWriteLabel')}
+                description={t('permCreateEdit')}
+                badge={scope === 'write' ? defaultBadge : undefined}
+              />
+            </RadioCards>
+          </AuthSection>
 
-            {/* Workspace selector — icon list */}
-            <label className="text-xs text-neutral-500 mb-2 block">
-              {t('selectWorkspace')}
-            </label>
-            <div className="space-y-1.5 mb-5 max-h-44 overflow-y-auto pr-0.5">
-              {workspaces.map((ws) => {
-                const active = selectedWorkspace === ws.id;
-                return (
-                  <button
-                    key={ws.id}
-                    type="button"
-                    onClick={() => setSelectedWorkspace(ws.id)}
-                    className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg border text-left transition-all ${
-                      active
-                        ? 'bg-signal/10 border-signal/40'
-                        : 'bg-neutral-800 border-neutral-700 hover:border-neutral-600'
-                    }`}
-                  >
-                    {ws.icon
-                      ? <PageIcon icon={ws.icon} iconColor={ws.iconColor} size={18} />
-                      : <span className="w-4.5 h-4.5 rounded bg-neutral-700 flex items-center justify-center text-[10px] font-bold text-neutral-300 shrink-0">
-                          {ws.name.charAt(0).toUpperCase()}
-                        </span>
-                    }
-                    <span className={`flex-1 text-sm truncate ${active ? 'text-signal-text' : 'text-neutral-200'}`}>
-                      {ws.name}
-                    </span>
-                    {active && <Check size={15} className="text-signal-text shrink-0" />}
-                  </button>
-                );
-              })}
-            </div>
-
-            {/* Agent identity — brand + friendly name */}
-            <label className="text-xs text-neutral-500 mb-2 block">
-              {t('agentTypeLabel')}
-            </label>
-            <div className="flex flex-wrap gap-1.5 mb-3">
-              {AGENT_MARKS.map((a) => {
-                const active = selectedAgent === a.id;
-                return (
-                  <button
-                    key={a.id}
-                    type="button"
-                    title={a.label}
-                    onClick={() => setSelectedAgent(active ? null : a.id)}
-                    className={`w-8 h-8 rounded-lg flex items-center justify-center border transition-all ${
-                      active
-                        ? 'bg-signal/10 border-signal/40'
-                        : 'bg-neutral-800 border-neutral-700 hover:border-neutral-600'
-                    }`}
-                  >
-                    <MarkIcon mark={a.mark} size={15} />
-                  </button>
-                );
-              })}
-            </div>
-
-            <label className="text-xs text-neutral-500 mb-2 block">
-              {t('agentNameLabel')}
-            </label>
-            <input
+          <Field label={t('agentNameLabel')} htmlFor="oauth-display-name">
+            <Input
+              id="oauth-display-name"
               name="display_name"
-              type="text"
+              size="lg"
               maxLength={60}
               value={agentLabel}
               onChange={(e) => setAgentLabel(e.target.value)}
               placeholder={t('agentNamePlaceholder')}
-              className="w-full bg-neutral-800 border border-neutral-700 text-neutral-100 text-sm px-3 py-2.5 rounded-lg focus:outline-none focus:border-signal mb-4 placeholder:text-neutral-600"
             />
+          </Field>
 
-            <button
-              type="submit"
-              disabled={!selectedWorkspace}
-              className="w-full bg-ink hover:bg-ink/88 active:bg-ink/80 disabled:opacity-50 text-ink-fg font-medium text-sm py-2.5 rounded-lg transition-colors"
-            >
-              {t('authorize')}
-            </button>
-          </form>
-        </div>
+          <AuthSection label={t('agentTypeLabel')}>
+            <div className="flex flex-wrap gap-1.5">
+              {AGENT_MARKS.map((a) => {
+                const active = selectedAgent === a.id;
+                return (
+                  <Tooltip key={a.id} content={a.label}>
+                    <button
+                      type="button"
+                      aria-label={a.label}
+                      aria-pressed={active}
+                      onClick={() => setSelectedAgent(active ? null : a.id)}
+                      className={cn(
+                        'flex size-9 cursor-pointer items-center justify-center rounded-control transition-[background-color,box-shadow]',
+                        active
+                          ? 'bg-signal-soft/50 shadow-[inset_0_0_0_1.5px_var(--color-signal)]'
+                          : 'bg-raised shadow-[inset_0_0_0_1px_var(--color-line)] hover:shadow-[inset_0_0_0_1px_var(--color-line-strong)]',
+                      )}
+                    >
+                      <MarkIcon mark={a.mark} size={16} />
+                    </button>
+                  </Tooltip>
+                );
+              })}
+            </div>
+          </AuthSection>
 
-        {/* Deny + disclaimer */}
-        <div className="mt-4 text-center">
-          <form action={onDeny}>
-            <button
-              type="submit"
-              className="text-neutral-500 hover:text-neutral-300 text-sm py-1.5 transition-colors"
-            >
-              {t('deny')}
-            </button>
-          </form>
-          <p className="text-xs text-neutral-700 mt-3 px-4">{t('disclaimer')}</p>
-        </div>
-      </div>
+          <ConsentActions
+            canApprove={Boolean(selectedWorkspace)}
+            onDeny={onDeny}
+            approveLabel={t('authorize')}
+            denyLabel={t('deny')}
+          />
+        </form>
+      </AuthCard>
+    </AuthScreen>
+  );
+}
+
+/**
+ * Deny and Authorize side by side, in the one form: Deny submits it to its own action
+ * (`formAction`), so both buttons know the form is busy and only the clicked one spins.
+ */
+function ConsentActions({
+  canApprove,
+  onDeny,
+  approveLabel,
+  denyLabel,
+}: {
+  canApprove: boolean;
+  onDeny: () => Promise<void>;
+  approveLabel: string;
+  denyLabel: string;
+}) {
+  const { pending } = useFormStatus();
+  const [clicked, setClicked] = useState<'approve' | 'deny' | null>(null);
+
+  return (
+    <div className="grid grid-cols-2 gap-2">
+      <Button
+        type="submit"
+        size="lg"
+        formAction={onDeny}
+        onClick={() => setClicked('deny')}
+        loading={pending && clicked === 'deny'}
+        disabled={pending}
+      >
+        {denyLabel}
+      </Button>
+      <Button
+        type="submit"
+        variant="primary"
+        size="lg"
+        onClick={() => setClicked('approve')}
+        loading={pending && clicked === 'approve'}
+        disabled={pending || !canApprove}
+      >
+        {approveLabel}
+      </Button>
     </div>
   );
 }

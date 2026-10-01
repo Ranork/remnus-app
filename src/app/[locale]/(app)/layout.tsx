@@ -5,6 +5,8 @@ import { getSessionAllowingWorkspaceLock } from '@/lib/auth/session';
 import { lockClaimsOf } from '@/lib/auth/workspaceLock';
 import { getTranslations } from 'next-intl/server';
 import { getAllWorkspaceItems, getWorkspaces } from '@/lib/actions/workspace';
+import { loadAgentPresence } from '@/lib/services/agentPresence';
+import { EMPTY_PRESENCE } from '@/lib/agentPresence';
 import WorkspaceSidebar from '@/components/features/WorkspaceSidebar';
 import MobileNavWrapper from '@/components/features/MobileNavWrapper';
 import QueryProvider from '@/components/providers/QueryProvider';
@@ -15,6 +17,7 @@ import { lastPathOwnerTag } from '@/lib/server/lastPath';
 import BillingSuccessModal from '@/components/features/BillingSuccessModal';
 import UpdateBanner from '@/components/features/UpdateBanner';
 import DownloadToast from '@/components/features/DownloadToast';
+import { Toaster } from '@/components/ui/toast';
 import DemoFeedbackPrompt from '@/components/features/DemoFeedbackPrompt';
 import PwaInstallNudge from '@/components/features/PwaInstallNudge';
 import ProjectWindowBanner from '@/components/features/ProjectWindowBanner';
@@ -44,10 +47,18 @@ export default async function AppGroupLayout({
   // eslint-disable-next-line react-hooks/purity -- a per-request server timestamp, by design
   const renderedAt = Date.now();
 
-  const [workspacesList, items, cookieStore] = await Promise.all([
-    getWorkspaces(),
+  const workspacesRead = getWorkspaces();
+  const [workspacesList, items, cookieStore, presence] = await Promise.all([
+    workspacesRead,
     getAllWorkspaceItems(),
     cookies(),
+    // Agent presence (V2 R8.8) over the same workspaces the sidebar lists — a project
+    // window's one, otherwise the memberships (never an admin's view of everything).
+    // It rides on this render, so every live-refresh brings it along at no extra
+    // request; a failure only leaves the presence out.
+    workspacesRead
+      .then((list) => loadAgentPresence(list.map((w) => w.id), renderedAt))
+      .catch(() => ({ ...EMPTY_PRESENCE, at: renderedAt })),
   ]);
 
   // The one source of truth for "this is a project window" — the session's lock claim.
@@ -107,6 +118,7 @@ export default async function AppGroupLayout({
       <BillingSuccessModal />
       <UpdateBanner />
       <DownloadToast />
+      <Toaster />
       <QueryProvider>
         <AppShell
           items={items}
@@ -124,6 +136,7 @@ export default async function AppGroupLayout({
               showOnboarding
               isProjectWindow={isProjectWindow}
               renderedAt={renderedAt}
+              presence={presence}
             />
           }
           mobileNav={
@@ -134,6 +147,7 @@ export default async function AppGroupLayout({
               activeWorkspace={activeWorkspace ?? { id: '', name: 'Workspace' }}
               currentUser={currentUser}
               isProjectWindow={isProjectWindow}
+              presence={presence}
             />
           }
           demoBanner={demoBanner ?? projectWindowBanner}

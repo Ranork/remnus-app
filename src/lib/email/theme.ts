@@ -1,19 +1,23 @@
 // Shared email theme — Remnus brand palette (dark), mirrored from the @theme
-// tokens in src/app/globals.css. Email clients require inline hex values (no
+// role tokens in src/app/globals.css (V2 R8: desk/sheet/raised, ink primary, one
+// yellow signal). Email clients require inline hex values (no
 // CSS variables), so the palette is duplicated here as literals — keep in sync
 // with globals.css if the brand colors ever change.
 
 export const PALETTE = {
-  bg: '#1d1f23',        // outer canvas (neutral-950)
-  card: '#21252b',      // card / sidebar bg (neutral-900)
-  canvas: '#282c34',    // inner panel bg (neutral-850)
-  border: '#383b41',    // borders / dividers (neutral-800)
-  heading: '#f2f3f5',   // headings (near-white on dark)
-  soft: '#d7dae0',      // emphasized text (neutral-50)
-  body: '#cccccc',      // body text (neutral-100)
-  muted: '#8f959e',     // secondary / footer text
-  accent: '#445c95',    // primary / accent (blue-500)
-  accentTint: '#2b3a5c',// dimmed accent (chips / list bullets on dark)
+  bg: '#111316',        // outer canvas (desk)
+  card: '#191b1f',      // the email body (sheet)
+  canvas: '#1f2226',    // inner panel bg (raised)
+  border: '#2a2d33',    // borders / dividers (line)
+  heading: '#eceef1',   // headings (fg)
+  soft: '#dcdfe4',      // emphasized text (neutral-100)
+  body: '#b0b4bc',      // body text (fg-2)
+  muted: '#979ca5',     // secondary / footer text (fg-3)
+  ink: '#eceef1',       // primary button fill (ink)
+  inkFg: '#111316',     // primary button label (ink-fg)
+  signal: '#f0b43c',    // the one accent: step chips, quote rule
+  signalFg: '#1c1504',  // text on a signal fill
+  link: '#f3c566',      // inline links (link)
   success: '#7fc36d',   // green-400
   warning: '#cc7d45',   // amber-500
   destructive: '#cd4d55', // red-400

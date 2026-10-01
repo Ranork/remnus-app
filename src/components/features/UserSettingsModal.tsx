@@ -1,8 +1,10 @@
-﻿'use client';
+'use client';
 import { useState, useEffect, useRef } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
 import { useRouter } from 'next/navigation';
-import { X, User, Download, HardDrive, Crown, SlidersHorizontal, Camera, Loader2, Monitor, ChevronDown, Check, AlertTriangle, Mail } from 'lucide-react';
+import { User, Download, HardDrive, Crown, SlidersHorizontal, Camera, Loader2, Monitor, AlertTriangle, Mail } from 'lucide-react';
+import { Radio } from '@base-ui/react/radio';
+import { RadioGroup } from '@base-ui/react/radio-group';
 import AvatarCropModal from './AvatarCropModal';
 import FlagIcon from './FlagIcon';
 import ImportTab from './workspace-settings/ImportTab';
@@ -20,6 +22,14 @@ import {
 import { APP_THEMES } from '@/lib/themes';
 import type { AppTheme } from '@/lib/themes';
 import { setLocale } from '@/lib/actions/locale';
+import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Tabs, TabsList, TabsPanel, TabsTab } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { SimpleSelect } from '@/components/ui/select';
+import { SegmentedControl, SegmentedControlItem } from '@/components/ui/segmented-control';
+import { DangerZone, Field, SettingsList, SettingsPage, SettingsRow, SettingsSection } from '@/components/ui/settings';
 
 function formatBytes(bytes: number): string {
   if (bytes === 0) return '0 B';
@@ -28,85 +38,61 @@ function formatBytes(bytes: number): string {
   return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }
 
-// ── Preference row ─────────────────────────────────────────────────────────────
+// ── Preference row: a label and a segmented choice ──────────────────────────────
 
 function PrefRow<T extends string>({
-  label, hint, options, value, onChange, wrap = false,
+  label, hint, options, value, onChange,
 }: {
   label: string;
   hint?: string;
   options: { value: T; label: string }[];
   value: T;
   onChange: (v: T) => void;
-  wrap?: boolean;
 }) {
   return (
-    <div className={`py-4 border-b border-neutral-800 last:border-b-0 ${wrap ? '' : 'flex items-start justify-between gap-6'}`}>
-      <div className={`min-w-0 ${wrap ? 'mb-3' : ''}`}>
-        <p className="text-sm font-medium text-neutral-200">{label}</p>
-        {hint && <p className="text-[11px] text-neutral-500 mt-0.5">{hint}</p>}
-      </div>
-      <div className={wrap ? 'flex flex-wrap gap-1.5' : 'flex gap-1 shrink-0'}>
+    <SettingsRow label={label} hint={hint}>
+      <SegmentedControl value={value} onValueChange={onChange} aria-label={label}>
         {options.map(opt => (
-          <button
-            key={opt.value}
-            onClick={() => onChange(opt.value)}
-            className={`px-3 py-1.5 text-xs font-medium border rounded-md transition-colors cursor-pointer ${
-              value === opt.value
-                ? 'bg-neutral-700 border-neutral-600 text-neutral-100'
-                : 'bg-transparent border-neutral-800 text-neutral-500 hover:border-neutral-600 hover:text-neutral-300'
-            }`}
-          >
-            {opt.label}
-          </button>
+          <SegmentedControlItem key={opt.value} value={opt.value}>{opt.label}</SegmentedControlItem>
         ))}
-      </div>
-    </div>
+      </SegmentedControl>
+    </SettingsRow>
   );
 }
 
-// ── Theme picker ──────────────────────────────────────────────────────────────
+// ── Theme picker: a radio group of swatch strips (desk · sheet · signal) ─────────────
 
 function ThemePicker({ value, onChange }: { value: AppTheme; onChange: (v: AppTheme) => void }) {
   const t = useTranslations('UserSettings');
   return (
-    <div className="py-4 border-b border-neutral-800">
-      <div className="mb-3">
-        <p className="text-sm font-medium text-neutral-200">{t('prefTheme')}</p>
-        <p className="text-[11px] text-neutral-500 mt-0.5">{t('prefThemeHint')}</p>
-      </div>
-      <div className="flex flex-wrap gap-2">
+    <SettingsSection title={t('prefTheme')} description={t('prefThemeHint')}>
+      <RadioGroup
+        value={value}
+        onValueChange={(v) => onChange(v as AppTheme)}
+        aria-label={t('prefTheme')}
+        className="flex flex-wrap gap-3"
+      >
         {APP_THEMES.map(theme => (
-          <button
+          <Radio.Root
             key={theme.value}
-            onClick={() => onChange(theme.value)}
-            title={theme.label}
-            className={`group flex flex-col items-center gap-1.5 cursor-pointer transition-opacity ${
-              value === theme.value ? 'opacity-100' : 'opacity-60 hover:opacity-90'
-            }`}
+            value={theme.value}
+            className="group flex cursor-pointer flex-col items-center gap-1.5 rounded-control p-1 select-none"
           >
-            {/* Swatch strip — extra outline ensures visibility on light and dark bg */}
-            <div
-              className={`flex h-8 w-16 overflow-hidden border rounded-md transition-all ${
-                value === theme.value
-                  ? 'border-signal ring-1 ring-signal/50'
-                  : 'border-neutral-700 group-hover:border-neutral-500'
-              }`}
-              style={theme.dark ? undefined : { outline: '1px solid #d1d5db', outlineOffset: '-1px' }}
+            <span
+              aria-hidden
+              className="flex h-9 w-18 overflow-hidden rounded-control shadow-[inset_0_0_0_1px_var(--color-line-strong)] transition-shadow group-hover:shadow-[inset_0_0_0_1px_var(--color-fg-4)] group-data-checked:shadow-[0_0_0_2px_var(--color-signal)]"
             >
               {theme.swatches.map((color, i) => (
-                <div key={i} className="flex-1 h-full" style={{ background: color }} />
+                <span key={i} className={i === 2 ? 'w-3 shrink-0' : 'flex-1'} style={{ background: color }} />
               ))}
-            </div>
-            <span className={`text-[10px] font-medium leading-none ${
-              value === theme.value ? 'text-neutral-100' : 'text-neutral-500'
-            }`}>
+            </span>
+            <span className="text-2xs font-medium text-fg-3 group-hover:text-fg-2 group-data-checked:text-fg">
               {theme.label}
             </span>
-          </button>
+          </Radio.Root>
         ))}
-      </div>
-    </div>
+      </RadioGroup>
+    </SettingsSection>
   );
 }
 
@@ -121,90 +107,7 @@ const LOCALE_OPTIONS = [
   { value: 'hi', label: 'हिन्दी' },
   { value: 'zh', label: '中文' },
   { value: 'ru', label: 'Русский' },
-] as const;
-
-// ── Flag-based language select ───────────────────────────────────────────────────
-
-function LocaleSelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-  const current = LOCALE_OPTIONS.find(l => l.value === value) ?? LOCALE_OPTIONS[0];
-
-  useEffect(() => {
-    if (!open) return;
-    function handleClick(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
-    }
-    function handleKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') setOpen(false);
-    }
-    document.addEventListener('mousedown', handleClick);
-    document.addEventListener('keydown', handleKey);
-    return () => {
-      document.removeEventListener('mousedown', handleClick);
-      document.removeEventListener('keydown', handleKey);
-    };
-  }, [open]);
-
-  return (
-    <div ref={ref} className="relative w-48 shrink-0">
-      <button
-        type="button"
-        onClick={() => setOpen(v => !v)}
-        aria-haspopup="listbox"
-        aria-expanded={open}
-        className={`w-full flex items-center gap-2.5 bg-neutral-950 border rounded-md px-3 py-2 text-sm text-neutral-100 transition-colors cursor-pointer ${
-          open ? 'border-signal/60' : 'border-neutral-700 hover:border-neutral-600'
-        }`}
-      >
-        <FlagIcon code={current.value} size={18} />
-        <span className="flex-1 text-left truncate">{current.label}</span>
-        <ChevronDown size={15} className={`shrink-0 text-neutral-500 transition-transform ${open ? 'rotate-180' : ''}`} />
-      </button>
-
-      {open && (
-        <div
-          role="listbox"
-          className="absolute top-full mt-1.5 left-0 right-0 z-10 bg-neutral-900 border border-neutral-800 rounded-md py-1 modal-shadow max-h-64 overflow-y-auto"
-        >
-          {LOCALE_OPTIONS.map(lang => {
-            const selected = lang.value === value;
-            return (
-              <button
-                key={lang.value}
-                type="button"
-                role="option"
-                aria-selected={selected}
-                onClick={() => { onChange(lang.value); setOpen(false); }}
-                className={`w-full flex items-center gap-2.5 px-3 py-2 text-sm text-left transition-colors cursor-pointer ${
-                  selected ? 'text-signal-text bg-signal/10' : 'text-neutral-300 hover:bg-neutral-800/60'
-                }`}
-              >
-                <FlagIcon code={lang.value} size={18} />
-                <span className="flex-1 truncate">{lang.label}</span>
-                {selected && <Check size={14} className="shrink-0" />}
-              </button>
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ── Language preference row ───────────────────────────────────────────────────────
-
-function LanguagePrefRow({ label, hint, value, onChange }: { label: string; hint?: string; value: string; onChange: (v: string) => void }) {
-  return (
-    <div className="py-4 border-b border-neutral-800 flex items-start justify-between gap-6">
-      <div className="min-w-0">
-        <p className="text-sm font-medium text-neutral-200">{label}</p>
-        {hint && <p className="text-[11px] text-neutral-500 mt-0.5">{hint}</p>}
-      </div>
-      <LocaleSelect value={value} onChange={onChange} />
-    </div>
-  );
-}
+].map(l => ({ ...l, icon: <FlagIcon code={l.value} size={16} /> }));
 
 // ── Main component ─────────────────────────────────────────────────────────────
 
@@ -312,7 +215,7 @@ function ProfileSection({ currentUser }: { currentUser: CurrentUser }) {
   }
 
   return (
-    <div className="space-y-5">
+    <SettingsSection>
       {cropObjectUrl && (
         <AvatarCropModal
           objectUrl={cropObjectUrl}
@@ -323,17 +226,17 @@ function ProfileSection({ currentUser }: { currentUser: CurrentUser }) {
 
       {/* Avatar + actions */}
       <div className="flex items-center gap-4">
-        <div className="relative shrink-0 group">
+        <div className="group relative shrink-0">
           {image && !avatarError ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={image}
               alt={name || 'User'}
-              className="w-16 h-16 rounded-full object-cover"
+              className="size-16 rounded-full object-cover"
               onError={() => setAvatarError(true)}
             />
           ) : (
-            <div className="w-16 h-16 rounded-full bg-neutral-700 flex items-center justify-center text-2xl font-semibold text-neutral-200">
+            <div className="flex size-16 items-center justify-center rounded-full bg-hover text-2xl font-semibold text-fg-2">
               {initials}
             </div>
           )}
@@ -342,7 +245,7 @@ function ProfileSection({ currentUser }: { currentUser: CurrentUser }) {
             onClick={() => fileRef.current?.click()}
             disabled={uploading}
             aria-label={t('profileUpload')}
-            className="absolute inset-0 rounded-full bg-black/55 opacity-0 group-hover:opacity-100 disabled:opacity-100 transition-opacity flex items-center justify-center text-white cursor-pointer"
+            className="absolute inset-0 flex cursor-pointer items-center justify-center rounded-full bg-black/55 text-white opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 disabled:opacity-100"
           >
             {uploading ? <Loader2 size={18} className="animate-spin" /> : <Camera size={18} />}
           </button>
@@ -351,63 +254,44 @@ function ProfileSection({ currentUser }: { currentUser: CurrentUser }) {
 
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
-            <button
-              onClick={() => fileRef.current?.click()}
-              disabled={uploading}
-              className="text-xs font-medium px-3 py-1.5 border border-neutral-700 rounded-md text-neutral-200 hover:bg-neutral-800 transition-colors cursor-pointer disabled:opacity-50"
-            >
+            <Button size="sm" onClick={() => fileRef.current?.click()} disabled={uploading}>
               {t('profileUpload')}
-            </button>
+            </Button>
             {image && (
-              <button
-                onClick={onRemove}
-                disabled={uploading}
-                className="text-xs font-medium px-3 py-1.5 border border-neutral-800 rounded-md text-neutral-400 hover:text-red-400 hover:border-red-400/40 transition-colors cursor-pointer disabled:opacity-50"
-              >
+              <Button size="sm" variant="ghost" onClick={onRemove} disabled={uploading}>
                 {t('profileRemove')}
-              </button>
+              </Button>
             )}
           </div>
-          <p className="text-[11px] text-neutral-500 mt-1.5">{t('profilePhotoHint')}</p>
+          <p className="mt-1.5 text-xs text-fg-3">{t('profilePhotoHint')}</p>
         </div>
       </div>
 
-      {/* Display name */}
-      <div>
-        <label className="block text-xs font-medium text-neutral-500 mb-1.5">
-          {t('profileName')}
-        </label>
+      <Field label={t('profileName')} htmlFor="settings-profile-name">
         <div className="flex gap-2">
-          <input
+          <Input
+            id="settings-profile-name"
             value={name}
             onChange={e => setName(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter') onSaveName(); }}
             maxLength={80}
             placeholder={t('profileNamePlaceholder')}
-            className="flex-1 min-w-0 bg-neutral-950 border border-neutral-700 rounded-md text-neutral-100 px-3 py-2 text-sm outline-none focus:border-signal/60 transition-colors"
+            className="flex-1"
           />
-          <button
-            onClick={onSaveName}
-            disabled={!nameChanged || savingName}
-            className="shrink-0 text-xs font-semibold px-4 py-2 rounded-md bg-ink hover:bg-ink/88 text-ink-fg disabled:opacity-40 disabled:hover:bg-ink transition-colors cursor-pointer"
-          >
-            {savingName ? t('profileSaving') : t('profileSave')}
-          </button>
+          <Button variant="primary" onClick={onSaveName} disabled={!nameChanged} loading={savingName}>
+            {t('profileSave')}
+          </Button>
         </div>
-      </div>
+      </Field>
 
-      {/* Email (read-only) */}
       {currentUser.email && (
-        <div>
-          <label className="block text-xs font-medium text-neutral-500 mb-1.5">
-            {t('profileEmail')}
-          </label>
-          <p className="text-sm text-neutral-400 truncate">{currentUser.email}</p>
-        </div>
+        <Field label={t('profileEmail')}>
+          <p className="truncate text-ui text-fg-2">{currentUser.email}</p>
+        </Field>
       )}
 
-      {err && <p className="text-[11px] text-red-400">{err}</p>}
-    </div>
+      {err && <p role="alert" className="text-xs text-red-400">{err}</p>}
+    </SettingsSection>
   );
 }
 
@@ -445,83 +329,64 @@ function DeleteAccountSection({ email }: { email?: string | null }) {
   }
 
   return (
-    <div className="border border-red-500/20 bg-red-500/5 p-4 rounded-lg space-y-3">
-      <h4 className="text-xs font-medium text-red-400">{t('dangerZoneTitle')}</h4>
-      <p className="text-xs text-neutral-400 leading-relaxed">{t('deleteAccountHint')}</p>
-      <button
-        onClick={() => setShowConfirm(true)}
-        className="text-xs bg-red-400 hover:bg-red-500 text-white font-semibold py-1.5 px-3 rounded-md transition-colors cursor-pointer"
-      >
-        {t('deleteAccountButton')}
-      </button>
-
+    <DangerZone
+      title={t('dangerZoneTitle')}
+      description={t('deleteAccountHint')}
+      action={
+        <Button variant="danger" size="sm" onClick={() => setShowConfirm(true)}>
+          {t('deleteAccountButton')}
+        </Button>
+      }
+    >
       {showConfirm && (
-        <>
-          <div className="fixed inset-0 z-300 bg-black/60" onClick={closeConfirm} />
-          <div className="fixed z-300 inset-x-4 top-1/2 -translate-y-1/2 sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:w-full sm:max-w-sm bg-neutral-850 border border-neutral-800 rounded-xl shadow-[0_8px_40px_rgba(0,0,0,0.6)] p-5 flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-150">
+        <Dialog open onOpenChange={(open) => { if (!open) closeConfirm(); }}>
+          <DialogContent showCloseButton={false}>
             {sent ? (
               <>
-                <div className="flex items-start gap-2.5">
-                  <Mail size={16} className="text-signal-text shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-sm font-semibold text-neutral-100 mb-1.5">{t('deleteAccountEmailSentTitle')}</p>
-                    <p className="text-xs text-neutral-400 leading-relaxed">{t('deleteAccountEmailSentBody', { email: email || '' })}</p>
-                  </div>
-                </div>
-                <div className="flex justify-end">
-                  <button
-                    onClick={closeConfirm}
-                    className="px-4 py-2 text-xs font-medium text-neutral-400 hover:text-neutral-200 bg-neutral-800 hover:bg-neutral-700 rounded-lg transition-colors cursor-pointer"
-                  >
-                    {t('deleteAccountCancel')}
-                  </button>
-                </div>
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2">
+                    <Mail size={16} className="shrink-0 text-fg-3" />
+                    {t('deleteAccountEmailSentTitle')}
+                  </DialogTitle>
+                  <DialogDescription>{t('deleteAccountEmailSentBody', { email: email || '' })}</DialogDescription>
+                </DialogHeader>
+                <DialogFooter>
+                  <Button onClick={closeConfirm}>{t('deleteAccountCancel')}</Button>
+                </DialogFooter>
               </>
             ) : (
               <>
-                <div className="flex items-start gap-2.5">
-                  <AlertTriangle size={16} className="text-red-400 shrink-0 mt-0.5" />
-                  <div>
-                    <p className="text-sm font-semibold text-neutral-100 mb-1.5">{t('deleteAccountConfirmTitle')}</p>
-                    <p className="text-xs text-neutral-400 leading-relaxed">{t('deleteAccountConfirmBody')}</p>
-                  </div>
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-neutral-500 mb-1.5">
-                    {t('deleteAccountConfirmInputLabel')}
-                  </label>
-                  <input
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2">
+                    <AlertTriangle size={16} className="shrink-0 text-red-400" />
+                    {t('deleteAccountConfirmTitle')}
+                  </DialogTitle>
+                  <DialogDescription>{t('deleteAccountConfirmBody')}</DialogDescription>
+                </DialogHeader>
+                <Field label={t('deleteAccountConfirmInputLabel')} htmlFor="settings-delete-account" error={error || undefined}>
+                  <Input
+                    id="settings-delete-account"
                     value={confirmText}
                     onChange={(e) => setConfirmText(e.target.value)}
                     onKeyDown={(e) => { if (e.key === 'Enter') handleRequest(); }}
                     placeholder="DELETE"
+                    autoComplete="off"
                     autoFocus
-                    className="w-full bg-neutral-950 border border-neutral-700 rounded-md text-neutral-100 px-3 py-2 text-sm outline-none focus:border-red-500/60 transition-colors"
+                    className="font-mono"
                   />
-                </div>
-                {error && <p className="text-xs text-red-400 leading-relaxed">{error}</p>}
-                <div className="flex gap-2 justify-end">
-                  <button
-                    onClick={closeConfirm}
-                    disabled={sending}
-                    className="px-4 py-2 text-xs font-medium text-neutral-400 hover:text-neutral-200 bg-neutral-800 hover:bg-neutral-700 rounded-lg transition-colors disabled:opacity-50 cursor-pointer"
-                  >
-                    {t('deleteAccountCancel')}
-                  </button>
-                  <button
-                    onClick={handleRequest}
-                    disabled={!canConfirm || sending}
-                    className="px-4 py-2 text-xs font-semibold text-white bg-red-500/80 hover:bg-red-500 rounded-lg transition-colors disabled:opacity-40 cursor-pointer"
-                  >
-                    {sending ? t('deleteAccountSending') : t('deleteAccountRequestButton')}
-                  </button>
-                </div>
+                </Field>
+                <DialogFooter>
+                  <Button onClick={closeConfirm} disabled={sending}>{t('deleteAccountCancel')}</Button>
+                  <Button variant="danger" onClick={handleRequest} disabled={!canConfirm} loading={sending}>
+                    {t('deleteAccountRequestButton')}
+                  </Button>
+                </DialogFooter>
               </>
             )}
-          </div>
-        </>
+          </DialogContent>
+        </Dialog>
       )}
-    </div>
+    </DangerZone>
   );
 }
 
@@ -598,208 +463,158 @@ export default function UserSettingsModal({ currentUser, onClose }: UserSettings
   }
 
   const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
-    { id: 'account', label: t('tabAccount'), icon: <User size={13} /> },
-    { id: 'preferences', label: t('tabPreferences'), icon: <SlidersHorizontal size={13} /> },
-    ...(isTauri ? [{ id: 'desktop' as Tab, label: t('tabDesktop'), icon: <Monitor size={13} /> }] : []),
-    { id: 'import', label: t('tabImport'), icon: <Download size={13} /> },
+    { id: 'account', label: t('tabAccount'), icon: <User /> },
+    { id: 'preferences', label: t('tabPreferences'), icon: <SlidersHorizontal /> },
+    ...(isTauri ? [{ id: 'desktop' as Tab, label: t('tabDesktop'), icon: <Monitor /> }] : []),
+    { id: 'import', label: t('tabImport'), icon: <Download /> },
   ];
 
   return (
-    <>
-    <div
-      className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-2 sm:p-4 md:p-6"
-      onClick={onClose}
-    >
-      <div
-        className="w-full max-w-full sm:max-w-2xl bg-neutral-850 border border-neutral-800 rounded-lg modal-shadow flex flex-col overflow-hidden animate-scale-in"
-        onClick={(e) => e.stopPropagation()}
-        style={{ maxHeight: '92vh', minHeight: 'min(480px, 85vh)' }}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-800 bg-neutral-900/30 shrink-0">
-          <span className="text-sm font-semibold text-neutral-100 shrink-0">{t('title')}</span>
-          <button
-            onClick={onClose}
-            className="p-1 text-neutral-500 hover:text-neutral-200 transition-colors rounded hover:bg-neutral-800 cursor-pointer"
-          >
-            <X size={16} />
-          </button>
-        </div>
+    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent size="full">
+        <DialogHeader>
+          <DialogTitle>{t('title')}</DialogTitle>
+        </DialogHeader>
 
-        {/* Mobile tab strip */}
-        <div className="flex sm:hidden border-b border-neutral-800 bg-neutral-900/50 shrink-0 overflow-x-auto scrollbar-none">
-          {tabs.map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-1.5 px-4 py-3 text-xs whitespace-nowrap border-b-2 transition-colors cursor-pointer shrink-0 ${
-                activeTab === tab.id
-                  ? 'border-signal text-neutral-100 font-medium'
-                  : 'border-transparent text-neutral-500 hover:text-neutral-300'
-              }`}
-            >
-              {tab.icon}
-              <span>{tab.label}</span>
-            </button>
-          ))}
-        </div>
+        <Tabs
+          variant="nav"
+          orientation="vertical"
+          value={activeTab}
+          onValueChange={(v) => setActiveTab(v as Tab)}
+        >
+          <TabsList aria-label={t('title')}>
+            {tabs.map(tab => (
+              <TabsTab key={tab.id} value={tab.id}>
+                {tab.icon}
+                <span className="truncate">{tab.label}</span>
+              </TabsTab>
+            ))}
+          </TabsList>
 
-        {/* Body: left nav + content */}
-        <div className="flex flex-1 min-h-0 overflow-hidden">
-
-          {/* Desktop left nav */}
-          <div className="hidden sm:flex w-44 shrink-0 border-r border-neutral-800 flex-col bg-neutral-900/50">
-            <nav className="flex-1 p-2 space-y-0.5 pt-3">
-              {tabs.map(tab => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs transition-colors cursor-pointer rounded ${
-                    activeTab === tab.id
-                      ? 'bg-neutral-800 text-neutral-100 font-medium'
-                      : 'text-neutral-500 hover:text-neutral-300 hover:bg-neutral-800/60'
-                  }`}
-                >
-                  {tab.icon}
-                  <span className="truncate">{tab.label}</span>
-                </button>
-              ))}
-            </nav>
-          </div>
-
-          {/* Tab content */}
-          <div key={activeTab} className="flex-1 overflow-y-auto p-4 sm:p-6 animate-tab-fade">
-
-          {/* Account */}
-          {activeTab === 'account' && (
-              <div className="space-y-6">
+          <DialogBody className="sm:px-6 sm:py-5">
+            <TabsPanel value="account" className="animate-tab-fade">
+              <SettingsPage>
                 <ProfileSection currentUser={currentUser} />
 
-                <div className="border-t border-neutral-800 pt-5 space-y-4">
-                  <p className="text-xs font-medium text-neutral-500">{t('planTitle')}</p>
-                  <div className="py-3 border-b border-neutral-800 space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2.5">
-                        <Crown size={14} className="text-amber-400 shrink-0" />
-                        <div>
-                          <p className="text-xs font-semibold text-neutral-200">
-                            {planTier === null ? '—' : tBilling(`tier_${planTier}` as 'tier_free')}
-                          </p>
-                          {planTier === 'free' && (
-                            <p className="text-[11px] text-neutral-500 mt-0.5">{t('planFreeHint')}</p>
-                          )}
-                        </div>
+                <SettingsSection title={t('planTitle')}>
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex min-w-0 items-start gap-2.5">
+                      <Crown size={16} className="mt-0.5 shrink-0 text-fg-3" />
+                      <div className="min-w-0">
+                        <p className="flex items-center gap-2 text-ui font-medium text-fg">
+                          {planTier === null ? '—' : tBilling(`tier_${planTier}` as 'tier_free')}
+                          <Badge variant="outline" size="sm">{t('planCurrentBadge')}</Badge>
+                        </p>
+                        {planTier === 'free' && (
+                          <p className="mt-0.5 text-xs text-fg-3">{t('planFreeHint')}</p>
+                        )}
                       </div>
-                      <span className="text-[10px] font-semibold px-2 py-0.5 bg-neutral-800 text-neutral-500 border border-neutral-700 rounded-md shrink-0">
-                        {t('planCurrentBadge')}
-                      </span>
                     </div>
-
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => setBilling('details')}
-                        className="text-xs font-medium px-3 py-1.5 border border-neutral-700 rounded-md text-neutral-200 hover:bg-neutral-800 transition-colors cursor-pointer"
-                      >
+                    <div className="flex shrink-0 items-center gap-2">
+                      <Button size="sm" onClick={() => setBilling('details')}>
                         {t('planDetails')}
-                      </button>
+                      </Button>
                       {planTier !== 'enterprise' && (
-                        <button
-                          onClick={() => setBilling('upgrade')}
-                          className="text-xs font-semibold px-3 py-1.5 rounded-md bg-ink hover:bg-ink/88 text-ink-fg transition-colors cursor-pointer"
-                        >
+                        <Button size="sm" variant="primary" onClick={() => setBilling('upgrade')}>
                           {tBilling('upgrade')}
-                        </button>
+                        </Button>
                       )}
                     </div>
                   </div>
+                </SettingsSection>
 
-                  <p className="text-xs font-medium text-neutral-500 pt-1">{t('storageTitle')}</p>
-                  <div className="flex items-center gap-3 py-3 border-b border-neutral-800">
-                    <HardDrive size={14} className="text-neutral-500 shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs text-neutral-300">
+                <SettingsSection title={t('storageTitle')}>
+                  <div className="flex items-start gap-2.5">
+                    <HardDrive size={16} className="mt-0.5 shrink-0 text-fg-3" />
+                    <div className="min-w-0">
+                      <p className="text-ui text-fg">
                         {storageBytes === null
                           ? t('storageLoading')
                           : t('storageUsed', { size: formatBytes(storageBytes) })}
                       </p>
-                      <p className="text-[11px] text-neutral-600 mt-0.5">{t('storageHint')}</p>
+                      <p className="mt-0.5 text-xs text-fg-3">{t('storageHint')}</p>
                     </div>
                   </div>
-                </div>
+                </SettingsSection>
 
                 {!isDemo && <DeleteAccountSection email={currentUser.email} />}
-          </div>
-          )}
+              </SettingsPage>
+            </TabsPanel>
 
-          {/* Preferences */}
-          {activeTab === 'preferences' && (
-            <div>
-              <ThemePicker value={theme} onChange={handleTheme} />
-              <LanguagePrefRow
-                label={t('prefLanguage')}
-                hint={t('prefLanguageHint')}
-                value={locale}
-                onChange={handleLocale}
-              />
-              <PrefRow
-                label={t('prefEditorSize')}
-                hint={t('prefEditorSizeHint')}
-                options={[
-                  { value: 'sm', label: t('prefSizeSmall') },
-                  { value: 'md', label: t('prefSizeMedium') },
-                  { value: 'lg', label: t('prefSizeLarge') },
-                ]}
-                value={editorSize}
-                onChange={handleEditorSize}
-              />
-              <PrefRow
-                label={t('prefSidebarDensity')}
-                hint={t('prefSidebarDensityHint')}
-                options={[
-                  { value: 'compact', label: t('prefDensityCompact') },
-                  { value: 'comfortable', label: t('prefDensityComfortable') },
-                ]}
-                value={density}
-                onChange={handleDensity}
-              />
-              <PrefRow
-                label={t('prefDefaultWidth')}
-                hint={t('prefDefaultWidthHint')}
-                options={[
-                  { value: 'narrow', label: t('prefWidthNarrow') },
-                  { value: 'wide', label: t('prefWidthWide') },
-                  { value: 'full', label: t('prefWidthFull') },
-                ]}
-                value={defaultWidth}
-                onChange={handleDefaultWidth}
-              />
-            </div>
-          )}
+            <TabsPanel value="preferences" className="animate-tab-fade">
+              <SettingsPage>
+                <ThemePicker value={theme} onChange={handleTheme} />
+                <SettingsSection>
+                  <SettingsList>
+                    <SettingsRow label={t('prefLanguage')} hint={t('prefLanguageHint')}>
+                      <SimpleSelect
+                        value={locale}
+                        onValueChange={handleLocale}
+                        options={LOCALE_OPTIONS}
+                        aria-label={t('prefLanguage')}
+                        className="w-44"
+                      />
+                    </SettingsRow>
+                    <PrefRow
+                      label={t('prefEditorSize')}
+                      hint={t('prefEditorSizeHint')}
+                      options={[
+                        { value: 'sm', label: t('prefSizeSmall') },
+                        { value: 'md', label: t('prefSizeMedium') },
+                        { value: 'lg', label: t('prefSizeLarge') },
+                      ]}
+                      value={editorSize}
+                      onChange={handleEditorSize}
+                    />
+                    <PrefRow
+                      label={t('prefSidebarDensity')}
+                      hint={t('prefSidebarDensityHint')}
+                      options={[
+                        { value: 'compact', label: t('prefDensityCompact') },
+                        { value: 'comfortable', label: t('prefDensityComfortable') },
+                      ]}
+                      value={density}
+                      onChange={handleDensity}
+                    />
+                    <PrefRow
+                      label={t('prefDefaultWidth')}
+                      hint={t('prefDefaultWidthHint')}
+                      options={[
+                        { value: 'narrow', label: t('prefWidthNarrow') },
+                        { value: 'wide', label: t('prefWidthWide') },
+                        { value: 'full', label: t('prefWidthFull') },
+                      ]}
+                      value={defaultWidth}
+                      onChange={handleDefaultWidth}
+                    />
+                  </SettingsList>
+                </SettingsSection>
+              </SettingsPage>
+            </TabsPanel>
 
-          {/* Desktop (Tauri only) */}
-          {activeTab === 'desktop' && isTauri && (
-            <DesktopTab />
-          )}
+            {isTauri && (
+              <TabsPanel value="desktop" className="animate-tab-fade">
+                <DesktopTab />
+              </TabsPanel>
+            )}
 
-          {/* Import */}
-          {activeTab === 'import' && (
-            <ImportTab workspaceId="" />
-          )}
-          </div>
-        </div>
-      </div>
-    </div>
+            <TabsPanel value="import" className="animate-tab-fade">
+              <ImportTab workspaceId="" />
+            </TabsPanel>
+          </DialogBody>
+        </Tabs>
 
-    {billing && (
-      <BillingModal
-        isDemo={isDemo}
-        initialPickerOpen={billing === 'upgrade'}
-        onClose={() => {
-          setBilling(null);
-          getMyTier().then(setPlanTier).catch(() => {});
-        }}
-      />
-    )}
-    </>
+        {billing && (
+          <BillingModal
+            isDemo={isDemo}
+            initialPickerOpen={billing === 'upgrade'}
+            onClose={() => {
+              setBilling(null);
+              getMyTier().then(setPlanTier).catch(() => {});
+            }}
+          />
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }

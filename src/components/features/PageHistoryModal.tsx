@@ -2,7 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import { useTranslations, useLocale } from 'next-intl';
-import { X, RotateCcw, Loader2, History } from 'lucide-react';
+import { RotateCcw, Loader2, History } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogBody, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { EmptyState } from '@/components/ui/empty-state';
+import { cn } from '@/lib/cn';
 import AgentMark from './agents/AgentMark';
 import { getPageHistory, restoreVersion, type ContentVersion } from '@/lib/actions/history';
 
@@ -135,86 +139,96 @@ export function PageHistoryModal({ workspaceId, pageId, currentContent, onRestor
   const selected = versions?.find((v) => v.id === selectedId) ?? null;
 
   return (
-    <>
-      <div onClick={onClose} className="fixed inset-0 z-300 bg-black/60" />
-      <div className="fixed z-300 inset-x-4 top-1/2 -translate-y-1/2 sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:w-full sm:max-w-2xl max-h-[85vh] bg-neutral-850 border border-neutral-800 rounded-xl shadow-[0_8px_40px_rgba(0,0,0,0.6)] flex flex-col animate-in fade-in zoom-in-95 duration-150">
-        <div className="flex items-center gap-2 px-5 py-3.5 border-b border-neutral-800 shrink-0">
-          <History size={14} className="text-neutral-500" />
-          <p className="flex-1 text-sm font-semibold text-neutral-100">{t('history.title')}</p>
-          <button onClick={onClose} className="text-neutral-500 hover:text-neutral-200 p-1 rounded cursor-pointer transition-colors">
-            <X size={16} />
-          </button>
-        </div>
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        // A restore in flight holds the dialog, like ConfirmDialog does.
+        if (!open && restoringId === null) onClose();
+      }}
+    >
+      <DialogContent size="lg">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <History size={15} className="shrink-0 text-fg-3" aria-hidden />
+            {t('history.title')}
+          </DialogTitle>
+        </DialogHeader>
 
         {error && (
-          <div className="mx-5 mt-3 rounded border border-amber-500/20 bg-amber-500/5 px-3 py-2 text-xs text-amber-300">
+          <p role="alert" className="mx-5 mt-3 rounded-control border border-amber-500/25 bg-amber-500/8 px-3 py-2 text-xs text-amber-400">
             {error}
-          </div>
+          </p>
         )}
 
         {versions === null ? (
-          <div className="flex justify-center py-16">
-            <Loader2 size={16} className="animate-spin text-neutral-600" />
-          </div>
+          <DialogBody className="flex justify-center py-16">
+            <Loader2 size={16} className="animate-spin text-fg-4" aria-hidden />
+          </DialogBody>
         ) : versions.length === 0 ? (
-          <div className="flex flex-col items-center gap-2 py-16 text-center">
-            <History size={20} className="text-neutral-700" />
-            <p className="text-xs text-neutral-500">{t('history.empty')}</p>
-          </div>
+          <DialogBody>
+            <EmptyState icon={<History />} title={t('history.empty')} />
+          </DialogBody>
         ) : (
-          <div className="flex-1 overflow-hidden flex flex-col sm:flex-row min-h-0">
+          <div className="flex min-h-0 flex-1 flex-col overflow-hidden sm:flex-row">
             {/* Version list */}
-            <div className="sm:w-56 shrink-0 overflow-y-auto border-b sm:border-b-0 sm:border-r border-neutral-800 py-1.5">
+            <div className="max-h-48 shrink-0 overflow-y-auto border-b border-line p-1.5 sm:max-h-none sm:w-60 sm:border-r sm:border-b-0">
               {versions.map((v, i) => {
                 const succeedingContent = i === 0 ? currentContent : versions[i - 1].content;
                 const { added, removed } = lineDelta(v.content, succeedingContent);
                 const isAgent = v.changedByKind === 'agent';
+                const active = selectedId === v.id;
                 return (
                   <button
+                    type="button"
                     key={v.id}
                     onClick={() => setSelectedId(v.id)}
-                    className={`w-full text-left px-3 py-2 text-xs transition-colors cursor-pointer ${
-                      selectedId === v.id ? 'bg-neutral-800' : 'hover:bg-neutral-800/60'
-                    }`}
+                    aria-pressed={active}
+                    className={cn(
+                      'w-full cursor-pointer rounded-control px-2.5 py-2 text-left text-xs transition-colors',
+                      active ? 'bg-hover' : 'hover:bg-hover/60',
+                    )}
                   >
-                    <div className="flex items-center gap-1.5 text-neutral-300">
-                      {isAgent && <AgentMark hint={v.changedByLabel} size={11} fallback="globe" />}
-                      <span className={isAgent ? 'text-amber-500/90 font-medium truncate' : 'truncate'}>
+                    <div className="flex items-center gap-1.5 text-ui font-medium text-fg">
+                      {isAgent && <AgentMark hint={v.changedByLabel} size={12} fallback="globe" />}
+                      <span className="truncate">
                         {isAgent ? t('history.byAgent', { name: v.changedByLabel }) : v.changedByLabel}
                       </span>
                     </div>
-                    <div className="mt-0.5 text-neutral-400">{relativeTime(new Date(v.createdAt), locale)}</div>
-                    <div className="mt-0.5 font-mono text-[11px]">
-                      {added > 0 && <span className="text-green-400">+{added}</span>}
-                      {added > 0 && removed > 0 && <span className="text-neutral-500"> / </span>}
-                      {removed > 0 && <span className="text-red-400">−{removed}</span>}
-                    </div>
+                    <div className="mt-0.5 text-fg-3">{relativeTime(new Date(v.createdAt), locale)}</div>
+                    {(added > 0 || removed > 0) && (
+                      <div className="mt-0.5 font-mono text-2xs">
+                        {added > 0 && <span className="text-green-400">+{added}</span>}
+                        {added > 0 && removed > 0 && <span className="text-fg-4"> / </span>}
+                        {removed > 0 && <span className="text-red-400">−{removed}</span>}
+                      </div>
+                    )}
                   </button>
                 );
               })}
             </div>
 
             {/* Preview */}
-            <div className="flex-1 min-h-0 flex flex-col">
-              <div className="flex-1 overflow-y-auto px-4 py-3">
-                <pre className="whitespace-pre-wrap break-words font-mono text-[11px] text-neutral-400">
+            <div className="flex min-h-0 flex-1 flex-col">
+              <DialogBody>
+                <pre className="font-mono text-xs leading-relaxed wrap-break-word whitespace-pre-wrap text-fg-2">
                   {selected?.content}
                 </pre>
-              </div>
-              <div className="flex justify-end px-4 py-3 border-t border-neutral-800 shrink-0">
-                <button
+              </DialogBody>
+              <div className="flex shrink-0 justify-end border-t border-line px-5 py-3">
+                <Button
+                  variant="primary"
                   onClick={() => selected && handleRestore(selected.id)}
+                  loading={restoringId !== null && restoringId === selected?.id}
                   disabled={!selected || restoringId !== null}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-ink-fg bg-ink hover:bg-ink/88 disabled:opacity-40 disabled:cursor-not-allowed rounded-lg transition-colors cursor-pointer"
                 >
-                  {restoringId === selected?.id ? <Loader2 size={13} className="animate-spin" /> : <RotateCcw size={13} />}
+                  <RotateCcw />
                   {t('history.restore')}
-                </button>
+                </Button>
               </div>
             </div>
           </div>
         )}
-      </div>
-    </>
+      </DialogContent>
+    </Dialog>
   );
 }

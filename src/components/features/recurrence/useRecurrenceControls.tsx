@@ -1,9 +1,9 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
-import { createPortal } from 'react-dom';
+import { useCallback, useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { AlertTriangle, Unlink, X } from 'lucide-react';
+import { Unlink } from 'lucide-react';
+import { toast } from '@/components/ui/toast';
 import { parseDateValue, type RecurrenceRule } from '@/lib/recurrence/rule';
 import type { RecurrenceScope } from '@/lib/services/recurrence';
 import {
@@ -16,16 +16,9 @@ import {
 import RecurrenceDialog from './RecurrenceDialog';
 import RecurrenceScopeDialog, { type ScopeImpact } from './RecurrenceScopeDialog';
 
-/** Post-action result the confirm dialog itself can't show, since it is
- *  already gone by the time the mutation resolves. Without this, a delete
- *  that preserves content (or one that outright fails) closes the dialog and
- *  looks exactly like nothing happened. */
-type RecurrenceFeedback =
-  | { type: 'preserved'; count: number }
-  | { type: 'removed'; count: number }
-  | { type: 'error' };
-
-const FEEDBACK_AUTO_DISMISS_MS = 6000;
+// A result the confirm dialog itself can't show — it is already gone by the time the
+// mutation resolves — goes to the app's toast. Without it a delete that preserves
+// content (or one that outright fails) closes the dialog and looks like nothing happened.
 
 // Recurrence needs the same three-step conversation (pick a rule → if it is
 // already a series, pick a scope → apply) wherever it is offered: the calendar
@@ -73,13 +66,6 @@ export function useRecurrenceControls({
     | null
   >(null);
   const [impact, setImpact] = useState<Partial<Record<RecurrenceScope, ScopeImpact>>>({});
-  const [feedback, setFeedback] = useState<RecurrenceFeedback | null>(null);
-
-  useEffect(() => {
-    if (!feedback) return;
-    const timer = window.setTimeout(() => setFeedback(null), FEEDBACK_AUTO_DISMISS_MS);
-    return () => window.clearTimeout(timer);
-  }, [feedback]);
 
   const ruleFor = useCallback(
     (page: RecurrencePageLike | undefined): RecurrenceRule | null =>
@@ -101,7 +87,7 @@ export function useRecurrenceControls({
         await op();
       } catch (err) {
         console.error('[Remnus] recurrence action failed:', err);
-        setFeedback({ type: 'error' });
+        toast({ title: t('actionError'), tone: 'error' });
       } finally {
         setRepeatPageId(null);
         setScopeDialog(null);
@@ -109,7 +95,7 @@ export function useRecurrenceControls({
         onChanged?.();
       }
     },
-    [onChanged],
+    [onChanged, t],
   );
 
   const openScope = useCallback(
@@ -173,13 +159,15 @@ export function useRecurrenceControls({
         const result = await deleteRecurringPage(scopeDialog.pageId, scope, includeDirty);
         // Cards with content are kept (detached) rather than deleted — say so,
         // otherwise a delete that mostly no-oped looks identical to a bug.
-        if (result.preserved > 0) setFeedback({ type: 'preserved', count: result.preserved });
+        if (result.preserved > 0) {
+          toast({ title: t('deleteResultPreserved', { count: result.preserved }), icon: <Unlink /> });
+        }
         return result;
       });
     } else if (scopeDialog.mode === 'remove') {
       return run(async () => {
         const result = await endSeriesRecurrence(scopeDialog.pageId, scope as 'thisAndFollowing' | 'all');
-        if (result) setFeedback({ type: 'removed', count: result.removed });
+        if (result) toast({ title: t('removeResult', { count: result.removed }), icon: <Unlink /> });
         return result;
       });
     } else {
@@ -229,34 +217,6 @@ export function useRecurrenceControls({
           onConfirm={handleScopeConfirm}
           onCancel={() => { setScopeDialog(null); setImpact({}); }}
         />
-      )}
-
-      {feedback && typeof document !== 'undefined' && createPortal(
-        <div
-          role="status"
-          className="fixed bottom-4 right-4 z-[60] w-72 bg-neutral-900 border border-neutral-800 shadow-xl p-3 flex items-start gap-3 animate-in slide-in-from-bottom-2 fade-in duration-200"
-        >
-          <div className={`shrink-0 mt-0.5 ${feedback.type === 'error' ? 'text-red-400' : 'text-amber-400'}`}>
-            {feedback.type === 'error' ? <AlertTriangle size={16} /> : <Unlink size={16} />}
-          </div>
-          <div className="min-w-0 flex-1">
-            <span className="text-xs font-medium text-neutral-100 leading-snug">
-              {feedback.type === 'error'
-                ? t('actionError')
-                : feedback.type === 'removed'
-                  ? t('removeResult', { count: feedback.count })
-                  : t('deleteResultPreserved', { count: feedback.count })}
-            </span>
-          </div>
-          <button
-            onClick={() => setFeedback(null)}
-            aria-label={t('dismiss')}
-            className="shrink-0 text-neutral-500 hover:text-neutral-300 transition-colors"
-          >
-            <X size={14} />
-          </button>
-        </div>,
-        document.body,
       )}
     </>
   );

@@ -8,16 +8,16 @@ export type BreadcrumbItem = { name: string; href?: string };
 export default function BreadcrumbTrail({ items }: { items: BreadcrumbItem[] }) {
   return (
     <nav aria-label="Breadcrumb" className="mb-4">
-      <ol className="flex items-center gap-1.5 flex-wrap text-[12.5px] text-neutral-500">
+      <ol className="m-0 flex list-none flex-wrap items-center gap-1.5 p-0 text-ui text-fg-3">
         {items.map((item, i) => (
           <li key={i} className="flex items-center gap-1.5">
-            {i > 0 && <ChevronRight size={12} className="text-neutral-700 shrink-0" />}
+            {i > 0 && <ChevronRight size={12} className="shrink-0 text-fg-4" aria-hidden />}
             {item.href ? (
-              <Link href={item.href} className="hover:text-neutral-300 transition-colors duration-150">
+              <Link href={item.href} className="transition-colors duration-150 hover:text-fg">
                 {item.name}
               </Link>
             ) : (
-              <span className="text-neutral-300" aria-current="page">{item.name}</span>
+              <span className="text-fg-2" aria-current="page">{item.name}</span>
             )}
           </li>
         ))}

@@ -12,7 +12,9 @@ import { snapshotBeforeDelete, maybeSnapshotContentUpdate } from '@/lib/services
 import { exdateOccurrenceForPage } from '@/lib/services/recurrence';
 import { syncPageLinks, removeOutgoingPageLinks } from '@/lib/services/pageLinks';
 import { touchWorkspaces } from '@/lib/services/changeVersion';
+import { getPageProvenance } from '@/lib/services/pageProvenance';
 import { coerceRowValues, extractRowContent, assignOptionColors, type DatabaseColumn } from '@/lib/utils/propertyCoercion';
+import { stockStatusDefault } from '@/lib/templates';
 
 const MAX_BULK_ROWS = 500;
 
@@ -75,19 +77,15 @@ export async function createPage(
   const maxSort = existing.reduce((max, p) => p.sortOrder > max ? p.sortOrder : max, 0);
 
   // Defaults come from the database's own schema: a select/status column's configured
-  // default, and — for the stock "Status" column (To Do / In Progress / Done) — its
-  // "To Do". A hard-coded `status: 'To Do'` used to land on every new row, so a board
-  // with other status options (or none) got a stray, colourless "To Do".
+  // default, and — for the stock `status` column — its first "to do" option
+  // (`stockStatusDefault`). A hard-coded `status: 'To Do'` used to land on every new
+  // row, so a board with other status options (or none) got a stray, colourless "To Do".
   const [dbRow] = await db.select({ schema: databases.schema }).from(databases).where(eq(databases.id, databaseId)).limit(1);
   const schema = (Array.isArray(dbRow?.schema) ? dbRow.schema : []) as DatabaseColumn[];
   const stockStatus = schema.find((c) => c.id === 'status' && (c.type === 'select' || c.type === 'status'));
-  const stockStatusDefault =
-    stockStatus && !stockStatus.defaultValue &&
-    (stockStatus.options ?? []).some((o) => (typeof o === 'string' ? o : o?.value) === 'To Do')
-      ? { status: 'To Do' }
-      : {};
+  const stockTodo = stockStatus && !stockStatus.defaultValue ? stockStatusDefault(stockStatus.options) : undefined;
 
-  const defaultProps = { title: title, ...stockStatusDefault, ...getSchemaDefaults(schema), ...initialProperties };
+  const defaultProps = { title: title, ...(stockTodo ? { status: stockTodo } : {}), ...getSchemaDefaults(schema), ...initialProperties };
 
   const now = new Date();
   await db.insert(pages).values({
@@ -185,8 +183,18 @@ export async function getPage(id: string) {
 
   if (!row) return undefined;
 
-  await assertDatabaseAccess(row.databaseId);
-  return row;
+  const { userId, workspaceId } = await assertDatabaseAccess(row.databaseId);
+  // The line under the title (V2 R8.8). Best-effort: a failure costs the line, not the page.
+  const provenance = await getPageProvenance({
+    workspaceId,
+    itemId: row.id,
+    itemType: 'database_row',
+    title: row.title,
+    content: row.content ?? '',
+    viewerId: userId,
+    rowStamp: { at: row.agentEditedAt, agentName: row.agentName, tokenName: row.agentTokenName },
+  }).catch(() => null);
+  return { ...row, provenance };
 }
 
 export async function updatePageContent(id: string, content: string) {

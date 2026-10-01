@@ -27,6 +27,7 @@ export default async function StandalonePageRoute(
         page={data.page}
         subItems={subItems}
         isAdmin={user.role === 'admin'}
+        provenance={data.provenance}
       />
     </div>
   );

@@ -29,12 +29,15 @@ export function getStatusGroup(opt: string | SelectOption): StatusGroup {
   return o.group && STATUS_GROUP_ORDER.includes(o.group) ? o.group : 'todo';
 }
 
-// The default option set a new `status` column is seeded with.
-export const DEFAULT_STATUS_OPTIONS: SelectOption[] = [
-  { value: 'Not started', color: 'default', group: 'todo' },
-  { value: 'In progress', color: 'blue', group: 'in_progress' },
-  { value: 'Done', color: 'green', group: 'complete' },
-];
+// The default option set a new `status` column is seeded with. The values are data a
+// user creates, so they are named in the UI language (`Database.statusOption*`).
+export function defaultStatusOptions(names: { notStarted: string; inProgress: string; done: string }): SelectOption[] {
+  return [
+    { value: names.notStarted, color: 'default', group: 'todo' },
+    { value: names.inProgress, color: 'blue', group: 'in_progress' },
+    { value: names.done, color: 'green', group: 'complete' },
+  ];
+}
 
 // Dark-theme fallbacks: semi-transparent tinted bg + bright matching text (Linear/GitHub style).
 // Light themes override via --chip-*-* CSS vars (defined in Catppuccin theme block).

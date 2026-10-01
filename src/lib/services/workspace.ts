@@ -36,6 +36,9 @@ import { foldText, foldTextWithOffsets, foldingSearchPatterns } from './textFold
 import { searchMatchExpression, searchTerms } from './searchIndex';
 import { iconInputError } from '@/lib/icons';
 import type { StatusGroup } from '@/lib/types/properties';
+import { stockDatabaseSchema } from '@/lib/templates';
+import englishTemplateText from '@/lib/starterContent/templates/en';
+import type { StockDatabaseText } from '@/lib/starterContent/types';
 
 export type { SnapshotActor } from './snapshots';
 
@@ -2334,6 +2337,12 @@ export async function createDatabaseInWorkspace(
     parentId?: string;
     icon?: string;
     iconColor?: string;
+    /**
+     * The words of the columns this adds itself (the stock schema, the title and ID
+     * columns). MCP has no UI language, so it stays English; the Notion import passes
+     * the request's language.
+     */
+    stockText?: StockDatabaseText;
   },
 ) {
   if (input.parentId) {
@@ -2342,6 +2351,7 @@ export async function createDatabaseInWorkspace(
 
   const itemId = crypto.randomUUID();
   const dbId = crypto.randomUUID();
+  const stockText = input.stockText ?? englishTemplateText.stock;
 
   const rawSchema: any[] = input.schema?.length
     ? input.schema.map(col => ({
@@ -2350,19 +2360,15 @@ export async function createDatabaseInWorkspace(
         type: col.type,
         ...(col.options ? { options: col.options } : {}),
       }))
-    : [
-        { id: 'title', name: 'Title', type: 'text' },
-        { id: 'status', name: 'Status', type: 'select', options: ['To Do', 'In Progress', 'Done'] },
-        { id: 'id', name: 'ID', type: 'id' },
-      ];
+    : stockDatabaseSchema(stockText);
 
   const resolvedSchema = normalizeSchemaColumns(rawSchema);
 
   if (!resolvedSchema.some((c: any) => c.id === 'title')) {
-    resolvedSchema.unshift({ id: 'title', name: 'Title', type: 'text' });
+    resolvedSchema.unshift({ id: 'title', name: stockText.title, type: 'text' });
   }
   if (!resolvedSchema.some((c: any) => c.id === 'id')) {
-    resolvedSchema.push({ id: 'id', name: 'ID', type: 'id' });
+    resolvedSchema.push({ id: 'id', name: stockText.id, type: 'id' });
   }
 
   const now = new Date();
@@ -2454,7 +2460,8 @@ function resolveColumnRef(schema: any[], ref: string | undefined): any | undefin
 // it shows for a database with no saved `views` — so a fresh database reads back
 // `views: null`. Seed that same default before appending, so the first
 // MCP-created view lands alongside a Table view exactly like a human adding a
-// second view through the UI would, instead of silently replacing it.
+// second view through the UI would, instead of silently replacing it. Named in
+// English: an MCP request carries no UI language (V2 R8.9).
 function seedDefaultViews(existing: any[] | null | undefined): any[] {
   if (Array.isArray(existing) && existing.length > 0) return existing;
   return [{

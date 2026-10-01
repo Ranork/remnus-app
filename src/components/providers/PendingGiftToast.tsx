@@ -11,11 +11,14 @@
 // screen is already claimed by CookieConsentBanner (z-[120], full-width) and
 // the accessibility widget; top avoids fighting either for space.
 //
-// Collapsed = one compact row. Hovering expands it downward into a preview
-// that mirrors /welcome/[token] itself (co-brand logos, the gift headline,
-// the pitch, the plan chips) — not a zoom, an actual reveal of the same
-// content the invite page shows, using a CSS grid-rows 0fr→1fr transition so
-// it animates to its natural height instead of a guessed max-height.
+// Collapsed = one compact row. Hovering (or focusing inside) expands it downward
+// into a preview that mirrors /welcome/[token] itself (co-brand lockup, the gift
+// headline, the pitch, the plan badges) — not a zoom, an actual reveal of the same
+// content the invite page shows, using a CSS grid-rows 0fr→1fr transition so it
+// animates to its natural height instead of a guessed max-height.
+//
+// V2 R8.6: a floating surface like a menu (bg-float, shadow-float); the gift icon on
+// a signal-soft disc is the one warm spot — no glow, no gold border.
 
 import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
@@ -24,14 +27,9 @@ import { useTranslations } from 'next-intl';
 import { X, Gift } from 'lucide-react';
 import { readPendingGift, clearPendingGift, type PendingGift } from '@/lib/prospectInvite/pendingGift';
 import { PLAN_LIMITS } from '@/lib/billing/plans';
-
-function Chip({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="rounded-full border border-neutral-800 bg-neutral-850 px-2.5 py-0.5 text-[11px] text-neutral-300">
-      {children}
-    </span>
-  );
-}
+import { GiftLockup } from '@/components/features/auth/GiftLockup';
+import { Badge } from '@/components/ui/badge';
+import { Button, buttonVariants } from '@/components/ui/button';
 
 export default function PendingGiftToast() {
   const t = useTranslations('ProspectInvites');
@@ -64,74 +62,38 @@ export default function PendingGiftToast() {
   const agentsLabel = limits.agents === Infinity ? t('unlimitedLabel') : String(limits.agents);
 
   return (
-    <div className="fixed inset-x-4 top-20 z-90 animate-fade-in animate-duration-200 sm:inset-x-auto sm:right-4">
-      <div
-        className="pending-gift-toast group relative mx-auto max-w-sm overflow-hidden rounded-xl border bg-neutral-900/95 shadow-lg backdrop-blur"
-        style={{ borderColor: 'color-mix(in oklab, var(--color-opt-yellow) 40%, transparent)' }}
-      >
-        {/* Same accent-glow technique as the landing page's "No API keys." strip
-            (LandingSetup.tsx) — a gift deserves to visually pop, not blend into
-            the neutral chrome everything else on the page uses. Unlike that
-            strip this isn't scoped under .marketing-site, so light mode isn't
-            covered by its remap — the pending-gift-toast* classes get their
-            own catppuccin tuning in globals.css (gold reads fine on near-black
-            but washes out on near-white without a stronger mix + a tinted glow). */}
-        <div
-          aria-hidden
-          className="pending-gift-toast-glow pointer-events-none absolute inset-0"
-          style={{ background: 'radial-gradient(220px circle at 12% 20%, color-mix(in oklab, var(--color-opt-yellow) 20%, transparent), transparent 70%)' }}
-        />
+    <div className="fixed inset-x-4 top-20 z-90 animate-fade-in animate-duration-200 sm:inset-x-auto sm:right-4 sm:w-90">
+      <div className="group overflow-hidden rounded-surface bg-float text-fg-2 shadow-float">
         {/* Collapsed row — always visible */}
-        <div className="relative flex items-center gap-3 px-4 py-3">
-          <div
-            className="pending-gift-toast-icon flex h-9 w-9 shrink-0 items-center justify-center rounded-lg"
-            style={{ background: 'color-mix(in oklab, var(--color-opt-yellow) 18%, transparent)' }}
-          >
-            <Gift size={16} style={{ color: 'var(--color-opt-yellow)' }} />
-          </div>
-          <p className="m-0 min-w-0 flex-1 truncate text-[12.5px] font-medium text-neutral-100">
+        <div className="flex items-center gap-3 py-2.5 pr-2 pl-3">
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-signal-soft text-signal-text">
+            <Gift size={16} aria-hidden />
+          </span>
+          <p className="min-w-0 flex-1 truncate text-ui font-medium text-fg">
             {t('toastText', { days: gift.giftDays, appName: gift.appName })}
           </p>
-          <Link
-            href={`/welcome/${gift.token}`}
-            className="shrink-0 rounded-lg bg-ink px-3 py-1.5 text-[12px] font-semibold text-ink-fg transition-opacity hover:opacity-90"
-          >
+          <Link href={`/welcome/${gift.token}`} className={buttonVariants({ variant: 'primary', size: 'sm' })}>
             {t('toastCta')}
           </Link>
-          <button
-            onClick={dismiss}
-            aria-label={t('toastDismiss')}
-            className="shrink-0 rounded-lg p-1 text-neutral-500 hover:text-neutral-300"
-          >
-            <X size={14} />
-          </button>
+          <Button variant="ghost" size="icon-sm" onClick={dismiss} aria-label={t('toastDismiss')}>
+            <X />
+          </Button>
         </div>
 
-        {/* Hover-expand preview — grid-rows 0fr→1fr animates to natural height.
-            `relative` so it paints above the absolute glow behind it (same
-            reason the collapsed row above needs it too). */}
-        <div className="relative grid grid-rows-[0fr] transition-[grid-template-rows] duration-300 ease-out group-hover:grid-rows-[1fr]">
+        {/* Hover/focus-expand preview — grid-rows 0fr→1fr animates to natural height. */}
+        <div className="grid grid-rows-[0fr] transition-[grid-template-rows] duration-300 ease-out group-focus-within:grid-rows-[1fr] group-hover:grid-rows-[1fr] motion-reduce:transition-none">
           <div className="overflow-hidden">
-            <div className="flex flex-col items-center gap-2.5 border-t border-neutral-800 px-4 pb-4 pt-3.5 text-center">
-              <div className="flex items-center gap-2">
-                <img src="/logo-square-dark.png" alt="Remnus" className="h-7 w-7 rounded-lg object-contain" />
-                <span className="text-neutral-700">×</span>
-                {gift.appLogoUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element -- external Scout Forge asset
-                  <img src={gift.appLogoUrl} alt={gift.appName} className="h-7 w-7 rounded-lg object-cover" />
-                ) : (
-                  <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-signal/15 text-[11px] font-semibold text-signal-text">
-                    {gift.appName.charAt(0).toUpperCase()}
-                  </div>
-                )}
+            <div className="flex flex-col gap-3 border-t border-line px-4 pt-3.5 pb-4">
+              <GiftLockup appName={gift.appName} appLogoUrl={gift.appLogoUrl} size="sm" />
+              <div className="flex flex-col gap-1">
+                <p className="text-sm leading-snug font-semibold text-fg">
+                  {t('giftLine', { days: gift.giftDays, tier: tierLabel })}
+                </p>
+                <p className="text-xs leading-relaxed text-fg-3">{t('pitchLine')}</p>
               </div>
-              <p className="m-0 text-[13.5px] font-bold leading-tight text-neutral-50">
-                {t('giftLine', { days: gift.giftDays, tier: tierLabel })}
-              </p>
-              <p className="m-0 text-[12px] leading-relaxed text-neutral-400">{t('pitchLine')}</p>
-              <div className="flex flex-wrap items-center justify-center gap-1.5">
-                <Chip>{t('chipSeats', { count: seatsLabel })}</Chip>
-                <Chip>{t('chipAgents', { count: agentsLabel })}</Chip>
+              <div className="flex flex-wrap items-center gap-1.5">
+                <Badge>{t('chipSeats', { count: seatsLabel })}</Badge>
+                <Badge>{t('chipAgents', { count: agentsLabel })}</Badge>
               </div>
             </div>
           </div>

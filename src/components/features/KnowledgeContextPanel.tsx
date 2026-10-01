@@ -14,7 +14,19 @@ const EMPTY_FORM = { conceptType: '', description: '', tags: '', sources: '', st
 
 const labelCls = 'flex flex-col gap-1.5 text-xs text-fg-3';
 
-export default function KnowledgeContextPanel({ workspaceId, pageId }: { workspaceId: string; pageId: string }) {
+export default function KnowledgeContextPanel({
+  workspaceId,
+  pageId,
+  refreshKey = 0,
+  onReviewed,
+}: {
+  workspaceId: string;
+  pageId: string;
+  /** Bumped when the page was reviewed elsewhere (the provenance line) — reloads the panel. */
+  refreshKey?: number;
+  /** After a review here, so the provenance line under the title shows it too. */
+  onReviewed?: () => void;
+}) {
   const t = useTranslations('Page');
   const [collapsed, setCollapsed] = useState(true);
   const [knowledge, setKnowledge] = useState<KnowledgeCorpusItem | null>(null);
@@ -42,7 +54,7 @@ export default function KnowledgeContextPanel({ workspaceId, pageId }: { workspa
       .catch(() => { if (!cancelled) setMessage(t('knowledgeLoadFailed')); })
       .finally(() => { if (!cancelled) setBusy(null); });
     return () => { cancelled = true; };
-  }, [workspaceId, pageId, t]);
+  }, [workspaceId, pageId, t, refreshKey]);
 
   async function save() {
     setBusy('save');
@@ -71,6 +83,7 @@ export default function KnowledgeContextPanel({ workspaceId, pageId }: { workspa
     try {
       applyKnowledge(await markPageKnowledgeReviewed(workspaceId, pageId));
       setMessage(t('knowledgeReviewed'));
+      onReviewed?.();
     } catch {
       setMessage(t('knowledgeReviewFailed'));
     } finally {

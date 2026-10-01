@@ -16,7 +16,7 @@ function subscribe(onChange: () => void) {
 const getSnapshot = () => document.documentElement.dataset.theme === LIGHT;
 const getServerSnapshot = () => false;
 
-export default function LandingThemeToggle({ label }: { label: string }) {
+export default function LandingThemeToggle({ label, className }: { label: string; className?: string }) {
   const isLight = useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
 
   function toggle() {
@@ -33,7 +33,7 @@ export default function LandingThemeToggle({ label }: { label: string }) {
       onClick={toggle}
       title={label}
       aria-label={label}
-      className="inline-flex items-center justify-center h-9 w-9 rounded-md text-neutral-50 hover:text-neutral-100 hover:bg-neutral-900 transition-colors duration-150 cursor-pointer shrink-0"
+      className={className ?? "inline-flex items-center justify-center h-9 w-9 rounded-md text-neutral-50 hover:text-neutral-100 hover:bg-neutral-900 transition-colors duration-150 cursor-pointer shrink-0"}
     >
       {isLight ? <Moon size={16} /> : <Sun size={16} />}
     </button>

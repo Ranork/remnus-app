@@ -1,45 +1,40 @@
 import { auth } from '@/auth';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
-import Image from 'next/image';
-import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
+import { Clock, SearchX } from 'lucide-react';
 import { getInviteByToken } from '@/lib/actions/invites';
 import InviteAcceptClient from '@/components/features/InviteAcceptClient';
-
-// Module-scope so it isn't recreated on every render (and to satisfy
-// react-hooks/static-components). It closes over nothing render-specific.
-function Shell({ children }: { children: React.ReactNode }) {
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-neutral-950 px-4">
-      <div className="w-full max-w-sm bg-neutral-900 border border-neutral-800 rounded-xl p-7 flex flex-col items-center text-center gap-4">
-        <Image src="/logo-square-transparent.png" alt="Remnus" width={44} height={44} />
-        {children}
-      </div>
-    </div>
-  );
-}
+import { AuthCard, AuthScreen, AuthStatus } from '@/components/features/auth/AuthScreen';
+import { SubmitButton } from '@/components/features/auth/parts';
 
 export default async function InvitePage({ params }: { params: Promise<{ token: string }> }) {
   const { token } = await params;
-  const t = await getTranslations('Billing');
+  const [t, tErrors] = await Promise.all([getTranslations('Billing'), getTranslations('Errors')]);
   const session = await auth();
   const invite = await getInviteByToken(token);
 
-  if (!invite) {
-    return <Shell><p className="text-sm text-neutral-400">{t('inviteInvalid')}</p></Shell>;
-  }
-  if (invite.expired) {
-    return <Shell><p className="text-sm text-neutral-400">{t('inviteExpired')}</p></Shell>;
+  // The two dead-end messages live in `Errors` (this page used to ask `Billing` for them
+  // and showed the raw key).
+  if (!invite || invite.expired) {
+    return (
+      <AuthScreen>
+        <AuthStatus
+          icon={invite ? <Clock /> : <SearchX />}
+          title={invite ? tErrors('inviteExpired') : tErrors('inviteInvalid')}
+        />
+      </AuthScreen>
+    );
   }
 
   // Logged in → auto-accept and go to the app.
   if (session?.user) {
     return (
-      <Shell>
-        <h1 className="m-0 text-base font-semibold text-neutral-100">{t('inviteJoinTitle', { workspace: invite.workspaceName })}</h1>
-        <InviteAcceptClient token={token} />
-      </Shell>
+      <AuthScreen>
+        <AuthCard title={t('inviteJoinTitle', { workspace: invite.workspaceName })}>
+          <InviteAcceptClient token={token} />
+        </AuthCard>
+      </AuthScreen>
     );
   }
 
@@ -53,15 +48,12 @@ export default async function InvitePage({ params }: { params: Promise<{ token: 
   }
 
   return (
-    <Shell>
-      <h1 className="m-0 text-base font-semibold text-neutral-100">{t('inviteJoinTitle', { workspace: invite.workspaceName })}</h1>
-      <p className="m-0 text-[13px] text-neutral-400 leading-relaxed">{t('inviteJoinBody')}</p>
-      <form action={signInToAccept} className="w-full">
-        <button type="submit" className="w-full px-5 py-2.5 rounded-lg text-[13.5px] font-semibold text-ink-fg bg-ink hover:opacity-90 transition-opacity">
-          {t('inviteSignIn')}
-        </button>
-      </form>
-      <Link href="/" className="text-[12px] text-neutral-500 hover:text-neutral-300">Remnus</Link>
-    </Shell>
+    <AuthScreen>
+      <AuthCard title={t('inviteJoinTitle', { workspace: invite.workspaceName })} description={t('inviteJoinBody')}>
+        <form action={signInToAccept}>
+          <SubmitButton>{t('inviteSignIn')}</SubmitButton>
+        </form>
+      </AuthCard>
+    </AuthScreen>
   );
 }

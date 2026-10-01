@@ -1,9 +1,11 @@
 'use client';
-import { useEffect } from 'react';
-import { createPortal } from 'react-dom';
-import Image from 'next/image';
 import { useTranslations } from 'next-intl';
-import { Plug, PencilLine, ArrowRight, ShieldCheck, ScrollText, X } from 'lucide-react';
+import { ShieldCheck } from 'lucide-react';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { RemnusMark } from '@/components/ui/remnus-mark';
+import { MarkIcon } from '@/components/features/agents/AgentMark';
+import type { AgentMarkName } from '@/components/features/agents/agentMarks';
 
 interface Props {
   /** Recommended path — open the editor-connection flow. */
@@ -14,92 +16,70 @@ interface Props {
   onClose: () => void;
 }
 
+// The tools people most often connect first; the panel shows them so "your AI agent"
+// is something the reader recognises, not an abstraction.
+const FIRST_AGENTS: { mark: AgentMarkName; label: string }[] = [
+  { mark: 'claude', label: 'Claude Code' },
+  { mark: 'cursor', label: 'Cursor' },
+  { mark: 'vscode', label: 'VS Code' },
+  { mark: 'codex', label: 'Codex' },
+  { mark: 'windsurf', label: 'Windsurf' },
+];
+
 /**
- * First-run welcome modal shown once to a brand-new user. Splits intent into the
- * two real activation paths (connect an AI agent vs. explore manually) and frames
- * the pre-seeded "Paint clone" workspace as a sample so it isn't mistaken for the
- * user's own data. See {@link OnboardingGuide}.
+ * First-run welcome shown once to a brand-new user. Connecting an agent is what Remnus
+ * is for, so it is the one primary action, in its own panel; exploring by hand is the
+ * quiet way out below it (V2 R8.6). The pre-seeded sample workspace is named as a sample
+ * so it isn't mistaken for the user's own data. See {@link OnboardingGuide}.
  */
 export default function WelcomeModal({ onConnect, onExplore, onClose }: Props) {
   const t = useTranslations('Onboarding');
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [onClose]);
+  return (
+    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent size="md" className="dialog-compact:gap-5 dialog-compact:p-6">
+        <DialogHeader className="gap-1.5">
+          <span className="mb-2 flex size-10 items-center justify-center rounded-control bg-ink text-ink-fg">
+            <RemnusMark className="size-5" />
+          </span>
+          <DialogTitle className="text-xl tracking-[-0.015em]">{t('welcomeTitle')}</DialogTitle>
+          <DialogDescription className="text-sm">{t('welcomeSubtitle')}</DialogDescription>
+        </DialogHeader>
 
-  return createPortal(
-    <div
-      className="fixed inset-0 z-120 flex items-center justify-center p-4 bg-black/70"
-      onClick={onClose}
-    >
-      <div
-        className="relative w-full max-w-2xl bg-neutral-850 border border-neutral-800 rounded-2xl modal-shadow overflow-hidden animate-scale-in"
-        onClick={e => e.stopPropagation()}
-      >
-        <button
-          onClick={onClose}
-          className="absolute top-3.5 right-3.5 p-1 text-neutral-500 hover:text-neutral-200 transition-colors rounded hover:bg-neutral-800"
-          aria-label={t('welcomeSkip')}
-        >
-          <X size={16} />
-        </button>
-
-        <div className="px-8 pt-11 pb-7 flex flex-col items-center text-center gap-3.5">
-          <Image src="/logo-square-transparent.png" alt="Remnus" width={56} height={56} className="opacity-90" />
-          <h2 className="text-2xl font-semibold text-neutral-50">{t('welcomeTitle')}</h2>
-          <p className="text-sm text-neutral-400 max-w-md leading-relaxed">{t('welcomeSubtitle')}</p>
+        <div className="flex flex-col gap-4 rounded-surface bg-raised p-4 shadow-[inset_0_0_0_1px_var(--color-line)]">
+          <ul className="flex flex-wrap items-center gap-1.5">
+            {FIRST_AGENTS.map((a) => (
+              <li
+                key={a.mark}
+                title={a.label}
+                className="flex size-8 items-center justify-center rounded-control bg-sheet shadow-[inset_0_0_0_1px_var(--color-line)]"
+              >
+                <MarkIcon mark={a.mark} size={16} />
+                <span className="sr-only">{a.label}</span>
+              </li>
+            ))}
+          </ul>
+          <div className="flex flex-col gap-1">
+            <p className="text-sm font-semibold text-fg">{t('welcomeConnectTitle')}</p>
+            <p className="text-xs leading-relaxed text-fg-3">{t('welcomeConnectDesc')}</p>
+          </div>
+          <Button variant="primary" size="lg" className="w-full" onClick={onConnect}>
+            {t('welcomeConnectCta')}
+          </Button>
         </div>
 
-        <div className="px-8 grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {/* Recommended: connect an AI agent */}
-          <button
-            onClick={onConnect}
-            className="group relative flex flex-col items-start gap-2 p-5 rounded-xl border border-signal/40 bg-signal/10 hover:bg-signal/15 hover:-translate-y-0.5 transition-all text-left"
-          >
-            <span className="absolute top-2.5 right-2.5 text-2xs font-medium text-signal-text bg-signal/15 border border-signal/30 px-1.5 py-0.5 rounded-full">
-              {t('welcomeRecommended')}
-            </span>
-            <span className="w-9 h-9 rounded-lg bg-signal/15 border border-signal/30 flex items-center justify-center">
-              <Plug size={18} className="text-signal-text" />
-            </span>
-            <span className="text-sm font-semibold text-signal-text">{t('welcomeConnectTitle')}</span>
-            <span className="text-[11px] leading-snug text-neutral-400">{t('welcomeConnectDesc')}</span>
-            <span className="mt-1 inline-flex items-center gap-1 text-[11px] font-semibold text-signal-text group-hover:gap-1.5 transition-all">
-              {t('welcomeConnectCta')} <ArrowRight size={12} />
-            </span>
-          </button>
+        <Button variant="ghost" className="self-center" onClick={onExplore}>
+          {t('welcomeExploreCta')}
+        </Button>
 
-          {/* Secondary: explore manually */}
-          <button
-            onClick={onExplore}
-            className="group flex flex-col items-start gap-2 p-5 rounded-xl border border-neutral-800 bg-neutral-900 hover:bg-neutral-800 hover:-translate-y-0.5 transition-all text-left"
-          >
-            <span className="w-9 h-9 rounded-lg bg-neutral-950/60 border border-neutral-800 flex items-center justify-center">
-              <PencilLine size={18} className="text-neutral-300" />
-            </span>
-            <span className="text-sm font-semibold text-neutral-200">{t('welcomeExploreTitle')}</span>
-            <span className="text-[11px] leading-snug text-neutral-400">{t('welcomeExploreDesc')}</span>
-            <span className="mt-1 inline-flex items-center gap-1 text-[11px] font-semibold text-neutral-400 group-hover:text-neutral-200 group-hover:gap-1.5 transition-all">
-              {t('welcomeExploreCta')} <ArrowRight size={12} />
-            </span>
-          </button>
-        </div>
-
-        {/* Trust strip — the differentiator + the "this is a sample" framing */}
-        <div className="px-8 pt-5 pb-7 mt-5 space-y-2">
-          <div className="flex items-start gap-2 text-[11px] text-neutral-400 leading-relaxed">
-            <ShieldCheck size={13} className="text-green-400 shrink-0 mt-0.5" />
+        <div className="flex flex-col gap-2 border-t border-line pt-4">
+          <p className="flex items-start gap-2 text-xs leading-relaxed text-fg-2">
+            <ShieldCheck size={14} className="mt-0.5 shrink-0 text-fg-3" aria-hidden />
             <span>{t('welcomeTrust')}</span>
-          </div>
-          <div className="flex items-start gap-2 text-[11px] text-neutral-500 leading-relaxed">
-            <ScrollText size={13} className="text-neutral-500 shrink-0 mt-0.5" />
-            <span>{t('welcomeSeedNote')}</span>
-          </div>
+          </p>
+          <p className="pl-5.5 text-xs leading-relaxed text-fg-3">{t('welcomeSeedNote')}</p>
         </div>
-      </div>
-    </div>,
-    document.body,
+      </DialogContent>
+    </Dialog>
   );
 }

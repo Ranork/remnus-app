@@ -50,8 +50,8 @@ export default async function BlogPostPage({ params }: Props) {
           dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
         />
       )}
-      <article className="px-4 sm:px-8 lg:px-14 py-14 lg:py-20">
-        <div className="max-w-4xl mx-auto">
+      <article className="px-4 py-8 sm:px-8 lg:py-10">
+        <div className="mx-auto max-w-[56rem] rounded-[14px] bg-sheet px-5 py-8 shadow-sheet sm:px-10 sm:py-10 lg:px-14 lg:py-12">
           <BreadcrumbTrail
             items={[
               { name: t('breadcrumbHome'), href: '/' },
@@ -60,15 +60,12 @@ export default async function BlogPostPage({ params }: Props) {
             ]}
           />
           <header className="mb-10">
-            <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-500/10 text-blue-500 mb-5">
-              <Icon size={22} />
-            </div>
-            <h1 className="text-3xl sm:text-4xl font-bold text-neutral-100 tracking-tight leading-[1.15] mb-4">
+            <Icon size={24} className="mb-4 text-fg-3" />
+            <h1 className="m-0 mb-4 text-[32px] leading-[1.1] font-semibold tracking-[-0.03em] text-fg sm:text-[40px]">
               {post.meta.title}
             </h1>
-            <div className="flex items-center gap-3 font-mono text-[11px] uppercase tracking-wide text-neutral-500">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-ui text-fg-3">
               <time dateTime={post.meta.date}>{dateLabel}</time>
-              <span aria-hidden>·</span>
               <span className="inline-flex items-center gap-1.5">
                 <Clock size={12} />
                 {t('readingTime', { min: post.readingTime })}

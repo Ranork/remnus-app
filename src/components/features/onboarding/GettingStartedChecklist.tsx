@@ -1,7 +1,9 @@
 'use client';
 import { useTranslations } from 'next-intl';
-import { Check, Minus, Plug, Zap, PartyPopper, ArrowRight, ListChecks } from 'lucide-react';
+import { Check, ListChecks, Minus, X } from 'lucide-react';
 import type { OnboardingProgress } from '@/lib/actions/onboarding';
+import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/cn';
 
 interface Props {
   progress: Pick<OnboardingProgress, 'hasToken' | 'hasAgentCall'>;
@@ -15,129 +17,140 @@ interface Props {
   onDismiss: () => void;
 }
 
-type Step = {
-  id: 'account' | 'connect' | 'call';
-  done: boolean;
-  icon: typeof Plug;
-  action?: boolean;
-};
+type StepId = 'account' | 'connect' | 'call';
 
 /**
  * Persistent sidebar "Getting started" checklist. Steps are derived from real DB
  * state ({@link OnboardingProgress}) — never a stored flag — so the ticks are
  * always truthful. Mirrors the activation funnel: signup → token → first call.
  *
- * Minimizing collapses it into a sidebar-style "Getting started N/3" button
- * (like the AI Agents / Plan / Settings rows) that re-expands on click; a
- * permanent dismiss is only offered once everything is done.
+ * A small sheet on the desk like the agents card under it (V2 R8.6). The progress is
+ * three bars (the connect flow's step bars); the step that is next carries the one
+ * action — connecting an agent is what the product is for, so it is the ink button.
+ * Minimizing collapses it into a sidebar row that re-expands on click; a permanent
+ * dismiss is only offered once everything is done.
  */
 export default function GettingStartedChecklist({
   progress, collapsed, onConnect, onToggleCollapse, onDismiss,
 }: Props) {
   const t = useTranslations('Onboarding');
 
-  const steps: Step[] = [
-    { id: 'account', done: true,                  icon: Check },
-    { id: 'connect', done: progress.hasToken,     icon: Plug, action: true },
-    { id: 'call',    done: progress.hasAgentCall, icon: Zap,  action: true },
+  const steps: { id: StepId; done: boolean }[] = [
+    { id: 'account', done: true },
+    { id: 'connect', done: progress.hasToken },
+    { id: 'call',    done: progress.hasAgentCall },
   ];
 
   const doneCount = steps.filter(s => s.done).length;
   const allDone = doneCount === steps.length;
-
-  // The first not-yet-done actionable step is the one we surface a button on.
-  const activeStepId = steps.find(s => !s.done && s.action)?.id;
+  const activeStepId = steps.find(s => !s.done)?.id;
 
   if (allDone) {
     return (
-      <div className="mx-2 mt-1 rounded-lg border border-green-500/25 bg-green-500/10 px-3 py-2.5 flex items-center gap-2.5">
-        <PartyPopper size={15} className="text-green-400 shrink-0" />
+      <div className="mx-2 mb-1.5 flex items-center gap-2.5 rounded-surface bg-sheet/70 py-2.5 pr-1.5 pl-3 shadow-lift">
+        <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-signal text-signal-fg">
+          <Check size={13} strokeWidth={3} aria-hidden />
+        </span>
         <div className="min-w-0 flex-1">
-          <p className="text-xs font-semibold text-green-400 truncate">{t('checklistDoneTitle')}</p>
-          <p className="text-[10px] text-green-400/70 truncate">{t('checklistDoneHint')}</p>
+          <p className="truncate text-ui font-semibold text-fg">{t('checklistDoneTitle')}</p>
+          <p className="truncate text-xs text-fg-3">{t('checklistDoneHint')}</p>
         </div>
-        <button
-          onClick={onDismiss}
-          className="shrink-0 text-[10px] font-semibold text-green-400/80 hover:text-green-400 transition-colors"
-        >
-          {t('checklistDismiss')}
-        </button>
+        <Button variant="ghost" size="icon-sm" onClick={onDismiss} aria-label={t('checklistDismiss')}>
+          <X />
+        </Button>
       </div>
     );
   }
 
-  // Collapsed: a compact sidebar button matching the AI Agents / Plan / Settings rows.
+  // Collapsed: one sidebar row, like the rows around it.
   if (collapsed) {
     return (
-      <div className="px-2 pt-1">
+      <div className="px-2 pb-1">
         <button
+          type="button"
           onClick={onToggleCollapse}
-          className="w-full flex items-center gap-1.5 min-w-0 px-2 py-1.5 rounded-md text-sm text-neutral-300 hover:bg-neutral-800 hover:text-neutral-50 transition-all duration-200"
+          className="flex w-full min-w-0 items-center gap-2 rounded-control px-2 py-1.5 text-ui text-fg-2 transition-[background-color,box-shadow] hover:bg-sheet/55 hover:text-fg"
         >
-          <ListChecks size={14} className="shrink-0 text-signal-text" />
+          <ListChecks size={15} className="shrink-0 text-fg-3" aria-hidden />
           <span className="truncate">{t('checklistTitle')}</span>
-          <span className="ml-auto shrink-0 text-[10px] font-bold text-signal-text bg-signal/10 border border-signal/20 px-1.5 py-0.5 rounded-full leading-none">
-            {doneCount}/{steps.length}
-          </span>
+          <span className="ml-auto shrink-0 text-xs text-fg-3">{doneCount}/{steps.length}</span>
         </button>
       </div>
     );
   }
 
   return (
-    <div className="mx-2 mt-1 rounded-lg border border-neutral-800 bg-neutral-950/40 overflow-hidden">
-      <div className="flex items-center gap-2 px-3 pt-2.5 pb-1.5">
-        <span className="text-[11px] font-semibold text-neutral-200">{t('checklistTitle')}</span>
-        <span className="text-[10px] font-bold text-signal-text bg-signal/10 border border-signal/20 px-1.5 py-0.5 rounded-full leading-none">
-          {doneCount}/{steps.length}
-        </span>
-        <button
+    <section
+      aria-label={t('checklistTitle')}
+      className="mx-2 mb-1.5 flex flex-col gap-3 rounded-surface bg-sheet/70 p-3 shadow-lift"
+    >
+      <div className="flex items-center gap-2">
+        <p className="min-w-0 flex-1 truncate text-ui font-semibold text-fg">{t('checklistTitle')}</p>
+        <span className="shrink-0 text-xs text-fg-3">{doneCount}/{steps.length}</span>
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          className="-my-1 -mr-1 size-6"
           onClick={onToggleCollapse}
-          title={t('checklistCollapse')}
-          className="ml-auto p-0.5 text-neutral-600 hover:text-neutral-300 transition-colors rounded"
+          aria-label={t('checklistCollapse')}
         >
-          <Minus size={13} />
-        </button>
+          <Minus />
+        </Button>
       </div>
 
-      <div className="px-2 pb-2 space-y-0.5">
+      <div className="flex gap-1" aria-hidden>
+        {steps.map((s) => (
+          <span key={s.id} className={cn('h-1 flex-1 rounded-full', s.done ? 'bg-signal' : 'bg-hover')} />
+        ))}
+      </div>
+
+      <ol className="flex flex-col gap-2">
         {steps.map((step) => {
           const isActive = step.id === activeStepId;
           return (
-            <div
-              key={step.id}
-              className={`flex items-center gap-2 px-1.5 py-1 rounded-md ${isActive ? 'bg-neutral-800/40' : ''}`}
-            >
-              <span
-                className={`shrink-0 w-4 h-4 rounded-full flex items-center justify-center border ${
-                  step.done
-                    ? 'bg-green-500/15 border-green-500/40 text-green-400'
-                    : isActive
-                      ? 'border-signal/50 text-signal-text'
-                      : 'border-neutral-700 text-neutral-600'
-                }`}
-              >
-                {step.done ? <Check size={10} /> : <step.icon size={9} />}
-              </span>
-              <span
-                className={`text-[11px] truncate ${
-                  step.done ? 'text-neutral-500 line-through' : isActive ? 'text-neutral-100' : 'text-neutral-400'
-                }`}
-              >
-                {t(`checklist_${step.id}` as 'checklist_connect')}
-              </span>
-              {isActive && (
-                <button
-                  onClick={onConnect}
-                  className="ml-auto shrink-0 inline-flex items-center gap-0.5 text-[10px] font-semibold text-signal-text hover:text-fg bg-signal/10 hover:bg-signal/15 border border-signal/20 px-1.5 py-0.5 rounded transition-colors"
+            <li key={step.id} className="flex flex-col gap-2">
+              <div className="flex items-center gap-2.5">
+                <span
+                  aria-hidden
+                  className={cn(
+                    'flex size-4 shrink-0 items-center justify-center rounded-full',
+                    step.done
+                      ? 'bg-fg-4/35 text-fg-2'
+                      : isActive
+                        ? 'shadow-[inset_0_0_0_1.5px_var(--color-signal)]'
+                        : 'shadow-[inset_0_0_0_1px_var(--color-line-strong)]',
+                  )}
                 >
-                  {t('checklistGo')} <ArrowRight size={10} />
-                </button>
+                  {step.done && <Check size={10} strokeWidth={3} />}
+                </span>
+                <span
+                  className={cn(
+                    'min-w-0 truncate text-ui',
+                    step.done ? 'text-fg-3' : isActive ? 'font-medium text-fg' : 'text-fg-3',
+                  )}
+                >
+                  {t(`checklist_${step.id}`)}
+                  {step.done && <span className="sr-only"> ({t('checklistDoneLabel')})</span>}
+                </span>
+              </div>
+
+              {isActive && step.id === 'connect' && (
+                <Button variant="primary" className="ml-6.5" onClick={onConnect}>
+                  {t('checklistConnectCta')}
+                </Button>
               )}
-            </div>
+              {isActive && step.id === 'call' && (
+                <div className="ml-6.5 flex flex-col items-start gap-1.5">
+                  <p className="text-xs leading-relaxed text-fg-3">{t('checklistCallHint')}</p>
+                  <Button variant="secondary" size="sm" onClick={onConnect}>
+                    {t('checklistCallCta')}
+                  </Button>
+                </div>
+              )}
+            </li>
           );
         })}
-      </div>
-    </div>
+      </ol>
+    </section>
   );
 }

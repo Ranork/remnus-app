@@ -12,8 +12,9 @@ import { getMyAgentMetrics, type AgentMetrics } from '@/lib/actions/agentMetrics
  * savings number nobody can check is a number nobody believes.
  *
  * One component, three surfaces:
- *  - `sidebar`   compact row inside the sidebar's agents panel. Hidden until something
- *                is measured — a card reading zero makes the product look smaller than it is.
+ *  - `sidebar`   the figure at the top of the sidebar's agents card (one button with the
+ *                AI Agents row). Hidden until something is measured — a card reading zero
+ *                makes the product look smaller than it is.
  *  - `modal`     hero at the top of the AI Agents modal. Shown for anyone who has an
  *                agent connected, with an honest "after the first session" note until
  *                there is a number.
@@ -91,21 +92,25 @@ export default function AgentSavingsCard({
   ].filter(Boolean) as { key: string; value: string; label: string; short: string; hint: string }[];
 
   if (variant === 'sidebar') {
+    // The sidebar's one warm spot (Hakan: this number is what the product is for, it
+    // must not read as a footnote). It carries the signal colour as a FILL — a lit
+    // panel and a solid disc — never as small yellow text on the desk, and nothing
+    // moves: the figure only changes when agents save more.
     const body = (
       <>
-        <span className="flex items-center gap-2.5">
-          <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-control bg-signal-soft text-signal-text">
-            <Zap size={14} />
+        <span className="flex items-center gap-3">
+          <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-signal text-signal-fg">
+            <Zap size={16} fill="currentColor" strokeWidth={1.5} />
           </span>
           <span className="min-w-0 flex-1">
-            <span className="block truncate text-sm leading-tight font-semibold text-fg">{value}</span>
-            <span className="block truncate text-2xs text-fg-3">{t('savingsLabel')}</span>
+            <span className="block truncate text-xl leading-tight font-semibold tracking-tight text-fg">{value}</span>
+            <span className="block truncate text-xs font-medium text-signal-text">{t('savingsLabel')}</span>
           </span>
         </span>
         {stats.length > 0 && (
-          <span className="mt-1.5 flex items-center gap-2.5 truncate pl-[38px] text-2xs text-fg-3">
+          <span className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 pl-12 text-xs text-fg-3">
             {stats.map((s) => (
-              <span key={s.key} className="truncate" title={s.hint}>
+              <span key={s.key} className="whitespace-nowrap" title={s.hint}>
                 {s.short}
               </span>
             ))}
@@ -113,16 +118,15 @@ export default function AgentSavingsCard({
         )}
       </>
     );
+    const panel = 'block w-full rounded-control bg-signal-soft px-3 py-3 text-left';
+    // Without its own click target it is a span, so the sidebar can put it inside the
+    // one button that makes up the agents card (a div inside a button is invalid).
     return onOpenDetail ? (
-      <button
-        onClick={onOpenDetail}
-        title={hint}
-        className="block w-full cursor-pointer rounded-control px-2 py-2 text-left transition-colors duration-150 hover:bg-hover"
-      >
+      <button onClick={onOpenDetail} title={hint} className={`${panel} cursor-pointer`}>
         {body}
       </button>
     ) : (
-      <div title={hint} className="px-2 py-2">{body}</div>
+      <span title={hint} className={panel}>{body}</span>
     );
   }
 

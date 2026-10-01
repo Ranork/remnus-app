@@ -1,6 +1,6 @@
 # Remnus V2 Revizeleri — Chat Promptları
 
-> **Durum (2026-09-30): R1–R4 tamamlandı ve canlıda; R5 + R6 + R7 + R8 tamamlandı (commit'siz); R8.1–R8.8 ve R9–R11 sırada.** Her prompt bitince
+> **Durum (2026-10-01): R1–R4 tamamlandı ve canlıda; R5–R8 + R8.1–R8.6 tamamlandı (commit'siz); R8.7 tamamlandı (yeni site `/`'de; eski landing `/landing-old`, `/landing-next` arşivde); R8.8 tamamlandı (commit'siz, migration yok); R8.9 tamamlandı (commit'siz, migration yok); R9–R11 sırada.** Her prompt bitince
 > kendi bölümünün sonuna "Tamamlandı" notu düşer; bu satırı da güncelle.
 
 Hazırlanma tarihi: 2026-09-26. Kaynak: Hakan'ın "RemnusV2 Revizeler" listesi (18 madde +
@@ -1404,6 +1404,7 @@ Build çalıştırılmadı (build davranışı değişmedi).
 | R8.6 | Giriş, kurulum, onboarding | İlk 5 dakika; auth kartları ortak primitiflere. |
 | R8.8 | Ajan varlık katmanı | Yeni özellik; R8.1–R8.2 kabuğu oturduktan sonra. |
 | R8.7 | Pazarlama sitesi (son) | Ürün ekran görüntüleri yeni arayüzle yeniden alınır. |
+| R8.9 | Şablonlar ve varsayılan içeriğin dili | R8.2/R8.3'te ayrıldı; Hakan: "8.x'lerin sonunda". Arayüz dilinde doğmayan şablon/varsayılan veri. |
 
 Her R8.x kendi başına yeterlidir; ortak referans bloğu her prompta gömülüdür.
 
@@ -1458,6 +1459,65 @@ changelog.ts tek kayıt (`improved`); AGENTS.md editör bölümü + Serena conve
 sonuna "Tamamlandı" notu.
 ```
 
+### ✅ R8.1 — Tamamlandı (2026-09-30, Claude; commit/push yok, migration yok, paket eklenmedi)
+
+**Hakan'ın kararları (soruldu):** yorumlar gövdenin altında, **açık**; başlığın altında yalnız "N yorum" bağlantısı (N>0 iken)
+aşağı kaydırır. Ölü `SubItemsPanel.tsx` (Mayıs'tan beri import edilmiyordu) **silindi**.
+
+**Yapılanlar**
+- **Tipografi (`globals.css` `.prose-editor`):** gövde 16/1.7 `fg-2` (Küçük/Orta/Büyük tercihi yalnız px'i verir: 14/16/18;
+  gerisi em); H1/H2/H3 24/20/18 semibold `fg` → sayfa başlığının (28/34) altında. Tek ritim `--prose-flow` (metin 0.5em,
+  nesneler ×1.5 — kod, tablo, callout, medya `.editor-object` ile —, ayırıcı ×3). Liste içi 0.25em, alıntı italiksiz kural +
+  `fg-3` (Onest'te italik yok). **Ölçü:** Dar sütun 768px'te ~95 karakter çıkıyordu (ölçüldü) → 560px
+  (`pageContainerClass`, `features/pageLayout.ts`); 16px Onest'te satır başına 69–72 karakter ölçüldü. Geniş/Tam dokunulmadı.
+- **Kod/tablo/görev:** kod JetBrains Mono (`var(--font-mono)`; önce `monospace`tı), raised kuyu + hairline, "daha fazla göster"
+  geçişi raised'a karışır (catppuccin'e özel fade değişkenleri kaldırıldı). Tablo başlığı raised/`fg`, seçili hücre ve sütun
+  genişletme tutamacı sarı (mavi değil). Görev kutusu çiziliyor (line kenar, bitince `fg-3` dolgu + tik; üstü çizili `fg-3`).
+  Blok seçimi `signal-soft`, köşe 6.
+- **Menüler (`editor/menuStyles.ts`):** eğik çizgi, `@`, `:`, sayfa seçici, balon menü, blok seçim çubuğu, tutamaç menüsü ve
+  tablo kontrolleri DropdownMenu görünümünde (float yüzey, `shadow-float`, 12 köşe, 8 köşeli satırlar, 16px ikonlar) ama elle
+  konumlu — ProseMirror'dan odak çalmamaları gerekiyor. Eğik çizgi menüsü: cümle düzeninde grup başlıkları (Temel bloklar /
+  Medya / Sayfalar), satır sonunda markdown kısayolu `Kbd` (`#`, `##`, `-`, `1.`, `[]`, `>`, ```` ``` ````, `---`), `max-h-80`
+  + klavye vurgusu görünürde kalır, **"Ayırıcı" çevirisi** (önceki İngilizce kalıyordu) ve filtre artık okurun dilindeki adı da
+  eşliyor (aksan/büyük-küçük katlamalı: `/baslik` → "Başlık"). Renk paletleri tek yerde (`editorColors.ts`, değerler aynı),
+  yazı/vurgu seçici tek bileşen (`EditorColorPanel`), renk adları ve "Geri/Uygula/Bölümü daralt/Başlık" metinleri i18n'e
+  alındı (8 dil). Sürükleme tutamacının elle yapılmış onay modalı → `ConfirmDialog`.
+- **Ajana özgü giriş:** değerlendirildi, eklenmedi — editörün içinde çalışan bir ajan eylemi yok; uydurmadım.
+- **Blok yüzeyleri:** callout rengi kullanıcı verisi olarak kaldı; yüzey 8 köşe, 16/12 dolgu, 26px ikon kutusu, renk/sil
+  kontrolleri hover'da kutunun üst kenarında yüzüyor (metin artık tam genişliği kullanıyor). Görsel/dosya/yer imi/YouTube:
+  `raised` + `line`, `Button` primitifi, `×` karakterleri yerine ikon; dosya bloğuna ataç ikonu; alt sayfa satırı gövde
+  boyunda altı çizili başlık.
+- **Sayfa panelleri:** yeni `PageSection` (ince çizgi + başlık + açılır ok, kart yok) — yorumlar, bilgi bağlamı, geri
+  bağlantılar (kart ızgarası yerine satırlar), yerel harita (boş/hata `EmptyState sm`, derinlik anahtarı segment görünümü).
+  Bilgi bağlamı formu `Input`/`Textarea`/`SimpleSelect`/`Button loading` primitiflerine geçti. Yorumlar: orta noktasız meta
+  (ad + `<time>`), ajan için ayrı renk yok (işaret + "(ajan)"), `fieldClass` yazma kutusu, `Button loading`; `byAgent`
+  "by … (agent)" kalıbı 7 dilde "Ad (ajan)" oldu.
+- **Diyaloglar:** `PageHistoryModal` ve `PageMarkdownDialog` elle modaldan `Dialog` primitifine (odak tuzağı, Escape);
+  geçmiş başlığı cümle düzeni ("Sayfa geçmişi").
+- **Ölçek:** kapsamdaki tüm `text-[10/11px]` ölçeğe (`text-2xs`/`text-xs`), `neutral-*` sınıfları rol tokenlarına taşındı
+  (editör klasöründe kalan yok).
+- **Bulunup düzeltilen hata:** `globals.css`'teki katmansız `input, textarea, button { font-family: inherit }` kuralı her
+  input/textarea'daki `font-mono`'yu eziyordu (markdown alanı Onest'le çıkıyordu) → `@layer base`'e alındı.
+- **Kapsam dışı ama Hakan'ın bildirdiği:** "Yeni öğe" şablon kartında hover'da başlık beyaza dönüp açık temada kayboluyordu →
+  `TemplatePickerModal` kartı rol tokenlarına geçti (modalin geri kalanı R8.5'te).
+- **Hakan'ın oturum içi isteği — kenar çubuğu ajan kartı:** tasarruf rakamı ile "AI Ajanlarım" aynı modalı açıyordu → tek
+  buton-kart (tek hover, tek tıklama, `cursor-pointer`); proje penceresinde yalnız kapsamlı rakam, tıklanmaz. Rakam artık
+  kenar çubuğunun tek sıcak noktası: `signal-soft` panel, dolu `signal` disk, 20px rakam (Hakan: "göze çarpmalı"). Fareyle
+  tıklanınca kart odağı bırakıyor (`e.detail > 0`) — modal Escape'le kapanınca karta sarı odak halkası çıkıyordu. Changelog
+  `2026-09-30-one-agents-card`.
+- Changelog `2026-09-30-pages-easier-to-read` (improved). AGENTS.md (UI & Design + Project Structure → sayfa altı bölümler,
+  Editor görünüm/menü notları, SlashCommand*), Serena `conventions` güncellendi.
+
+**Doğrulama:** `npx tsc --noEmit` temiz; eslint (değişen 31+ dosya) 0 hata, 1 eski uyarı (`PageEditor` `onClose`, HEAD'de de
+var). Playwright (Hakan onaylı), dev + local.db, demo kullanıcı, uzun test sayfası (başlıklar, listeler, görev, alıntı, kısa +
+uzun kod, tablo, 2 callout, ayırıcı, görsel, dosya, yer imi): açık + koyu + Nord, 1440 ve 390 px (yatay kaydırma yok);
+eğik çizgi menüsü + TR filtre, balon menü + renk paneli + dönüştür menüsü, blok seçimi, tutamaç menüsü + alt menü, tablo
+kontrolleri, yorum gönderme + "1 yorum" atlaması, geçmiş ve markdown diyalogları. Ekran görüntüleri `.playwright-mcp/r81-*`.
+
+**Açık kalan / sonraki adıma not:** veritabanı satırı sayfası (`PageEditor`, peek değil) varsayılan olarak **Tam** genişlikte
+açılıyor ve kullanıcının varsayılan genişlik tercihini okumuyor — orada satır uzunluğu kuralı işlemez; R8.2'de (veritabanı
+görünümleri) değerlendirilmeli. `PageEditor`'ün özellik paneli R8.2 kapsamında bırakıldı.
+
 ---
 
 # R8.2 — Veritabanı görünümleri
@@ -1509,6 +1569,63 @@ changelog tek kayıt (`improved`: veritabanı görünümleri sadeleşti…); AGE
 "Tamamlandı" notu.
 ```
 
+### ✅ R8.2 — Tamamlandı (2026-10-01, Claude; commit/push yok, migration yok, paket eklenmedi)
+
+**Yapılanlar**
+- **Notion kalıpları kalktı (görev 1):** kanban sütun zemini, gruplu tablo bölüm zemini, kart sol şeridi, kart/satır renk
+  tinti yok. Görünümün "işaret" özelliği (`cardColorCol`, yoksa eski `cardBgCol`; tabloda `rowColorCol`) kanbanda kartın
+  üstünde rozet (`PropertyMark`), takvim olayında ve tablo satırında başlıktan önce nokta/durum halkası (`MarkDot`). Grup
+  başlıkları seçeneğin glifini taşır (`GroupGlyph`; değersiz grup içi boş halka). Kartta "Etiket:" yalnız değer kendini
+  anlatmıyorsa (`isSelfDescribingType`). Kanban ve takvim kartları `bg-raised` + hairline, bırakma çizgisi sinyal.
+  Ayarlar: "Kartları işaretle" / "Satırları işaretle" tek seçimi + açıklama; `cardBorderSide`, `groupColBg` artık okunmuyor
+  (tiplerde "legacy" notu, kayıtlı config'ler bozulmaz). Ölü `getCardBorderAccents`/`getCardBorderDots`/`getCardBgColor`
+  ve `globals.css`'teki `.database-card` açık-tema kuralı + `--database-card-bg`/`--database-muted-group-bg` silindi.
+- **Sekmeler + araç çubuğu (görev 2):** `ViewsBar` `Tabs` (line, mürekkep çubuk) üzerinde; aktif sekmeye tık → sekmeye
+  bağlı `DropdownMenu` (yeniden adlandır / çoğalt / sil; `DropdownMenuContent` artık `anchor` alıyor, rename alanı
+  `finalFocus` ile odakta kalıyor); görünüm ekleme `DropdownMenu`; mobilde tek menü düğmesi. Araç çubuğu ghost `Button` +
+  `Tooltip` (yenile, genişlik, toplu ekle, Ayarlar `aria-pressed`), "Yeni" mürekkep birincil + `loading`. Veritabanı başlığı
+  sayfa başlığıyla aynı (28/34, simge kaldır balonu R8.1 gibi).
+- **Onay kutusu (görev 3):** `src/components/ui/checkbox.tsx` (Base UI; işaretli = sinyal dolgu, tik `signal-fg`). Taşınan
+  yerler: kenar çubuğu sütun/grup/kart listeleri (`ToggleRow`), filtre seçenekleri, tablo hücresi (hücre tıkı değiştirir),
+  sütun göster/gizle, kanban/takvim kart değerleri, satır sayfası, tekrar silme diyaloğundaki native `accent-red` kutu.
+- **Özellik seçicileri (görev 4):** yeni `PropertyValuePicker` — Base UI Combobox, arama kutusu popup içinde (ok tuşları +
+  Enter, Esc, "X oluştur", durumlar grup başlıklı). Tablo/kanban hücre editörü (`InlineCellEditor`) ve satır sayfasının
+  özellik listesi bunu kullanıyor; elle açılan `absolute bg-neutral-900` listeleri kalmadı. Tablo sütun menüsü (sırala /
+  gizle / genişliği sıfırla / filtre) form alanı taşıdığı için `menuStyles` görünümünde elle konumlanan panel olarak kaldı;
+  filtre değer alanı `FiltersSection` ile ortak (`FilterValueField`, `useFilterOperators`).
+- **Ajan işareti (görev 5):** `AgentEditBadge` tek görünüm: nötr disk üzerinde ajanın marka ikonu + ui `Tooltip`
+  ("{ajan} MCP ile düzenledi: {zaman}"); sinyal noktası yalnız son 10 dakikadaki düzenlemede. Veri tarafına girilmedi.
+- **Yan panel + ölçek (görev 6):** kenar çubuğu yüzeyleri raised + çizgi, `text-[8..11px]` → `text-2xs`/`xs`/`ui`, codemod
+  (TS parser, yalnız literal) ile nötr rampa → rol tokenları.
+- **Takvim (görev 7):** bugün tek sinyal dolgulu gün numarası (`signal-fg`, `aria-current="date"`), hafta sonu ve ay dışı
+  numaralar `fg-4` (ay dışı hücre hafif desk tonu); gün/ay/hafta aralığı `Intl` ile UI dilinde (`formatRange`); büyük harfli
+  gün dizileri ve "Mapped to:" kaldırıldı; boş durum `EmptyState` (döngüsel `animate-pulse` gitti); gün sayısı hover'da
+  gün eylemlerine yer verir; olayda yalnız seçilmiş sayfa simgesi.
+- **Satır peek + diğerleri:** peek başlığı tek `PeekHeader` (kapat, "Tam sayfada aç", `DropdownMenu`), yüzey `bg-sheet` +
+  `shadow-modal`, arka plan `bg-overlay`. `DateRangePicker` float yüzey, yerel ay/gün adları, bugün sinyal halka, aralık
+  `signal-soft`, Button'lar; tarih aralığı ayırıcısı "→" yerine "–". `BulkRowsDialog`, `RecurrenceDialog`,
+  `RecurrenceScopeDialog` → `Dialog` primitifi (segmented `Tabs`, `Button`, `Textarea`/`Input`); `OptionTile` seçimi sinyal
+  halka, kırmızı ton yalnız silmede; `SeriesPanel`/`RecurringBadge`/geri bildirim toast'ı nötr. `PropertyTypeIcon` tablo
+  başlığı ve satır sayfasında ortak.
+- **i18n (8 dil):** 28 yeni `Database` anahtarı (none, selectProperty, calendar*, cardMark*, groupByHint, columnOptions,
+  removeSort, hideColumn, resetWidth, loadingPage, searchPlaceholder, noMatches, openLink, dateRange, agentEditedTooltip…),
+  `bulkImport.ignoredColumns`/`moreRows`, `Editor.colorTeal`; değer düzeltmeleri: rowColor → "Satırları işaretle",
+  toggleColumns, defaultPageIcon(Color), visibleGroups cümle düzeni, addSelectProperty (durum dahil).
+
+**Doğrulama:** eslint (yalnız önceden var olan 4 uyarı), `npx tsc --noEmit` temiz, `npm run test:recurrence` 26/26.
+Playwright (yerel demo çalışma alanı, açık + koyu, 1440 ve 390 px): kanban, tablo, takvim (geçici "Due" özelliği + takvim
+görünümü eklenip sonra silindi), sütun menüsü + filtre, seçici ile değer değiştirme (yazma + Enter, Esc), satır peek ve
+"⋯" menüsü, tarih seçici, tekrar diyaloğu (özel kurucu dahil), görünüm sekmesi menüsü + yeniden adlandırma, kanban
+sürükle-bırak (geri alındı). Test verisi eski hâline döndürüldü.
+
+**Açık kalanlar kapatıldı (2026-10-01, Hakan: "dokunmadığın açık alanları da kapat"):** yeni satır boş başlıkla açılır
+(yerel "Başlıksız" yer tutucu; `createPage` artık her satıra sabit `status: 'To Do'` yazmıyor — şemanın kendi varsayılanı,
+"To Do" yalnız o seçeneği olan stok Durum sütununda), yeni görünüm/özellik adları UI dilinde (`viewTable/viewBoard/
+viewCalendar`, `newProperty`), tarih biçimi (varsayılan + göreli) UI dilinde (`formatDateValue(..., locale)`), değeri boş
+filtre artık uygulanmıyor (satırları gizlemiyor; görünüm ve pano aynı), satır peek'i görünümün kutusuna sığıyor (vh yerine
+%; mobilde üst şerit artık örtülmüyor). Hâlâ İngilizce olan ve ayrı iş olanlar: şablonlar (`templates.ts`), MCP/Notion
+içe aktarmanın görünüm adları.
+
 ---
 
 # R8.3 — Panolar
@@ -1555,6 +1672,39 @@ eslint, tsc; Hakan onayıyla Playwright: kalibre edilmiş bir pano + otomatik ku
 changelog (`improved`); AGENTS.md Dashboards + Serena; update-handoff; commit yok; "Tamamlandı" notu.
 ```
 
+### ✅ R8.3 — Tamamlandı (2026-10-01, Claude; commit/push yok, migration yok, paket eklenmedi)
+
+**Yapılanlar**
+- **Palet (görev 1):** `DashboardBlocks`'taki `PALETTE` dataviz doğrulayıcısında kalıyordu (bitişik #e66767↔#d55181
+  normal görüş ΔE 7,8 < 15; #008300↔#c98500 CVD 6,9). Referans sekizli, doğrulanmış sırasıyla `--chart-1…8` +
+  `--chart-muted` tokenlarına taşındı (`globals.css`; koyu temalarda koyu basamaklar, `catppuccin`'de açık basamaklar).
+  Doğrulayıcı: koyu sheet/raised'da tüm kontroller PASS (CVD ≥ 8,4, normal ≥ 19,3, ≥ 3:1); açıkta PASS + 3 dilimde 3:1 altı
+  uyarısı → her grafikte değer/etiket görünür (rahatlama kuralı). Dracula/Tokyo/Nord yüzeylerinde de yalnız kontrast
+  uyarısı. Renk artık sırayla değil varlıkla gider: `ChartPoint.colorIndex` seçenek/durum sütununda seçeneğin yerini korur
+  (filtre değişince renk kaymaz); 8'i aşan dilim soluk. Halka izi `--color-hover`; eksen/etiketler tokenlarda; işaretlere
+  hover başlıkları (SVG `<title>`; HTML'de React 19 `<title>`ı `<head>`'e taşıdığı için `title` özniteliği).
+- **Ajan etkinliği (görev 2):** blok son 100 çağrıyı **oturumlara** ayırıyor (aynı token, 30 dk'dan kısa aralık, en çok 4):
+  başlıkta ajanın işareti, adı, canlıysa (15 dk) sabit sinyal nokta, "N çağrı, M yazma" ve göreli zaman; altında çağrılar
+  (araç, dokunduğu sayfa/satır/veritabanı adı, saat). En yeni oturum açık, eskiler yerel `<details>` (sunucu bileşeni kalır).
+  Hedef adları tek toplu okumayla (öğe/satır/veritabanı, çalışma alanına kapsamlı) — yerelde blok çözümlemesi medyan 3,3 ms.
+- **Yığın çubuk + metrik (görev 3):** yeni `chart` varyantı `stack`: tek yatay çubuk, 2px boşluk, sütunun seçenek sırası
+  (yapılacak → bitti), sayılı iki sütunlu açıklama. Ev panosu besteleyicisi, katalog örneği, `docs/mcp/dashboards.md`,
+  `calibrate.md` ve dört oyun kitabı durum karışımı için `stack` öneriyor; `donut` geçerli kalıyor (dilimler arası boşluk
+  eklendi). Editörde yeni grafik varsayılanı `bar`. Metrik: 40px sayı + nötr (mürekkep) değişim satırı — "yukarı" her zaman
+  iyi değil, yeşil/kırmızı kalktı.
+- **Blok editörü (görev 4):** yeni `ui/sheet.tsx` (Base UI Dialog üzerinde sağ panel; R8.5 bunu kullanacak). Alanlar
+  `Input`/`Textarea`/`SimpleSelect`/`Checkbox`, kaydet `Button primary` + `loading`, ekle/kaldır ghost `Button`, blok türü
+  seçici kalkık sekme görünümünde, etiketler cümle düzeninde (zaten öyleydi), Escape/odak Sheet'ten.
+- **Boş/hata (görev 5):** veri yok, kaynak/sütun silinmiş, okunamayan blok ve gömülü görünümde satır yok → `EmptyState
+  size="sm"`; dikkat ikonları `signal-text` (amber kalktı); `andMore` ve "kaldırıldı" yazıları `text-xs`. Blok eylemleri 24px
+  düğme + `Tooltip`; "Blok ekle" `Button`. Durum başlığındaki boşluklu uzun tire kalktı ("{name}: duruma göre").
+- **i18n (8 dil):** `Dashboard.sessionMeta`, `callFailed`, `editor.variants.stack`; tr/hi `home.byStatus` düzeltmesi.
+
+**Doğrulama:** eslint (bu dosyalarda 0), `npx tsc --noEmit` temiz, `npm run test:recurrence` 26/26; dataviz
+`validate_palette.js` (koyu/açık + diğer koyu temalar). Playwright (Hakan onayıyla; yerel demo, otomatik kurulan pano,
+açık + koyu, 1440 ve 390 px): yığın çubuk, halka, oturumlar, Sheet ile blok ekle/düzenle/sil (geçici "Öncelik dağılımı"
+ve proje başlığı blokları eklenip silindi).
+
 ---
 
 # R8.4 — Bilgi haritası
@@ -1598,6 +1748,33 @@ satırları getir, 390 px.
 ## Bitirirken
 changelog (`improved`); AGENTS.md Knowledge Map + Serena; update-handoff; commit yok; "Tamamlandı" notu.
 ```
+
+### ✅ R8.4 — Tamamlandı (2026-10-01, Claude; commit/push yok, migration yok, paket eklenmedi)
+
+**Yapılanlar**
+- **Araç çubuğu (görev 1):** harita kâğıdın üstünde (`bg-sheet`, alt çizgi); Ağ/Ağaç `Tabs segmented`, Renk ve etkinlik
+  günü `SimpleSelect`, Katmanlar `DropdownMenu` + yeni `DropdownMenuCheckboxItem` (primitife eklendi; işaretli = sinyal,
+  menü açık kalır), arama `Input` + `menuStyles` öneri listesi, yeniden düzenle/sığdır ghost `Button` + `Tooltip`, Pano
+  `Button secondary` (mavi kalktı, oluştururken `loading`), mobil "Dikkat isteyenler" düğmesi sinyal-text ikonlu.
+- **Renkler (görev 2):** `graphTheme.ts` artık `--color-signal` / `--color-focus` okuyor. Hover/seçim/arama halkası
+  `--color-focus` (2 px). Beş temada ölçüldü: açık temada parlak sinyal beyazda 1,85:1 (halka kayboluyordu), focus altını
+  okunur. Ajan yazması `--color-signal`; tuvalde 3:1'in altına düşerse (`contrast()`) focus altınına geçiyor (açık temada).
+  Mavi veri rengi kaldı; taslak sarı yerine mor (haritada başka sarı yok), kümeler panoların doğrulanmış `--chart-1…8`'i.
+  Lejant ve katman çizgileri tuvalle aynı `readGraphTheme()` nesnesini okuyor (`useGraphTheme` →
+  `useSyncExternalStore(watchTheme)`), renk sapamaz. Not: CSS değişkenleri `#fff` gibi kısa döndürebiliyor; `hexToRgb`
+  genişletiyor. Ölçülen düşük kontrastlar (etiketli olduğu için kabul): açık temada etiket/satır 2,5–2,6, Nord'da chart-6
+  2,5 ve pano 2,96.
+- **Sağ panel + seçim kartı (görev 3):** başlık + ince çizgi, cümle düzeni, grup başına "Burada düzeltilecek bir şey yok"
+  satırı; hiçbiri yoksa `EmptyState sm`. Seçim kartı float yüzey, Aç `Button primary`, satırlar `Button secondary loading`,
+  ajan satırı sinyal noktalı. Yükleme/başarısız/boş durumlar `EmptyState`.
+- **Çerez bandı (görev 4, R7 notu):** `CookieConsentBanner` yüksekliğini `--consent-banner-height` olarak yayınlıyor
+  (ResizeObserver; bant yokken 0); seçim kartı `bottom: calc(var(--consent-banner-height) + 0.75rem)`.
+
+**Doğrulama:** eslint, `npx tsc --noEmit` temiz (dev'in bozuk `routes.d.ts`'i yeniden başlatmayla onarıldıktan sonra
+yeniden koşuldu). `bench:graph` koşulmadı: render yolu değişmedi (yalnız renk ve halka). Playwright (Hakan onayıyla; yerel
+demo): açık/koyu/Nord, seçim halkası, ajan modu, satırları getir (~370 ms), uzak zoom'da küçük düğüme tıklama, katman
+aç/kapa, ağaç düzeni, çerez bandıyla kart konumu (kart 823 px'te biter, bant 843 px'te başlar), 390 px + mobil panel.
+Beş temada kontrast tarayıcıda ölçüldü.
 
 ---
 
@@ -1650,6 +1827,53 @@ changelog tek kayıt (`improved`); AGENTS.md + Serena (yeni Dialog/Sheet/Toast k
 commit yok; "Tamamlandı" notu.
 ```
 
+### ✅ R8.5 — Tamamlandı (2026-10-01, Claude; tek oturumda, commit/push yok, migration yok, paket eklenmedi)
+
+**Yapılanlar**
+- **Kalıp (görev 1):** `ui/dialog.tsx` artık tek modal ailesi: `DialogContent size` sm 24rem / md 32rem / lg 44rem /
+  full 60rem × sabit yükseklik (sekmeli modal zıplamaz); `DialogBody` eklendi. Şekli içerik seçiyor: `DialogBody` varsa
+  **panel** (başlık/ayak ince çizgili sabit çubuk, yalnız gövde kayar), yoksa **compact** (tek blok, bütün olarak kayar) —
+  `globals.css` başındaki `dialog-compact` / `in-dialog-compact` / `in-dialog-panel` `@custom-variant`'ları. `sm` altında
+  alttan açılan sheet (`animate-sheet-up`, safe-area payı), üstünde ortada. İç içe dialog ebeveyni karartıyor
+  (`data-nested-dialog-open`), Escape yalnız üsttekini kapatıyor. Base UI Drawer yerine Dialog (jest gerekmiyor; Base UI'nin
+  kendi önerisi). `ui/sheet.tsx` aynı parçaları (header/body/footer/title, kapat düğmesi, overlay) paylaşıyor; ölü
+  `animate-in slide-in-from-right` sınıfı yerine `animate-slide-in-right`. Eski elle `p-0 gap-0 max-h-[85vh]` kullanan
+  BulkRows/Recurrence/RecurrenceScope/PageHistory/PageMarkdown diyalogları `size` + `DialogBody`'ye taşındı.
+- **Ayarlar (görev 2):** Kullanıcı ve Çalışma alanı ayarları `size="full"` Dialog + yeni `Tabs variant="nav"` (dikey
+  satırlar, aktif dolu; telefonda kayan şerit) + `TabsPanel`. Yeni `ui/settings.tsx`: `SettingsPage/Section/List/Row`,
+  `Field`, tek kalıp `DangerZone` (hesap silme + workspace silme). Yeni `ui/segmented-control.tsx` (Base UI RadioGroup):
+  tercihler, paylaşım izni/genişliği, token kapsamı, OS seçimi, demo geri bildirimi. Dil seçimi `SimpleSelect` (bayraklı),
+  tema seçici radio grubu; tema şeritleri R8 rollerine (masa/kâğıt/sinyal) güncellendi. Tüm sekmeler (Genel, MCP, Üyeler,
+  Paylaşım, Faturalama, Taşınabilirlik, Masaüstü, İçe aktar + Notion/OKF akışları) primitiflere; hesap silme onayı iç içe
+  Dialog; avatar kırpma Dialog. Başlıklar cümle düzenine çekildi (en/tr/es/fr anahtarları), eksik çevrilmiş kırpma
+  metinleri 6 dilde tamamlandı, `Templates.nameLabel/namePlaceholder` ve `Sharing.openShare` eklendi (8 dil).
+- **AI Ajanlarım (görev 3):** token satırları liste (kart yok); `Badge` varyantları — yazma `signal`, okuma `neutral`,
+  süre `outline/warning/danger` (Badge'e `warning` eklendi), PAT/OAuth `outline`; ajan türü seçici `DropdownMenu`;
+  "·" birleştirmeleri kalktı; iptal async `ConfirmDialog`. Bağlanma akışı adımları çubuk + "Adım n/3"; editör kartları
+  seçimde sinyal halkası; otomatik bağlan paneli `signal-soft`; kod blokları/token mono; Claude animasyonu tokenlara ve
+  11 px tabanına çekildi. `ConnectModal` iç içe Dialog.
+- **Toast (görev 4):** yeni `ui/toast.tsx` (Base UI Toast, modül düzeyi yönetici, `toast()` / `toast.update` /
+  `toast.close`; `<Toaster />` `(app)` layout'ta; sağ altta, mobil nav ve çerez bandının üstünde; tone yalnız semantik ikon,
+  `progress` sinyal çubuğu). DownloadToast, UpdateBanner (tek id ile evreler: sunuldu → iniyor → hazır/hata), sidebar silme
+  hatası, takvim tekrar geri bildirimi ve PwaInstallNudge artık `toast()`; DemoFeedbackPrompt form olduğu için kendi
+  kartında ama `toastSurfaceClass` + primitifler.
+- **Diğer modallar (görev 5):** Çöp kutusu, Yenilikler (`full`, kategori glifle, okunmamış = `Badge signal`; her kart
+  sarı değil), Şablon seçici (iki adım tek Dialog; Escape adımda geri; varsayılan ad UI dilinde), Faturalama + Plan seçici +
+  Demo uyarısı (üç kat iç içe), Ödeme başarılı, PWA kur, Paylaş, Ajan bulundu, Karşılama → Dialog. IconPicker popover'ı
+  float yüzey + `Tabs` + `Input`/`Button` (konumlama aynı). AgentDetectNotice tek renk. Kapsamdaki `text-[8..11px]`,
+  elle onay kutuları ve elle butonlar primitiflere geçti.
+- **Admin (görev 6):** yapılmadı — `AdminUserDetailModal` hâlâ elle katman + eski stil; ayrı bir admin turunda.
+
+**Doğrulama:** eslint (değişen dosyalar: 0 hata, 3 eski uyarı), `tsc` temiz (dev açıkken yarım `.next/dev/types` yüzünden
+`.playwright-mcp/tsconfig.check.json` ile). Playwright (yerel demo): koyu + açık + 390 px; Escape, odak tuzağı, odak dönüşü
+(hesap menüsü düğmesine), iç içe Escape (önce çocuk), ru/de uzun metinler (ayarlar, paylaşım), boş durumlar (Çöp kutusu, Paylaşım),
+toast (sunucu eylemi engellenerek silme hatası → öğe geri geldi + toast). Bulunan dev tuzağı: `globals.css` değişikliği
+Turbopack önbelleğinde görünmedi → `.next/dev` → `.next/dev-stale-20261001-r85` (silinebilir). Dev durduruldu.
+
+**Açık kalanlar:** dil değişince Ayarlar penceresi kapanıyor (dil değişimi istemci ağacını yeniden kuruyor; eskiden de
+böyleydi sanılıyor, yoğunluk vb. `router.refresh` açık tutuyor); bağlanma listesinde "Other tool" etiketi `deeplinks.ts`'de
+İngilizce sabitti — sonradan düzeltildi (`connectOtherTool`, 8 dil); admin modalı; pazarlama `SetupGuideModal` R8.7'ye.
+
 ---
 
 # R8.6 — Giriş, kurulum ve onboarding
@@ -1691,6 +1915,65 @@ akışı (yerel), OAuth onayı (yerel istemci).
 ## Bitirirken
 changelog (`improved`); AGENTS.md + Serena; update-handoff; commit yok; "Tamamlandı" notu.
 ```
+
+### ✅ R8.6 — Tamamlandı (2026-10-01, Claude; tek oturumda, commit/push yok, migration yok, paket eklenmedi)
+
+**Doğrulanan iddialar:** kapsamdaki tüm rotalar/bileşenler mevcuttu; WelcomeModal ve AgentDetect parçaları R8.5'te zaten
+`Dialog`'a geçmişti (AgentDetectNotice/Modal'a dokunulmadı). Kurulum linki ve OAuth sunucu mantığına (mint, tek kullanım,
+süre, üyelik/rol kontrolü, scope sıkıştırma, imzalı yönlendirme) dokunulmadı — yalnız görünüm.
+
+**Yapılanlar**
+- **Ortak kabuk (görev 1):** yeni `features/auth/AuthScreen.tsx` — `AuthScreen` (masa; sol üstte `RemnusMark` + "Remnus" ana
+  sayfaya link, sağ üstte dil menüsü, kâğıdın altında sessiz `footer`, alt boşluk çerez şeridini hesaba katar) + tek `Card`:
+  form için `AuthCard` (sola hizalı başlık/açıklama/meta), bitmiş/harcanmış ekranlar için `AuthStatus` (semantik renkli ikon
+  diski). Yardımcılar: `AuthSection`, `AuthNotice`, `AuthDivider`, `AuthCode` (mesajlarda `<cmd>{command}</cmd>` + `t.rich`),
+  `parts.tsx` (`SubmitButton` = `useFormStatus` spinner, `WorkspaceGlyph`, `ProjectChip`), `ProviderButtons`
+  (Google/GitHub nötr ikincil buton, tıklanan döner). PNG logolar `RemnusMark`'a döndü. Taşınanlar: `/login` (+ masaüstü
+  Tauri durumu: bekliyor/iptal/hata), `/client-login`, `/install` (InstallForm, JoinForm, done/requested/denied, used/expired,
+  hata), `/invite/[token]`, `/oauth/authorize` + `/oauth/authorized`, `/welcome/[token]` (parıltı kalktı; ortak
+  `GiftLockup`, rozetler `Badge`, süre uyarısı `warning`), `/account-delete/confirm` (`danger` SubmitButton),
+  InviteAcceptClient, ProspectInviteClaimClient. Masaüstü tarayıcı dönüşü `/api/auth/client-bridge` (ham HTML) aynı
+  masa/kâğıt renklerine, tema çerezine ya da sistem tercihine göre açık/koyu. `LanguageSwitcher` → `DropdownMenu` (mavi
+  aktif satır yerine tik; pazarlama `header` tetikleyicisi aynı kaldı).
+- **OAuth onayı (görev 2):** yeni `ui/radio-cards.tsx` (`RadioCards`/`RadioCard`, Base UI RadioGroup; seçili = sinyal halkası
+  + nokta + hafif `signal-soft/50` — tam ton koyuda kahverengi okunuyordu). Sıra: çalışma alanı (proje sabitliyse tek satır)
+  → erişim kartları (okuma "hiçbir şeyi değiştirmez", yazma "ayrıca oluşturur/düzenler") → bağlantı adı → ajan türü (Tooltip'li
+  ikon düğmeler). Sunucunun ön seçtiği kapsam (istemcinin isteği; tam `write` istemedikçe okuma) `Varsayılan` rozetli; viewer'da
+  yazma kartı devre dışı + açıklama. Reddet/Yetkilendir aynı formda yan yana (Reddet `formAction`, yalnız tıklanan döner).
+  Kurulum/katılım ekranları aynı radyo kartlarını kullanıyor; çalışma alanı listesi de radyo kartı.
+- **Onboarding (görev 3):** WelcomeModal tek birincil eylem: kendi panelinde "Ajan bağla" (ilk ajanların işaretleriyle), altında
+  hayalet "Önce etrafa bakayım"; vaat cümlesi yeniden yazıldı ("ajanını bağla, işe başlamadan sayfalarını okur, yaptığını
+  yazar"). GettingStartedChecklist masada küçük kâğıt: adım çubukları, sıradaki adım tek eylemi taşır (bağla = mürekkep buton;
+  ilk çağrı = ne yapılacağını söyleyen ipucu + "Bağlantı adımları"), bitti durumu tek renk; yeşil, 10 px yazı, "→" kalktı.
+- **Çerez bandı (görev 4):** masada alt kenar boyunca ince şerit (`sm`'den tek satır, telefonda iki), emoji yok, `Button sm`.
+  Yüksekliği `--consent-banner-height` olarak yayımlanıyor ve erişilebilirlik widget'ı ölçülen yükseklik kadar kaldırılıyor
+  (sabit 5rem yerine). Demo kullanıcıda haritanın seçim kartı şeridin üstünde kalıyor (ölçüldü).
+- **Ayrıca:** `PendingGiftToast` `bg-float` kart + `GiftLockup` + `Badge` (globals.css'teki `.pending-gift-toast*` açık tema
+  yamaları silindi; odakta da açılıyor). Public `/share/*` kabuğu uygulamanın çerçevesinde: çubuk + paylaşılan ağaç masada,
+  sayfa tek kâğıtta, editörün sütunu (`pageContainerClass`) ve 28/34 başlığı; sabit İngilizce "Saved/Back/Contents/Untitled"
+  i18n'e alındı (`Page.*`, yeni `Sharing.contents`), `writeBadge` "Düzenlenebilir". **Hata düzeltmesi:** `/invite/[token]`
+  geçersiz/süresi dolmuş mesajlarını `Billing`'den istiyordu (anahtar `Errors`'ta) ve ham anahtar gösteriyordu; düzeltildi.
+- **Metinler (8 dil, metin düzenlemesiyle):** yeni `Auth.signInTitle/signInHint/desktopSignInHint`,
+  `OAuthAuthorize.heading/headingHint/scopeDefault`, `Onboarding.checklistConnectCta/checklistCallHint/checklistCallCta/
+  checklistDoneLabel`, `Sharing.contents`; güncellenen: izin açıklamaları (Install + OAuth), OAuth disclaimer (artık "AI
+  Ajanlarım", eski "Ayarlar → Tokenlar" yolu yoktu), başlık cümle düzenleri, karşılama metinleri, "Demoyu deneyin",
+  `usedOtherHint/expiredHint` (`<cmd>`). Changelog `2026-10-01-clearer-sign-in-and-setup` (`improved`).
+
+**Doğrulama:** eslint (değişen dosyalar temiz), `tsc` temiz (`.playwright-mcp/tsconfig.check.json`). Playwright (yerel dev +
+local.db): çıkış yapmış bağlamda login/client-login/install expired+hata/OAuth hata+geçersiz yönlendirme/davet/hediye/paylaşım
+koyu + açık + 390 px; dil menüsü (giriş ve pazarlama; dil değiştirme çalışıyor); demo ile tek kullanımlık kurulum linki uçtan uca
+(form → done → aynı link "zaten bağlandı"), katılım (üye) ve erişim isteği ekranları (istek GÖNDERİLMEDİ: e-posta atardı);
+yerel kayıtlı istemciyle OAuth onayı (Yetkilendir → kod ile yönlendirme, Reddet → `access_denied`, `scope=write` isteğinde
+yazma ön seçili + rozet), başarı ekranı (JS kapalı bağlamda), masaüstü giriş durumu (`__TAURI_INTERNALS__` taklidi, hata
+durumu), client-bridge açık/koyu, hesap silme geçerli/geçersiz, karşılama modalı (koyu/açık/390) ve kontrol listesinin üç durumu
++ küçültülmüş hali (geçici olarak `role=user` yapılan demo kullanıcıyla, client-bridge akışıyla oturum yenilendi), demo
+haritasında seçim kartı ↔ şerit mesafesi (1440: 20 px, 390: 68 px). Test verileri (davet, hediye, silme jetonu, paylaşımlar,
+OAuth istemcisi/kodları, CLI token'ı, sahte OAuth bağlantısı/etkinlik) silindi, roller `demo`'ya geri alındı. Dev durduruldu
+(port 3000 boş).
+
+**Açık kalan / not:** AgentDetectNotice/Modal yalnız Tauri'de görünür, R8.5 hali korundu (canlı denenmedi). Pazarlama
+sitesindeki dil düğmesi (`header`) ve `/unsubscribe` R8.7'ye kaldı. Karşılama modalı açılınca birincil butonda odak halkası
+görünüyor (Base UI ilk odak; diğer modallarla aynı davranış).
 
 ---
 
@@ -1738,6 +2021,49 @@ güncelleniyor mu (Hakan onayıyla Playwright), boştaki sekme istek sayısı de
 changelog (`new`); AGENTS.md (Live refresh + yeni bölüm) + Serena; update-handoff; commit yok; "Tamamlandı" notu.
 ```
 
+### ✅ R8.8 — Tamamlandı (2026-10-01, commit'siz, migration yok, paket yok)
+
+**Ölçüm (önce):** veri zaten vardı — `agent_activity` (her MCP çağrısı; hedef = item / satır / `databases.id`,
+bulk araçlarda hedef yok), satırlarda `pages.agent_edited_at`, standalone sayfalarda karşılığı yok AMA her MCP
+create/update `knowledge_metadata.generated_by/generated_at` damgası yazıyor (sayfa + satır). Son insan düzenlemesi:
+sürüm geçmişi (`page_snapshots`, insan, debounce'lu). İnceleme: `knowledge_reviews` (başlık+gövde hash'i).
+**Yeni istek türü eklenmedi**, `/api/activity/changes` ve heartbeat gövdesi büyümedi → Hakan onayı gereken ek maliyet yok;
+yalnız mevcut render'lara sorgu eklendi (bench aşağıda). Migration gerekmedi.
+
+**Yapılan:**
+- `src/lib/agentPresence.ts`: ortak pencereler (çalışıyor 3 dk = heartbeat `agent: true`, canlı 10 dk, görünürlük 60 dk) +
+  tipler. `AGENT_ACTIVE_WINDOW_MS` buraya taşındı (changeVersion yeniden dışa aktarıyor), `AgentEditBadge` da aynı 10 dk'yı okuyor.
+- `services/agentPresence.ts` → `loadAgentPresence`: `(app)` layout'ta `getWorkspaces()` ardından (kilitli pencerede tek
+  workspace, adminde yalnız üyelikler). Tek `db.batch`'te iki SQL aggregate (bağlantı başına son çağrı, hedef başına son
+  yazma); boş saat = 1 round trip. Etkinlik varsa 1 batch daha: token/OAuth adları + hedef → kenar çubuğu öğesi (satır →
+  veritabanı), bulk yazma olduysa bilgi damgalarından. Audit penceresi: `min(60 dk, en kısa plan auditDays)` → her
+  workspace'in `auditVisibleSince`'i içinde (plan sorgusu olmadan aynı sonuç).
+- Kenar çubuğu (`AgentPresence.tsx`): ajan kartının üstünde ajan satırları (marka diski, ad, "çalışıyor" + sabit sarı
+  nokta + son araç mono + hedef / "12 dk. önce"); heartbeat ajan aktif deyip listede 3 dk içi çağrı yoksa tek bağlantı
+  varsayılır, birden çoksa adsız "Bir ajan çalışıyor" (tahmin yok). Ağaçta yalnız yazmalar: <10 dk sarı halkalı marka
+  diski, <60 dk "12 dk.", sonra yok (animasyonsuz); kapalı ebeveyn alttaki en yeniyi taşır. Workspace satırında ajan
+  çalışırken sabit sarı nokta. Tek 30 sn saat (`useServerNow`, istemci saat kaymasından bağımsız).
+  `ActivityTracker` heartbeat'in mevcut `agent: true`'sunu `AGENT_EVENT` ile yayınlıyor (istek değil).
+- Sayfa köken satırı (`services/pageProvenance.ts` + `PageProvenance.tsx`): `getStandalonePageByItemId` / `getPage`
+  `provenance` döndürüyor (web, Tauri sekmeleri, peek). Yalnız ajanın yazdığı sayfada: "Claude Code 2 dk. önce düzenledi",
+  "Sen dün düzenledin" (ayrı öğeler, en yeni önce, orta nokta yok), "Ajan yazdı, incelenmedi" + **İncele** (=
+  `markPageKnowledgeReviewed`; sonraki her düzenleme canlı yenilemede düşürüyor) / "Sen inceledin". Satır sayfasının eski
+  "AI ajanı tarafından düzenlendi" damgası bunun yerine geçti. Bilgi paneliyle `reviewSignal` ile senkron.
+- i18n: `Workspace.presence*` (6), `Page.provenance*` (9), 8 dil. Changelog `2026-10-01-see-your-agents-at-work` (`new`).
+- `npm run bench:presence` (yalnız local, kendini temizler).
+- Yapılmadı (prompt: opsiyonel, ayrı karar): sayfa üst çubuğunda varlık avatarları.
+
+**Doğrulama:** `tsc` (temiz, `.playwright-mcp/tsconfig.check.json` ile de), eslint (0 hata; 2 eski uyarı),
+`test:access` 28/28, `test:agent-access` 34/34, `bench:presence` 18/18 kontrol — boş saat ~0,9 ms, yoğun saat (257 çağrı)
+~3,6 ms p50, `getPageProvenance` ~0,7 ms, presence yükü ~800 B (RSC içinde). Playwright (Hakan onayıyla; Hakan'ın 3000'deki
+sunucusu kapanmıştı, 3100'de ayrı dev + local.db, iş sonunda durduruldu): demo kullanıcı + yerel MCP ile gerçek
+`update_page` → kart "Claude Code • çalışıyor / update_page Product Spec" 8 sn'de, ağaç işareti + workspace noktası,
+nabız animasyonu yok; sayfada köken satırı, İncele → "Sen inceledin", ikinci ajan yazması açık sayfaya 4 sn'de geldi ve
+incelemeyi düşürdü; satır yazması veritabanı öğesini işaretledi; satır sayfasında köken satırı; açık/koyu/390 px ekran
+görüntüleri, yatay taşma yok. **Boştaki sekme maliyeti değişmedi:** oturum oturduktan sonra 125 sn = 4 ping, 0 poll,
+0 RSC. (Girişten sonraki ilk dakika R5 settle penceresi — demo seed giriş anında yazıyor — bu değişiklikten bağımsız.)
+Not: sessiz sekmede ajanın İLK yazması heartbeat'i bekler (≤30 sn, R5 davranışı; ajan önce okursa sekme zaten hızlıdır).
+
 ---
 
 # R8.7 — Pazarlama sitesi (ayrı değerlendirme, en son)
@@ -1782,6 +2108,209 @@ eslint, tsc; Hakan onayıyla Playwright: tüm pazarlama sayfaları koyu + açık
 changelog (`improved`, yalnız müşteri fark ederse); AGENTS.md (landing bölümü) + Serena; update-handoff; commit yok;
 "Tamamlandı" notu.
 ```
+
+### ✅ R8.7 — Aşama 1 tamamlandı (2026-10-01, Claude; commit/push yok, migration yok, paket eklenmedi)
+
+**Kararlar (Hakan):** eski hâl kötü değil ama sarı da etkin kullanılsın (mürekkep + sarı, iki renk), "AI üretimi" hissi veren
+kalıplar gitsin, bölüm başına birkaç cümle, ilk bakışta ne yaptığı anlaşılsın, animasyonlu ve profesyonel — yön bana bırakıldı.
+İş sırasında: yeni landing **ayrı bir URL'de** dursun; ortağıyla `/`, `/landing-next` ve yeniyi karşılaştırıp seçecek. E-posta
+şablonları yeni tokenlara eşlensin.
+
+**Yapılan:**
+- **`/landing-v3`** (noindex, bağlantısız, `auth.config.ts` beyaz listesi): `components/marketing/site/` — `SiteLanding`
+  (`.site` kapsamı, uygulamanın rol tokenlarını donmadan okur, 5 temayı izler). Bölümler: hero (başlık + tek cümle + tek sarı
+  eylem "Demoyu dene" + `HeroStage`), 3 adım (`npx remnus init` kopyala, mini pano, mini denetim satırı), ürün sekmeleri
+  (gerçek ekranlar), ajanlar için 4 gerçek, tek satır fiyat, masaüstü + telefon, kapanış, footer. **`HeroStage`** imza öğesi:
+  uygulamanın HTML kopyası (masa kenar çubuğu + kâğıt üstünde kanban) ve Claude Code terminali; tek zaman çizgisi — komut
+  yazılır, `create_page` ağaca sayfa ekler, `bulk_create_pages` üç kartı sarı halkayla düşürür, `update_page` birini taşır,
+  halkalar söner (12,5 sn döngü; ekran dışında durur; reduced-motion'da son hâl). Sarı yalnız yapılacak eylem ve ajanın
+  dokunduğu şey. Serif, büyük harfli etiket, numaralı bölüm başlığı, "→", orta nokta yok; numara yalnız gerçek sıra (adımlar).
+- **Metin:** yeni `Site` namespace'i (en + tr; diğer 6 dil İngilizceye düşer — seçilirse tamamlanacak). Plan adları/fiyatları
+  ve footer bağlantıları mevcut `Landing` anahtarlarından (8 dil). Araç sayısı `LandingTools.tsx`'ten dışa açılan
+  `TOOLS.length`.
+- **Ürün ekran görüntüleri:** yerel demo workspace'i gerçek MCP yazma araçlarıyla "Paint Clone" projesine çevrildi (mimari +
+  karar sayfaları, bağlantılar/etiketler, kalibre ana pano; yalnız `local.db`), 2× çekildi → `public/marketing/app-*-{dark,light}.webp`
+  (8 + 2 telefon, 41–130 KB). Tema başına biri görünür (`.site-shot-*`, lazy). Tarifler `.playwright-mcp/r87-*.cjs`.
+- **Bağımsız işler (canlıyı da etkiler):** PWA ekran görüntüleri (`public/screenshots/*`) yeni arayüzden yeniden çekildi;
+  `manifest.json`, `capacitor.config.ts`, Android `colors.xml` → masa `#111316`, Android accent sarı `#f0b43c`;
+  e-posta paleti (`src/lib/email/theme.ts` + `layout.ts`/`templates.ts`) → masa/kâğıt/raised/çizgi, CTA mürekkep, adım çipleri
+  ve alıntı çizgisi sarı, bağlantılar `#f3c566`.
+- Ufak: `LandingThemeToggle` isteğe bağlı `className` alır (varsayılan görünüm aynı).
+
+**Bilerek yapılmayanlar (seçim bekliyor):** canlı `/` (LandingBridgeSwitcher), `/landing-next` ve `MarketingShell`
+sayfaları (pricing, download, contact, privacy, security, brand, wiki/docs) ve `.marketing-site` dondurması aynen duruyor —
+karşılaştırma adil olsun diye. OG görseli de seçilen yöne göre yapılacak. Changelog yok (müşterinin gördüğü bir sayfa henüz
+değişmedi). Terfi listesi `AGENTS.md` → Marketing → "R8.7 landing draft".
+
+**Doğrulama:** `tsc` (`.playwright-mcp/tsconfig.check.json`) temiz; eslint (yeni + değişen dosyalar) temiz; Playwright
+(playwright-core + sistem Chrome; MCP tarayıcısı başka oturumdaydı): `/landing-v3` koyu + açık 1440, 390 px, tr; `/`,
+`/landing-next`, `/pricing`, `/download` 200; karşılaştırmalı ölçüm (dev sunucusu, yalnız göreli): `/` 1405 KB · LCP 1068 ms,
+`/landing-next` 1419 KB · 892 ms, `/landing-v3` 1208 KB · 524 ms, üçünde CLS 0. Lighthouse makinede yok (paket kurulmadı).
+E-posta: hoş geldin şablonu render edilip görsel kontrol edildi.
+
+**Sonraki adım (Aşama 2, seçimden sonra):** seçilen landing `/`'e; diğer pazarlama sayfaları rol tokenlarına + `SiteNav`/
+`SiteFooter`'a; `.marketing-site` dondurması + açık tema yamaları silinir; `/brand` token tablosu; `.prose-doc` mavi
+bağlantıları; yeni OG; `Site` 6 dil; kaybeden taslak(lar) silinir (silme için Hakan onayı); changelog `improved`.
+
+### ✅ R8.7 — Aşama 2 tamamlandı (2026-10-01, Claude; commit/push yok, migration yok, paket eklenmedi)
+
+**Kararlar (Hakan):** yeni landing seçildi → `/`. Eski landing ve `/landing-next` **silinmeyecek**, iki adreste dursun.
+Ek istek: ana sayfaya token tasarrufu için "şu kadar kazandırıyoruz" türü bir reklam bölümü.
+
+**Yapılan:**
+- `/` = `SiteLanding home="/"`; eski ana sayfa **`/landing-old`** (`LandingBridgeSwitcher`, noindex), `/landing-next` aynen;
+  `/landing-v3` → `/` yönlendirmesi. Eski ikisi `.marketing-site` dondurmasında kalır (görünümleri korunsun diye CSS
+  silinmedi); Fraunces artık kök layout'ta değil, yalnız bu iki sayfada (`marketing/legacyFont.ts`) — her sayfadan bir font
+  yükü kalktı.
+- **Tasarruf bölümü (`SiteSavings`)**: başlık "Aynı iş, %84 daha az token."; yayımlanmış, tekrarlanabilir benchmark oturumu
+  (`docs/blog/agent-token-efficiency.md`, `bench:tokens`: 5.740 → 901 token) üç adım + toplam çubuklarla (Remnus çubuğu
+  sarı); `SavingsCalculator`: günlük oturum kaydırıcısı + $1/$3/$15 girdi fiyatı → aylık dolar ve token (varsayılan 200
+  oturum, $3 → $87/ay). Rakam yalnız ölçülen tasarruf × ziyaretçinin kendi hacmi × seçtiği fiyat; varsayım ekranda
+  (AGENTS "Agent Savings Metrics" kuralına not düşüldü). Ölçüm yöntemi bağlantısı blog yazısına.
+- **İç sayfalar** `MarketingShell` üzerinden `.site` + `SiteNav`/`SiteFooter`: `/pricing` (`site/SitePricingPage`: plan
+  kâğıtları, önerilen planda sarı halka + sarı buton, kendin barındır satırı, `Tooltip`'li karşılaştırma tablosu; ödeme akışı
+  `PricingCtaButton`'da, yalnız `className` aldı), `/download` (akıllı birincil eylem sarı, platform listesi kâğıtta, OS
+  logoları maske ile temaya uyuyor), `/contact` (ui Input/Textarea/Button; GitHub bağlantısı gerçek repoya), `/privacy` +
+  `/security` (`DocSections`: başlık solda, metin sağda), `/brand` (rol tokenları koyu/açık örneklerle, logo koyu+açık, iki
+  yazı tipi), `/wiki` + `/docs` (kenar menü masada, yazı kâğıtta, `.prose-doc` rol tokenları + editörle aynı bağlantı stili).
+  Mavi parıltılar, büyük harfli mono etiketler, "→" ve orta noktalı meta kalktı.
+- **Metin:** `Site` 8 dilde tamam (+ `savings`, `pricing.included/notIncluded`); `Brand` yeni anahtarlar 8 dilde,
+  `colorsSubtitle`/`typographySubtitle`/`fontMonoRole` değerleri güncellendi. Mesaj dosyaları biçimi bozulmadan metin
+  olarak birleştirildi.
+- **OG görseli:** `public/og-image.png` (= `OG_1200x630.png`, 2400×1260): masa üstünde başlık + gerçek pano ekranı + sarı
+  "Claude updated the dashboard" rozeti.
+- **Changelog** `2026-10-01-new-website-and-emails` (`improved`, 8 dil).
+
+**Doğrulama:** `tsc` temiz; eslint (marketing, docs, `[locale]`, layout, e-posta, changelog) 0 hata (1 eski uyarı:
+`share/[...slug]`); Playwright: ana sayfa tasarruf bölümü koyu/açık/390/tr, `/pricing` `/download` `/contact` `/privacy`
+`/security` `/brand` `/wiki` `/docs` `/docs/agent-token-efficiency` koyu 1440, `/pricing` `/wiki/read-tools` açık,
+`/pricing` `/download` `/wiki` 390; `/landing-old` + `/landing-next` 200 (eski görünüm, serif yerinde), `/landing-v3` 307 → `/`.
+Lighthouse makinede yok (paket kurulmadı).
+
+**Açık kalan / bilinen:** Kullanılmayan eski bileşenler ve `Landing` anahtarları arşiv sayfaları için duruyor (Hakan: silme).
+Android/Capacitor renk değişikliği `cap sync` + yeni native build ister. Blog dizinindeki breadcrumb "Docs" der (menüde
+"Blog") — önceden de böyleydi.
+
+**Ek (aynı gün, Hakan: "bunları düzelt"):** Blog breadcrumb'ı artık "Blog" (`Docs.breadcrumbDocs` 8 dilde + `seo.ts`
+JSON-LD'deki iki "Docs" adı). `npx cap sync android` çalıştırıldı: `capacitor.config.json` yeni masa rengiyle üretildi
+(git-ignored), eklentiler güncel; izlenen gradle dosyalarında içerik değişmedi. **Android derlemesi bu makinede yapılamadı:**
+Android SDK / Android Studio kurulu değil (yalnız JDK 8 ve 25 var); paket kurulmadı. Android uygulaması şu an hiçbir yerde
+dağıtılmıyor (telefonlar `/download`'daki PWA'yı kullanıyor), yani renk yalnız APK üretildiğinde görünür.
+
+---
+
+# R8.9 — Şablonlar ve varsayılan içeriğin dili (R8.x'in sonu)
+
+> R8.2/R8.3 turunda ayrı iş diye bırakıldı (Hakan, 2026-10-01: "8.x'lerin sonunda yapalım"). Arayüz 8 dilde ama
+> kullanıcının oluşturduğu VERİNİN bir kısmı hâlâ İngilizce doğuyor. R8.7'den sonra, R9'dan önce.
+
+```text
+Remnus projesinde çalışıyorsun. AI.md kuralları geçerli. `git status --short` ile başla. Serena varsa core + conventions
+(i18n, "UI-created data is named in the UI language" maddesi). Playwright'tan önce Hakan'a sor.
+
+## Bağlam (2026-10-01'de kodda doğrulandı; uygulamadan önce yeniden doğrula)
+- R8.2 sonrası UI'dan oluşan veri UI dilinde: yeni satır başlıksız (yerel "Başlıksız" yer tutucu), görünüm adları
+  `Database.viewTable/viewBoard/viewCalendar`, yeni özellik `Database.newProperty`, tarihler `formatDateValue(…, locale)`.
+  `createPage` (actions/page.ts) varsayılanı şemadan alır; stok `status` sütununda yalnız "To Do" seçeneği varsa onu yazar.
+- Hâlâ İngilizce doğanlar:
+  1. `src/lib/templates.ts` — 9 şablon (page-blank, page-meeting-notes, page-project-brief, dashboard-blank, db-blank,
+     db-task-tracker, db-event-calendar, db-reading-list, db-agent-memory): sütun adları, seçenek değerleri ("To Do",
+     "In Progress", "Done"…), görünüm adları, sayfa şablonlarının `initialContent` markdown'ı ve 4 şablonun `seedRows`'u.
+     `TemplatePickerModal` adı/açıklamayı `Templates` namespace'iyle (İngilizce ada göre eşleme) çeviriyor ama onay
+     adımında başlık alanına İngilizce `template.name` yazılıyor (`selectTemplate` → `setTitle(template.name)`).
+  2. Varsayılan veritabanı şeması: `createWorkspaceDatabase` (actions/workspace.ts) ve MCP'nin `createDatabase`'i
+     (services/workspace.ts): Title / Status (To Do, In Progress, Done) / ID.
+  3. Slash ile oluşan sayfa ve veritabanı başlığı "Untitled" (editor/SlashCommandList.tsx) — kenar çubuğunda İngilizce kalır.
+  4. MCP'nin ilk görünümü `seedDefaultViews` → "Table"; Notion içe aktarma görünüm adları "Table/Board/Calendar" ve
+     "Untitled" yedekleri (api/import/notion/route.ts, lib/import/notion-parser.ts).
+  5. Gösterimde İngilizce yedekler: pageLinkData.ts, ChildBlockExtension (varsayılan başlık), BlockEditor, paylaşılan
+     sayfalar (share/*), StandalonePageEditor `document.title`, dashboards servis/aksiyon "Untitled".
+  6. Demo tohum içeriği (`src/lib/seed.ts`, `createDemoSeedData`) tamamen İngilizce.
+- `users` tablosunda kayıtlı dil yok: sunucu yolu yalnız istek diliyle (next-intl `getLocale`) yerelleştirebilir; MCP
+  isteğinde UI dili yok.
+
+## Görevler
+1. Karar (Hakan'a sor, kısa seçenek tablosuyla): şablon içeriği 8 dile mi çevrilir (öneri: evet — şablon adı, sütun/seçenek/
+   görünüm adları, seed satırları ve sayfa içerikleri yerel dosyada, kod tek yapı), yoksa yalnız yapısal adlar mı?
+   Demo tohum içeriği ziyaretçi dilinde mi doğsun (öneri: değerlendir; demo herkese sıfırlanıyor)?
+2. Şablon tanımlarını dilden bağımsız yapıya ayır: kimlikler (sütun `id`, seçenek grubu) sabit, görünen metinler
+   `Templates.*` anahtarlarından; oluşturma anında isteğin dilinde somutlaştır. `createPage`'in stok "To Do" kuralını yerel
+   şemaya göre yeniden yaz (ör. `status` sütununun `todo` grubundaki ilk seçenek). Seçenek DEĞERLERİ veridir: mevcut
+   veritabanlarına dokunma, yalnız yeni oluşturulanlar etkilenir.
+3. Onay adımındaki başlık alanını yerel adla doldur; slash ile oluşan sayfa/veritabanı başlığını yerel "Başlıksız" yap.
+4. MCP yolları için karar: İngilizce kalsın mı (ajanın dili ayrı), yoksa çalışma alanı sahibinin son UI dili mi saklansın
+   (yeni sütun = migration; maliyetini göster). Notion içe aktarma isteğin dilini kullanabilir.
+5. Gösterim yedeklerini (madde 5) yerel `untitled` anahtarlarına bağla; sunucu bileşeninde `getTranslations`.
+
+## Doğrulama
+eslint, tsc, `npm run test:okf` (şablon/okf yolları), ilgili testler; Hakan onayıyla Playwright: tr ve en arayüzde her
+şablondan oluşturma, slash ile sayfa/veritabanı, yeni satır, demo hesabı (karar evetse).
+
+## Bitirirken
+changelog (`improved`: şablonlar ve yeni içerik artık dilinizde…); AGENTS.md (Templates + i18n) + Serena; update-handoff;
+commit yok; "Tamamlandı" notu.
+```
+
+### ✅ R8.9 — Tamamlandı (2026-10-01, Claude; commit/push yok, migration yok, paket eklenmedi)
+
+**Kararlar (Hakan, 2026-10-01):** şablon içeriği 8 dilde (tamamı); örnek çalışma alanı (demo + her yeni kaydın ilk
+alanı) ziyaretçinin dilinde; MCP varsayılanları İngilizce kalır (`users.locale` migration'ı yapılmadı); Notion içe
+aktarma isteğin dilini kullanır.
+
+**Yapılan:**
+- Kelimeler kodla ayrıldı: `src/lib/starterContent/` → `types.ts` (`TemplateText`, `SampleText`, `StockDatabaseText`; eksik
+  kelime = `tsc` hatası), `templates/<locale>.ts` ×8, `sample/<locale>.ts` ×8 (3 sayfa + Sprint Tahtası + 16 görev gövdesi),
+  `index.ts` (`getTemplateText` / `getSampleText`, locale başına ayrı chunk, yalnız sunucuda). `messages/`'a konmadı: her
+  sayfanın istemci yüküne binerdi.
+- `src/lib/templates.ts` dilden bağımsız yapı oldu: `TEMPLATE_CATALOG` (picker: id, ikon, `Templates.<nameKey>`),
+  `buildTemplate(id, text)`, `stockDatabaseSchema(text.stock)` (Title/Status/ID; `select` durum seçenekleri `group`
+  taşıyor), `stockStatusDefault` (ilk `todo` seçeneği; grupsuz eski stok sütunlarda "To Do" korunuyor).
+- Yeni server action `createFromTemplate` (`actions/templates.ts`): şablonu isteğin dilinde kurar, örnek satırları TEK
+  insert'le yazar (eskiden satır başına bir `createPage` round trip'i). `TemplatePickerModal` artık yalnız katalogu biliyor
+  (İngilizce ada göre eşleme kalktı; onay adımındaki yerel ad R8.5'te zaten gelmişti, doğrulandı).
+- Dil kaynağı `src/i18n/requestLocale.ts` → `getRequestLocale()`: middleware başlığı → `NEXT_LOCALE` çerezi →
+  `Accept-Language` → `en`. `/api/*` ve Auth.js olaylarında `getLocale()` hep `en` döndüğü için gerekli.
+- Varsayılanlar: `createWorkspaceDatabase` şemasız çağrıda yerel stok şema; `createStandalonePage` /
+  `createWorkspaceDatabase` boş adı `Page.untitled` ile saklayıp **saklanan adı döndürüyor** → slash `/sayfa`, `/veritabanı`
+  kenar çubuğunda ve alt blokta "Başlıksız"; `createWorkspace`/`renameWorkspace` boş ad, `createDashboard` (`Dashboard.untitled`).
+  `createPage` stok kuralı `stockStatusDefault`'a geçti (Görev Takipçisi'nde yeni satır artık "Bekleyen"/"Backlog" alır).
+  Yeni `status` sütunu `defaultStatusOptions(Database.statusOption*)` (3 yeni anahtar ×8 dil).
+- Örnek çalışma alanı: `seed.ts` yalnız yapı (`SPRINT_TASKS`), kelimeler `sample/<locale>`; `createSeedWorkspace` dili
+  istekten çözer (Auth.js `createUser`), `loginAsDemo` demo kullanıcısının adını da yerel yazar. Sprint durum seçenekleri
+  grup taşıyor (ev panosu "bitti"yi her dilde görür; `homeDashboard` STATUS_NAME/DONE_WORDS'e Hintçe eklendi).
+  İngilizce içerikte eskimiş "Workspace Settings → Tokens" → "Workspace settings → MCP" düzeltildi.
+- MCP: `createDatabaseInWorkspace` varsayılanı aynı stok tanımdan (İngilizce) geliyor, isteğe bağlı `stockText`
+  (Notion içe aktarma yerel geçiriyor); `seedDefaultViews` "Table" kaldı. **`save-memory` prompt'u düzeltildi:** yerel
+  "Ajan Hafızası" veritabanını 8 dildeki adıyla buluyor, sütun adlarını id'den (type/tags/date) ve Tür seçeneğini her
+  dilin kelimesinden çözüyor — yoksa yerel şablonla İngilizce "Decision" yazacaktı.
+- Notion içe aktarma: görünüm adları, otomatik başlık sütunu ve "Untitled" yedekleri isteğin dilinde.
+- Gösterim yedekleri: `pageLinkData` (`withTitle` + iki picker), `ChildBlock` başlığı `''` + görünümde `Page.untitled`,
+  `BlockEditor` alt öğe başlığı, paylaşım sayfası metadata (`Sharing.notFound`/`Page.untitled`),
+  `StandalonePageEditor` `document.title`, kenar çubuğunda boş başlık yedeği. `services/dashboards` "Untitled" (MCP) bırakıldı.
+- es/fr şablon adları cümle düzenine çekildi (artık öğe başlığı olarak saklanıyor; "Rastreador de Tareas" →
+  "Seguimiento de tareas" vb.).
+- Yeni test `npm run test:starter` (`src/scripts/test-starter-content.ts`): 8 dil × 9 şablon + örnek alan; seed değerleri
+  gerçek seçenek mi, pano sütun sırası seçeneklerle aynı mı, şablon görünüm adları `Database.view*` mı, CJK'da tam genişlik
+  noktalama sonrası kapanan kalın (`**连接：**`) yok mu, Agent Memory kelimeleri diller arası çakışıyor mu,
+  `localeFromAcceptLanguage`.
+- Changelog `2026-10-01-templates-in-your-language` (improved, 8 dil); AGENTS.md (i18n + Templates + seed + UI-language
+  defaults), AI.md (i18n maddesi), Serena `core` + `conventions`.
+
+**Doğrulama:** `tsc` (temiz), eslint (değişen dosyalarda yalnız önceden var olan 5 uyarı), `npm run test:okf` geçti,
+`npm run test:starter` geçti. Playwright (Hakan onaylı, 3100 + local.db): tr demo (Demo Çalışma Alanı / Buradan Başla /
+Sprint Tahtası Bekleyen-Devam ediyor-Bitti), tr'de 9 şablonun hepsi (önceden dolu yerel ad, yerel sütun/seçenek/görünüm
+ve satırlar), Boş Veritabanı'nda yeni satır = "Başlıksız" + "Yapılacak", Görev Takipçisi'nde yeni satır = "Bekleyen",
+slash `/Sayfa` ve `/Veritabanı` → kenar çubuğunda ve blokta "Başlıksız", alt veritabanı Başlık/Durum; en demo + 9 şablon
++ "Untitled"/"To Do"; zh demo "这个工作区是怎样搭建的" kalınları doğru. Görüntüler `.playwright-mcp/r89-*.png`. Konsolda
+yalnız YouTube gömme hataları. Dev durduruldu, test demo hesapları silindi.
+
+**Not / açık:**
+- Temizlik betiği son 2 saatteki TÜM demo hesaplarını sildi: benim 3 hesabıma ek olarak local.db'deki 2 "Demo User"
+  daha gitti (benden önce açılmış; demo hesapları zaten 6 saatte kendiliğinden siliniyor).
+- Mevcut veritabanlarına dokunulmadı; dil değişince seçenek değerleri yeniden yazılmaz (veri). Eski İngilizce "Agent
+  Memory" veritabanları İngilizce kalır.
+- Şablon tarih örnekleri (Etkinlik Takvimi Mayıs–Haziran 2026, Görev Takipçisi son tarihleri) sabit ve geçmişte kaldı;
+  takvim bugünün ayında boş açılıyor. Dil işi değil, ayrı küçük iş: tarihleri oluşturma gününe göre kaydırmak.
 
 ---
 

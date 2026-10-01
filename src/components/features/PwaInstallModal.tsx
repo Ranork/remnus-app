@@ -1,12 +1,10 @@
 'use client';
 
 import { useEffect, useState, useSyncExternalStore } from 'react';
-import { createPortal } from 'react-dom';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import {
-  X,
   Share,
   SquarePlus,
   MoreVertical,
@@ -18,7 +16,7 @@ import {
   Check,
   Compass,
   Globe,
-  ArrowRight,
+  ChevronRight,
   type LucideIcon,
 } from 'lucide-react';
 import {
@@ -30,6 +28,9 @@ import {
   detectInstallPlatform,
   type InstallPlatform,
 } from '@/lib/pwa/installPrompt';
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsList, TabsTab } from '@/components/ui/tabs';
 
 interface Props {
   open: boolean;
@@ -77,15 +78,6 @@ export default function PwaInstallModal({ open, onClose }: Props) {
     setMounted(true);
   }, []);
 
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [open, onClose]);
-
   if (!open || !mounted) return null;
 
   const benefits: { icon: LucideIcon; key: 'pwaBenefit1' | 'pwaBenefit2' | 'pwaBenefit3' }[] = [
@@ -94,132 +86,82 @@ export default function PwaInstallModal({ open, onClose }: Props) {
     { icon: ShieldCheck, key: 'pwaBenefit3' },
   ];
 
-  return createPortal(
-    <div
-      className="fixed inset-0 z-120 flex items-center justify-center p-4 bg-black/70"
-      onClick={onClose}
-    >
-      <div
-        className="relative w-full max-w-md bg-neutral-850 border border-neutral-800 rounded-2xl modal-shadow overflow-hidden animate-scale-in"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <button
-          onClick={onClose}
-          className="absolute top-3.5 right-3.5 p-1 text-neutral-500 hover:text-neutral-200 transition-colors rounded hover:bg-neutral-800"
-          aria-label={t('pwaNudgeLater')}
-        >
-          <X size={16} />
-        </button>
-
+  return (
+    <Dialog open onOpenChange={(next) => { if (!next) onClose(); }}>
+      <DialogContent size="md" className="dialog-compact:gap-5 sm:max-w-md">
         {/* Header */}
-        <div className="px-7 pt-9 pb-5 flex flex-col items-center text-center gap-3">
+        <div className="flex flex-col items-center gap-3 px-4 pt-3 text-center">
           <Image
             src="/icons/icon-192.png"
             alt="Remnus"
             width={56}
             height={56}
-            className="rounded-2xl ring-1 ring-neutral-800"
+            className="rounded-surface shadow-[0_0_0_1px_var(--color-line)]"
           />
-          <h2 className="text-xl font-semibold text-neutral-50">{t('pwaInstallCta')}</h2>
-          <p className="text-[13px] text-neutral-400 max-w-xs leading-relaxed">
-            {t('pwaModalTagline')}
-          </p>
+          <DialogTitle className="text-xl">{t('pwaInstallCta')}</DialogTitle>
+          <DialogDescription className="max-w-xs">{t('pwaModalTagline')}</DialogDescription>
         </div>
 
         {/* Benefits */}
-        <div className="px-7 grid grid-cols-3 gap-2">
+        <ul className="grid grid-cols-3 gap-2">
           {benefits.map(({ icon: Icon, key }) => (
-            <div
+            <li
               key={key}
-              className="flex flex-col items-center gap-1.5 px-2 py-3 rounded-xl border border-neutral-800 bg-neutral-900 text-center"
+              className="flex flex-col items-center gap-1.5 rounded-control bg-raised px-2 py-3 text-center shadow-[inset_0_0_0_1px_var(--color-line)]"
             >
-              <span className="w-7 h-7 rounded-lg bg-signal/10 border border-signal/20 flex items-center justify-center">
-                <Icon size={14} className="text-signal-text" />
-              </span>
-              <span className="text-[10.5px] leading-tight text-neutral-300">{t(key)}</span>
-            </div>
+              <Icon size={16} className="text-fg-3" />
+              <span className="text-xs leading-tight text-fg-2">{t(key)}</span>
+            </li>
           ))}
-        </div>
+        </ul>
 
         {/* Action zone */}
-        <div className="px-7 pt-5 pb-6">
-          {status === 'installed' ? (
-            <div className="flex items-center gap-2.5 border border-green-400/30 bg-green-400/10 rounded-xl px-4 py-3">
-              <Check size={16} className="text-green-400 shrink-0" />
-              <span className="text-[13px] text-neutral-100 leading-snug">
-                {t('pwaInstalledBadge')}
-              </span>
-            </div>
-          ) : status === 'available' ? (
-            <button
-              onClick={() => void triggerInstallPrompt()}
-              className="w-full inline-flex items-center justify-center gap-2.5 bg-ink hover:bg-accent-strong text-ink-fg px-6 py-3.5 rounded-xl text-[14px] font-medium transition-colors duration-150"
-            >
-              <Download size={16} aria-hidden />
-              {t('pwaInstallCta')}
-            </button>
-          ) : (
-            <div className="space-y-4">
-              <div className="flex items-center gap-3">
-                <span className="font-mono text-2xs text-neutral-500 shrink-0">
-                  {t('pwaHowTitle')}
-                </span>
-                <span className="flex-1 h-px bg-neutral-800" />
-              </div>
-
-              {/* Platform tabs */}
-              <div className="flex gap-1 p-1 bg-neutral-900 border border-neutral-800 rounded-lg">
+        {status === 'installed' ? (
+          <p role="status" className="flex items-center gap-2.5 rounded-control bg-green-500/10 px-4 py-3 text-ui text-fg">
+            <Check size={16} className="shrink-0 text-green-400" />
+            {t('pwaInstalledBadge')}
+          </p>
+        ) : status === 'available' ? (
+          <Button variant="primary" size="lg" className="w-full" onClick={() => void triggerInstallPrompt()}>
+            <Download aria-hidden />
+            {t('pwaInstallCta')}
+          </Button>
+        ) : (
+          <div className="flex flex-col gap-3">
+            <p className="text-xs font-medium text-fg-3">{t('pwaHowTitle')}</p>
+            <Tabs variant="segmented" value={platform} onValueChange={(v) => setPlatform(v as TabPlatform)}>
+              <TabsList className="w-full">
                 {(['ios', 'android'] as const).map((p) => (
-                  <button
-                    key={p}
-                    onClick={() => setPlatform(p)}
-                    className={`flex-1 px-2 py-1.5 text-[11.5px] font-medium rounded-md transition-colors ${
-                      platform === p
-                        ? 'bg-neutral-800 text-neutral-100'
-                        : 'text-neutral-400 hover:text-neutral-200'
-                    }`}
-                  >
-                    {t(TAB_KEYS[p])}
-                  </button>
+                  <TabsTab key={p} value={p} className="flex-1 justify-center">{t(TAB_KEYS[p])}</TabsTab>
                 ))}
-              </div>
-
-              <ol className="space-y-2.5">
-                {STEP_ICONS[platform].map((Icon, i) => (
-                  <li key={i} className="flex items-center gap-3 px-1">
-                    <span className="w-7 h-7 shrink-0 rounded-lg bg-neutral-900 border border-neutral-800 flex items-center justify-center">
-                      <Icon size={14} className="text-neutral-300" />
-                    </span>
-                    <span className="text-[13px] text-neutral-200 leading-snug">
-                      <span className="font-mono text-[11px] text-neutral-500 mr-1.5">
-                        {i + 1}.
-                      </span>
-                      {t(`${STEP_KEY_PREFIX[platform]}Step${i + 1}` as Parameters<typeof t>[0])}
-                    </span>
-                  </li>
-                ))}
-              </ol>
-            </div>
-          )}
-        </div>
+              </TabsList>
+            </Tabs>
+            <ol className="flex flex-col gap-2.5">
+              {STEP_ICONS[platform].map((Icon, i) => (
+                <li key={i} className="flex items-center gap-3 px-1">
+                  <span className="flex size-7 shrink-0 items-center justify-center rounded-control bg-raised shadow-[inset_0_0_0_1px_var(--color-line)]">
+                    <Icon size={14} className="text-fg-2" />
+                  </span>
+                  <span className="text-ui leading-snug text-fg">
+                    <span className="mr-1.5 text-xs text-fg-3">{i + 1}.</span>
+                    {t(`${STEP_KEY_PREFIX[platform]}Step${i + 1}` as Parameters<typeof t>[0])}
+                  </span>
+                </li>
+              ))}
+            </ol>
+          </div>
+        )}
 
         {/* Desktop apps pointer */}
-        <div className="border-t border-neutral-800 bg-neutral-900/50">
-          <Link
-            href="/download"
-            onClick={onClose}
-            className="group flex items-center justify-between gap-3 px-7 py-3.5 text-[12px] text-neutral-400 hover:text-neutral-100 transition-colors duration-150"
-          >
-            <span className="leading-snug">{t('pwaModalDesktopLink')}</span>
-            <ArrowRight
-              size={13}
-              className="shrink-0 group-hover:translate-x-0.5 transition-transform"
-              aria-hidden
-            />
-          </Link>
-        </div>
-      </div>
-    </div>,
-    document.body
+        <Link
+          href="/download"
+          onClick={onClose}
+          className="-mx-5 -mb-5 flex items-center justify-between gap-3 border-t border-line px-5 py-3.5 text-xs text-fg-3 transition-colors hover:text-fg"
+        >
+          <span className="leading-snug">{t('pwaModalDesktopLink')}</span>
+          <ChevronRight size={14} className="shrink-0" aria-hidden />
+        </Link>
+      </DialogContent>
+    </Dialog>
   );
 }

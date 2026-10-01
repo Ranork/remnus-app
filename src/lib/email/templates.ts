@@ -27,7 +27,7 @@ export function welcomeEmail(name: string | null | undefined, unsubUrl: string):
     para(`Three quick ways to get going:`) +
     step('1', 'Create your first page', `Hit <strong style="color:${P.soft};">+</strong> in the sidebar — pages, databases with table/kanban/calendar views, all in one tree.`) +
     step('2', 'Connect an AI agent', `Open <strong style="color:${P.soft};">AI Agents</strong> in the sidebar and link Claude, Cursor, VS Code or any MCP client in about two minutes.`) +
-    step('3', 'Take Remnus everywhere', `Install the <a href="${SITE_URL}/download" style="color:#7a94c9;text-decoration:underline;">desktop &amp; mobile apps</a> so your workspace is one click away.`);
+    step('3', 'Take Remnus everywhere', `Install the <a href="${SITE_URL}/download" style="color:${P.link};text-decoration:underline;">desktop &amp; mobile apps</a> so your workspace is one click away.`);
 
   return {
     subject: 'Welcome to Remnus — your workspace is ready',
@@ -223,8 +223,8 @@ const MD_TAG_STYLES: Record<string, string> = {
   ul: `margin:0 0 13px;padding-left:22px;color:${P.body};font-size:14px;line-height:1.7;`,
   ol: `margin:0 0 13px;padding-left:22px;color:${P.body};font-size:14px;line-height:1.7;`,
   li: `margin:0 0 4px;`,
-  a: `color:#7a94c9;text-decoration:underline;`,
-  blockquote: `margin:0 0 13px;padding:10px 16px;border-left:3px solid ${P.accent};background:${P.canvas};color:${P.soft};font-size:14px;line-height:1.7;`,
+  a: `color:${P.link};text-decoration:underline;`,
+  blockquote: `margin:0 0 13px;padding:10px 16px;border-left:3px solid ${P.signal};background:${P.canvas};color:${P.soft};font-size:14px;line-height:1.7;`,
   hr: `border:none;border-top:1px solid ${P.border};margin:20px 0;`,
   img: `max-width:100%;height:auto;border-radius:8px;border:1px solid ${P.border};display:block;margin:0 0 13px;`,
   code: `font-family:'JetBrains Mono',Consolas,monospace;font-size:13px;background:${P.canvas};color:${P.soft};padding:1px 5px;border-radius:4px;`,

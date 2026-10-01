@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { cn } from '@/lib/cn';
 import PageIcon from '../PageIcon';
-import { searchPageItems, type PageLinkItem } from './pageLinkData';
+import { searchPageItems, type PageLinkItem, withTitle } from './pageLinkData';
 import { MENU_EMPTY, MENU_SURFACE, menuItem } from './menuStyles';
 
 type Props = {
@@ -16,6 +16,7 @@ type Props = {
 // its own input because it is opened on demand by a slash command.
 export default function PagePickerPanel({ onSelect, onClose }: Props) {
   const t = useTranslations('Editor');
+  const untitled = useTranslations('Page')('untitled');
   const [query, setQuery] = useState('');
   const [items, setItems] = useState<PageLinkItem[]>([]);
   const [selectedIndex, setSelectedIndex] = useState(0);
@@ -73,12 +74,12 @@ export default function PagePickerPanel({ onSelect, onClose }: Props) {
       } else if (e.key === 'Enter') {
         e.preventDefault();
         e.stopPropagation();
-        if (items[selectedIndex]) onSelect(items[selectedIndex]);
+        if (items[selectedIndex]) onSelect(withTitle(items[selectedIndex], untitled));
       }
     };
     document.addEventListener('keydown', onKeyDownCapture, true);
     return () => document.removeEventListener('keydown', onKeyDownCapture, true);
-  }, [items, selectedIndex, onSelect, onClose]);
+  }, [items, selectedIndex, onSelect, onClose, untitled]);
 
   return (
     <div className={cn(MENU_SURFACE, 'w-72 max-w-[calc(100vw-2rem)] p-0')}>
@@ -101,14 +102,14 @@ export default function PagePickerPanel({ onSelect, onClose }: Props) {
             <button
               type="button"
               key={item.id}
-              onClick={() => onSelect(item)}
+              onClick={() => onSelect(withTitle(item, untitled))}
               onMouseMove={() => { if (index !== selectedIndex) setSelectedIndex(index); }}
               className={menuItem(index === selectedIndex)}
             >
               <span className="flex shrink-0 items-center">
                 <PageIcon icon={item.icon} iconColor={item.iconColor} size={16} fallbackType={item.type} />
               </span>
-              <span className="flex-1 truncate">{item.title}</span>
+              <span className="flex-1 truncate">{item.title || untitled}</span>
             </button>
           ))
         )}

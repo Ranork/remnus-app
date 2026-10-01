@@ -6,10 +6,16 @@ import { useTranslations } from 'next-intl';
 import { X } from 'lucide-react';
 import { submitDemoFeedback, type DemoSentiment } from '@/lib/actions/demoFeedback';
 import { logout } from '@/lib/actions/auth';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/input';
+import { SegmentedControl, SegmentedControlItem } from '@/components/ui/segmented-control';
+import { toastSurfaceClass } from '@/components/ui/toast';
+import { cn } from '@/lib/cn';
 
 // Fires a few minutes into a demo session to gauge sentiment and nudge signup.
 // Mounted ONLY for demo users (see (app)/layout.tsx). State is purely local —
 // demo accounts are ephemeral, so a localStorage bit is enough to show it once.
+// A small form, so not a toast — but it wears the toast's surface and sits in its corner.
 const STORAGE_KEY = 'remnus_demo_feedback_v1';
 const DELAY_MS = 3 * 60 * 1000; // ~3 minutes of demo time before we ask
 
@@ -21,9 +27,10 @@ const OPTIONS: { sentiment: DemoSentiment; emoji: string }[] = [
 
 export default function DemoFeedbackPrompt() {
   const t = useTranslations('DemoFeedback');
+  const tUi = useTranslations('UI');
   const [mounted, setMounted] = useState(false);
   const [open, setOpen] = useState(false);
-  const [sentiment, setSentiment] = useState<DemoSentiment | null>(null);
+  const [sentiment, setSentiment] = useState<DemoSentiment | ''>('');
   const [comment, setComment] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -69,95 +76,87 @@ export default function DemoFeedbackPrompt() {
   if (!mounted || !open) return null;
 
   return createPortal(
-    <div className="fixed z-[120] inset-x-4 bottom-4 sm:inset-x-auto sm:right-5 sm:bottom-5 sm:w-90 animate-fade-in animate-duration-200">
-      <div className="rounded-xl border border-neutral-800 bg-neutral-900 shadow-2xl p-4 relative">
-        <button
-          onClick={dismiss}
-          className="absolute right-2.5 top-2.5 p-1 text-neutral-500 hover:text-neutral-200 hover:bg-neutral-800 rounded transition-colors cursor-pointer"
-          aria-label={t('dismiss')}
-        >
-          <X size={15} />
-        </button>
+    <section
+      aria-label={submitted ? t('thanksTitle') : t('title')}
+      className={cn(
+        toastSurfaceClass,
+        'fixed inset-x-4 bottom-[calc(var(--consent-banner-height,0px)+4.5rem)] z-350 mx-auto max-w-90 p-4 animate-scale-in lg:right-4 lg:bottom-[calc(var(--consent-banner-height,0px)+1rem)] lg:left-auto lg:mx-0 lg:w-90',
+      )}
+    >
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        onClick={dismiss}
+        aria-label={tUi('close')}
+        className="absolute top-2 right-2"
+      >
+        <X />
+      </Button>
 
-        {submitted ? (
-          <div className="flex flex-col gap-3 pr-4">
-            <div>
-              <h3 className="text-sm font-semibold text-neutral-100">{t('thanksTitle')}</h3>
-              <p className="text-xs text-neutral-400 mt-1">{t('thanksBody')}</p>
-            </div>
-            <div className="flex items-center gap-2">
-              <form action={logout}>
-                <button
-                  type="submit"
-                  className="px-3 py-1.5 text-xs font-medium rounded-lg bg-ink hover:bg-ink/88 text-ink-fg transition-colors cursor-pointer"
-                >
-                  {t('ctaSignup')}
-                </button>
-              </form>
-              <button
-                onClick={() => setOpen(false)}
-                className="px-3 py-1.5 text-xs font-medium text-neutral-400 hover:text-neutral-200 transition-colors cursor-pointer"
+      {submitted ? (
+        <div className="flex flex-col gap-3 pr-6">
+          <div>
+            <h3 className="text-sm font-semibold text-fg">{t('thanksTitle')}</h3>
+            <p className="mt-1 text-xs leading-relaxed text-fg-3">{t('thanksBody')}</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <form action={logout}>
+              <Button type="submit" variant="primary" size="sm">{t('ctaSignup')}</Button>
+            </form>
+            <Button variant="ghost" size="sm" onClick={() => setOpen(false)}>
+              {t('keepExploring')}
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-3">
+          <div className="pr-6">
+            <h3 className="text-sm font-semibold text-fg">{t('title')}</h3>
+            <p className="mt-1 text-xs leading-relaxed text-fg-3">{t('subtitle')}</p>
+          </div>
+
+          <SegmentedControl
+            value={sentiment}
+            onValueChange={(v) => setSentiment(v as DemoSentiment)}
+            aria-label={t('title')}
+            className="w-full"
+          >
+            {OPTIONS.map((o) => (
+              <SegmentedControlItem
+                key={o.sentiment}
+                value={o.sentiment}
+                aria-label={t(`sentiment_${o.sentiment}`)}
+                title={t(`sentiment_${o.sentiment}`)}
+                className="h-10 text-xl"
               >
-                {t('keepExploring')}
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div className="flex flex-col gap-3 pr-4">
-            <div>
-              <h3 className="text-sm font-semibold text-neutral-100">{t('title')}</h3>
-              <p className="text-xs text-neutral-400 mt-1">{t('subtitle')}</p>
-            </div>
+                {o.emoji}
+              </SegmentedControlItem>
+            ))}
+          </SegmentedControl>
 
-            <div className="flex items-center gap-2">
-              {OPTIONS.map((o) => (
-                <button
-                  key={o.sentiment}
-                  onClick={() => setSentiment(o.sentiment)}
-                  className={`flex-1 py-2 text-2xl rounded-lg border transition-colors cursor-pointer ${
-                    sentiment === o.sentiment
-                      ? 'border-signal bg-signal/10'
-                      : 'border-neutral-800 bg-neutral-850 hover:border-neutral-700'
-                  }`}
-                  aria-label={t(`sentiment_${o.sentiment}`)}
-                  title={t(`sentiment_${o.sentiment}`)}
-                >
-                  {o.emoji}
-                </button>
-              ))}
-            </div>
-
-            {sentiment && (
-              <>
-                <textarea
-                  value={comment}
-                  onChange={(e) => setComment(e.target.value)}
-                  placeholder={t('commentPlaceholder')}
-                  rows={2}
-                  maxLength={1000}
-                  className="w-full text-xs rounded-lg bg-neutral-850 border border-neutral-800 px-2.5 py-2 text-neutral-200 placeholder:text-neutral-600 focus:outline-none focus:border-neutral-700 resize-none"
-                />
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={submit}
-                    disabled={busy}
-                    className="px-3 py-1.5 text-xs font-medium rounded-lg bg-ink hover:bg-ink/88 text-ink-fg transition-colors cursor-pointer disabled:opacity-60"
-                  >
-                    {busy ? t('sending') : t('submit')}
-                  </button>
-                  <button
-                    onClick={dismiss}
-                    className="px-3 py-1.5 text-xs font-medium text-neutral-400 hover:text-neutral-200 transition-colors cursor-pointer"
-                  >
-                    {t('maybeLater')}
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-        )}
-      </div>
-    </div>,
+          {sentiment && (
+            <>
+              <Textarea
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                placeholder={t('commentPlaceholder')}
+                rows={2}
+                maxLength={1000}
+                className="min-h-0 resize-none text-xs"
+              />
+              <div className="flex items-center gap-2">
+                <Button variant="primary" size="sm" onClick={submit} loading={busy}>
+                  {t('submit')}
+                </Button>
+                <Button variant="ghost" size="sm" onClick={dismiss}>
+                  {t('maybeLater')}
+                </Button>
+              </div>
+            </>
+          )}
+        </div>
+      )}
+    </section>,
     document.body,
   );
 }

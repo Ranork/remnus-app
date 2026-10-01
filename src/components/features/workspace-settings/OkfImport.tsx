@@ -3,17 +3,11 @@
 import { useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
-import {
-  AlertCircle,
-  ArrowLeft,
-  BookOpen,
-  CheckCircle,
-  FileArchive,
-  Link2,
-  Loader2,
-  ShieldCheck,
-  Upload,
-} from 'lucide-react';
+import { AlertCircle, BookOpen, CheckCircle, Link2, ShieldCheck } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { SettingsPage, SettingsSection } from '@/components/ui/settings';
+import { DropZone, ImportError, ImportHeader, Working } from './importParts';
 import { isSafeOkfImportPayload, parseOkfBundle } from '@/lib/import/okf-parser';
 import type { OkfImportPreview } from '@/lib/okf/types';
 
@@ -23,12 +17,6 @@ interface ImportResult {
   workspaceId: string;
   name: string;
   imported: { concepts: number; links: number };
-}
-
-function formatBytes(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
-  return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
 }
 
 export default function OkfImport({ onBack }: { onBack: () => void }) {
@@ -103,34 +91,25 @@ export default function OkfImport({ onBack }: { onBack: () => void }) {
   const errorCount = preview?.issues.filter(issue => issue.severity === 'error').length ?? 0;
 
   return (
-    <div className="space-y-5">
-      <div className="flex items-center gap-2">
-        <button
-          type="button"
-          onClick={onBack}
-          aria-label={t('okfImportBack')}
-          className="p-1 text-neutral-500 hover:bg-neutral-800 hover:text-neutral-200 transition-colors cursor-pointer"
-        >
-          <ArrowLeft size={14} />
-        </button>
-        <BookOpen size={18} className="text-signal-text" />
-        <div>
-          <h3 className="text-sm font-semibold text-neutral-100">{t('okfImportTitle')}</h3>
-          <p className="text-xs text-neutral-400">{t('okfImportHint')}</p>
-        </div>
-      </div>
+    <SettingsPage>
+      <ImportHeader
+        icon={<BookOpen size={18} className="text-fg-2" />}
+        title={t('okfImportTitle')}
+        hint={t('okfImportHint')}
+        backLabel={t('okfImportBack')}
+        onBack={onBack}
+      />
 
       {(step === 'idle' || step === 'error') && (
-        <div
-          className={`border-2 border-dashed p-8 text-center transition-colors cursor-pointer ${
-            file ? 'border-signal/50 bg-signal/5' : 'border-neutral-700 hover:border-neutral-500'
-          }`}
-          onClick={() => inputRef.current?.click()}
-          onDragOver={event => event.preventDefault()}
+        <DropZone
+          file={file}
+          onPick={() => inputRef.current?.click()}
           onDrop={event => {
             event.preventDefault();
             chooseFile(event.dataTransfer.files[0] ?? null);
           }}
+          label={t('okfImportDropZone')}
+          hint={t('okfImportDropHint')}
         >
           <input
             ref={inputRef}
@@ -139,136 +118,104 @@ export default function OkfImport({ onBack }: { onBack: () => void }) {
             className="hidden"
             onChange={event => chooseFile(event.target.files?.[0] ?? null)}
           />
-          {file ? (
-            <div className="flex flex-col items-center gap-2">
-              <FileArchive size={24} className="text-signal-text" />
-              <p className="max-w-xs truncate text-sm font-medium text-neutral-200">{file.name}</p>
-              <p className="text-xs text-neutral-500">{formatBytes(file.size)}</p>
-            </div>
-          ) : (
-            <div className="flex flex-col items-center gap-2">
-              <Upload size={24} className="text-neutral-600" />
-              <p className="text-sm text-neutral-400">{t('okfImportDropZone')}</p>
-              <p className="text-xs text-neutral-600">{t('okfImportDropHint')}</p>
-            </div>
-          )}
-        </div>
+        </DropZone>
       )}
 
-      {step === 'analyzing' && (
-        <div className="flex items-center justify-center gap-3 py-8 text-neutral-400">
-          <Loader2 size={16} className="animate-spin" />
-          <span className="text-sm">{t('okfImportAnalyzing')}</span>
-        </div>
-      )}
+      {step === 'analyzing' && <Working label={t('okfImportAnalyzing')} />}
 
       {step === 'preview' && preview && (
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-px overflow-hidden border border-neutral-800 bg-neutral-800 sm:grid-cols-4">
+        <SettingsSection>
+          <dl className="grid grid-cols-2 gap-px overflow-hidden rounded-surface bg-line shadow-[0_0_0_1px_var(--color-line)] sm:grid-cols-4">
             {[
               [t('okfImportConcepts'), preview.stats.concepts],
               [t('okfImportLinks'), preview.stats.brokenLinks],
               [t('okfImportAssets'), preview.stats.assets],
               [t('okfImportVersion'), preview.version ?? t('okfImportUnknown')],
             ].map(([label, value]) => (
-              <div key={label} className="bg-neutral-900 px-3 py-2">
-                <p className="text-2xs text-neutral-500">{label}</p>
-                <p className="mt-1 text-sm font-semibold text-neutral-200">{value}</p>
+              <div key={label} className="bg-float px-3 py-2.5">
+                <dt className="text-xs text-fg-3">{label}</dt>
+                <dd className="mt-1 text-ui font-semibold text-fg">{value}</dd>
               </div>
             ))}
-          </div>
+          </dl>
 
-          <div className="flex flex-wrap gap-2 text-xs">
-            <span className="flex items-center gap-1.5 border border-amber-500/30 bg-amber-500/5 px-2 py-1 text-amber-300">
-              <AlertCircle size={12} /> {t('okfImportWarnings')}: {warningCount}
-            </span>
-            <span className={`flex items-center gap-1.5 border px-2 py-1 ${errorCount ? 'border-red-500/30 bg-red-500/5 text-red-300' : 'border-green-500/30 bg-green-500/5 text-green-300'}`}>
-              <ShieldCheck size={12} /> {t('okfImportErrors')}: {errorCount}
-            </span>
+          <div className="flex flex-wrap gap-2">
+            <Badge variant={warningCount ? 'neutral' : 'outline'}>
+              <AlertCircle className={warningCount ? 'text-amber-400' : undefined} />
+              {t('okfImportWarnings')}: {warningCount}
+            </Badge>
+            <Badge variant={errorCount ? 'danger' : 'success'}>
+              <ShieldCheck />
+              {t('okfImportErrors')}: {errorCount}
+            </Badge>
           </div>
 
           {preview.stats.executableConcepts > 0 && (
-            <div className="border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-amber-200">
+            <p className="flex items-start gap-2 rounded-control bg-amber-500/10 p-3 text-xs leading-relaxed text-fg-2">
+              <AlertCircle size={14} className="mt-0.5 shrink-0 text-amber-400" />
               {t('okfImportInertComputations', { count: preview.stats.executableConcepts })}
-            </div>
+            </p>
           )}
 
           {preview.issues.length > 0 && (
-            <div className="max-h-40 space-y-1 overflow-y-auto border-y border-neutral-800 py-2">
+            <ul className="flex max-h-40 flex-col gap-1 overflow-y-auto border-y border-line py-2">
               {preview.issues.slice(0, 20).map((issue, index) => (
-                <div key={`${issue.code}-${issue.path}-${index}`} className="flex items-start gap-2 px-1 text-xs">
-                  <span className={issue.severity === 'error' ? 'text-red-400' : 'text-amber-400'}>•</span>
-                  <span className="min-w-0 text-neutral-400">
-                    <span className="font-mono text-neutral-500">{issue.path}</span>: {t('okfImportIssueLabel', { code: issue.code })}
+                <li key={`${issue.code}-${issue.path}-${index}`} className="flex items-start gap-2 px-1 text-xs">
+                  <span
+                    aria-hidden
+                    className={`mt-1.5 size-1.5 shrink-0 rounded-full ${issue.severity === 'error' ? 'bg-red-400' : 'bg-amber-400'}`}
+                  />
+                  <span className="min-w-0 text-fg-2">
+                    <span className="font-mono text-fg-3">{issue.path}</span>: {t('okfImportIssueLabel', { code: issue.code })}
                   </span>
-                </div>
+                </li>
               ))}
               {preview.issues.length > 20 && (
-                <p className="px-1 text-xs text-neutral-500">{t('okfImportMoreIssues', { count: preview.issues.length - 20 })}</p>
+                <li className="px-1 text-xs text-fg-3">{t('okfImportMoreIssues', { count: preview.issues.length - 20 })}</li>
               )}
-            </div>
+            </ul>
           )}
 
-          <p className="flex items-start gap-2 text-xs text-neutral-500">
-            <Link2 size={13} className="mt-0.5 shrink-0" />
+          <p className="flex items-start gap-2 text-xs leading-relaxed text-fg-3">
+            <Link2 size={14} className="mt-0.5 shrink-0" />
             {t('okfImportDryRunNote')}
           </p>
-        </div>
+        </SettingsSection>
       )}
 
-      {step === 'importing' && (
-        <div className="flex items-center justify-center gap-3 py-8 text-neutral-400">
-          <Loader2 size={16} className="animate-spin" />
-          <span className="text-sm">{t('okfImportRunning')}</span>
-        </div>
-      )}
+      {step === 'importing' && <Working label={t('okfImportRunning')} />}
 
       {step === 'done' && result && (
-        <div className="space-y-3 border border-green-500/30 bg-green-500/5 p-4">
-          <div className="flex items-center gap-2 text-green-300">
-            <CheckCircle size={15} />
-            <p className="text-sm font-semibold">{t('okfImportSuccess')}</p>
-          </div>
-          <p className="text-xs text-neutral-300">
+        <SettingsSection>
+          <p className="flex items-center gap-2 text-sm font-semibold text-fg">
+            <CheckCircle size={16} className="text-green-400" />
+            {t('okfImportSuccess')}
+          </p>
+          <p className="text-xs text-fg-2">
             {t('okfImportResult', { concepts: result.imported.concepts, links: result.imported.links })}
           </p>
-        </div>
+        </SettingsSection>
       )}
 
-      {step === 'error' && error && (
-        <div className="flex items-start gap-3 border border-red-500/30 bg-red-500/10 p-4">
-          <AlertCircle size={16} className="mt-0.5 shrink-0 text-red-400" />
-          <p className="text-xs text-red-300">{error}</p>
-        </div>
-      )}
+      {step === 'error' && error && <ImportError message={error} />}
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2">
         {(step === 'idle' || step === 'error') && (
-          <button
-            type="button"
-            onClick={analyze}
-            disabled={!file}
-            className="bg-neutral-700 px-4 py-2 text-xs font-semibold text-white transition-colors hover:bg-neutral-600 disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer"
-          >
+          <Button variant="primary" onClick={analyze} disabled={!file}>
             {t('okfImportAnalyze')}
-          </button>
+          </Button>
         )}
         {step === 'preview' && preview && (
-          <button
-            type="button"
-            onClick={startImport}
-            disabled={!isSafeOkfImportPayload(preview)}
-            className="bg-ink px-4 py-2 text-xs font-semibold text-ink-fg transition-colors hover:bg-ink/88 disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer"
-          >
+          <Button variant="primary" onClick={startImport} disabled={!isSafeOkfImportPayload(preview)}>
             {t('okfImportStart')}
-          </button>
+          </Button>
         )}
         {(step === 'preview' || step === 'done') && (
-          <button type="button" onClick={() => reset()} className="text-xs text-neutral-500 transition-colors hover:text-neutral-300 cursor-pointer">
+          <Button variant="ghost" onClick={() => reset()}>
             {t('importReset')}
-          </button>
+          </Button>
         )}
       </div>
-    </div>
+    </SettingsPage>
   );
 }

@@ -19,10 +19,12 @@ import PageBacklinksPanel from './PageBacklinksPanel';
 import LocalGraphPanel from './graph/LocalGraphPanel';
 import KnowledgeContextPanel from './KnowledgeContextPanel';
 import PageCommentsPanel, { CommentsJumpLink } from './PageCommentsPanel';
+import PageProvenanceLine from './PageProvenance';
 import { pageContainerClass, scrollToSection } from './pageLayout';
 import { useTabNav } from '@/components/providers/TabsContext';
 import { tabKeys } from './tabs/keys';
 import type { WorkspaceItemRow } from '@/lib/actions/workspace';
+import type { PageProvenance } from '@/lib/agentPresence';
 
 function debounce<T extends (...args: any[]) => any>(fn: T, delay: number) {
   let timer: ReturnType<typeof setTimeout>;
@@ -40,11 +42,14 @@ export default function StandalonePageEditor({
   page,
   subItems,
   isAdmin = false,
+  provenance = null,
 }: {
   item: Item;
   page: Page;
   subItems?: WorkspaceItemRow[];
   isAdmin?: boolean;
+  /** Who shaped this page — the line under the title (V2 R8.8). Null: no agent wrote it. */
+  provenance?: PageProvenance | null;
 }) {
   const t = useTranslations('Page');
   const tEditor = useTranslations('Editor');
@@ -65,6 +70,9 @@ export default function StandalonePageEditor({
   const [commentCount, setCommentCount] = useState(0);
   const commentsRef = useRef<HTMLElement>(null);
   const editorRef = useRef<BlockEditorHandle>(null);
+  // Bumped by a review in either place (provenance line, knowledge panel) so the other follows.
+  const [reviewSignal, setReviewSignal] = useState(0);
+  const bumpReview = useCallback(() => setReviewSignal((n) => n + 1), []);
 
   // Keep the Tauri keep-alive query cache (TabPane) in sync with each save, so
   // leaving and re-entering this tab within the staleTime window doesn't reload
@@ -140,8 +148,8 @@ export default function StandalonePageEditor({
   // Re-applied after every server refresh too (`item` is a new object then): the refresh
   // re-renders the layout's default "Remnus" <title>, which would otherwise stay.
   useEffect(() => {
-    document.title = `${title || 'Untitled'} | Remnus`;
-  }, [title, item]);
+    document.title = `${title || t('untitled')} | Remnus`;
+  }, [title, item, t]);
 
   const saveContent = useCallback(async (md: string) => {
     setSaveState('saving');
@@ -274,6 +282,18 @@ export default function StandalonePageEditor({
         </div>
       </div>
 
+      {/* Provenance (R8.8): which agent edited it, the last human edit, review state. */}
+      {provenance && (
+        <PageProvenanceLine
+          provenance={provenance}
+          workspaceId={item.workspaceId}
+          itemId={item.id}
+          reviewSignal={reviewSignal}
+          onReviewed={bumpReview}
+          className="-mt-3 mb-6"
+        />
+      )}
+
       {/* The thread lives under the body (R8.1); up here only its count, as a way down. */}
       {commentCount > 0 && (
         <div className="-mt-3 mb-5">
@@ -299,7 +319,7 @@ export default function StandalonePageEditor({
         onCountChange={setCommentCount}
         sectionRef={commentsRef}
       />
-      <KnowledgeContextPanel workspaceId={item.workspaceId} pageId={item.id} />
+      <KnowledgeContextPanel workspaceId={item.workspaceId} pageId={item.id} refreshKey={reviewSignal} onReviewed={bumpReview} />
       <PageBacklinksPanel workspaceId={item.workspaceId} pageId={item.id} />
       <LocalGraphPanel workspaceId={item.workspaceId} pageId={item.id} />
     </div>

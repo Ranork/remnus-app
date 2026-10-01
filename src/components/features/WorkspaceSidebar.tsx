@@ -9,8 +9,6 @@ import { reportClientError } from '@/lib/reportClientError';
 import { useTabNav } from '@/components/providers/TabsContext';
 import {
   Plus,
-  X,
-  AlertTriangle,
   ChevronDown,
   ChevronRight,
   Trash,
@@ -52,6 +50,8 @@ import WorkspaceSettingsModal from './WorkspaceSettingsModal';
 import { initDesktopZoom } from '@/lib/desktop/zoom';
 import AgentsModal from './AgentsModal';
 import AgentSavingsCard from './AgentSavingsCard';
+import { AgentPresenceRows, AgentTouchMark, useServerNow, useWorkingWorkspaces } from './AgentPresence';
+import { EMPTY_PRESENCE, type AgentPresence, type PresenceTouch } from '@/lib/agentPresence';
 import TrashModal from './TrashModal';
 import OnboardingGuide from './onboarding/OnboardingGuide';
 import AgentDetectGuide from './agent-detect/AgentDetectGuide';
@@ -71,6 +71,7 @@ import { RemnusMark } from '@/components/ui/remnus-mark';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { ConfirmDialog } from './ConfirmDialog';
+import { toast } from '@/components/ui/toast';
 
 // Plan pill in the account menu: neutral for free, the accent for the paid tiers.
 const TIER_BADGE: Record<PlanTier, 'neutral' | 'outline' | 'signal' | 'solid'> = {
@@ -118,6 +119,7 @@ export default function WorkspaceSidebar({
   showOnboarding = false,
   isProjectWindow = false,
   renderedAt = 0,
+  presence = EMPTY_PRESENCE,
 }: {
   items: WorkspaceItemRow[];
   workspaces: WorkspaceType[];
@@ -139,11 +141,15 @@ export default function WorkspaceSidebar({
   /** Server clock (epoch ms) of the layout render. Passed only to the desktop sidebar,
    *  which makes it the one copy that drives live refresh (see `useWorkspaceEvents`). */
   renderedAt?: number;
+  /** Agent presence read with this render (`services/agentPresence.ts`): who worked here
+   *  lately for the agents card, and which items an agent changed for the tree marks. */
+  presence?: AgentPresence;
 }) {
   const t = useTranslations('Workspace');
   const tLayout = useTranslations('Layout');
   const tSharing = useTranslations('Sharing');
   const tBilling = useTranslations('Billing');
+  const tPage = useTranslations('Page');
   const router = useRouter();
   const pathname = usePathname();
   const [isPending, startTransition] = useTransition();
@@ -183,8 +189,6 @@ export default function WorkspaceSidebar({
 
   // Confirm delete state
   const [confirmDeleteItemId, setConfirmDeleteItemId] = useState<string | null>(null);
-  // Title of an item whose delete failed server-side (optimistic removal rolled back).
-  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   // Inline rename
   const [renamingItemId, setRenamingItemId] = useState<string | null>(null);
@@ -324,7 +328,28 @@ export default function WorkspaceSidebar({
 
   useEffect(() => {
     setLocalWorkspaces(workspaces);
-  }, [workspaces]);  
+  }, [workspaces]);
+
+  // Agent presence: one server-clock "now" for every mark, aged on a 30s tick.
+  const presenceNow = useServerNow(presence.at);
+  const workingWorkspaces = useWorkingWorkspaces(presence);
+  const hiddenWorkspaceIds = useMemo(
+    () => new Set(showHidden ? [] : localWorkspaces.filter((w) => w.hidden).map((w) => w.id)),
+    [localWorkspaces, showHidden],
+  );
+  // A collapsed parent shows the newest agent change anywhere beneath it.
+  const subtreeTouch = useMemo(() => {
+    const byId = new Map(localItems.map((i) => [i.id, i]));
+    const out: Record<string, PresenceTouch> = {};
+    for (const [id, touch] of Object.entries(presence.touched)) {
+      const seen = new Set<string>();
+      for (let node = byId.get(id); node && !seen.has(node.id); node = node.parentId ? byId.get(node.parentId) : undefined) {
+        seen.add(node.id);
+        if (!out[node.id] || touch.at > out[node.id].at) out[node.id] = touch;
+      }
+    }
+    return out;
+  }, [localItems, presence.touched]);
 
   const isAnyModalOrPickerOpen = !!(
     settingsModalWorkspace ||
@@ -866,7 +891,7 @@ export default function WorkspaceSidebar({
         // — the page stayed in the database, kept rendering inside its parent,
         // and was still openable. Put it back and say so.
         setLocalItems(snapshot);
-        setDeleteError(item.title);
+        toast({ title: t('deleteFailed', { title: item.title }), tone: 'error' });
         reportClientError(err, { source: 'sidebar-delete', itemId: item.id, itemType: item.type });
       } finally {
         setLoadingItem(null);
@@ -1085,7 +1110,18 @@ export default function WorkspaceSidebar({
                     )}
                   </div>
 
-                  <span className="truncate flex-1 font-medium">{w.name}</span>
+                  <span className="flex min-w-0 flex-1 items-center gap-1.5">
+                    <span className="truncate font-medium">{w.name}</span>
+                    {/* An agent is working in this workspace now: a steady signal dot. */}
+                    {workingWorkspaces.has(w.id) && (
+                      <span
+                        role="img"
+                        aria-label={t('presenceWorkspaceLive')}
+                        title={t('presenceWorkspaceLive')}
+                        className="size-1.5 shrink-0 rounded-full bg-signal"
+                      />
+                    )}
+                  </span>
 
                   {/* Someone asked to join. The count only ever reaches an owner (see
                       getWorkspaces) and a project window gets 0, so no role check here. */}
@@ -1282,8 +1318,17 @@ export default function WorkspaceSidebar({
                                 href={hrefFor(item)}
                                 className="truncate flex-1 min-w-0 block py-0.5"
                               >
-                                {item.title}
+                                {item.title || tPage('untitled')}
                               </Link>
+                            )}
+
+                            {/* An agent changed it lately (a collapsed parent: anything beneath it). */}
+                            {renamingItemId !== item.id && !isLoading && (
+                              <AgentTouchMark
+                                touch={hasChildren && !isItemExpanded ? subtreeTouch[item.id] : presence.touched[item.id]}
+                                presence={presence}
+                                now={presenceNow}
+                              />
                             )}
 
                             {/* Hover actions & spinner */}
@@ -1428,7 +1473,7 @@ export default function WorkspaceSidebar({
               <div className="w-8 h-1 rounded-full bg-line-strong" />
             </div>
             <div className="px-4 py-2 text-xs text-fg-3 font-medium truncate border-b border-line mb-1">
-              {activeMenuItem.title}
+              {activeMenuItem.title || tPage('untitled')}
             </div>
             <button
               onClick={() => {
@@ -1605,26 +1650,6 @@ export default function WorkspaceSidebar({
         sidebarOverlayContainer,
       )}
 
-      {/* Delete failed server-side — the item was restored to the sidebar. */}
-      {deleteError && sidebarOverlayContainer && createPortal(
-        <div
-          role="alert"
-          className="fixed z-300 bottom-4 left-1/2 -translate-x-1/2 w-[min(24rem,calc(100vw-2rem))] bg-float rounded-surface shadow-float px-4 py-3 flex items-start gap-3 animate-scale-in"
-        >
-          <AlertTriangle size={16} className="text-red-400 shrink-0 mt-0.5" />
-          <p className="text-ui text-fg leading-relaxed flex-1">
-            {t('deleteFailed', { title: deleteError })}
-          </p>
-          <button
-            onClick={() => setDeleteError(null)}
-            className="shrink-0 rounded-sm p-0.5 text-fg-3 hover:bg-hover hover:text-fg transition-colors"
-          >
-            <X size={14} />
-          </button>
-        </div>,
-        sidebarOverlayContainer,
-      )}
-
       {/* Delete confirmation — the shared dialog; the delete itself is optimistic
           (confirmDelete closes it and runs in a transition). */}
       {confirmDeleteItemId && (() => {
@@ -1654,24 +1679,38 @@ export default function WorkspaceSidebar({
         </div>
       )}
 
-      {/* The agents panel: a small sheet on the desk holding what the agents saved (the
+      {/* The agents card: a small sheet on the desk holding what the agents saved (the
           number that says what Remnus is for should not be a footnote) and the AI Agents
           entry — the one account-level row kept outside the account menu, because it is
-          what the product is for. Savings are workspace-scoped in a project window
-          (content data the lock allows); the AI Agents row is account-level (tokens span
-          every workspace) and not rendered there. `empty:hidden` drops the panel when a
-          project window has nothing measured yet. */}
-      <div className="shrink-0 mx-2 mb-1 rounded-surface bg-sheet/70 p-1 shadow-lift empty:hidden">
-        <AgentSavingsCard
-          variant="sidebar"
-          workspaceId={isProjectWindow ? activeWorkspace.id : undefined}
-          onOpenDetail={isProjectWindow ? undefined : () => setAgentsModalOpen(true)}
-        />
-        {!isProjectWindow && (
-          <button
-            onClick={() => setAgentsModalOpen(true)}
-            className="w-full flex items-center gap-2 min-w-0 h-8 px-2 rounded-control text-sm text-fg-2 hover:bg-hover hover:text-fg transition-colors"
-          >
+          what the product is for. Both led to the same modal, so they are ONE button now
+          (Hakan, 2026-09-30): one hover, one click target. Savings are workspace-scoped in
+          a project window (content data the lock allows); the AI Agents row is
+          account-level (tokens span every workspace) and not rendered there, so the card is
+          just the figure, not clickable. `empty:hidden` drops it when a project window has
+          nothing measured yet. */}
+      {/* Presence rides at the top of the same card (V2 R8.8): who is working, their
+          last call, who worked here lately — spans only, so the card stays one button. */}
+      {isProjectWindow ? (
+        <div className="shrink-0 mx-2 mb-1 rounded-surface bg-sheet/70 p-1 shadow-lift empty:hidden">
+          <AgentPresenceRows presence={presence} />
+          <AgentSavingsCard variant="sidebar" workspaceId={activeWorkspace.id} />
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={(e) => {
+            // A mouse click must not leave the card focused: the agents modal closes
+            // on Escape, and a key press on a focused element turns on its
+            // :focus-visible ring — a gold outline round the card nobody asked for.
+            // A keyboard activation (detail 0) keeps focus, so Tab users keep their place.
+            if (e.detail > 0) e.currentTarget.blur();
+            setAgentsModalOpen(true);
+          }}
+          className="group/agents shrink-0 mx-2 mb-1 block cursor-pointer rounded-surface bg-sheet/70 p-1 text-left shadow-lift transition-colors hover:bg-sheet"
+        >
+          <AgentPresenceRows presence={presence} hiddenWorkspaceIds={hiddenWorkspaceIds} />
+          <AgentSavingsCard variant="sidebar" />
+          <span className="flex h-8 min-w-0 items-center gap-2 rounded-control px-2 text-sm text-fg-2 transition-colors group-hover/agents:text-fg">
             <span className="relative shrink-0">
               <Bot size={16} className="text-fg-3" />
               {agentTokenCount === 0 && (
@@ -1684,9 +1723,9 @@ export default function WorkspaceSidebar({
             ) : agentTokenCount === 0 ? (
               <Badge variant="solid" size="sm" className="ml-auto">{t('agentsConnectNudge')}</Badge>
             ) : null}
-          </button>
-        )}
-      </div>
+          </span>
+        </button>
+      )}
 
       {/* Everything else lives behind the account row: settings, plan, trash, app install,
           what's new, admin, sign-out. A project window renders only trash and what's new

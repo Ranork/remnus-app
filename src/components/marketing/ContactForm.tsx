@@ -2,11 +2,12 @@
 
 import { useEffect, useRef, useState, useTransition } from 'react';
 import { useTranslations } from 'next-intl';
-import { CheckCircle2, Loader2 } from 'lucide-react';
+import { CheckCircle2 } from 'lucide-react';
 import { submitContactForm } from '@/lib/actions/contact';
+import { Button } from '@/components/ui/button';
+import { Input, Textarea } from '@/components/ui/input';
 
-const inputCls =
-  'w-full text-sm rounded-lg bg-neutral-850 border border-neutral-800 px-3.5 py-2.5 text-neutral-100 placeholder:text-neutral-600 focus:outline-none focus:border-neutral-700 transition-colors';
+const labelCls = 'text-ui font-medium text-fg-2';
 
 export default function ContactForm() {
   const t = useTranslations('Contact');
@@ -49,18 +50,15 @@ export default function ContactForm() {
 
   if (status === 'success') {
     return (
-      <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-8 flex flex-col items-center text-center gap-3 max-w-xl mx-auto">
-        <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-green-400/10 text-green-400">
+      <div className="flex flex-col items-start gap-3 rounded-[14px] bg-sheet p-7 shadow-sheet">
+        <span className="flex size-10 items-center justify-center rounded-full bg-green-500/12 text-green-400">
           <CheckCircle2 size={20} />
-        </div>
-        <h3 className="text-base font-semibold text-neutral-100">{t('formSuccessTitle')}</h3>
-        <p className="text-sm text-neutral-400 leading-relaxed">{t('formSuccessBody')}</p>
-        <button
-          onClick={() => setStatus('idle')}
-          className="mt-1 text-sm text-blue-500 hover:text-blue-400 transition-colors cursor-pointer"
-        >
+        </span>
+        <h3 className="m-0 text-lg font-semibold text-fg">{t('formSuccessTitle')}</h3>
+        <p className="m-0 text-[15px] leading-relaxed text-fg-2">{t('formSuccessBody')}</p>
+        <Button variant="outline" onClick={() => setStatus('idle')} className="mt-1 text-fg">
           {t('formSendAnother')}
-        </button>
+        </Button>
       </div>
     );
   }
@@ -68,14 +66,14 @@ export default function ContactForm() {
   return (
     <form
       onSubmit={handleSubmit}
-      className="relative rounded-xl border border-neutral-800 bg-neutral-900 p-8 flex flex-col gap-4 max-w-xl mx-auto"
+      className="relative flex flex-col gap-4 rounded-[14px] bg-sheet p-6 shadow-sheet sm:p-7"
     >
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="flex flex-col gap-1.5">
-          <label htmlFor="contact-name" className="text-xs font-medium text-neutral-400">
+          <label htmlFor="contact-name" className={labelCls}>
             {t('formNameLabel')}
           </label>
-          <input
+          <Input
             id="contact-name"
             name="name"
             type="text"
@@ -85,14 +83,14 @@ export default function ContactForm() {
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder={t('formNamePlaceholder')}
-            className={inputCls}
+            size="lg"
           />
         </div>
         <div className="flex flex-col gap-1.5">
-          <label htmlFor="contact-email" className="text-xs font-medium text-neutral-400">
+          <label htmlFor="contact-email" className={labelCls}>
             {t('formEmailLabel')}
           </label>
-          <input
+          <Input
             id="contact-email"
             name="email"
             type="email"
@@ -102,16 +100,16 @@ export default function ContactForm() {
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder={t('formEmailPlaceholder')}
-            className={inputCls}
+            size="lg"
           />
         </div>
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="contact-message" className="text-xs font-medium text-neutral-400">
+        <label htmlFor="contact-message" className={labelCls}>
           {t('formMessageLabel')}
         </label>
-        <textarea
+        <Textarea
           id="contact-message"
           name="message"
           required
@@ -120,7 +118,7 @@ export default function ContactForm() {
           value={message}
           onChange={(e) => setMessage(e.target.value)}
           placeholder={t('formMessagePlaceholder')}
-          className={`${inputCls} resize-none`}
+          className="resize-none text-sm"
         />
       </div>
 
@@ -140,14 +138,9 @@ export default function ContactForm() {
 
       {status === 'error' && <p className="text-sm text-red-400">{errorMsg}</p>}
 
-      <button
-        type="submit"
-        disabled={pending}
-        className="mt-1 inline-flex items-center justify-center gap-2 rounded-lg bg-blue-600 hover:bg-blue-500 disabled:opacity-60 text-white text-sm font-medium px-5 py-2.5 transition-colors cursor-pointer"
-      >
-        {pending && <Loader2 size={15} className="animate-spin" />}
-        {pending ? t('formSending') : t('formSubmit')}
-      </button>
+      <Button type="submit" variant="primary" size="lg" loading={pending} aria-label={pending ? t('formSending') : undefined} className="mt-1 self-start">
+        {t('formSubmit')}
+      </Button>
     </form>
   );
 }

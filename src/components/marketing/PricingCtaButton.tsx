@@ -16,20 +16,22 @@ interface Props {
   variant: 'solid' | 'outline';
   accentColor: string;   // solid background
   solidTextLight: boolean;
+  /** The site (R8.7) passes its own button classes: no inline colours, no trailing arrow. */
+  className?: string;
 }
 
 // Paid tiers, when the visitor is logged in, start a Stripe Checkout directly.
 // Everyone else just follows the link (sign up / contact / go to app).
-export default function PricingCtaButton({ tier, isAuthed, isDemo = false, href, label, variant, accentColor, solidTextLight }: Props) {
+export default function PricingCtaButton({ tier, isAuthed, isDemo = false, href, label, variant, accentColor, solidTextLight, className }: Props) {
   const [busy, setBusy] = useState(false);
   const [demoOpen, setDemoOpen] = useState(false);
   const isPaid = tier === 'startup' || tier === 'professional';
 
   const base = 'inline-flex items-center justify-center gap-2 px-5 py-3 rounded-lg text-[13.5px] transition-colors duration-150';
-  const cls = variant === 'solid'
+  const cls = className ?? (variant === 'solid'
     ? `${base} font-semibold`
-    : `${base} border border-neutral-700 font-medium text-neutral-100 hover:border-neutral-500`;
-  const style = variant === 'solid'
+    : `${base} border border-neutral-700 font-medium text-neutral-100 hover:border-neutral-500`);
+  const style = !className && variant === 'solid'
     ? { background: accentColor, color: solidTextLight ? '#fff' : '#1d1f23' }
     : undefined;
 
@@ -37,7 +39,7 @@ export default function PricingCtaButton({ tier, isAuthed, isDemo = false, href,
     return (
       <Link href={href} className={cls} style={style}>
         {label}
-        <span aria-hidden>→</span>
+        {!className && <span aria-hidden>→</span>}
       </Link>
     );
   }
@@ -48,16 +50,9 @@ export default function PricingCtaButton({ tier, isAuthed, isDemo = false, href,
       <>
         <button type="button" onClick={() => setDemoOpen(true)} className={cls} style={style}>
           {label}
-          <span aria-hidden>→</span>
+          {!className && <span aria-hidden>→</span>}
         </button>
-        {demoOpen && (
-          <>
-            <div className="fixed inset-0 z-100 bg-black/60" onClick={() => setDemoOpen(false)} />
-            <div className="fixed inset-x-4 top-1/2 -translate-y-1/2 z-100 sm:inset-x-auto sm:left-1/2 sm:-translate-x-1/2 sm:w-full sm:max-w-sm">
-              <DemoBillingNotice onClose={() => setDemoOpen(false)} />
-            </div>
-          </>
-        )}
+        {demoOpen && <DemoBillingNotice onClose={() => setDemoOpen(false)} />}
       </>
     );
   }
@@ -79,7 +74,7 @@ export default function PricingCtaButton({ tier, isAuthed, isDemo = false, href,
     <button type="button" onClick={onClick} disabled={busy} className={`${cls} disabled:opacity-60`} style={style}>
       {busy ? <Loader2 size={14} className="animate-spin" /> : null}
       {label}
-      {!busy && <span aria-hidden>→</span>}
+      {!busy && !className && <span aria-hidden>→</span>}
     </button>
   );
 }

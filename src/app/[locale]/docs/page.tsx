@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { getTranslations, getLocale } from 'next-intl/server';
 import BlogCard from '@/components/docs/BlogCard';
 import BreadcrumbTrail from '@/components/docs/BreadcrumbTrail';
+import PageHead from '@/components/marketing/site/PageHead';
 import { getAllBlogPosts } from '@/lib/content';
 import { blogIndexJsonLd, blogIndexBreadcrumbJsonLd } from '@/lib/content/seo';
 import { METADATA_BASE_URL, DEFAULT_OG_IMAGE, DEFAULT_TWITTER_IMAGE } from '@/lib/metadata';
@@ -41,7 +42,7 @@ export default async function DocsIndexPage() {
   const breadcrumbJsonLd = blogIndexBreadcrumbJsonLd();
 
   return (
-    <section className="px-4 sm:px-8 lg:px-14 py-16 lg:py-24">
+    <section className="px-4 sm:px-8">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
@@ -50,26 +51,16 @@ export default async function DocsIndexPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
       />
-      <div className="max-w-6xl mx-auto">
+      <div className="mx-auto max-w-[1200px] pt-10 pb-24 sm:pt-14 lg:pb-32">
         <BreadcrumbTrail
           items={[
             { name: t('breadcrumbHome'), href: '/' },
             { name: t('breadcrumbDocs') },
           ]}
         />
-        <header className="mb-12 lg:mb-16">
-          <p className="font-mono text-[11px] uppercase tracking-widest text-blue-500 mb-3">
-            {t('docsEyebrow')}
-          </p>
-          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-bold text-neutral-100 tracking-tight mb-4">
-            {t('docsTitle')}
-          </h1>
-          <p className="text-neutral-300 text-[15px] leading-relaxed max-w-2xl">
-            {t('docsIntro')}
-          </p>
-        </header>
+        <PageHead title={t('docsTitle')} lede={t('docsIntro')} className="mt-6 mb-12 lg:mb-16" />
 
-        <div className="grid gap-5 sm:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {posts.map((post) => (
             <BlogCard key={post.slug} post={post} dateLabel={fmt.format(new Date(post.date))} />
           ))}

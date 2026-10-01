@@ -3,6 +3,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import { CURATED_ICONS, ICON_COLORS, ICON_COLOR_HEX } from './PageIcon';
 import { X, Smile, Star, Trash2, Upload, ImageIcon, Loader2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { Tabs, TabsList, TabsTab } from '@/components/ui/tabs';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Tooltip } from '@/components/ui/tooltip';
+import { cn } from '@/lib/cn';
 
 const POPULAR_EMOJIS = [
   '😊', '🚀', '📝', '📅', '💻', '🎨',
@@ -33,6 +38,7 @@ export default function IconPicker({
   anchorRef,
 }: IconPickerProps) {
   const t = useTranslations('IconPicker');
+  const tUi = useTranslations('UI');
 
   const initialTab = (): 'emoji' | 'lucide' | 'upload' => {
     if (currentIcon?.startsWith('lucide:')) return 'lucide';
@@ -203,131 +209,104 @@ export default function IconPicker({
       ref={pickerRef}
       style={pickerStyle}
       onClick={(e) => e.stopPropagation()}
-      className={`z-50 bg-neutral-850 border border-neutral-800 shadow-2xl p-4 w-72 rounded-lg text-left text-neutral-200 animate-fade-in animate-duration-150 ${coords ? '' : 'absolute'}`}
+      className={cn(
+        'z-50 w-72 rounded-surface bg-float p-3 text-left text-fg-2 shadow-float animate-fade-in',
+        !coords && 'absolute',
+      )}
     >
-      <div className="flex items-center justify-between pb-3 border-b border-neutral-800 mb-3">
-        <span className="text-xs font-medium text-neutral-400">{t('title')}</span>
-        <div className="flex items-center gap-1.5">
+      <div className="mb-1 flex items-center justify-between gap-2 pl-1">
+        <span className="text-xs font-medium text-fg-3">{t('title')}</span>
+        <div className="flex items-center">
           {currentIcon && (
-            <button
-              onClick={handleRemove}
-              className="p-1 hover:bg-neutral-800 text-red-400 hover:text-red-300 rounded transition-colors cursor-pointer"
-              title={t('remove')}
-            >
-              <Trash2 size={13} />
-            </button>
+            <Tooltip content={t('remove')}>
+              <Button variant="ghost" size="icon-sm" onClick={handleRemove} aria-label={t('remove')} className="hover:text-red-400">
+                <Trash2 />
+              </Button>
+            </Tooltip>
           )}
-          <button
-            onClick={onClose}
-            className="p-1 hover:bg-neutral-800 text-neutral-500 hover:text-neutral-300 rounded transition-colors cursor-pointer"
-          >
-            <X size={13} />
-          </button>
+          <Button variant="ghost" size="icon-sm" onClick={onClose} aria-label={tUi('close')}>
+            <X />
+          </Button>
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex border-b border-neutral-850 mb-3 text-xs">
-        <button
-          onClick={() => setActiveTab('emoji')}
-          className={`flex-1 pb-2 flex items-center justify-center gap-1.5 transition-colors font-medium border-b-2 cursor-pointer ${
-            activeTab === 'emoji'
-              ? 'border-signal text-fg'
-              : 'border-transparent text-neutral-500 hover:text-neutral-300'
-          }`}
-        >
-          <Smile size={13} />
-          <span>{t('tabEmoji')}</span>
-        </button>
-        <button
-          onClick={() => setActiveTab('lucide')}
-          className={`flex-1 pb-2 flex items-center justify-center gap-1.5 transition-colors font-medium border-b-2 cursor-pointer ${
-            activeTab === 'lucide'
-              ? 'border-signal text-fg'
-              : 'border-transparent text-neutral-500 hover:text-neutral-300'
-          }`}
-        >
-          <Star size={13} />
-          <span>{t('tabIcon')}</span>
-        </button>
-        <button
-          onClick={() => setActiveTab('upload')}
-          className={`flex-1 pb-2 flex items-center justify-center gap-1.5 transition-colors font-medium border-b-2 cursor-pointer ${
-            activeTab === 'upload'
-              ? 'border-signal text-fg'
-              : 'border-transparent text-neutral-500 hover:text-neutral-300'
-          }`}
-        >
-          <Upload size={13} />
-          <span>{t('tabUpload')}</span>
-        </button>
-      </div>
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'emoji' | 'lucide' | 'upload')} className="mb-3">
+        <TabsList>
+          <TabsTab value="emoji" className="flex-1 justify-center"><Smile className="size-3.5" />{t('tabEmoji')}</TabsTab>
+          <TabsTab value="lucide" className="flex-1 justify-center"><Star className="size-3.5" />{t('tabIcon')}</TabsTab>
+          <TabsTab value="upload" className="flex-1 justify-center"><Upload className="size-3.5" />{t('tabUpload')}</TabsTab>
+        </TabsList>
+      </Tabs>
 
       {/* Emoji Panel */}
       {activeTab === 'emoji' && (
-        <div className="space-y-3">
-          <div className="grid grid-cols-8 gap-1 max-h-36 overflow-y-auto pr-1">
+        <div className="flex flex-col gap-3">
+          <div className="grid max-h-36 grid-cols-8 gap-1 overflow-y-auto pr-1">
             {POPULAR_EMOJIS.map((emoji) => (
               <button
                 key={emoji}
+                type="button"
                 onClick={() => handleEmojiClick(emoji)}
-                className="w-7 h-7 flex items-center justify-center text-base hover:bg-neutral-800 rounded transition-colors cursor-pointer"
+                className="flex size-7 cursor-pointer items-center justify-center rounded-sm text-base transition-colors hover:bg-hover"
               >
                 {emoji}
               </button>
             ))}
           </div>
 
-          <form onSubmit={handleCustomEmojiSubmit} className="flex gap-2 pt-2 border-t border-neutral-850">
-            <input
-              type="text"
+          <form onSubmit={handleCustomEmojiSubmit} className="flex gap-2 border-t border-line pt-3">
+            <Input
+              size="sm"
               placeholder={t('customEmojiPlaceholder')}
+              aria-label={t('customEmojiPlaceholder')}
               value={customEmoji}
               onChange={(e) => setCustomEmoji(e.target.value)}
               maxLength={4}
-              className="flex-1 bg-neutral-950 border border-neutral-800 rounded px-2.5 py-1 text-xs text-white placeholder:text-neutral-600 focus:outline-none focus:border-neutral-700"
+              className="flex-1"
             />
-            <button
-              type="submit"
-              disabled={!customEmoji.trim()}
-              className="px-2.5 py-1 bg-neutral-800 hover:bg-neutral-750 disabled:opacity-40 text-xs font-medium text-white rounded transition-colors cursor-pointer"
-            >
+            <Button type="submit" size="sm" disabled={!customEmoji.trim()}>
               {t('add')}
-            </button>
+            </Button>
           </form>
         </div>
       )}
 
       {/* Lucide Panel */}
       {activeTab === 'lucide' && (
-        <div className="space-y-3">
+        <div className="flex flex-col gap-3">
           {/* Color Selector */}
-          <div className="flex justify-between items-center gap-1 py-1">
+          <div className="flex items-center justify-between gap-1 px-0.5 py-1">
             {Object.keys(ICON_COLORS).map((colorKey) => (
               <button
                 key={colorKey}
+                type="button"
                 onClick={() => handleColorClick(colorKey)}
                 style={{ backgroundColor: ICON_COLOR_HEX[colorKey] }}
-                className={`w-4 h-4 rounded-full border transition-all cursor-pointer ${
+                aria-label={colorKey}
+                aria-pressed={selectedColor === colorKey}
+                className={cn(
+                  'size-4 cursor-pointer rounded-full transition-[box-shadow,scale]',
                   selectedColor === colorKey
-                    ? 'border-white scale-110 shadow-sm'
-                    : 'border-transparent hover:scale-105'
-                }`}
+                    ? 'scale-110 shadow-[0_0_0_2px_var(--color-float),0_0_0_3.5px_var(--color-fg)]'
+                    : 'shadow-[inset_0_0_0_1px_var(--color-line)] hover:scale-105',
+                )}
                 title={colorKey}
               />
             ))}
           </div>
 
           {/* Icons Grid */}
-          <div className="grid grid-cols-8 gap-1 max-h-36 overflow-y-auto pr-1">
+          <div className="grid max-h-36 grid-cols-8 gap-1 overflow-y-auto pr-1">
             {Object.entries(CURATED_ICONS).map(([name, IconComponent]) => {
-              const colorClass = selectedColor === 'default' ? 'text-neutral-400 group-hover:text-neutral-200' : ICON_COLORS[selectedColor];
+              const colorClass = selectedColor === 'default' ? 'text-fg-3 group-hover:text-fg' : ICON_COLORS[selectedColor];
               return (
                 <button
                   key={name}
+                  type="button"
                   onClick={() => handleLucideClick(name)}
-                  className="group w-7 h-7 flex items-center justify-center hover:bg-neutral-800 rounded transition-colors cursor-pointer"
+                  className="group flex size-7 cursor-pointer items-center justify-center rounded-sm transition-colors hover:bg-hover"
                   title={name}
+                  aria-label={name}
                 >
                   <IconComponent size={14} className={`${colorClass} transition-colors`} />
                 </button>
@@ -339,29 +318,30 @@ export default function IconPicker({
 
       {/* Upload Panel */}
       {activeTab === 'upload' && (
-        <div className="space-y-3">
+        <div className="flex flex-col gap-3">
           {/* Preview / drop zone */}
           <button
             type="button"
             onClick={() => fileInputRef.current?.click()}
             disabled={isUploading}
-            className="w-full h-28 border border-dashed border-neutral-700 hover:border-neutral-500 rounded-lg flex flex-col items-center justify-center gap-2 transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-not-allowed overflow-hidden relative"
+            className="relative flex h-28 w-full cursor-pointer flex-col items-center justify-center gap-2 overflow-hidden rounded-control border border-dashed border-line-strong transition-colors hover:border-fg-4 hover:bg-hover/40 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {previewUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
               <img
                 src={previewUrl}
                 alt=""
-                className="w-full h-full object-cover rounded-lg"
+                className="size-full rounded-control object-cover"
               />
             ) : (
               <>
-                <ImageIcon size={22} className="text-neutral-600" />
-                <span className="text-xs text-neutral-500">{t('uploadHint')}</span>
+                <ImageIcon size={22} className="text-fg-4" />
+                <span className="text-xs text-fg-3">{t('uploadHint')}</span>
               </>
             )}
             {isUploading && (
-              <div className="absolute inset-0 bg-neutral-900/70 flex items-center justify-center rounded-lg">
-                <Loader2 size={20} className="text-signal-text animate-spin" />
+              <div className="absolute inset-0 flex items-center justify-center rounded-control bg-float/70">
+                <Loader2 size={20} className="animate-spin text-fg-2" />
               </div>
             )}
           </button>
@@ -375,10 +355,10 @@ export default function IconPicker({
           />
 
           {uploadError && (
-            <p className="text-[11px] text-red-400 leading-tight">{uploadError}</p>
+            <p role="alert" className="text-xs leading-tight text-red-400">{uploadError}</p>
           )}
 
-          <p className="text-[10px] text-neutral-600 leading-tight">{t('uploadLimit')}</p>
+          <p className="text-xs leading-snug text-fg-3">{t('uploadLimit')}</p>
         </div>
       )}
     </div>

@@ -1,9 +1,8 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
-import { createPortal } from 'react-dom';
 import { useLocale, useTranslations } from 'next-intl';
-import { Sparkles, X, Plus, ArrowUp, Wrench } from 'lucide-react';
+import { Plus, ArrowUp, Wrench } from 'lucide-react';
 import {
   CHANGELOG,
   CHANGELOG_SEEN_COOKIE,
@@ -13,6 +12,8 @@ import {
   type ChangelogCategory,
   type ChangelogEntry,
 } from '@/lib/changelog';
+import { Dialog, DialogBody, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Badge } from '@/components/ui/badge';
 
 // "What's New": the unread count and the modal it opens, as a hook. The account menu
 // (and the mobile user sheet) supply their own row and call `open()`; the caller must
@@ -37,22 +38,11 @@ function writeSeenCookie(id: string) {
     `${CHANGELOG_SEEN_COOKIE}=${encodeURIComponent(id)}; path=/; max-age=${YEAR_SECONDS}; samesite=lax`;
 }
 
-const CATEGORY_STYLE: Record<ChangelogCategory, { chip: string; dot: string; icon: typeof Plus }> = {
-  new: {
-    chip: 'text-green-400 bg-green-500/10 border-green-500/20',
-    dot: 'bg-green-400',
-    icon: Plus,
-  },
-  improved: {
-    chip: 'text-signal-text bg-signal/10 border-signal/20',
-    dot: 'bg-signal',
-    icon: ArrowUp,
-  },
-  fixed: {
-    chip: 'text-neutral-400 bg-neutral-800 border-neutral-700',
-    dot: 'bg-neutral-500',
-    icon: Wrench,
-  },
+// The category is a kind of change, not a state: told apart by its glyph, not a colour.
+const CATEGORY_ICON: Record<ChangelogCategory, typeof Plus> = {
+  new: Plus,
+  improved: ArrowUp,
+  fixed: Wrench,
 };
 
 export function useWhatsNew() {
@@ -60,14 +50,12 @@ export function useWhatsNew() {
   const locale = useLocale();
 
   const [open, setOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
   // Frozen at open time: the highlight ring must not vanish out from under the
   // reader the moment the cookie is written.
   const [unseenIds, setUnseenIds] = useState<Set<string>>(new Set());
   const [unseenCount, setUnseenCount] = useState(0);
 
   useEffect(() => {
-    setMounted(true);
     setUnseenCount(countUnseenEntries(readSeenCookie()));
   }, []);
 
@@ -102,125 +90,68 @@ export function useWhatsNew() {
     setUnseenCount(0);
   };
 
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [open]);
-
   const formatDate = (date: string) => {
     const d = new Date(`${date}T00:00:00`);
     return Number.isNaN(d.getTime()) ? date : dateFormatter.format(d);
   };
 
-  const modal = (
-    <>
-      {open && mounted && createPortal(
-        <div
-          // z-300 (not the z-[100] most modals use): on mobile this button lives
-          // inside MobileNavWrapper's z-200 workspace bottom sheet, and the modal
-          // portals to document.body — anything lower renders behind the sheet.
-          className="fixed inset-0 bg-black/60 z-300 flex items-center justify-center p-4 md:p-6"
-          onClick={() => setOpen(false)}
-        >
-          <div
-            role="dialog"
-            aria-modal="true"
-            aria-label={t('title')}
-            onClick={(e) => e.stopPropagation()}
-            // Wide and fixed-height rather than narrow and tall: the entry list
-            // grows forever, so a height that tracks the content just produced a
-            // long thin column. `h-[80vh]` gives the panel a stable shape and
-            // `max-h-full` keeps it inside the padded overlay on short viewports.
-            className="w-full max-w-full sm:max-w-4xl h-[80vh] max-h-full bg-neutral-850 border border-neutral-800 rounded-lg modal-shadow flex flex-col overflow-hidden animate-scale-in"
-          >
-            {/* Header */}
-            <div className="flex items-start justify-between gap-3 px-5 py-4 border-b border-neutral-800 bg-neutral-900/30 shrink-0">
-              <div className="flex items-center gap-2.5 min-w-0">
-                <div className="w-7 h-7 rounded-md bg-signal/10 border border-signal/20 flex items-center justify-center shrink-0">
-                  <Sparkles size={14} className="text-signal-text" />
-                </div>
-                <div className="min-w-0">
-                  <h2 className="m-0 text-sm font-semibold text-neutral-100 truncate">{t('title')}</h2>
-                  <p className="m-0 text-[11px] text-neutral-500 truncate">
-                    {unseenIds.size > 0 ? t('unseenSubtitle', { count: unseenIds.size }) : t('subtitle')}
-                  </p>
-                </div>
+  // Wide and a fixed height (`full`) rather than narrow and tall: the list grows forever,
+  // so a height that tracked the content produced a long thin column.
+  const modal = open ? (
+    <Dialog open onOpenChange={(next) => { if (!next) setOpen(false); }}>
+      <DialogContent size="full">
+        <DialogHeader>
+          <DialogTitle>{t('title')}</DialogTitle>
+          <DialogDescription>
+            {unseenIds.size > 0 ? t('unseenSubtitle', { count: unseenIds.size }) : t('subtitle')}
+          </DialogDescription>
+        </DialogHeader>
+
+        {/* Timeline */}
+        <DialogBody className="sm:px-6">
+          {groups.map((group) => (
+            <section key={group.date} className="relative pb-1 pl-5">
+              {/* Spine: one continuous rule behind every card of this date. */}
+              <span className="absolute top-2 bottom-0 left-[3px] w-px bg-line" aria-hidden />
+              <span className="absolute top-1.5 left-0 size-[7px] rounded-full bg-line-strong ring-4 ring-float" aria-hidden />
+
+              <h3 className="mb-2 text-xs font-medium text-fg-3">{formatDate(group.date)}</h3>
+
+              {/* Two columns once there is room for them: one would run ~90 characters a line. */}
+              <div className="grid gap-2 pb-4 md:grid-cols-2">
+                {group.entries.map((entry) => {
+                  const CategoryIcon = CATEGORY_ICON[entry.category];
+                  const isUnseen = unseenIds.has(entry.id);
+                  return (
+                    <article
+                      key={entry.id}
+                      className="rounded-control bg-raised px-3.5 py-3 shadow-[inset_0_0_0_1px_var(--color-line)]"
+                    >
+                      <div className="mb-1.5 flex items-center gap-1.5">
+                        <Badge variant="outline" size="sm">
+                          <CategoryIcon className="size-2.5" />
+                          {t(`category_${entry.category}` as 'category_new')}
+                        </Badge>
+                        {isUnseen && <Badge variant="signal" size="sm">{t('badgeNew')}</Badge>}
+                      </div>
+                      <h4 className="mb-1 text-ui leading-snug font-semibold text-fg">
+                        {localizedText(entry.title, locale)}
+                      </h4>
+                      <p className="text-xs leading-relaxed text-fg-2">
+                        {localizedText(entry.summary, locale)}
+                      </p>
+                    </article>
+                  );
+                })}
               </div>
-              <button
-                onClick={() => setOpen(false)}
-                aria-label={t('close')}
-                className="shrink-0 p-1.5 rounded text-neutral-500 hover:text-neutral-200 hover:bg-neutral-800 transition-colors"
-              >
-                <X size={15} />
-              </button>
-            </div>
+            </section>
+          ))}
 
-            {/* Timeline */}
-            <div className="flex-1 overflow-y-auto px-5 py-4">
-              {groups.map((group) => (
-                <div key={group.date} className="relative pl-5 pb-1">
-                  {/* Spine: one continuous rule behind every card of this date. */}
-                  <span className="absolute left-[3px] top-2 bottom-0 w-px bg-neutral-800" aria-hidden />
-                  <span className="absolute left-0 top-1.5 w-[7px] h-[7px] rounded-full bg-neutral-700 ring-4 ring-neutral-850" aria-hidden />
-
-                  <p className="m-0 mb-2 text-[11px] font-medium text-neutral-500">
-                    {formatDate(group.date)}
-                  </p>
-
-                  {/* Two columns once there is room for them. At the panel's new
-                      width a single column would run ~90 characters per line,
-                      which is past comfortable reading length for body copy. */}
-                  <div className="grid gap-2 md:grid-cols-2 pb-4">
-                    {group.entries.map((entry) => {
-                      const style = CATEGORY_STYLE[entry.category];
-                      const CategoryIcon = style.icon;
-                      const isUnseen = unseenIds.has(entry.id);
-                      return (
-                        <div
-                          key={entry.id}
-                          className={`rounded-lg border px-3.5 py-3 transition-colors ${
-                            isUnseen
-                              ? 'border-signal/25 bg-signal/[0.04]'
-                              : 'border-neutral-800 bg-neutral-900/30'
-                          }`}
-                        >
-                          <div className="flex items-center gap-2 mb-1.5">
-                            <span
-                              className={`inline-flex items-center gap-1 text-2xs font-medium px-1.5 py-0.5 rounded-full border leading-none ${style.chip}`}
-                            >
-                              <CategoryIcon size={9} />
-                              {t(`category_${entry.category}` as 'category_new')}
-                            </span>
-                            {isUnseen && (
-                              <span className="flex items-center gap-1 text-[9px] font-semibold text-red-400">
-                                <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
-                                {t('badgeNew')}
-                              </span>
-                            )}
-                          </div>
-                          <h3 className="m-0 mb-1 text-[13px] font-semibold text-neutral-100 leading-snug">
-                            {localizedText(entry.title, locale)}
-                          </h3>
-                          <p className="m-0 text-xs text-neutral-400 leading-relaxed">
-                            {localizedText(entry.summary, locale)}
-                          </p>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
-
-              <p className="m-0 pt-1 pl-5 text-[11px] text-neutral-600">{t('footerNote')}</p>
-            </div>
-          </div>
-        </div>,
-        document.body,
-      )}
-    </>
-  );
+          <p className="pt-1 pl-5 text-xs text-fg-3">{t('footerNote')}</p>
+        </DialogBody>
+      </DialogContent>
+    </Dialog>
+  ) : null;
 
   return { unseenCount, open: handleOpen, modal };
 }

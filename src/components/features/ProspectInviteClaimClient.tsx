@@ -2,10 +2,12 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Loader2, PartyPopper } from 'lucide-react';
+import { AlertCircle, Check, Loader2 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { claimProspectInvite } from '@/lib/actions/prospectInvites';
 import { clearPendingGift } from '@/lib/prospectInvite/pendingGift';
+import { AuthNotice } from '@/components/features/auth/AuthScreen';
+import { Button } from '@/components/ui/button';
 
 type Phase = 'claiming' | 'claimed' | 'error';
 
@@ -68,27 +70,25 @@ export default function ProspectInviteClaimClient({ token, alreadyClaimed = fals
     router.refresh();
   };
 
-  if (phase === 'error') return <p className="text-sm text-red-400">{error}</p>;
+  if (phase === 'error') return <AuthNotice tone="danger" icon={<AlertCircle />}>{error}</AuthNotice>;
 
   if (phase === 'claimed') {
     return (
-      <div className="flex w-full flex-col items-center gap-3">
-        <div className="flex items-center gap-2 text-sm font-medium text-green-400">
-          <PartyPopper size={16} /> {t('claimedTitle', { days: giftDays, tier: tierLabel })}
-        </div>
-        <button
-          onClick={goToApp}
-          className="w-full px-5 py-2.5 rounded-lg text-[13.5px] font-semibold text-ink-fg bg-ink hover:opacity-90 transition-opacity"
-        >
+      <div className="flex w-full flex-col gap-3">
+        <p className="flex items-center gap-2 text-sm font-medium text-fg" role="status">
+          <Check className="size-4 shrink-0 text-green-400" aria-hidden />
+          {t('claimedTitle', { days: giftDays, tier: tierLabel })}
+        </p>
+        <Button variant="primary" size="lg" className="w-full" onClick={goToApp}>
           {t('continueCta')}
-        </button>
+        </Button>
       </div>
     );
   }
 
   return (
-    <div className="flex items-center gap-2 text-sm text-neutral-400">
-      <Loader2 size={16} className="animate-spin" /> {t('claiming')}
-    </div>
+    <p className="flex items-center gap-2 text-sm text-fg-3" role="status">
+      <Loader2 className="size-4 animate-spin" aria-hidden /> {t('claiming')}
+    </p>
   );
 }

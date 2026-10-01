@@ -20,7 +20,7 @@ export default function RecurringBadge({
   seriesId,
   detached,
   rule,
-  size = 10,
+  size = 12,
 }: {
   seriesId?: string | null;
   detached?: boolean | null;
@@ -37,11 +37,11 @@ export default function RecurringBadge({
     : (rule ? formatRuleSummary(rule, t as never, locale) : '') || t('badgeRecurring');
 
   return (
-    <span className="relative shrink-0 inline-flex items-center" title={title}>
-      <Repeat size={size} className={detached ? 'text-neutral-600' : 'text-signal-text/80'} />
+    <span className="relative shrink-0 inline-flex items-center" title={title} role="img" aria-label={title}>
+      <Repeat size={size} className={detached ? 'text-fg-4' : 'text-fg-3'} aria-hidden />
       {detached && (
         <span className="absolute inset-0 flex items-center justify-center" aria-hidden>
-          <span className="h-px bg-neutral-500 rotate-45" style={{ width: size + 3 }} />
+          <span className="h-px bg-fg-4 rotate-45" style={{ width: size + 3 }} />
         </span>
       )}
     </span>

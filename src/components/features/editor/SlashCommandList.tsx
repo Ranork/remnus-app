@@ -35,10 +35,11 @@ export function buildChildCommands(workspaceId: string, parentId: string): Slash
       icon: <FileText size={15} />,
       command: ({ editor, range }) => {
         editor.chain().focus().deleteRange(range).run();
-        createStandalonePage(workspaceId, 'Untitled', parentId).then(({ itemId }) => {
+        // No title: the server names it in the UI language and returns that name.
+        createStandalonePage(workspaceId, '', parentId).then(({ itemId, title }) => {
           editor.commands.insertContent({
             type: 'childBlock',
-            attrs: { itemId, title: 'Untitled', itemType: 'page', icon: null, iconColor: null },
+            attrs: { itemId, title, itemType: 'page', icon: null, iconColor: null },
           });
         });
       },
@@ -50,10 +51,10 @@ export function buildChildCommands(workspaceId: string, parentId: string): Slash
       icon: <Database size={15} />,
       command: ({ editor, range }) => {
         editor.chain().focus().deleteRange(range).run();
-        createWorkspaceDatabase(workspaceId, 'Untitled', { parentId }).then(result => {
+        createWorkspaceDatabase(workspaceId, '', { parentId }).then(result => {
           editor.commands.insertContent({
             type: 'childBlock',
-            attrs: { itemId: result.itemId, databaseId: result.dbId, title: 'Untitled', itemType: 'database', icon: null, iconColor: null },
+            attrs: { itemId: result.itemId, databaseId: result.dbId, title: result.title, itemType: 'database', icon: null, iconColor: null },
           });
         });
       },

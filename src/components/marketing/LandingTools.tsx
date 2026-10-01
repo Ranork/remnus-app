@@ -17,7 +17,7 @@ import { getTranslations } from 'next-intl/server';
 
 // Canonical list of the current MCP surface — kept in sync with the actual
 // server tool/resource/prompt set so the landing counts below stay accurate.
-const TOOLS = [
+export const TOOLS = [
   { scope: 'read',  tool: 'prepare_context' },
   { scope: 'read',  tool: 'search_workspace' },
   { scope: 'read',  tool: 'list_workspace' },

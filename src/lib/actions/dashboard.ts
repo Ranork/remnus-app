@@ -78,7 +78,7 @@ export async function createDashboard(
     id: itemId,
     workspaceId,
     type: 'dashboard',
-    title: title || 'Untitled',
+    title: title || (await getTranslations('Dashboard'))('untitled'),
     parentId: parentId ?? null,
     sortOrder: 0,
     icon: options?.icon ?? null,

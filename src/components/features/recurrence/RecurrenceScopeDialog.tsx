@@ -1,12 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
-import { createPortal } from 'react-dom';
+import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { AlertTriangle, Info, Repeat, Trash2, Unlink } from 'lucide-react';
+import { AlertTriangle, Info } from 'lucide-react';
 import type { RecurrenceScope } from '@/lib/services/recurrence';
 import { OptionTile } from './parts';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 // The "this / this and following / all" question, shared by deleting a
 // recurring card and by changing its rhythm.
@@ -55,19 +56,12 @@ export default function RecurrenceScopeDialog({
   const [includeDirty, setIncludeDirty] = useState(false);
   const [busy, setBusy] = useState(false);
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape' && !busy) onCancel(); };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [onCancel, busy]);
-
   const current = impact[scope];
   // Remove ("Kaldır tekrarı") never deletes content, so there is nothing to
   // protect — the dirty-content note/checkbox only makes sense for delete/edit.
   const hasDirty = mode !== 'remove' && (current?.dirty ?? 0) > 0;
   const isDelete = mode === 'delete';
   const copy = COPY_KEY[mode];
-  const Icon = isDelete ? Trash2 : mode === 'remove' ? Unlink : Repeat;
 
   /** Each option's own count, so the choice is made with the number visible
    *  rather than after committing to it. */
@@ -77,44 +71,21 @@ export default function RecurrenceScopeDialog({
     return t(copy.impact as 'scopeImpactDelete', { count: entry.affected });
   };
 
-  if (typeof document === 'undefined') return null;
+  return (
+    <Dialog open onOpenChange={(open) => { if (!open && !busy) onCancel(); }}>
+      <DialogContent size="md" className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>{t(copy.title as 'scopeDeleteTitle')}</DialogTitle>
+          <DialogDescription className="text-xs">{t(copy.hint as 'scopeDeleteHint')}</DialogDescription>
+        </DialogHeader>
 
-  return createPortal(
-    <div
-      className="fixed inset-0 bg-black/60 z-300 flex items-center justify-center p-4 md:p-6"
-      onClick={busy ? undefined : onCancel}
-    >
-      <div
-        role="dialog"
-        aria-modal="true"
-        onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-full sm:max-w-md max-h-full bg-neutral-850 border border-neutral-800 rounded-xl modal-shadow flex flex-col overflow-hidden animate-scale-in"
-      >
-        <div className="flex items-center gap-2.5 px-5 py-3.5 border-b border-neutral-800 shrink-0">
-          <div
-            className={`w-7 h-7 rounded-lg border flex items-center justify-center shrink-0 ${
-              isDelete ? 'bg-red-500/10 border-red-500/20' : 'bg-signal/10 border-signal/20'
-            }`}
-          >
-            <Icon size={13} className={isDelete ? 'text-red-400' : 'text-signal-text'} />
-          </div>
-          <div className="min-w-0">
-            <h2 className="m-0 text-sm font-semibold text-neutral-100 truncate">
-              {t(copy.title as 'scopeDeleteTitle')}
-            </h2>
-            <p className="m-0 text-[11px] text-neutral-500 truncate">
-              {t(copy.hint as 'scopeDeleteHint')}
-            </p>
-          </div>
-        </div>
-
-        <div className="flex-1 overflow-y-auto px-5 py-4 flex flex-col gap-3">
+        <DialogBody className="flex flex-col gap-3">
           <div className="grid grid-cols-2 gap-2">
             {scopes.map((id) => (
               <OptionTile
                 key={id}
                 wide
-                tone={isDelete ? 'red' : 'blue'}
+                tone={isDelete ? 'red' : 'signal'}
                 title={t(`${copy.option}_${id}` as 'scopeDelete_this')}
                 subtitle={subtitleFor(id)}
                 selected={scope === id}
@@ -127,8 +98,8 @@ export default function RecurrenceScopeDialog({
               Point at the option that actually does, so "I removed repeat but
               the cards are still there" doesn't read as a bug. */}
           {mode === 'remove' && (
-            <p className="m-0 flex items-start gap-1.5 text-[11px] text-neutral-500 leading-snug">
-              <Info size={11} className="shrink-0 mt-0.5" />
+            <p className="m-0 flex items-start gap-1.5 text-xs text-fg-3 leading-snug">
+              <Info size={14} className="shrink-0 mt-px" aria-hidden />
               <span>{t('scopeRemoveDeleteHint')}</span>
             </p>
           )}
@@ -136,27 +107,22 @@ export default function RecurrenceScopeDialog({
           {/* Content protection. Only shown when there is actually something to
               protect, so the dialog stays quiet in the common case. */}
           {hasDirty && (
-            <div className="rounded-lg border border-amber-500/20 bg-amber-500/[0.06] px-3.5 py-2.5">
-              <p className="m-0 flex items-start gap-1.5 text-[11px] text-amber-300/90 leading-snug">
-                <AlertTriangle size={11} className="shrink-0 mt-0.5" />
+            <div className="rounded-control bg-raised px-3.5 py-2.5 shadow-[inset_0_0_0_1px_var(--color-line)]">
+              <p className="m-0 flex items-start gap-1.5 text-xs text-fg-2 leading-snug">
+                <AlertTriangle size={14} className="shrink-0 mt-px text-fg-3" aria-hidden />
                 <span>{t('scopeDirtyNote', { count: current!.dirty })}</span>
               </p>
               {isDelete && (
                 <label className="mt-2 flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={includeDirty}
-                    onChange={(e) => setIncludeDirty(e.target.checked)}
-                    className="accent-red-500"
-                  />
-                  <span className="text-[11px] text-neutral-400">{t('scopeIncludeDirty')}</span>
+                  <Checkbox size="sm" checked={includeDirty} onCheckedChange={(next) => setIncludeDirty(next)} />
+                  <span className="text-xs text-fg-2">{t('scopeIncludeDirty')}</span>
                 </label>
               )}
             </div>
           )}
-        </div>
+        </DialogBody>
 
-        <div className="flex gap-2 justify-end px-5 py-3 border-t border-neutral-800 shrink-0">
+        <DialogFooter>
           <Button variant="secondary" onClick={onCancel} disabled={busy}>
             {t('cancel')}
           </Button>
@@ -175,9 +141,8 @@ export default function RecurrenceScopeDialog({
           >
             {t(copy.confirm as 'scopeConfirmDelete')}
           </Button>
-        </div>
-      </div>
-    </div>,
-    document.body,
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

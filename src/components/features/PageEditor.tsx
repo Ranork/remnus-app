@@ -11,7 +11,7 @@ import { tabKeys } from './tabs/keys';
 import BlockEditor, { type BlockEditorHandle } from '@/components/features/editor/BlockEditor';
 import PageIcon from './PageIcon';
 import IconPicker from './IconPicker';
-import AgentEditBadge from './AgentEditBadge';
+import PageProvenanceLine from './PageProvenance';
 import SaveStatus, { type SaveState } from './SaveStatus';
 import PageActionsMenu from './PageActionsMenu';
 import { ConfirmDialog } from './ConfirmDialog';
@@ -155,6 +155,9 @@ const PageEditor = forwardRef<PageEditorHandle, PageEditorProps>(function PageEd
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [commentCount, setCommentCount] = useState(0);
   const commentsRef = useRef<HTMLElement>(null);
+  // Bumped by a review in either place (provenance line, knowledge panel) so the other follows.
+  const [reviewSignal, setReviewSignal] = useState(0);
+  const bumpReview = useCallback(() => setReviewSignal((n) => n + 1), []);
   const editorRef = useRef<BlockEditorHandle>(null);
 
   useImperativeHandle(ref, () => ({
@@ -427,16 +430,17 @@ const PageEditor = forwardRef<PageEditorHandle, PageEditorProps>(function PageEd
         </div>
       </div>
 
-      {/* Agent edit stamp */}
-      {initialPage.agentEditedAt && (
-        <div className="flex items-center gap-2 mb-5 -mt-2">
-          <AgentEditBadge
-            agentName={initialPage.agentName ?? null}
-            tokenName={initialPage.agentTokenName ?? null}
-            editedAt={initialPage.agentEditedAt}
-          />
-          <span className="text-xs text-fg-3 select-none">{tDb('agentEditedLabel')}</span>
-        </div>
+      {/* Provenance (R8.8): which agent edited it, the last human edit, review state.
+          Replaces the bare "agent edited" stamp; the row's own stamp still feeds it. */}
+      {initialPage.provenance && (
+        <PageProvenanceLine
+          provenance={initialPage.provenance}
+          workspaceId={database.workspaceId}
+          itemId={initialPage.id}
+          reviewSignal={reviewSignal}
+          onReviewed={bumpReview}
+          className="-mt-2 mb-5"
+        />
       )}
 
       {/* Properties Section — a quiet two-column list: name (with its type glyph)
@@ -624,7 +628,7 @@ const PageEditor = forwardRef<PageEditorHandle, PageEditorProps>(function PageEd
         onCountChange={setCommentCount}
         sectionRef={commentsRef}
       />
-      {!isPeek && <KnowledgeContextPanel workspaceId={database.workspaceId} pageId={initialPage.id} />}
+      {!isPeek && <KnowledgeContextPanel workspaceId={database.workspaceId} pageId={initialPage.id} refreshKey={reviewSignal} onReviewed={bumpReview} />}
       {!isPeek && <PageBacklinksPanel workspaceId={database.workspaceId} pageId={initialPage.id} />}
       {!isPeek && <LocalGraphPanel workspaceId={database.workspaceId} pageId={initialPage.id} />}
 

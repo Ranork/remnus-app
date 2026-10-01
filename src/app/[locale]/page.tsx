@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import LandingBridgeSwitcher from '@/components/marketing/LandingBridgeSwitcher';
+import SiteLanding from '@/components/marketing/site/SiteLanding';
 import { METADATA_BASE_URL, DEFAULT_OG_IMAGE, DEFAULT_TWITTER_IMAGE } from '@/lib/metadata';
 
 export const metadata: Metadata = {
@@ -39,5 +39,5 @@ export const metadata: Metadata = {
 };
 
 export default function HomePage() {
-  return <LandingBridgeSwitcher />;
+  return <SiteLanding home="/" />;
 }

@@ -1,5 +1,5 @@
 import type { Viewport } from 'next';
-import { Onest, JetBrains_Mono, Fraunces } from 'next/font/google';
+import { Onest, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 import { cookies } from 'next/headers';
 import { getLocale } from 'next-intl/server';
@@ -15,11 +15,6 @@ const onest = Onest({
 const jetbrainsMono = JetBrains_Mono({
   subsets: ['latin'],
   variable: '--font-jetbrains-mono',
-});
-const fraunces = Fraunces({
-  subsets: ['latin'],
-  style: ['normal', 'italic'],
-  variable: '--font-fraunces',
 });
 
 export const viewport: Viewport = {
@@ -47,7 +42,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html
       lang={locale}
-      className={`${onest.variable} ${jetbrainsMono.variable} ${fraunces.variable}`}
+      className={`${onest.variable} ${jetbrainsMono.variable}`}
       data-editor-size={editorFontSize}
       data-default-width={defaultPageWidth}
       data-theme={theme ?? 'remnus'}

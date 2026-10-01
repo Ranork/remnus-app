@@ -1,7 +1,10 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { ZoomIn, ZoomOut, RotateCcw, FolderOpen, FolderInput, RefreshCw, Loader2, Check } from 'lucide-react';
+import { ZoomIn, ZoomOut, RotateCcw, FolderOpen, FolderInput, RefreshCw, Check } from 'lucide-react';
 import { useTranslations } from 'next-intl';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { SettingsPage, SettingsSection } from '@/components/ui/settings';
 import {
   applyDesktopZoom, getSavedZoom, round1,
   ZOOM_MIN, ZOOM_MAX, ZOOM_STEP, ZOOM_DEFAULT,
@@ -88,118 +91,84 @@ export default function DesktopTab() {
   const pct = Math.round(zoom * 100);
 
   return (
-    <div>
-      {/* Zoom section */}
-      <div className="py-4 border-b border-neutral-800 space-y-4">
-        <div className="flex items-center justify-between">
-          <div className="min-w-0">
-            <p className="text-sm font-medium text-neutral-200">{t('zoom')}</p>
-          </div>
-          <span className="text-xs text-neutral-500 font-mono tabular-nums bg-neutral-800 px-2 py-0.5 rounded border border-neutral-700/40 shrink-0">
-            {pct}%
-          </span>
-        </div>
-
+    <SettingsPage>
+      <SettingsSection
+        title={t('zoom')}
+        action={<Badge variant="outline" className="font-mono">{pct}%</Badge>}
+      >
         <div className="flex items-center gap-2">
-          <button
-            onClick={() => changeZoom(zoom - ZOOM_STEP)}
-            disabled={zoom <= ZOOM_MIN}
-            className="flex-1 flex items-center justify-center gap-1.5 py-1.5 text-xs text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/40 disabled:opacity-30 disabled:cursor-not-allowed border border-neutral-800 cursor-pointer rounded transition-colors"
-          >
-            <ZoomOut size={12} />
+          <Button size="sm" className="flex-1" onClick={() => changeZoom(zoom - ZOOM_STEP)} disabled={zoom <= ZOOM_MIN}>
+            <ZoomOut />
             {t('zoomOut')}
-          </button>
-
-          <button
+          </Button>
+          <Button
+            size="icon-sm"
             onClick={() => changeZoom(ZOOM_DEFAULT)}
             disabled={zoom === ZOOM_DEFAULT}
-            className="flex items-center justify-center p-1.5 text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/40 disabled:opacity-30 disabled:cursor-not-allowed border border-neutral-800 cursor-pointer rounded transition-colors"
+            aria-label={t('resetZoom')}
             title={t('resetZoom')}
           >
-            <RotateCcw size={12} />
-          </button>
-
-          <button
-            onClick={() => changeZoom(zoom + ZOOM_STEP)}
-            disabled={zoom >= ZOOM_MAX}
-            className="flex-1 flex items-center justify-center gap-1.5 py-1.5 text-xs text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/40 disabled:opacity-30 disabled:cursor-not-allowed border border-neutral-800 cursor-pointer rounded transition-colors"
-          >
-            <ZoomIn size={12} />
+            <RotateCcw />
+          </Button>
+          <Button size="sm" className="flex-1" onClick={() => changeZoom(zoom + ZOOM_STEP)} disabled={zoom >= ZOOM_MAX}>
+            <ZoomIn />
             {t('zoomIn')}
-          </button>
+          </Button>
         </div>
-
         <input
           type="range"
           min={ZOOM_MIN}
           max={ZOOM_MAX}
           step={ZOOM_STEP}
           value={zoom}
+          aria-label={t('zoom')}
           onChange={(e) => changeZoom(parseFloat(e.target.value))}
-          className="w-full accent-signal"
+          className="w-full cursor-pointer accent-signal"
         />
-      </div>
+      </SettingsSection>
 
-      {/* Download folder section */}
-      <div className="py-4 border-b border-neutral-800 space-y-3">
-        <p className="text-sm font-medium text-neutral-200">{t('downloadFolder')}</p>
-
-        <div className="text-xs text-neutral-500 font-mono truncate bg-neutral-800 px-2.5 py-1.5 rounded border border-neutral-700/40" title={downloadDir ?? undefined}>
-          {downloadDir ?? t('downloadFolderDefault')}
-        </div>
-
-        <div className="flex items-center gap-2">
-          <button
-            onClick={chooseDownloadDir}
-            className="flex-1 flex items-center justify-center gap-1.5 py-1.5 text-xs text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/40 border border-neutral-800 cursor-pointer rounded transition-colors"
-          >
-            <FolderInput size={12} />
-            {t('downloadChooseFolder')}
-          </button>
-
-          <button
-            onClick={resetDownloadDir}
-            disabled={!downloadDir}
-            className="flex items-center justify-center gap-1.5 py-1.5 px-3 text-xs text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/40 disabled:opacity-30 disabled:cursor-not-allowed border border-neutral-800 cursor-pointer rounded transition-colors"
-            title={t('downloadFolderReset')}
-          >
-            <FolderOpen size={12} />
-            {t('downloadFolderReset')}
-          </button>
-        </div>
-      </div>
-
-      {/* Updates section */}
-      <div className="py-4 space-y-3">
-        <div className="min-w-0">
-          <p className="text-sm font-medium text-neutral-200">{tUpdater('checkSection')}</p>
-          <p className="text-[11px] text-neutral-500 mt-0.5">{tUpdater('checkHint')}</p>
-        </div>
-
-        <button
-          onClick={checkForUpdates}
-          disabled={updateCheck === 'checking'}
-          className="flex items-center justify-center gap-1.5 w-full py-1.5 text-xs text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/40 disabled:opacity-50 disabled:cursor-not-allowed border border-neutral-800 cursor-pointer rounded transition-colors"
+      <SettingsSection title={t('downloadFolder')}>
+        <p
+          className="truncate rounded-control bg-raised px-2.5 py-1.5 font-mono text-xs text-fg-2 shadow-[inset_0_0_0_1px_var(--color-line)]"
+          title={downloadDir ?? undefined}
         >
-          {updateCheck === 'checking'
-            ? <Loader2 size={12} className="animate-spin" />
-            : <RefreshCw size={12} />}
-          {updateCheck === 'checking' ? tUpdater('checking') : tUpdater('checkButton')}
-        </button>
+          {downloadDir ?? t('downloadFolderDefault')}
+        </p>
+        <div className="flex items-center gap-2">
+          <Button size="sm" className="flex-1" onClick={chooseDownloadDir}>
+            <FolderInput />
+            {t('downloadChooseFolder')}
+          </Button>
+          <Button size="sm" variant="ghost" onClick={resetDownloadDir} disabled={!downloadDir}>
+            <FolderOpen />
+            {t('downloadFolderReset')}
+          </Button>
+        </div>
+      </SettingsSection>
 
+      <SettingsSection title={tUpdater('checkSection')} description={tUpdater('checkHint')}>
+        <Button
+          size="sm"
+          className="self-start"
+          onClick={checkForUpdates}
+          loading={updateCheck === 'checking'}
+        >
+          <RefreshCw />
+          {tUpdater('checkButton')}
+        </Button>
         {updateCheck === 'upToDate' && (
-          <p className="flex items-center gap-1.5 text-[11px] text-green-400">
+          <p className="flex items-center gap-1.5 text-xs text-green-400">
             <Check size={12} className="shrink-0" />
             {tUpdater('upToDate')}
           </p>
         )}
         {updateCheck === 'found' && (
-          <p className="text-[11px] text-signal-text">{tUpdater('availableTitle')}</p>
+          <p className="text-xs text-fg-2">{tUpdater('availableTitle')}</p>
         )}
         {updateCheck === 'error' && (
-          <p className="text-[11px] text-red-400">{tUpdater('checkError')}</p>
+          <p role="alert" className="text-xs text-red-400">{tUpdater('checkError')}</p>
         )}
-      </div>
-    </div>
+      </SettingsSection>
+    </SettingsPage>
   );
 }

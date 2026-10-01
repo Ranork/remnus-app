@@ -93,8 +93,8 @@
 
   /* Shape: 4 tiny · 6 small · 8 control · 12 surface. The Tailwind names are pinned to
      that scale in the app (md = lg, xl = 2xl) so older classes collapse onto it;
-     new code says what it is: rounded-control / rounded-surface. The marketing site
-     keeps Tailwind's defaults (see .marketing-site below). */
+     new code says what it is: rounded-control / rounded-surface. Only the two archived
+     landings (.marketing-site below) keep Tailwind's defaults. */
   --radius-xs: 3px;
   --radius-sm: 4px;
   --radius: 6px;
@@ -164,9 +164,15 @@
   --animate-slide-in-right: slide-in-right 0.25s cubic-bezier(0.16, 1, 0.3, 1) backwards;
   --animate-fade-in: fade-in 0.2s ease-out forwards;
   --animate-scale-in: scale-in 0.2s ease-out backwards;
+  --animate-sheet-up: sheet-up 0.24s cubic-bezier(0.16, 1, 0.3, 1) backwards;
 
   @keyframes slide-in-right {
     from { transform: translateX(100%); }
+    to { transform: none; }
+  }
+  /* A dialog on a phone rises from the bottom edge (ui/dialog.tsx). */
+  @keyframes sheet-up {
+    from { transform: translateY(100%); }
     to { transform: none; }
   }
   @keyframes fade-in {
@@ -178,16 +184,10 @@
     to { opacity: 1; }
   }
   @keyframes tab-fade {
-  --animate-sheet-up: sheet-up 0.24s cubic-bezier(0.16, 1, 0.3, 1) backwards;
     from { opacity: 0; transform: translateY(4px); }
     to   { opacity: 1; transform: translateY(0); }
   }
 }
-  /* A dialog on a phone rises from the bottom edge (ui/dialog.tsx). */
-  @keyframes sheet-up {
-    from { transform: translateY(100%); }
-    to { transform: none; }
-  }
 
 .animate-tab-fade {
   animation: tab-fade 0.18s ease-out both;
@@ -487,9 +487,10 @@
   --chip-pink-bg:       #fce7f3; --chip-pink-text:    #831843; --chip-pink-dot:    #db2777; --chip-pink-group:    rgba(219,39,119,0.08);
 }
 
-/* The marketing site keeps the pre-R8 dark palette and Tailwind's default shape scale
-   until its own pass (R8.x → "pazarlama sitesi"). The light marketing remap further
-   down still wins in the light theme (it is more specific). */
+/* .marketing-site = the two landings kept for reference after R8.7 (/landing-old, the
+   pre-R8.7 home page, and the /landing-next draft): they keep the pre-R8 dark palette and
+   Tailwind's default shape scale. The live site is .site (below), unfrozen. The light
+   remap further down still wins in the light theme (it is more specific). */
 [data-theme="remnus"] .marketing-site,
 [data-theme="remnus"] body:has(.marketing-site) {
   --color-neutral-50:  #d7dae0;
@@ -620,29 +621,6 @@ body:has(.marketing-site) {
   background: #f0fdfa;
   border-color: #5fb9ae;
   color: #0f766e;
-}
-
-/* Prospect Invites gift toast (PendingGiftToast) — same gold accent + glow
-   technique as setup-strip-* above, but this component isn't scoped under
-   .marketing-site (it's a standalone floating toast, styled dark by
-   default like /login), so it needs its own explicit light-mode tuning
-   rather than inheriting the marketing remap. A `color-mix` at the same
-   percentage the dark version uses reads as a barely-there wash against a
-   near-white card, so light mode gets its own hand-picked pale-gold/
-   dark-gold pairing instead — same principle as setup-strip-icon's #e8f7f4/
-   #0f766e pairing above, just gold instead of teal. */
-[data-theme="catppuccin"] .pending-gift-toast {
-  border-color: #e3cb85 !important;
-}
-[data-theme="catppuccin"] .pending-gift-toast-glow {
-  background: radial-gradient(220px circle at 12% 20%, rgba(210, 179, 80, 0.22), transparent 70%) !important;
-}
-[data-theme="catppuccin"] .pending-gift-toast-icon {
-  background: #faf1da !important;
-  border: 1px solid #f0dfa8;
-}
-[data-theme="catppuccin"] .pending-gift-toast-icon svg {
-  color: #8a6d1f !important;
 }
 
 [data-theme="catppuccin"] .marketing-site .marketing-download-card {
@@ -831,20 +809,21 @@ pre,
    (div.react-renderer), whose margin would otherwise collapse up past the title. */
 .prose-editor > :first-child,
 .prose-editor > .react-renderer:first-child > :first-child {
-  font-weight: 600;
-}
-.prose-editor h1 {
-  font-size: 1.5em;
-  line-height: 1.25;
   margin-top: 0;
-  margin: 1.6em 0 0.35em;
 }
+
 .prose-editor h1,
 .prose-editor h2,
 .prose-editor h3 {
   position: relative;
   color: var(--color-fg);
+  font-weight: 600;
+}
+.prose-editor h1 {
+  font-size: 1.5em;
+  line-height: 1.25;
   letter-spacing: -0.02em;
+  margin: 1.6em 0 0.35em;
 }
 .prose-editor h2 {
   font-size: 1.25em;
@@ -852,7 +831,6 @@ pre,
   letter-spacing: -0.015em;
   margin: 1.5em 0 0.3em;
 }
-
 .prose-editor h3 {
   font-size: 1.125em;
   line-height: 1.4;
@@ -970,7 +948,6 @@ pre,
   display: inline-block;
   width: 0.95em;
   height: 0.95em;
-/* Code is literal machine text: JetBrains Mono, on a raised well with a hairline. */
   margin-right: 0.18em;
   vertical-align: -0.14em;
   /* A mask, so the glyph takes the link's own colour in every theme. */
@@ -979,6 +956,7 @@ pre,
   mask: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='24'%20height='24'%20viewBox='0%200%2024%2024'%20fill='none'%20stroke='black'%20stroke-width='2.2'%20stroke-linecap='round'%20stroke-linejoin='round'%3E%3Cpath%20d='M14%202H6a2%202%200%200%200-2%202v16a2%202%200%200%200%202%202h12a2%202%200%200%200%202-2V8z'/%3E%3Cpolyline%20points='14%202%2014%208%2020%208'/%3E%3C/svg%3E") center / contain no-repeat;
 }
 
+/* Code is literal machine text: JetBrains Mono, on a raised well with a hairline. */
 .prose-editor code:not(pre code) {
   background: var(--color-raised);
   color: var(--color-fg);
@@ -1079,7 +1057,6 @@ pre,
     color-mix(in srgb, var(--color-raised) 0%, transparent) 0%,
     color-mix(in srgb, var(--color-raised) 82%, transparent) 45%,
     var(--color-raised) 100%
-  line-height: 1rem;
   );
 }
 .prose-editor .code-block-expand-label,
@@ -1088,6 +1065,7 @@ pre,
   align-items: center;
   gap: 0.3rem;
   font-size: 0.75rem;
+  line-height: 1rem;
   font-weight: 500;
   color: var(--color-fg-2);
   padding: 0.3rem 0.75rem;
@@ -1115,13 +1093,21 @@ pre,
 
 .prose-editor ul {
   list-style-type: disc;
-/* A list is one unit: its items sit closer than paragraphs do. */
   padding-left: 1.5em;
   margin: var(--prose-flow) 0;
 }
 .prose-editor ol {
   list-style-type: decimal;
   padding-left: 1.5em;
+  margin: var(--prose-flow) 0;
+}
+/* A list is one unit: its items sit closer than paragraphs do. */
+.prose-editor li {
+  margin: 0.25em 0;
+}
+.prose-editor li p {
+  margin: 0;
+}
 .prose-editor li > ul,
 .prose-editor li > ol {
   margin: 0.25em 0;
@@ -1129,16 +1115,8 @@ pre,
 .prose-editor li::marker {
   color: var(--color-fg-3);
 }
-  margin: var(--prose-flow) 0;
-/* Onest has no italic, so a quote is a rule and a quieter voice, not a slant. */
-}
-.prose-editor li {
-  margin: 0.25em 0;
-}
-.prose-editor li p {
-  margin: 0;
-}
 
+/* Onest has no italic, so a quote is a rule and a quieter voice, not a slant. */
 .prose-editor blockquote {
   border-left: 2px solid var(--color-line-strong);
   padding: 0.125em 0 0.125em 1em;
@@ -1194,13 +1172,21 @@ pre,
   padding-left: 0.125em;
   margin: var(--prose-flow) 0;
 }
+.prose-editor ul[data-type="taskList"] li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.625em;
+  margin: 0.25em 0;
+}
+.prose-editor ul[data-type="taskList"] li > label {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   /* One line box tall, so the box centres on the first line of the item. */
   height: 1.7em;
   user-select: none;
-.prose-editor ul[data-type="taskList"] li {
-  display: flex;
+}
+.prose-editor ul[data-type="taskList"] li > label input[type="checkbox"] {
   -webkit-appearance: none;
   appearance: none;
   display: grid;
@@ -1211,14 +1197,6 @@ pre,
   border: 1.5px solid var(--color-line-strong);
   border-radius: var(--radius-sm);
   background: transparent;
-  align-items: flex-start;
-  gap: 0.625em;
-  margin: 0.25em 0;
-}
-.prose-editor ul[data-type="taskList"] li > label {
-  flex-shrink: 0;
-}
-.prose-editor ul[data-type="taskList"] li > label input[type="checkbox"] {
   cursor: pointer;
   transition: background-color 0.12s, border-color 0.12s;
 }
@@ -1230,7 +1208,6 @@ pre,
   border-color: var(--color-fg-3);
 }
 .prose-editor ul[data-type="taskList"] li > label input[type="checkbox"]:checked::before {
-  color: var(--color-fg-3);
   content: '';
   width: 0.7em;
   height: 0.7em;
@@ -1239,6 +1216,7 @@ pre,
   mask: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2024%2024'%20fill='none'%20stroke='black'%20stroke-width='3.5'%20stroke-linecap='round'%20stroke-linejoin='round'%3E%3Cpath%20d='M20%206%209%2017l-5-5'/%3E%3C/svg%3E") center / contain no-repeat;
 }
 .prose-editor ul[data-type="taskList"] li[data-checked="true"] > div {
+  color: var(--color-fg-3);
   text-decoration: line-through;
   text-decoration-color: var(--color-fg-4);
 }
@@ -1271,8 +1249,6 @@ pre,
   font-size: 0.875em;
   text-align: left;
 }
-/* Selected cells take the selection colour. A translucent overlay rather than
-   signal-soft: the light theme's signal-soft is opaque and would hide the text. */
 .prose-editor table td {
   color: var(--color-fg-2);
   background: transparent;
@@ -1281,6 +1257,8 @@ pre,
 .prose-editor table th p {
   margin: 0;
 }
+/* Selected cells take the selection colour. A translucent overlay rather than
+   signal-soft: the light theme's signal-soft is opaque and would hide the text. */
 .prose-editor .selectedCell::after {
   position: absolute;
   content: "";
@@ -1652,9 +1630,9 @@ body.resize-drag-active * {
    also reads correctly in the light (catppuccin) marketing theme.
    ───────────────────────────────────────────────────────────────────────────── */
 .prose-doc {
-  color: var(--color-neutral-300);
-  font-size: 15px;
-  line-height: 1.72;
+  color: var(--color-fg-2);
+  font-size: 16px;
+  line-height: 1.7;
 }
 .prose-doc > :first-child { margin-top: 0; }
 
@@ -1662,9 +1640,9 @@ body.resize-drag-active * {
 .prose-doc h2,
 .prose-doc h3,
 .prose-doc h4 {
-  color: var(--color-neutral-100);
+  color: var(--color-fg);
   font-weight: 600;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.015em;
   scroll-margin-top: 6rem;
 }
 .prose-doc h1 { font-size: 1.9rem; line-height: 1.2; margin: 2rem 0 0.75rem; letter-spacing: -0.02em; }
@@ -1673,49 +1651,55 @@ body.resize-drag-active * {
 .prose-doc h4 { font-size: 1rem; margin: 1.25rem 0 0.4rem; }
 
 .prose-doc p { margin: 0.85rem 0; }
-.prose-doc strong { color: var(--color-neutral-100); font-weight: 600; }
+.prose-doc strong { color: var(--color-fg); font-weight: 600; }
 .prose-doc em { font-style: italic; }
 
+/* Links read like the editor's (.prose-editor a): link colour, a signal underline. */
 .prose-doc a {
-  color: #8aa6ee;
+  color: var(--color-link);
   text-decoration: underline;
-  text-underline-offset: 2px;
-  text-decoration-color: color-mix(in srgb, #8aa6ee 45%, transparent);
+  text-underline-offset: 3px;
+  text-decoration-thickness: 1.5px;
+  text-decoration-color: var(--link-underline, color-mix(in srgb, var(--color-signal) 50%, transparent));
   transition: color 0.15s, text-decoration-color 0.15s;
 }
 .prose-doc a:hover {
-  color: #a6bdf5;
-  text-decoration-color: #8aa6ee;
+  color: var(--color-fg);
+  text-decoration-color: var(--color-signal);
+}
+[data-theme="catppuccin"] .prose-doc a {
+  --link-underline: #d9a100;
+  text-decoration-thickness: 2px;
 }
 
 .prose-doc ul { list-style-type: disc; padding-left: 1.5rem; margin: 0.85rem 0; }
 .prose-doc ol { list-style-type: decimal; padding-left: 1.5rem; margin: 0.85rem 0; }
 .prose-doc li { margin: 0.35rem 0; padding-left: 0.25rem; }
 .prose-doc li > p { margin: 0.3rem 0; }
-.prose-doc li::marker { color: var(--color-neutral-500); }
+.prose-doc li::marker { color: var(--color-fg-4); }
 
 .prose-doc blockquote {
-  border-left: 3px solid var(--color-blue-500);
+  border-left: 3px solid var(--color-line-strong);
   padding: 0.15rem 0 0.15rem 1.1rem;
   margin: 1.1rem 0;
-  color: var(--color-neutral-400);
+  color: var(--color-fg-3);
 }
 .prose-doc blockquote p { margin: 0.4rem 0; }
 
 .prose-doc code:not(pre code) {
-  background: var(--color-neutral-800);
-  color: var(--color-neutral-100);
+  background: var(--color-raised);
+  color: var(--color-fg);
   font-family: var(--font-mono, monospace);
   font-size: 0.85em;
   padding: 0.12em 0.38em;
-  border-radius: 5px;
-  border: 1px solid var(--color-neutral-700);
+  border-radius: 4px;
+  border: 1px solid var(--color-line);
 }
 
 .prose-doc pre {
-  background: var(--color-neutral-900);
-  border: 1px solid var(--color-neutral-800);
-  border-radius: 10px;
+  background: var(--color-raised);
+  border: 1px solid var(--color-line);
+  border-radius: var(--radius-control);
   padding: 1rem 1.1rem;
   overflow-x: auto;
   margin: 1.1rem 0;
@@ -1726,22 +1710,22 @@ body.resize-drag-active * {
   background: none;
   border: none;
   padding: 0;
-  color: var(--color-neutral-200);
+  color: var(--color-fg-2);
   font-family: var(--font-mono, monospace);
   font-size: inherit;
 }
 
 .prose-doc hr {
   border: none;
-  border-top: 1px solid var(--color-neutral-800);
+  border-top: 1px solid var(--color-line);
   margin: 2rem 0;
 }
 
 .prose-doc img {
   max-width: 100%;
   height: auto;
-  border-radius: 10px;
-  border: 1px solid var(--color-neutral-800);
+  border-radius: var(--radius-control);
+  border: 1px solid var(--color-line);
   margin: 1.25rem 0;
 }
 
@@ -1756,16 +1740,72 @@ body.resize-drag-active * {
 }
 .prose-doc th,
 .prose-doc td {
-  border: 1px solid var(--color-neutral-800);
+  border: 1px solid var(--color-line);
   padding: 0.5rem 0.75rem;
   vertical-align: top;
   text-align: left;
 }
 .prose-doc th {
-  background: var(--color-neutral-900);
-  color: var(--color-neutral-100);
+  background: var(--color-raised);
+  color: var(--color-fg);
   font-weight: 600;
 }
-.prose-doc td { color: var(--color-neutral-300); }
+.prose-doc td { color: var(--color-fg-2); }
 .prose-doc td p,
 .prose-doc th p { margin: 0; }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   .site — the public site since R8.7 (home page + MarketingShell pages,
+   components/marketing/site). Unlike .marketing-site it is NOT frozen: it reads the
+   app's own role tokens, so it follows every theme. Product screenshots come as a dark and a light file; the
+   light one shows only in the light theme (lazy images that stay hidden never load).
+   ───────────────────────────────────────────────────────────────────────────── */
+.site-shot-light { display: none; }
+[data-theme="catppuccin"] .site-shot-light { display: block; }
+[data-theme="catppuccin"] .site-shot-dark { display: none; }
+
+/* "Works with" and registry marks read as one monochrome row, not a colour fan. */
+.site-marks svg[aria-label] { fill: currentColor; }
+.site-marks img { filter: brightness(0) invert(0.74) !important; }
+[data-theme="catppuccin"] .site-marks img { filter: brightness(0) invert(0.3) !important; }
+
+/* Hero stage: what an agent just wrote arrives, then settles. */
+@keyframes site-arrive {
+  from { opacity: 0; transform: translateY(-6px) scale(0.98); }
+  to { opacity: 1; transform: none; }
+}
+.site-arrive { animation: site-arrive 0.36s var(--ease-snappy) backwards; }
+@keyframes site-caret {
+  0%, 50% { opacity: 1; }
+  50.01%, 100% { opacity: 0; }
+}
+.site-caret { animation: site-caret 1s steps(1) infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .site-arrive { animation: none; }
+  .site-caret { animation: none; }
+}
+
+/* The savings calculator's range: a raised track, the chosen part in signal. */
+.site-range {
+  appearance: none;
+  height: 6px;
+  border-radius: 9999px;
+  background: linear-gradient(to right, var(--color-signal) var(--fill, 50%), var(--color-hover) var(--fill, 50%));
+  cursor: pointer;
+}
+.site-range::-webkit-slider-thumb {
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 9999px;
+  background: var(--color-sheet);
+  box-shadow: 0 0 0 2px var(--color-signal), 0 2px 6px -2px var(--elev-shade-deep);
+}
+.site-range::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border: none;
+  border-radius: 9999px;
+  background: var(--color-sheet);
+  box-shadow: 0 0 0 2px var(--color-signal), 0 2px 6px -2px var(--elev-shade-deep);
+}

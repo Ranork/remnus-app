@@ -17,10 +17,10 @@ export default function DocsArticleFooter({
   nextLabel: string;
 }) {
   return (
-    <footer className="mt-14 pt-8 border-t border-neutral-800">
+    <footer className="mt-14 border-t border-line pt-8">
       <Link
         href="/docs"
-        className="inline-flex items-center gap-1.5 text-[13px] text-neutral-400 hover:text-neutral-100 transition-colors duration-150"
+        className="inline-flex items-center gap-1.5 text-ui text-fg-3 transition-colors duration-150 hover:text-fg"
       >
         <ChevronLeft size={14} />
         {backLabel}
@@ -31,12 +31,12 @@ export default function DocsArticleFooter({
           {prev ? (
             <Link
               href={`/docs/${prev.slug}`}
-              className="group flex flex-col gap-1 p-4 rounded-lg border border-neutral-800 hover:border-neutral-700 hover:bg-neutral-900/50 transition-colors duration-200"
+              className="group flex flex-col gap-1 rounded-control bg-raised p-4 shadow-[inset_0_0_0_1px_var(--color-line)] transition-colors duration-200 hover:bg-hover/60"
             >
-              <span className="inline-flex items-center gap-1.5 font-mono text-[10.5px] uppercase tracking-wide text-neutral-500">
+              <span className="inline-flex items-center gap-1.5 text-ui text-fg-3">
                 <ArrowLeft size={12} /> {prevLabel}
               </span>
-              <span className="text-[13.5px] font-medium text-neutral-200 group-hover:text-neutral-100 leading-snug">
+              <span className="text-sm leading-snug font-medium text-fg-2 group-hover:text-fg">
                 {prev.title}
               </span>
             </Link>
@@ -47,12 +47,12 @@ export default function DocsArticleFooter({
           {next && (
             <Link
               href={`/docs/${next.slug}`}
-              className="group flex flex-col gap-1 p-4 rounded-lg border border-neutral-800 hover:border-neutral-700 hover:bg-neutral-900/50 transition-colors duration-200 sm:text-right"
+              className="group flex flex-col gap-1 rounded-control bg-raised p-4 shadow-[inset_0_0_0_1px_var(--color-line)] transition-colors duration-200 hover:bg-hover/60 sm:text-right"
             >
-              <span className="inline-flex items-center gap-1.5 font-mono text-[10.5px] uppercase tracking-wide text-neutral-500 sm:justify-end">
+              <span className="inline-flex items-center gap-1.5 text-ui text-fg-3 sm:justify-end">
                 {nextLabel} <ArrowRight size={12} />
               </span>
-              <span className="text-[13.5px] font-medium text-neutral-200 group-hover:text-neutral-100 leading-snug">
+              <span className="text-sm leading-snug font-medium text-fg-2 group-hover:text-fg">
                 {next.title}
               </span>
             </Link>

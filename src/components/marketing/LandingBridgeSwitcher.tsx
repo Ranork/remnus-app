@@ -10,10 +10,11 @@ import LandingPricing from './LandingPricing';
 import LandingDownload from './LandingDownload';
 import LandingClosing from './LandingClosing';
 import LandingFooter from './LandingFooter';
+import { legacyFontClass, legacyFontStyle } from './legacyFont';
 
 export default function LandingBridgeSwitcher() {
   return (
-    <div className="marketing-site min-h-screen bg-neutral-950 text-neutral-100">
+    <div className={`${legacyFontClass} marketing-site min-h-screen bg-neutral-950 text-neutral-100`} style={legacyFontStyle}>
       <LandingNav />
       <main>
         <LandingHero />

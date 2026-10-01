@@ -6,11 +6,13 @@
 // here afterward), since confirming deletion requires the SAME live session
 // that requested it — the emailed link alone isn't sufficient.
 
-import Image from 'next/image';
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
-import { AlertTriangle, ShieldAlert } from 'lucide-react';
+import { AlertCircle, AlertTriangle, ShieldAlert } from 'lucide-react';
+import { AuthNotice, AuthScreen, AuthStatus } from '@/components/features/auth/AuthScreen';
+import { SubmitButton } from '@/components/features/auth/parts';
+import { buttonVariants } from '@/components/ui/button';
 import { db } from '@/db';
 import { accountDeletionTokens } from '@/db/schema';
 import { eq } from 'drizzle-orm';
@@ -48,50 +50,38 @@ export default async function ConfirmAccountDeletePage({
     if (result?.error) redirect(`/account-delete/confirm?token=${encodeURIComponent(token)}&error=1`);
   }
 
+  const cancel = (
+    <Link href="/app" className={buttonVariants({ variant: valid ? 'ghost' : 'secondary', size: 'lg', className: 'w-full' })}>
+      {t('deleteAccountCancel')}
+    </Link>
+  );
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-neutral-950 px-4">
-      <div className="w-full max-w-md rounded-xl border border-neutral-800 bg-neutral-900 p-8">
-        <div className="mb-6 flex items-center gap-2.5">
-          <Image src="/logo-square-dark.png" alt="Remnus" width={30} height={30} className="rounded-lg" />
-          <span className="text-lg font-semibold text-neutral-100">Remnus</span>
-        </div>
-
-        {!valid ? (
-          <>
-            <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-amber-500/12 text-amber-500">
-              <AlertTriangle size={20} />
+    <AuthScreen>
+      {!valid ? (
+        <AuthStatus icon={<AlertTriangle />} tone="warning" title={t('deleteAccountLinkInvalidTitle')} action={cancel}>
+          {t('deleteAccountLinkInvalidBody')}
+        </AuthStatus>
+      ) : (
+        <AuthStatus
+          icon={<ShieldAlert />}
+          tone="danger"
+          title={t('deleteAccountConfirmTitle')}
+          action={
+            <div className="flex w-full flex-col gap-2">
+              {error === '1' && (
+                <AuthNotice tone="danger" icon={<AlertCircle />}>{tErrors('accountDeleteInvalidToken')}</AuthNotice>
+              )}
+              <form action={confirm}>
+                <SubmitButton variant="danger">{t('deleteAccountConfirmButton')}</SubmitButton>
+              </form>
+              {cancel}
             </div>
-            <h1 className="text-lg font-semibold text-neutral-100">{t('deleteAccountLinkInvalidTitle')}</h1>
-            <p className="mt-2 text-sm leading-relaxed text-neutral-400">{t('deleteAccountLinkInvalidBody')}</p>
-          </>
-        ) : (
-          <>
-            <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg bg-red-500/12 text-red-400">
-              <ShieldAlert size={20} />
-            </div>
-            <h1 className="text-lg font-semibold text-neutral-100">{t('deleteAccountConfirmTitle')}</h1>
-            <p className="mt-2 text-sm leading-relaxed text-neutral-400">{t('deleteAccountFinalConfirmBody')}</p>
-            {error === '1' && (
-              <p className="mt-3 text-xs text-red-400 leading-relaxed">{tErrors('accountDeleteInvalidToken')}</p>
-            )}
-            <form action={confirm} className="mt-6">
-              <button
-                type="submit"
-                className="w-full rounded-lg bg-red-500/80 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-red-500 cursor-pointer"
-              >
-                {t('deleteAccountConfirmButton')}
-              </button>
-            </form>
-          </>
-        )}
-
-        <Link
-          href="/app"
-          className="mt-6 inline-block text-xs text-neutral-500 underline-offset-2 hover:text-neutral-300 hover:underline"
+          }
         >
-          {t('deleteAccountCancel')}
-        </Link>
-      </div>
-    </div>
+          {t('deleteAccountFinalConfirmBody')}
+        </AuthStatus>
+      )}
+    </AuthScreen>
   );
 }

@@ -1,4 +1,5 @@
 import LandingFooter from '../LandingFooter';
+import { legacyFontClass, legacyFontStyle } from '../legacyFont';
 import NextNav from './NextNav';
 import NextHero from './NextHero';
 import NextProblem from './NextProblem';
@@ -25,7 +26,7 @@ import {
 // what will I see → how do I stay in control → how do I start → can I trust it.
 export default function NextLanding() {
   return (
-    <div className="marketing-site min-h-screen bg-neutral-950 text-neutral-100">
+    <div className={`${legacyFontClass} marketing-site min-h-screen bg-neutral-950 text-neutral-100`} style={legacyFontStyle}>
       <NextNav />
       <main>
         <NextHero />

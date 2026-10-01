@@ -6,9 +6,11 @@ import { revalidatePath } from 'next/cache';
 import { cookies } from 'next/headers';
 import { getCurrentUser, getCurrentUserAllowingWorkspaceLock } from '@/lib/auth/session';
 import { assertWorkspaceLockAllows } from '@/lib/auth/workspaceLock';
-import type { SchemaColumn } from '@/lib/templates';
+import { stockDatabaseSchema, type SchemaColumn } from '@/lib/templates';
 import type { DatabaseView } from '@/lib/types/views';
 import { getTranslations } from 'next-intl/server';
+import { getRequestLocale } from '@/i18n/requestLocale';
+import { getTemplateText } from '@/lib/starterContent';
 import { isCloudinaryUrl, deleteCloudinaryImage } from '@/lib/cloudinary';
 import { checkCanCreateWorkspace } from '@/lib/services/billing';
 import { recordDeletionTombstone, getRelatedPages } from '@/lib/services/workspace';
@@ -17,6 +19,7 @@ import { syncPageLinks, removeOutgoingPageLinks } from '@/lib/services/pageLinks
 import { snapshotBeforeDelete, maybeSnapshotContentUpdate, type SnapshotActor } from '@/lib/services/snapshots';
 import { deleteWorkspaceData } from '@/lib/services/workspaceDeletion';
 import { touchWorkspaces } from '@/lib/services/changeVersion';
+import { getPageProvenance } from '@/lib/services/pageProvenance';
 
 export type { RelatedPageRef } from '@/lib/services/workspace';
 
@@ -40,6 +43,12 @@ export type WorkspaceItemRow = {
   updatedAt: Date;
   databaseId: string | null;
 };
+
+/** The stored name of something created without one — in the UI language, like every UI-created default. */
+async function untitledName(): Promise<string> {
+  const t = await getTranslations({ locale: await getRequestLocale(), namespace: 'Page' });
+  return t('untitled');
+}
 
 // ── Auth helpers ──────────────────────────────────────────────────────────────
 
@@ -170,7 +179,7 @@ export async function createWorkspace(name: string) {
 
   await db.insert(workspaces).values({
     id,
-    name: name.trim() || 'Untitled',
+    name: name.trim() || (await untitledName()),
     billingOwnerId: user.id,
     createdAt: new Date(),
     // Explicit, not the column's CURRENT_TIMESTAMP default: that writes TEXT, which
@@ -234,7 +243,7 @@ export async function deleteWorkspace(id: string) {
 export async function renameWorkspace(id: string, name: string) {
   await assertWorkspaceManagementAccess(id);
   await db.update(workspaces)
-    .set({ name: name.trim() || 'Untitled', updatedAt: new Date() })
+    .set({ name: name.trim() || (await untitledName()), updatedAt: new Date() })
     .where(eq(workspaces.id, id));
 
   revalidatePath('/', 'layout');
@@ -414,12 +423,15 @@ export async function createStandalonePage(
   const itemId = crypto.randomUUID();
   const pageId = crypto.randomUUID();
   const now = new Date();
+  // '' (the "/page" slash command) gets the UI language's "Untitled"; the caller
+  // shows the returned title, so the sidebar and the child block agree.
+  const storedTitle = title.trim() ? title : await untitledName();
 
   await db.insert(workspaceItems).values({
     id: itemId,
     workspaceId,
     type: 'page',
-    title: title || 'Untitled',
+    title: storedTitle,
     parentId: parentId ?? null,
     sortOrder: 0,
     icon: options?.icon ?? null,
@@ -440,7 +452,7 @@ export async function createStandalonePage(
   if (parentId) autoShareIfParentShared(itemId, parentId, workspaceId, userId);
 
   revalidatePath('/', 'layout');
-  return { itemId, pageId };
+  return { itemId, pageId, title: storedTitle };
 }
 
 export async function createWorkspaceDatabase(
@@ -453,12 +465,16 @@ export async function createWorkspaceDatabase(
   const itemId = crypto.randomUUID();
   const dbId = crypto.randomUUID();
   const now = new Date();
+  // No name ("/database") and no schema (every bare "new database") are filled in the
+  // UI language: the stock Title / Status / ID columns come from the locale's template text.
+  const storedName = name.trim() ? name : await untitledName();
+  const schema = options?.schema ?? stockDatabaseSchema((await getTemplateText(await getRequestLocale())).stock);
 
   await db.insert(workspaceItems).values({
     id: itemId,
     workspaceId,
     type: 'database',
-    title: name,
+    title: storedName,
     parentId: options?.parentId ?? null,
     sortOrder: 0,
     icon: options?.icon ?? null,
@@ -469,13 +485,9 @@ export async function createWorkspaceDatabase(
 
   await db.insert(databases).values({
     id: dbId,
-    name,
+    name: storedName,
     itemId,
-    schema: options?.schema ?? [
-      { id: 'title', name: 'Title', type: 'text' },
-      { id: 'status', name: 'Status', type: 'select', options: ['To Do', 'In Progress', 'Done'] },
-      { id: 'id', name: 'ID', type: 'id' },
-    ],
+    schema,
     views: options?.views ?? null,
     createdAt: now,
     updatedAt: now,
@@ -484,17 +496,28 @@ export async function createWorkspaceDatabase(
   if (options?.parentId) autoShareIfParentShared(itemId, options.parentId, workspaceId, userId);
 
   revalidatePath('/', 'layout');
-  return { itemId, dbId };
+  return { itemId, dbId, title: storedName };
 }
 
 export async function getStandalonePageByItemId(itemId: string) {
   const item = await db.select().from(workspaceItems).where(eq(workspaceItems.id, itemId));
   if (!item[0] || item[0].type !== 'page') return null;
 
-  await assertWorkspaceAccess(item[0].workspaceId);
+  const viewerId = await assertWorkspaceAccess(item[0].workspaceId);
 
   const page = await db.select().from(standalonePages).where(eq(standalonePages.itemId, itemId));
-  return { item: item[0], page: page[0] ?? null };
+  // The line under the title (V2 R8.8). Best-effort: a failure costs the line, not the page.
+  const provenance = page[0]
+    ? await getPageProvenance({
+        workspaceId: item[0].workspaceId,
+        itemId,
+        itemType: 'page',
+        title: item[0].title,
+        content: page[0].content,
+        viewerId,
+      }).catch(() => null)
+    : null;
+  return { item: item[0], page: page[0] ?? null, provenance };
 }
 
 export async function updateStandalonePageContent(itemId: string, content: string) {

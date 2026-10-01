@@ -1,8 +1,7 @@
-﻿'use client';
-import { useState, useEffect, useRef, useLayoutEffect } from 'react';
-import { createPortal } from 'react-dom';
+'use client';
+import { useState, useEffect } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
-import { X, Bot, ChevronDown, RefreshCw, Link2, Check, User } from 'lucide-react';
+import { Bot, ChevronDown, RefreshCw, Link2, Check, User, Loader2 } from 'lucide-react';
 import PageIcon from '@/components/features/PageIcon';
 import { ConfirmDialog } from '@/components/features/ConfirmDialog';
 import ConnectModal from '@/components/features/agents/ConnectModal';
@@ -20,6 +19,20 @@ import {
 } from '@/lib/actions/agentToken';
 import { getMyAgentMetrics, type AgentMetrics } from '@/lib/actions/agentMetrics';
 import AgentSavingsCard from './AgentSavingsCard';
+import { Dialog, DialogBody, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { EmptyState } from '@/components/ui/empty-state';
+import { cn } from '@/lib/cn';
 
 type WsWithTokens = Awaited<ReturnType<typeof getUserWorkspacesWithTokens>>[number];
 type WorkspaceToken = WsWithTokens['tokens'][number];
@@ -31,6 +44,9 @@ type UnifiedRow =
   | { kind: 'oauth'; data: OAuthToken };
 
 type AgentUsage = Awaited<ReturnType<typeof getMyAgentUsage>>;
+
+/** A hairline-divided list in a hairline frame. */
+const LIST = 'flex flex-col divide-y divide-line rounded-surface shadow-[inset_0_0_0_1px_var(--color-line)]';
 
 // ── helpers ───────────────────────────────────────────────────────────────────
 
@@ -49,12 +65,12 @@ function expiryLabel(d: Date | null, t: ReturnType<typeof useTranslations>): str
   return t('tokenExpiresInDays', { days: Math.ceil(ms / 86_400_000) });
 }
 
-function expiryCls(state: ReturnType<typeof expiryState>): string {
-  if (state === 'expired') return 'text-red-400 bg-red-500/10 border-red-500/20';
-  if (state === 'soon')    return 'text-amber-400 bg-amber-500/10 border-amber-500/20';
-  if (state === 'ok')      return 'text-green-400 bg-green-500/10 border-green-500/20';
-  return 'text-neutral-500 bg-neutral-800 border-neutral-700';
-}
+const EXPIRY_BADGE = {
+  expired: 'danger',
+  soon: 'warning',
+  ok: 'outline',
+  never: 'outline',
+} as const;
 
 /** "52 sn önce" / "52s ago" in the UI locale — this used to be English everywhere. */
 function relativeTime(d: Date | null, locale: string): string {
@@ -67,12 +83,8 @@ function relativeTime(d: Date | null, locale: string): string {
   return rtf.format(-Math.floor(s / 86400), 'day');
 }
 
-function formatTool(tool: string): string {
-  return tool.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
-}
-
 // ── AgentTypePicker ─────────────────────────────────────────────────────────────
-// Clickable agent icon that opens a dropdown to set the agent type (brand icon).
+// The agent's brand mark; clicking it sets which agent this connection is.
 function AgentTypePicker({
   override, hint, fallback, canEdit, onPick, t,
 }: {
@@ -83,79 +95,39 @@ function AgentTypePicker({
   onPick: (agentId: string | null) => void;
   t: ReturnType<typeof useTranslations>;
 }) {
-  const [open, setOpen] = useState(false);
-  const btnRef = useRef<HTMLButtonElement>(null);
-  const [coords, setCoords] = useState<{ top: number; left: number } | null>(null);
-
-  // The token list lives inside an `overflow-hidden` card, so an absolutely-positioned
-  // dropdown gets clipped. Render it in a portal with fixed viewport coords instead.
-  useLayoutEffect(() => {
-    if (!open || !btnRef.current) return;
-    const update = () => {
-      const r = btnRef.current!.getBoundingClientRect();
-      const W = 176, GAP = 6;
-      let left = r.left;
-      if (left + W > window.innerWidth - 8) left = window.innerWidth - 8 - W;
-      setCoords({ top: r.bottom + GAP, left: Math.max(8, left) });
-    };
-    update();
-    window.addEventListener('scroll', update, true);
-    window.addEventListener('resize', update);
-    return () => {
-      window.removeEventListener('scroll', update, true);
-      window.removeEventListener('resize', update);
-    };
-  }, [open]);
-
-  const pick = (agentId: string | null) => { setOpen(false); onPick(agentId); };
-
+  const mark = (
+    <AgentMark override={override} hint={hint} size={14} fallback={fallback} />
+  );
+  const box = 'flex size-7 shrink-0 items-center justify-center rounded-control bg-raised shadow-[inset_0_0_0_1px_var(--color-line)]';
+  if (!canEdit) return <span className={box}>{mark}</span>;
   return (
-    <div className="shrink-0">
-      <button
-        ref={btnRef}
-        type="button"
-        onClick={() => canEdit && setOpen(v => !v)}
-        disabled={!canEdit}
-        title={canEdit ? t('agentSetType') : undefined}
-        className={`w-7 h-7 rounded-md flex items-center justify-center border transition-colors ${
-          fallback === 'zap' || override ? 'bg-neutral-800 border-neutral-700' : 'bg-signal/10 border-signal/20'
-        } ${canEdit ? 'hover:border-neutral-500 cursor-pointer' : ''}`}
+    <DropdownMenu>
+      <DropdownMenuTrigger
+        aria-label={t('agentSetType')}
+        title={t('agentSetType')}
+        className={cn(box, 'cursor-pointer transition-shadow hover:shadow-[inset_0_0_0_1px_var(--color-line-strong)] data-popup-open:shadow-[inset_0_0_0_1px_var(--color-line-strong)]')}
       >
-        <AgentMark override={override} hint={hint} size={14} fallback={fallback} />
-      </button>
-      {open && coords && createPortal(
-        <>
-          <div className="fixed inset-0 z-200" onClick={() => setOpen(false)} />
-          <div
-            style={{ top: coords.top, left: coords.left }}
-            className="fixed z-201 w-44 bg-neutral-900 border border-neutral-700 rounded-lg shadow-[0_8px_30px_rgba(0,0,0,0.6)] py-1 max-h-64 overflow-y-auto"
-          >
-            <p className="px-2.5 py-1 text-2xs font-medium text-neutral-500">{t('agentSetType')}</p>
-            {AGENT_MARKS.map(a => (
-              <button
-                key={a.id}
-                onClick={() => pick(a.id)}
-                className="w-full flex items-center gap-2 px-2.5 py-1.5 text-[11px] text-neutral-300 hover:bg-neutral-800 transition-colors"
-              >
-                <MarkIcon mark={a.mark} size={13} />
-                <span className="flex-1 text-left">{a.label}</span>
-                {override === a.id && <Check size={11} className="text-green-400 shrink-0" />}
-              </button>
-            ))}
-            <div className="border-t border-neutral-800 my-1" />
-            <button
-              onClick={() => pick(null)}
-              className="w-full flex items-center gap-2 px-2.5 py-1.5 text-[11px] text-neutral-400 hover:bg-neutral-800 transition-colors"
-            >
-              <span className="w-[13px] text-center text-neutral-500">∅</span>
-              <span className="flex-1 text-left">{t('agentAutoDetect')}</span>
-              {!override && <Check size={11} className="text-green-400 shrink-0" />}
-            </button>
-          </div>
-        </>,
-        document.body,
-      )}
-    </div>
+        {mark}
+      </DropdownMenuTrigger>
+      <DropdownMenuContent className="min-w-48">
+        <DropdownMenuGroup>
+          <DropdownMenuLabel>{t('agentSetType')}</DropdownMenuLabel>
+          {AGENT_MARKS.map(a => (
+            <DropdownMenuItem key={a.id} onClick={() => onPick(a.id)}>
+              <MarkIcon mark={a.mark} size={14} />
+              <span className="flex-1">{a.label}</span>
+              {override === a.id && <Check className="text-signal-text" />}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuGroup>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={() => onPick(null)}>
+          <span aria-hidden className="w-4 text-center text-fg-4">∅</span>
+          <span className="flex-1">{t('agentAutoDetect')}</span>
+          {!override && <Check className="text-signal-text" />}
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
@@ -168,7 +140,6 @@ function TokenRow({
   t: ReturnType<typeof useTranslations>;
   onRevoked: () => void;
 }) {
-  const [revoking, setRevoking] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const locale = useLocale();
 
@@ -178,7 +149,7 @@ function TokenRow({
     ? row.data.name
     : (row.data.displayName ?? row.data.clientName ?? row.data.clientId.slice(0, 12));
   const scope = row.data.scope;
-  const canRevoke = isPat ? row.data.canRevoke : row.data.canRevoke;
+  const canRevoke = row.data.canRevoke;
   const id = row.data.id;
 
   // Brand icon: explicit agentName override → else inferred from name/clientName → else fallback.
@@ -193,36 +164,14 @@ function TokenRow({
     } catch { /* silent */ }
   };
 
+  // Async: the confirm dialog keeps a spinner until the token is gone, then the list
+  // reload unmounts this row (and the dialog with it).
   const doRevoke = async () => {
+    if (isPat) await revokeAgentToken(id);
+    else        await revokeOAuthToken(id);
     setShowConfirm(false);
-    setRevoking(true);
-    try {
-      if (isPat) await revokeAgentToken(id);
-      else        await revokeOAuthToken(id);
-      onRevoked();
-    } catch { /* silent */ }
-    finally { setRevoking(false); }
+    onRevoked();
   };
-
-  const expiryBadge = isPat
-    ? (() => {
-        const state = expiryState(row.data.expiresAt);
-        return (
-          <span className={`text-[9px] font-semibold px-1.5 py-0.5 rounded-full border shrink-0 ${expiryCls(state)}`}>
-            {expiryLabel(row.data.expiresAt, t)}
-          </span>
-        );
-      })()
-    : (
-        <span className="flex items-center gap-1 text-[9px] font-semibold px-1.5 py-0.5 rounded-full border shrink-0 text-green-400 bg-green-500/10 border-green-500/20" title={t('tokenAutoRenewingHint')}>
-          <RefreshCw size={8} />
-          {t('tokenAutoRenewing')}
-        </span>
-      );
-
-  const subline = isPat
-    ? `${row.data.tokenPrefix}… · ${t('lastUsed')}: ${row.data.lastUsedAt ? relativeTime(row.data.lastUsedAt, locale) : t('never')}`
-    : `OAuth · ${relativeTime(row.data.createdAt, locale)}`;
 
   // Whose agent this is: anyone's in the workspace, or — for a PAT — nobody's once the
   // creator's account is gone.
@@ -240,7 +189,7 @@ function TokenRow({
     : null;
 
   return (
-    <div className="flex items-center gap-2.5 p-3 group">
+    <li className="group flex items-start gap-3 px-3 py-3">
       <AgentTypePicker
         override={override}
         hint={iconHint}
@@ -249,52 +198,58 @@ function TokenRow({
         onPick={handlePickAgent}
         t={t}
       />
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-1.5 flex-wrap">
-          <span className="text-xs font-semibold text-neutral-200 truncate">{name}</span>
-          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full border shrink-0 ${
-            isPat
-              ? 'text-neutral-400 bg-neutral-800 border-neutral-700'
-              : 'text-signal-text bg-signal/10 border-signal/20'
-          }`}>
-            {isPat ? 'PAT' : 'OAuth'}
-          </span>
-          <span className={`text-[9px] font-bold px-1.5 py-0.5 rounded-full border shrink-0 ${
-            scope === 'write'
-              ? 'text-amber-400 bg-amber-500/10 border-amber-500/20'
-              : 'text-signal-text bg-signal/10 border-signal/20'
-          }`}>
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="mr-0.5 truncate text-ui font-medium text-fg">{name}</span>
+          <Badge variant={scope === 'write' ? 'signal' : 'neutral'} size="sm">
             {scope === 'write' ? t('tokenScopeWrite') : t('tokenScopeRead')}
-          </span>
-          {expiryBadge}
+          </Badge>
+          {isPat ? (
+            <Badge variant={EXPIRY_BADGE[expiryState(row.data.expiresAt)]} size="sm">
+              {expiryLabel(row.data.expiresAt, t)}
+            </Badge>
+          ) : (
+            <Badge variant="outline" size="sm" title={t('tokenAutoRenewingHint')}>
+              <RefreshCw className="size-2.5" />
+              {t('tokenAutoRenewing')}
+            </Badge>
+          )}
+          <Badge variant="outline" size="sm">{isPat ? 'PAT' : 'OAuth'}</Badge>
         </div>
         <div
-          className="flex items-center gap-1.5 mt-0.5 min-w-0 text-[10px]"
-          title={owner && !owner.isYou ? t('tokenOwnerTitle', { name: [owner.name, owner.email].filter(Boolean).join(' · ') || '—' }) : undefined}
+          className="mt-1 flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 text-xs"
+          title={owner && !owner.isYou ? t('tokenOwnerTitle', { name: [owner.name, owner.email].filter(Boolean).join(', ') || '—' }) : undefined}
         >
-          <User size={10} className="text-neutral-500 shrink-0" />
-          <span className={`truncate ${owner ? 'text-neutral-300' : 'text-neutral-500 italic'}`}>{ownerLabel}</span>
-          {ownerEmail && <span className="text-neutral-500 truncate hidden sm:inline">{ownerEmail}</span>}
-          {roleLabel && <span className="text-neutral-500 shrink-0">· {roleLabel}</span>}
+          <User size={12} className="shrink-0 text-fg-4" />
+          <span className={cn('truncate', owner ? 'text-fg-2' : 'text-fg-3 italic')}>{ownerLabel}</span>
+          {ownerEmail && <span className="hidden truncate text-fg-3 sm:inline">{ownerEmail}</span>}
+          {roleLabel && <span className="shrink-0 text-fg-3">({roleLabel})</span>}
           {owner && !owner.active && (
-            <span
-              className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full border shrink-0 text-red-400 bg-red-500/10 border-red-500/20"
-              title={t('tokenOwnerNotMemberHint')}
-            >
+            <Badge variant="danger" size="sm" title={t('tokenOwnerNotMemberHint')}>
               {t('tokenOwnerNotMember')}
-            </span>
+            </Badge>
           )}
         </div>
-        <p className="text-[10px] text-neutral-500 mt-0.5 font-mono">{subline}</p>
+        <p className="mt-0.5 flex flex-wrap gap-x-3 text-xs text-fg-3">
+          {isPat ? (
+            <>
+              <span className="font-mono">{row.data.tokenPrefix}…</span>
+              <span>{t('lastUsed')}: {row.data.lastUsedAt ? relativeTime(row.data.lastUsedAt, locale) : t('never')}</span>
+            </>
+          ) : (
+            <span>{relativeTime(row.data.createdAt, locale)}</span>
+          )}
+        </p>
       </div>
       {canRevoke && (
-        <button
+        <Button
+          size="xs"
+          variant="ghost"
           onClick={() => setShowConfirm(true)}
-          disabled={revoking}
-          className="shrink-0 text-[10px] font-semibold text-red-400 hover:text-red-300 bg-red-500/10 hover:bg-red-500/20 px-2 py-1 rounded border border-red-500/20 transition-colors opacity-0 group-hover:opacity-100 disabled:opacity-50"
+          className="shrink-0 hover:bg-red-500/12 hover:text-red-400 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-visible:opacity-100 sm:data-popup-open:opacity-100"
         >
-          {revoking ? t('revoking') : t('revokeToken')}
-        </button>
+          {t('revokeToken')}
+        </Button>
       )}
       {showConfirm && (
         <ConfirmDialog
@@ -306,7 +261,7 @@ function TokenRow({
           onCancel={() => setShowConfirm(false)}
         />
       )}
-    </div>
+    </li>
   );
 }
 
@@ -327,33 +282,29 @@ function WorkspaceSection({
   ];
 
   return (
-    <div className="space-y-1">
-      {/* Workspace header */}
-      <div className="flex items-center gap-2 px-1 mb-1">
+    <section className="flex flex-col gap-2">
+      <h3 className="flex items-center gap-2 px-1 text-xs font-medium text-fg-3">
         {ws.icon
-          ? <PageIcon icon={ws.icon} iconColor={ws.iconColor} size={13} />
-          : <div className="w-3.5 h-3.5 rounded bg-neutral-700 flex items-center justify-center text-[8px] font-bold text-neutral-400">
+          ? <PageIcon icon={ws.icon} iconColor={ws.iconColor} size={14} />
+          : <span className="flex size-3.5 items-center justify-center rounded-sm bg-hover text-2xs leading-none font-semibold text-fg-3">
               {ws.name.charAt(0).toUpperCase()}
-            </div>
+            </span>
         }
-        <span className="text-2xs font-medium text-neutral-400 truncate flex-1">
-          {ws.name}
-        </span>
-      </div>
+        <span className="truncate">{ws.name}</span>
+      </h3>
 
-      {/* Token list or empty state */}
-      <div className="divide-y divide-neutral-800 border border-neutral-800 rounded-lg overflow-hidden bg-neutral-900/20">
-        {rows.length === 0 ? (
-          <div className="px-3 py-2.5">
-            <span className="text-[11px] text-neutral-600 italic">{t('agentsWorkspaceEmpty')}</span>
-          </div>
-        ) : (
-          rows.map(row => (
+      {rows.length === 0 ? (
+        <p className="rounded-surface px-3 py-2.5 text-xs text-fg-3 shadow-[inset_0_0_0_1px_var(--color-line)]">
+          {t('agentsWorkspaceEmpty')}
+        </p>
+      ) : (
+        <ul className={LIST}>
+          {rows.map(row => (
             <TokenRow key={`${row.kind}-${row.data.id}`} row={row} t={t} onRevoked={onRevoked} />
-          ))
-        )}
-      </div>
-    </div>
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }
 
@@ -400,80 +351,38 @@ export default function AgentsModal({ onClose }: Props) {
 
   useEffect(() => { load(); }, []);
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [onClose]);
-
   return (
-    <>
-    <div
-      className="fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-4 md:p-6"
-      onClick={onClose}
-    >
-      <div
-        className="w-full max-w-full sm:max-w-2xl bg-neutral-850 border border-neutral-800 rounded-lg modal-shadow flex flex-col overflow-hidden animate-scale-in"
-        style={{ maxHeight: '88vh' }}
-        onClick={e => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-neutral-800 bg-neutral-900/30 shrink-0">
-          <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-md bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
-              <Bot size={14} className="text-amber-400" />
-            </div>
-            <span className="text-sm font-semibold text-neutral-100">{t('agentsTitle')}</span>
-            {totalTokens > 0 && (
-              <span className="text-[10px] font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-1.5 py-0.5 rounded-full">
-                {totalTokens}
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-1.5">
-            <button
-              onClick={() => setShowConnect(true)}
-              className="flex items-center gap-1.5 text-[11px] font-semibold text-ink-fg bg-ink hover:bg-ink/88 px-3 py-1.5 rounded-md transition-colors"
-            >
-              <Link2 size={12} />
+    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent size="lg">
+        <DialogHeader className="flex-row items-center gap-3">
+          <DialogTitle className="flex min-w-0 flex-1 items-center gap-2">
+            <span className="truncate">{t('agentsTitle')}</span>
+            {totalTokens > 0 && <Badge>{totalTokens}</Badge>}
+          </DialogTitle>
+          {totalTokens > 0 && (
+            <Button size="sm" variant="primary" onClick={() => setShowConnect(true)}>
+              <Link2 />
               {t('connectButton')}
-            </button>
-            <button
-              onClick={onClose}
-              className="p-1 text-neutral-500 hover:text-neutral-200 transition-colors rounded hover:bg-neutral-800"
-            >
-              <X size={16} />
-            </button>
-          </div>
-        </div>
+            </Button>
+          )}
+        </DialogHeader>
 
-        {/* Body */}
-        <div className="overflow-y-auto flex-1 p-6 space-y-5">
+        <DialogBody className="flex flex-col gap-6">
           {/* What the agents have saved, first: it is why the rest of this list exists. */}
           {!loading && totalTokens > 0 && <AgentSavingsCard variant="modal" metrics={metrics} />}
 
           {loading ? (
-            <div className="py-16 flex justify-center">
-              <div className="w-5 h-5 rounded-full border-2 border-neutral-800 border-t-neutral-500 animate-spin" />
+            <div role="status" className="flex justify-center py-16">
+              <Loader2 size={18} className="animate-spin text-fg-3" />
             </div>
           ) : totalTokens === 0 ? (
-            /* First-run: no agent connected anywhere → centered connect CTA */
-            <div className="py-12 flex flex-col items-center gap-4 text-center">
-              <div className="w-14 h-14 rounded-2xl bg-amber-500/10 border border-amber-500/20 flex items-center justify-center">
-                <Bot size={26} className="text-amber-400" />
-              </div>
-              <div className="space-y-1.5 max-w-sm">
-                <h3 className="text-sm font-semibold text-neutral-100">{t('mcpHeroTitle')}</h3>
-                <p className="text-xs text-neutral-400 leading-relaxed">{t('agentsNoTokens')}</p>
-              </div>
-              <button
-                onClick={() => setShowConnect(true)}
-                className="flex items-center gap-2 text-sm font-semibold text-ink-fg bg-ink hover:bg-ink/88 px-5 py-2.5 rounded-lg transition-colors"
-              >
-                <Link2 size={15} />
+            /* First-run: no agent connected anywhere → the one action */
+            <EmptyState icon={<Bot />} title={t('mcpHeroTitle')} description={t('agentsNoTokens')}>
+              <Button variant="primary" onClick={() => setShowConnect(true)}>
+                <Link2 />
                 {t('connectButton')}
-              </button>
-            </div>
+              </Button>
+            </EmptyState>
           ) : (
             workspaces.map(ws => (
               <WorkspaceSection
@@ -488,95 +397,89 @@ export default function AgentsModal({ onClose }: Props) {
 
           {/* Usage summary — last 30 days, by token owner (response payload → ~tokens) */}
           {!loading && totalTokens > 0 && usage && usage.calls > 0 && (
-            <div className="flex items-center justify-between border-t border-neutral-800 pt-4">
-              <span className="text-xs font-medium text-neutral-300">
-                {t('agentsUsageLabel')}
-              </span>
-              <span className="text-[11px] text-neutral-400">
+            <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-t border-line pt-4">
+              <span className="text-ui font-medium text-fg">{t('agentsUsageLabel')}</span>
+              <span className="text-xs text-fg-3">
                 {t('agentsUsageValue', { tokens: formatTokens(usage.bytes), calls: usage.calls })}
               </span>
             </div>
           )}
 
-          {/* Activity section — hidden until at least one agent is connected */}
+          {/* Activity — hidden until at least one agent is connected */}
           {!loading && totalTokens > 0 && (
-            <div className="border-t border-neutral-800 pt-4">
+            <section className="border-t border-line pt-3">
               <button
+                type="button"
                 onClick={() => setShowActivity(v => !v)}
-                className="w-full flex items-center justify-between group py-1"
+                aria-expanded={showActivity}
+                className="group flex w-full cursor-pointer items-center justify-between rounded-control py-1.5"
               >
-                <div className="flex items-center gap-2">
-                  <span className="text-xs font-medium text-neutral-300 group-hover:text-white transition-colors">
-                    {t('agentsActivity')}
-                  </span>
-                  {activity.length > 0 && (
-                    <span className="text-[9px] font-bold text-neutral-500 bg-neutral-800 px-1.5 py-0.5 rounded-full">
-                      {activity.length}
-                    </span>
-                  )}
-                </div>
+                <span className="flex items-center gap-2 text-ui font-medium text-fg-2 transition-colors group-hover:text-fg">
+                  {t('agentsActivity')}
+                  {activity.length > 0 && <Badge size="sm">{activity.length}</Badge>}
+                </span>
                 <ChevronDown
-                  size={14}
-                  className={`text-neutral-400 group-hover:text-neutral-200 transition-all ${showActivity ? 'rotate-180' : ''}`}
+                  size={16}
+                  className={cn('text-fg-3 transition-transform duration-150', showActivity && 'rotate-180')}
                 />
               </button>
 
               {showActivity && (
-                <div className="mt-3">
+                <div className="mt-2">
                   {activity.length === 0 ? (
-                    <p className="text-[11px] text-neutral-500 italic py-2">{t('agentsNoActivity')}</p>
+                    <p className="py-2 text-xs text-fg-3">{t('agentsNoActivity')}</p>
                   ) : (
-                    <div className="space-y-px">
+                    <ul className="flex flex-col">
                       {activity.map(act => {
                         const actMark = markForId(act.agentName) ?? resolveAgentMark(act.agentName) ?? resolveAgentMark(act.tokenName);
                         const actLabel = AGENT_MARKS.find(a => a.id === act.agentName)?.label;
                         return (
-                          <div
+                          <li
                             key={act.id}
-                            className="flex items-center gap-3 py-2 px-2 rounded-md hover:bg-neutral-800/40 transition-colors"
+                            className="flex items-center gap-3 rounded-control px-2 py-1.5 transition-colors hover:bg-hover/50"
                           >
-                            <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${act.status === 'success' ? 'bg-green-400' : 'bg-red-400'}`} />
-                            <span className="text-[11px] font-mono font-semibold text-neutral-200 shrink-0">
-                              {formatTool(act.tool)}
-                            </span>
-                            <div className="flex items-center gap-1 min-w-0">
+                            <span
+                              aria-hidden
+                              className={cn('size-1.5 shrink-0 rounded-full', act.status === 'success' ? 'bg-fg-4' : 'bg-red-400')}
+                            />
+                            <span className="w-28 shrink-0 truncate font-mono text-xs text-fg sm:w-36" title={act.tool}>{act.tool}</span>
+                            <span className="flex min-w-0 items-center gap-1">
                               {actMark && (
-                                <span className="flex items-center gap-1 text-[9px] font-semibold text-neutral-400 bg-neutral-800 border border-neutral-700 px-1.5 py-0.5 rounded-full shrink-0">
-                                  <MarkIcon mark={actMark} size={9} />
+                                <Badge size="sm">
+                                  <MarkIcon mark={actMark} size={10} />
                                   {actLabel && <span>{actLabel}</span>}
-                                </span>
+                                </Badge>
                               )}
-                              <span className="text-[9px] text-neutral-500 bg-neutral-800/60 px-1.5 py-0.5 rounded-full truncate max-w-[120px]">
-                                {act.tokenName}
-                              </span>
-                            </div>
-                            <span className="text-[10px] text-neutral-600 truncate flex-1 hidden sm:block">
+                              <Badge size="sm" variant="outline" className="max-w-32 truncate">
+                                <span className="truncate">{act.tokenName}</span>
+                              </Badge>
+                            </span>
+                            <span className="hidden min-w-0 flex-1 truncate text-xs text-fg-3 sm:block">
                               {act.workspaceName}
                             </span>
-                            <span className="text-[10px] text-neutral-600 shrink-0 ml-auto font-mono">
+                            <span className="ml-auto shrink-0 text-xs text-fg-3">
                               {relativeTime(act.createdAt, locale)}
                             </span>
-                          </div>
+                          </li>
                         );
                       })}
-                    </div>
+                    </ul>
                   )}
                 </div>
               )}
-            </div>
+            </section>
           )}
-        </div>
-      </div>
-    </div>
+        </DialogBody>
 
-    {showConnect && (
-      <ConnectModal
-        mcpUrl={mcpUrl}
-        mintTargets={mintTargets}
-        source="agents_modal"
-        onClose={() => { setShowConnect(false); load(); }}
-      />
-    )}
-    </>
+        {showConnect && (
+          <ConnectModal
+            mcpUrl={mcpUrl}
+            mintTargets={mintTargets}
+            source="agents_modal"
+            onClose={() => { setShowConnect(false); load(); }}
+          />
+        )}
+      </DialogContent>
+    </Dialog>
   );
 }

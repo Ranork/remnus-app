@@ -16,6 +16,9 @@ import {
   type InstallLinkState,
 } from '@/lib/services/installSession';
 import { isWorkspaceIdShape, workspaceMcpUrl } from '@/lib/mcp/workspaceEndpoint';
+import { AlertCircle, Check, Clock, Link2Off, Lock } from 'lucide-react';
+import { AuthCode, AuthScreen, AuthStatus } from '@/components/features/auth/AuthScreen';
+import { buttonVariants } from '@/components/ui/button';
 import { InstallForm } from './InstallForm';
 import { JoinForm } from './JoinForm';
 
@@ -414,29 +417,20 @@ async function InstallDoneView({
         : t('doneHint', { workspace: workspaceName });
 
   return (
-    <div className="min-h-screen bg-neutral-950 flex items-center justify-center p-4">
-      <div className="w-full max-w-sm text-center">
-        <div className={`w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-5 ${settled ? 'bg-green-500/15' : 'bg-amber-500/15'}`}>
-          {!settled ? (
-            <svg viewBox="0 0 24 24" fill="none" stroke="#e0b568" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7">
-              <circle cx="12" cy="12" r="9" />
-              <polyline points="12 7 12 12 15 14" />
-            </svg>
-          ) : (
-            <svg viewBox="0 0 24 24" fill="none" stroke="#7fc36d" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7">
-              <polyline points="20 6 9 17 4 12" />
-            </svg>
-          )}
-        </div>
-        <h1 className="text-lg font-semibold text-white mb-2">{title}</h1>
-        <p className="text-sm text-neutral-500 leading-relaxed">{hint}</p>
-        {settled && (
-          <Link href="/app" className="inline-block mt-6 text-sm text-signal-text hover:text-fg transition-colors">
+    <AuthScreen>
+      <AuthStatus
+        icon={settled ? <Check /> : kind === 'denied' ? <Lock /> : <Clock />}
+        tone={settled ? 'success' : 'neutral'}
+        title={title}
+        action={settled && (
+          <Link href="/app" className={buttonVariants({ variant: 'secondary' })}>
             {t('openWorkspace')}
           </Link>
         )}
-      </div>
-    </div>
+      >
+        {hint}
+      </AuthStatus>
+    </AuthScreen>
   );
 }
 
@@ -456,41 +450,32 @@ async function InstallLinkClosedView({
   const connected = state.state === 'used' && state.status === 'connected';
 
   const title = connected ? t('usedTitle') : state.state === 'used' ? t('usedOtherTitle') : t('expiredTitle');
+  const code = (chunks: React.ReactNode) => <AuthCode>{chunks}</AuthCode>;
   const hint = connected
     ? t('usedHint')
     : state.state === 'used'
-      ? t('usedOtherHint', { command })
-      : t('expiredHint', { command });
+      ? t.rich('usedOtherHint', { command, cmd: code })
+      : t.rich('expiredHint', { command, cmd: code });
 
   return (
-    <div className="min-h-screen bg-neutral-950 flex items-center justify-center p-4">
-      <div className="w-full max-w-sm text-center">
-        <div className={`w-14 h-14 rounded-full flex items-center justify-center mx-auto mb-5 ${connected ? 'bg-green-500/15' : 'bg-neutral-800'}`}>
-          {connected ? (
-            <svg viewBox="0 0 24 24" fill="none" stroke="#7fc36d" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7">
-              <polyline points="20 6 9 17 4 12" />
-            </svg>
-          ) : (
-            <svg viewBox="0 0 24 24" fill="none" stroke="#a3a3a3" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-7 h-7">
-              <circle cx="12" cy="12" r="9" />
-              <polyline points="12 7 12 12 15 14" />
-            </svg>
-          )}
-        </div>
-        <h1 className="text-lg font-semibold text-white mb-2">{title}</h1>
-        <p className="text-sm text-neutral-500 leading-relaxed">{hint}</p>
-      </div>
-    </div>
+    <AuthScreen>
+      <AuthStatus
+        icon={connected ? <Check /> : state.state === 'used' ? <Link2Off /> : <Clock />}
+        tone={connected ? 'success' : 'neutral'}
+        title={title}
+      >
+        {hint}
+      </AuthStatus>
+    </AuthScreen>
   );
 }
 
 function ErrorPage({ title, message }: { title: string; message: string }) {
   return (
-    <div className="min-h-screen bg-neutral-950 flex items-center justify-center p-4">
-      <div className="w-full max-w-sm text-center">
-        <h1 className="text-lg font-semibold text-white mb-2">{title}</h1>
-        <p className="text-sm text-neutral-500 leading-relaxed">{message}</p>
-      </div>
-    </div>
+    <AuthScreen>
+      <AuthStatus icon={<AlertCircle />} tone="danger" title={title}>
+        {message}
+      </AuthStatus>
+    </AuthScreen>
   );
 }

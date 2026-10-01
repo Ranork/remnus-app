@@ -34,6 +34,11 @@ export function pageLinkHref(item: { type: string; id: string; databaseId: strin
   return item.type === 'database' ? `/db/${item.databaseId || item.id}` : `/page/${item.id}`;
 }
 
+/** The item as a picker shows and inserts it: no title reads as the viewer's "Untitled". */
+export function withTitle(item: PageLinkItem, untitled: string): PageLinkItem {
+  return item.title ? item : { ...item, title: untitled };
+}
+
 function isLinkable(row: WorkspaceItemRow): boolean {
   return row.type === 'page' || row.type === 'database';
 }
@@ -41,7 +46,7 @@ function isLinkable(row: WorkspaceItemRow): boolean {
 function toLinkItem(row: WorkspaceItemRow): PageLinkItem {
   return {
     id: row.id,
-    title: row.title || 'Untitled',
+    title: row.title,
     type: row.type as 'page' | 'database',
     icon: row.icon,
     iconColor: row.iconColor,

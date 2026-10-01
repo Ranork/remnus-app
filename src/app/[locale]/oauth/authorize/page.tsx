@@ -9,6 +9,8 @@ import { OAuthAuthorizeForm } from './OAuthAuthorizeForm';
 import { AGENT_MARKS } from '@/components/features/agents/agentMarks';
 import { workspaceIdFromResource } from '@/lib/mcp/workspaceEndpoint';
 import { captureForUser } from '@/lib/analytics/server';
+import { AlertCircle } from 'lucide-react';
+import { AuthScreen, AuthStatus } from '@/components/features/auth/AuthScreen';
 
 function signRedirectUrl(url: string): string {
   // Fail closed: a missing AUTH_SECRET would make the HMAC key public and the
@@ -227,18 +229,10 @@ export default async function OAuthAuthorizePage({
 
 function ErrorPage({ title, message }: { title: string; message: string }) {
   return (
-    <div className="min-h-screen bg-neutral-950 flex items-center justify-center p-4">
-      <div className="max-w-sm w-full text-center">
-        <div className="w-12 h-12 bg-red-400/15 rounded-full flex items-center justify-center mx-auto mb-4">
-          <svg viewBox="0 0 24 24" fill="none" stroke="#cd4d55" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6">
-            <circle cx="12" cy="12" r="10" />
-            <line x1="12" y1="8" x2="12" y2="12" />
-            <line x1="12" y1="16" x2="12.01" y2="16" />
-          </svg>
-        </div>
-        <h1 className="text-white font-semibold mb-2">{title}</h1>
-        <p className="text-neutral-400 text-sm">{message}</p>
-      </div>
-    </div>
+    <AuthScreen>
+      <AuthStatus icon={<AlertCircle />} tone="danger" title={title}>
+        {message}
+      </AuthStatus>
+    </AuthScreen>
   );
 }

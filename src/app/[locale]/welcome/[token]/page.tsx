@@ -3,11 +3,17 @@ import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import { getTranslations } from 'next-intl/server';
-import { SearchX, Clock, Lock, ArrowRight } from 'lucide-react';
+import { SearchX, Clock, Lock } from 'lucide-react';
 import { getProspectInviteByToken } from '@/lib/actions/prospectInvites';
 import { PLAN_LIMITS } from '@/lib/billing/plans';
 import ProspectInviteClaimClient from '@/components/features/ProspectInviteClaimClient';
 import PendingGiftKeeper from '@/components/features/PendingGiftKeeper';
+import { AuthScreen, AuthStatus } from '@/components/features/auth/AuthScreen';
+import { GiftLockup } from '@/components/features/auth/GiftLockup';
+import { SubmitButton } from '@/components/features/auth/parts';
+import { Badge } from '@/components/ui/badge';
+import { buttonVariants } from '@/components/ui/button';
+import { Card } from '@/components/ui/card';
 
 // Public Prospect Invite claim page — personalized outreach gift-signup link.
 // Redesigned around one job: convert a cold-outreach click in ~5 seconds.
@@ -16,42 +22,13 @@ import PendingGiftKeeper from '@/components/features/PendingGiftKeeper';
 // limits are shown as concrete numbers (not just a tier name), and a link
 // expiry — when the invite has one — becomes visible urgency instead of
 // silently existing only in the database. See prospectInvites.ts.
-
-function Shell({ children, footer }: { children: React.ReactNode; footer?: React.ReactNode }) {
-  return (
-    <div className="relative min-h-screen overflow-hidden bg-neutral-950 flex flex-col items-center justify-center gap-5 px-4 py-10">
-      <div
-        aria-hidden
-        className="pointer-events-none absolute left-1/2 top-1/2 h-[420px] w-[420px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-signal/10 blur-[110px]"
-      />
-      <div className="relative w-full max-w-md bg-neutral-900 border border-neutral-800 rounded-2xl p-8 flex flex-col items-center text-center gap-4">
-        {children}
-      </div>
-      {/* Deliberately OUTSIDE the card, not buried as a small footer line inside
-          it — a visitor who wants to look around before signing up should have
-          an easy, visible way out instead of feeling funneled into one choice. */}
-      {footer}
-    </div>
-  );
-}
+// One sheet on the desk like every sign-in screen (V2 R8.6).
 
 function StatusMessage({ icon: Icon, text }: { icon: typeof SearchX; text: string }) {
   return (
-    <Shell>
-      <div className="flex h-11 w-11 items-center justify-center rounded-full bg-neutral-800 text-neutral-500">
-        <Icon size={20} />
-      </div>
-      <p className="m-0 text-sm text-neutral-400">{text}</p>
-      <Link href="/" className="text-[12px] text-neutral-600 hover:text-neutral-300">remnus.com</Link>
-    </Shell>
-  );
-}
-
-function Chip({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="rounded-full border border-neutral-800 bg-neutral-850 px-3 py-1 text-[12px] text-neutral-300">
-      {children}
-    </span>
+    <AuthScreen>
+      <AuthStatus icon={<Icon />} title={text} />
+    </AuthScreen>
   );
 }
 
@@ -83,42 +60,27 @@ export default async function ProspectWelcomePage({ params }: { params: Promise<
   const agentsLabel = limits.agents === Infinity ? t('unlimitedLabel') : String(limits.agents);
 
   const header = (
-    <>
+    <div className="flex flex-col gap-4">
       {/* Co-brand lockup: Remnus is the one giving the gift, the app is who it's for */}
-      <div className="flex items-center gap-2.5">
-        <img src="/logo-square-dark.png" alt="Remnus" className="h-10 w-10 rounded-xl object-contain" />
-        <span className="text-lg text-neutral-700">×</span>
-        {invite.appLogoUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element -- external Scout Forge asset; not worth a next/image remotePatterns entry for a one-off outreach link
-          <img src={invite.appLogoUrl} alt={invite.appName} className="h-10 w-10 rounded-xl object-cover" />
-        ) : (
-          <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-signal/15 text-sm font-semibold text-signal-text">
-            {invite.appName.charAt(0).toUpperCase()}
-          </div>
+      <GiftLockup appName={invite.appName} appLogoUrl={invite.appLogoUrl} />
+      <div className="flex flex-col gap-2">
+        <p className="text-sm font-medium text-fg-3">{t('welcomeTitle', { appName: invite.appName })}</p>
+        <h1 className="text-2xl font-semibold leading-tight tracking-[-0.02em] text-balance text-fg">
+          {t('giftLine', { days: invite.giftDays, tier: tierLabel })}
+        </h1>
+        <p className="text-sm leading-relaxed text-fg-3">{t('pitchLine')}</p>
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <Badge>{t('chipSeats', { count: seatsLabel })}</Badge>
+        <Badge>{t('chipAgents', { count: agentsLabel })}</Badge>
+        {invite.daysUntilLinkExpiry !== null && (
+          <Badge variant="warning">
+            <Clock />
+            {invite.daysUntilLinkExpiry <= 0 ? t('expiresToday') : t('expiresInDays', { days: invite.daysUntilLinkExpiry })}
+          </Badge>
         )}
       </div>
-      <p className="m-0 text-xs font-medium text-neutral-500">
-        {t('welcomeTitle', { appName: invite.appName })}
-      </p>
-
-      <h1 className="m-0 text-2xl font-bold leading-tight text-neutral-50">
-        {t('giftLine', { days: invite.giftDays, tier: tierLabel })}
-      </h1>
-
-      <p className="m-0 text-[13px] leading-relaxed text-neutral-400">{t('pitchLine')}</p>
-
-      <div className="flex flex-wrap items-center justify-center gap-2">
-        <Chip>{t('chipSeats', { count: seatsLabel })}</Chip>
-        <Chip>{t('chipAgents', { count: agentsLabel })}</Chip>
-      </div>
-
-      {invite.daysUntilLinkExpiry !== null && (
-        <p className="m-0 flex items-center gap-1.5 text-[12px] text-amber-400">
-          <Clock size={12} />
-          {invite.daysUntilLinkExpiry <= 0 ? t('expiresToday') : t('expiresInDays', { days: invite.daysUntilLinkExpiry })}
-        </p>
-      )}
-    </>
+    </div>
   );
 
   // Logged in → auto-claim (mirrors InviteAcceptClient's auto-trigger, but
@@ -127,15 +89,17 @@ export default async function ProspectWelcomePage({ params }: { params: Promise<
   // this viewer already has it (revisit, refresh, or a duplicate mount).
   if (session?.user) {
     return (
-      <Shell>
-        {header}
-        <ProspectInviteClaimClient
-          token={token}
-          alreadyClaimed={invite.claimedByViewer}
-          giftDays={invite.giftDays}
-          tierLabel={tierLabel}
-        />
-      </Shell>
+      <AuthScreen width="md">
+        <Card className="gap-6 p-6 sm:p-8">
+          {header}
+          <ProspectInviteClaimClient
+            token={token}
+            alreadyClaimed={invite.claimedByViewer}
+            giftDays={invite.giftDays}
+            tierLabel={tierLabel}
+          />
+        </Card>
+      </AuthScreen>
     );
   }
 
@@ -149,34 +113,34 @@ export default async function ProspectWelcomePage({ params }: { params: Promise<
   }
 
   return (
-    <Shell
+    <AuthScreen
+      width="md"
+      // Deliberately OUTSIDE the sheet, not buried as a small line inside it — a visitor
+      // who wants to look around before signing up should have an easy, visible way out
+      // instead of feeling funneled into one choice.
       footer={
-        <Link
-          href="/"
-          className="inline-flex items-center gap-1.5 rounded-lg border border-neutral-700 px-4 py-2 text-[13px] font-medium text-neutral-300 transition-colors hover:border-neutral-500 hover:text-neutral-50"
-        >
+        <Link href="/" className={buttonVariants({ variant: 'ghost' })}>
           {t('exploreCta')}
-          <ArrowRight size={14} />
         </Link>
       }
     >
-      {/* Lets the visitor wander off to explore the site first without losing
-          the gift — PendingGiftToast picks this up on whatever page they land on next. */}
-      <PendingGiftKeeper
-        token={token}
-        appName={invite.appName}
-        appLogoUrl={invite.appLogoUrl}
-        giftDays={invite.giftDays}
-        giftTier={invite.giftTier}
-        daysUntilLinkExpiry={invite.daysUntilLinkExpiry}
-      />
-      {header}
-      <form action={signInToClaim} className="w-full mt-1">
-        <button type="submit" className="w-full px-5 py-2.5 rounded-lg text-[13.5px] font-semibold text-ink-fg bg-ink hover:opacity-90 transition-opacity">
-          {t('signInCta', { days: invite.giftDays })}
-        </button>
-      </form>
-      <p className="m-0 text-[11px] text-neutral-600">{t('noCardHint')}</p>
-    </Shell>
+      <Card className="gap-6 p-6 sm:p-8">
+        {/* Lets the visitor wander off to explore the site first without losing
+            the gift — PendingGiftToast picks this up on whatever page they land on next. */}
+        <PendingGiftKeeper
+          token={token}
+          appName={invite.appName}
+          appLogoUrl={invite.appLogoUrl}
+          giftDays={invite.giftDays}
+          giftTier={invite.giftTier}
+          daysUntilLinkExpiry={invite.daysUntilLinkExpiry}
+        />
+        {header}
+        <form action={signInToClaim} className="flex flex-col gap-2">
+          <SubmitButton>{t('signInCta', { days: invite.giftDays })}</SubmitButton>
+          <p className="text-center text-xs text-fg-3">{t('noCardHint')}</p>
+        </form>
+      </Card>
+    </AuthScreen>
   );
 }
