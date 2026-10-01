@@ -1,5 +1,13 @@
 @import "tailwindcss";
 
+/* Dialog family (components/ui/dialog.tsx, V2 R8.5). A dialog that holds a <DialogBody>
+   is a PANEL: its header and footer become fixed bars with a hairline and only the body
+   scrolls. Without one it is COMPACT: the content is padded as one block. Nested dialogs
+   portal to <body>, so these never reach across from a parent dialog. */
+@custom-variant dialog-compact (&:not(:has([data-slot=dialog-body])));
+@custom-variant in-dialog-compact (:where([data-slot=dialog-content]:not(:has([data-slot=dialog-body]))) &);
+@custom-variant in-dialog-panel (:where([data-slot=dialog-content]:has([data-slot=dialog-body])) &);
+
 /* Runtime values the @theme tokens read (the default "remnus" theme is dark; every
    [data-theme] block below redefines them). */
 :root {
@@ -156,10 +164,16 @@
     to { opacity: 1; }
   }
   @keyframes tab-fade {
+  --animate-sheet-up: sheet-up 0.24s cubic-bezier(0.16, 1, 0.3, 1) backwards;
     from { opacity: 0; transform: translateY(4px); }
     to   { opacity: 1; transform: translateY(0); }
   }
 }
+  /* A dialog on a phone rises from the bottom edge (ui/dialog.tsx). */
+  @keyframes sheet-up {
+    from { transform: translateY(100%); }
+    to { transform: none; }
+  }
 
 .animate-tab-fade {
   animation: tab-fade 0.18s ease-out both;
@@ -172,7 +186,9 @@
   .animate-scale-in,
   .animate-fade-in,
   .animate-slide-in-right,
-  .animate-tab-fade {
+  .animate-sheet-up,
+  .animate-tab-fade,
+  [data-slot=dialog-content] {
     animation-duration: 1ms !important;
   }
 }
@@ -765,13 +781,17 @@ body {
   height: 0;
 }
 
-select,
-option,
-input,
-textarea,
-button {
-  font-family: inherit;
-  font-feature-settings: 'cv11', 'ss01';
+/* In the base layer so a utility still wins: unlayered, this beat `font-mono` on every
+   input/textarea (the markdown and code fields rendered in the UI sans). */
+@layer base {
+  select,
+  option,
+  input,
+  textarea,
+  button {
+    font-family: inherit;
+    font-feature-settings: 'cv11', 'ss01';
+  }
 }
 
 code,

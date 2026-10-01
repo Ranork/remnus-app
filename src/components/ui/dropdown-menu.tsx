@@ -2,6 +2,7 @@
 
 import * as React from "react"
 import { Menu as MenuPrimitive } from "@base-ui/react/menu"
+import { CheckIcon } from "lucide-react"
 import { cn } from "@/lib/cn"
 
 // shadcn/ui DropdownMenu on Base UI, in the R8 language (bg-float surface, shadow-float
@@ -23,13 +24,16 @@ function DropdownMenuContent({
   alignOffset = 0,
   side = "bottom",
   sideOffset = 4,
+  anchor,
   className,
   ...props
 }: MenuPrimitive.Popup.Props &
   Pick<
     MenuPrimitive.Positioner.Props,
-    "align" | "alignOffset" | "side" | "sideOffset"
+    "align" | "alignOffset" | "side" | "sideOffset" | "anchor"
   >) {
+  // `anchor` places a menu that has no Trigger (opened from code, e.g. a click on an
+  // already-active tab) against that element instead.
   return (
     <MenuPrimitive.Portal>
       <MenuPrimitive.Positioner
@@ -38,6 +42,7 @@ function DropdownMenuContent({
         alignOffset={alignOffset}
         side={side}
         sideOffset={sideOffset}
+        anchor={anchor}
       >
         <MenuPrimitive.Popup
           data-slot="dropdown-menu-content"
@@ -92,6 +97,39 @@ function DropdownMenuItem({
   )
 }
 
+/**
+ * A menu row that toggles (a layer, a column): the ui Checkbox look — signal fill and a
+ * `signal-fg` tick when on — and the menu stays open so several can be flipped in a row.
+ */
+function DropdownMenuCheckboxItem({
+  className,
+  children,
+  closeOnClick = false,
+  ...props
+}: MenuPrimitive.CheckboxItem.Props) {
+  return (
+    <MenuPrimitive.CheckboxItem
+      data-slot="dropdown-menu-checkbox-item"
+      closeOnClick={closeOnClick}
+      className={cn(
+        "group/check relative flex w-full cursor-pointer items-center gap-2.5 rounded-control px-2.5 py-1.5 text-ui text-fg-2 outline-hidden select-none data-highlighted:bg-hover data-highlighted:text-fg data-disabled:pointer-events-none data-disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:shrink-0",
+        className
+      )}
+      {...props}
+    >
+      <span
+        aria-hidden
+        className="flex size-4 shrink-0 items-center justify-center rounded-sm border border-line-strong text-signal-fg group-data-checked/check:border-signal group-data-checked/check:bg-signal"
+      >
+        <MenuPrimitive.CheckboxItemIndicator>
+          <CheckIcon className="size-3" strokeWidth={3.5} />
+        </MenuPrimitive.CheckboxItemIndicator>
+      </span>
+      {children}
+    </MenuPrimitive.CheckboxItem>
+  )
+}
+
 function DropdownMenuSeparator({
   className,
   ...props
@@ -118,6 +156,7 @@ function DropdownMenuShortcut({ className, ...props }: React.ComponentProps<"spa
 
 export {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuShortcut,
   DropdownMenuTrigger,
   DropdownMenuContent,

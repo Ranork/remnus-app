@@ -4,7 +4,8 @@ import { cn } from "@/lib/cn"
 
 // Small status/count labels. Sentence case, never uppercase (CSS `uppercase` turns
 // "Title" into "TİTLE" under lang="tr"). `signal` is the one accent — use it for what is
-// live or new; `count` is the red unread dot-with-number.
+// live or new; `count` is the red unread dot-with-number; success / warning / danger are
+// semantic only (a state, never decoration).
 const badgeVariants = cva(
   "inline-flex shrink-0 items-center justify-center gap-1 rounded-full font-medium whitespace-nowrap [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-3",
   {
@@ -15,6 +16,7 @@ const badgeVariants = cva(
         signal: "bg-signal-soft text-signal-text",
         solid: "bg-signal text-signal-fg",
         success: "bg-green-500/15 text-green-400",
+        warning: "bg-amber-500/15 text-amber-400",
         danger: "bg-red-500/15 text-red-400",
         count: "min-w-4 bg-red-500 px-1 text-white font-semibold tabular-nums",
       },

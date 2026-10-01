@@ -10,6 +10,7 @@ const twMerge = extendTailwindMerge({
       text: ['2xs', 'ui'],
       radius: ['control', 'surface'],
       shadow: ['lift', 'sheet', 'float', 'modal'],
+      animate: ['scale-in', 'fade-in', 'slide-in-right', 'sheet-up'],
     },
   },
 });

@@ -6,9 +6,9 @@ export const APP_THEMES: {
   dark: boolean;
   swatches: [string, string, string];
 }[] = [
-  { value: 'remnus',      label: 'Remnus',      dark: true,  swatches: ['#1d1f23', '#282c34', '#445c95'] },
-  { value: 'dracula',     label: 'Dracula',     dark: true,  swatches: ['#282a36', '#21222c', '#bd93f9'] },
-  { value: 'tokyo-night', label: 'Tokyo Night', dark: true,  swatches: ['#1a1b26', '#16161e', '#7aa2f7'] },
-  { value: 'nord',        label: 'Nord',        dark: true,  swatches: ['#2e3440', '#3b4252', '#88c0d0'] },
-  { value: 'catppuccin',  label: 'Catppuccin',  dark: false, swatches: ['#ffffff', '#f7f8fa', '#2563eb'] },
+  { value: 'remnus',      label: 'Remnus',      dark: true,  swatches: ['#111316', '#191b1f', '#f0b43c'] },
+  { value: 'dracula',     label: 'Dracula',     dark: true,  swatches: ['#191a21', '#21222c', '#f1fa8c'] },
+  { value: 'tokyo-night', label: 'Tokyo Night', dark: true,  swatches: ['#121319', '#1a1b26', '#e0af68'] },
+  { value: 'nord',        label: 'Nord',        dark: true,  swatches: ['#20242c', '#2e3440', '#ebcb8b'] },
+  { value: 'catppuccin',  label: 'Catppuccin',  dark: false, swatches: ['#eceef1', '#ffffff', '#f5b300'] },
 ];
