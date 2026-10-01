@@ -75,96 +75,24 @@ export function getOptionColorByValue(
   return found ? getOptionColor(found) : SELECT_COLORS.default;
 }
 
-/** One segment of a card's border-accent line: its dot color, plus the
- *  selected option's own icon when it has one (for the collapsed-card
- *  accent-icon treatment — see `getCardBorderAccents`). */
-export interface CardBorderAccent {
-  color: string;
-  icon?: string;
-  iconColor?: SelectOptionColor;
+/** "in 3 days" → "In 3 days": a value standing alone in a cell starts with a capital. */
+function capitalize(text: string, locale: string): string {
+  return text.charAt(0).toLocaleUpperCase(locale) + text.slice(1);
 }
 
 /**
- * Returns an ordered list of border-accent segments to paint the card's
- * accent line. For a `select`/`status` column this is one segment; for a
- * `multi_select` column one segment per selected value (preserving order).
- * Each segment carries the option's own icon when it has one — a collapsed
- * card (properties hidden) can then show that icon on the accent line itself
- * instead of losing the information entirely. Returns [] when there is
- * nothing to paint.
+ * A date / datetime property value as text. `locale` is the UI language (next-intl's
+ * `useLocale()`): the default and relative formats follow it — month names, word order,
+ * 12/24-hour clock, "tomorrow". ISO / UK / US are fixed numeric layouts by design.
  */
-export function getCardBorderAccents(
-  colSchema: { type: string; options?: (string | SelectOption)[] } | null | undefined,
-  value: unknown,
-): CardBorderAccent[] {
-  if (!colSchema) return [];
-  const opts = colSchema.options ?? [];
-
-  const toAccent = (v: string): CardBorderAccent => {
-    const found = opts.map(normalizeOption).find((o) => o.value === v);
-    const color = getOptionColorByValue(opts, v).dot;
-    return found?.icon ? { color, icon: found.icon, iconColor: found.color } : { color };
-  };
-
-  if (colSchema.type === 'select' || colSchema.type === 'status') {
-    if (typeof value !== 'string' || !value) return [];
-    return [toAccent(value)];
-  }
-
-  if (colSchema.type === 'multi_select') {
-    if (!Array.isArray(value) || value.length === 0) return [];
-    return (value as string[]).map(toAccent);
-  }
-
-  return [];
-}
-
-/**
- * Returns an ordered list of dot-color hex strings to paint the card's
- * left-border accent. For a `select` column this is one color; for a
- * `multi_select` column one color per selected value (preserving order).
- * Returns [] when there is nothing to paint. Thin wrapper around
- * `getCardBorderAccents` for callers that only need the color.
- */
-export function getCardBorderDots(
-  colSchema: { type: string; options?: (string | SelectOption)[] } | null | undefined,
-  value: unknown,
-): string[] {
-  return getCardBorderAccents(colSchema, value).map((a) => a.color);
-}
-
-/**
- * Returns the groupBg tint color for the card background based on a select/multi_select value.
- * For multi_select, uses the first selected value's color. Returns null when nothing to paint.
- */
-export function getCardBgColor(
-  colSchema: { type: string; options?: (string | SelectOption)[] } | null | undefined,
-  value: unknown,
-): string | null {
-  if (!colSchema) return null;
-  const opts = colSchema.options ?? [];
-
-  if (colSchema.type === 'select' || colSchema.type === 'status') {
-    if (typeof value !== 'string' || !value) return null;
-    return getOptionColorByValue(opts, value).groupBg;
-  }
-
-  if (colSchema.type === 'multi_select') {
-    if (!Array.isArray(value) || value.length === 0) return null;
-    return getOptionColorByValue(opts, (value as string[])[0]).groupBg;
-  }
-
-  return null;
-}
-
-export function formatDateValue(val: string, type: 'date' | 'datetime', format?: string): string {
+export function formatDateValue(val: string, type: 'date' | 'datetime', format?: string, locale = 'en-US'): string {
   if (!val) return '—';
   // Date range: "start/end"
   if (val.includes('/')) {
     const [startStr, endStr] = val.split('/');
-    const startFmt = formatDateValue(startStr, type, format);
-    const endFmt = endStr ? formatDateValue(endStr, type, format) : '';
-    return endFmt ? `${startFmt} → ${endFmt}` : startFmt;
+    const startFmt = formatDateValue(startStr, type, format, locale);
+    const endFmt = endStr ? formatDateValue(endStr, type, format, locale) : '';
+    return endFmt ? `${startFmt} – ${endFmt}` : startFmt;
   }
   const d = new Date(val);
   if (isNaN(d.getTime())) return val;
@@ -173,6 +101,7 @@ export function formatDateValue(val: string, type: 'date' | 'datetime', format?:
   const formatStr = format || 'default';
 
   if (formatStr === 'relative') {
+    const rtf = new Intl.RelativeTimeFormat(locale, { numeric: 'auto', style: 'short' });
     if (type === 'datetime') {
       const now = new Date();
       const diffMs = d.getTime() - now.getTime();
@@ -180,18 +109,10 @@ export function formatDateValue(val: string, type: 'date' | 'datetime', format?:
       const diffHours = Math.round(diffMs / 3600000);
       const diffDays = Math.round(diffMs / 86400000);
 
-      if (Math.abs(diffMins) < 1) return 'Just now';
-      if (Math.abs(diffMins) < 60) {
-        return diffMins > 0 ? `in ${diffMins}m` : `${Math.abs(diffMins)}m ago`;
-      }
-      if (Math.abs(diffHours) < 24) {
-        return diffHours > 0 ? `in ${diffHours}h` : `${Math.abs(diffHours)}h ago`;
-      }
-      if (Math.abs(diffDays) < 30) {
-        if (diffDays === 1) return 'Tomorrow';
-        if (diffDays === -1) return 'Yesterday';
-        return diffDays > 0 ? `in ${diffDays}d` : `${Math.abs(diffDays)}d ago`;
-      }
+      if (Math.abs(diffMins) < 1) return capitalize(rtf.format(0, 'second'), locale);
+      if (Math.abs(diffMins) < 60) return capitalize(rtf.format(diffMins, 'minute'), locale);
+      if (Math.abs(diffHours) < 24) return capitalize(rtf.format(diffHours, 'hour'), locale);
+      if (Math.abs(diffDays) < 30) return capitalize(rtf.format(diffDays, 'day'), locale);
     } else {
       // Just 'date' property: work exclusively with calendar days
       const dDate = new Date(d.getFullYear(), d.getMonth(), d.getDate());
@@ -200,12 +121,7 @@ export function formatDateValue(val: string, type: 'date' | 'datetime', format?:
       const diffMs = dDate.getTime() - nowDate.getTime();
       const diffDays = Math.round(diffMs / 86400000);
 
-      if (diffDays === 0) return 'Today';
-      if (diffDays === 1) return 'Tomorrow';
-      if (diffDays === -1) return 'Yesterday';
-      if (Math.abs(diffDays) < 30) {
-        return diffDays > 0 ? `in ${diffDays}d` : `${Math.abs(diffDays)}d ago`;
-      }
+      if (Math.abs(diffDays) < 30) return capitalize(rtf.format(diffDays, 'day'), locale);
     }
   }
 
@@ -251,11 +167,10 @@ export function formatDateValue(val: string, type: 'date' | 'datetime', format?:
     return datePart;
   }
 
-  // Default: Month Day, Year (e.g. May 19, 2026)
-  const datePart = d.toLocaleDateString('en-US', { day: '2-digit', month: 'short', year: 'numeric' });
+  // Default: the UI language's medium date ("May 19, 2026", "19 May 2026", "19 Mayıs…"),
+  // with its own clock for datetimes.
   if (showTime) {
-    const timePart = d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
-    return `${datePart} ${timePart}`;
+    return d.toLocaleString(locale, { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
   }
-  return datePart;
+  return d.toLocaleDateString(locale, { day: 'numeric', month: 'short', year: 'numeric' });
 }

@@ -2,13 +2,13 @@
 
 import { useRef, useState, useEffect, useSyncExternalStore } from 'react';
 import { useRouter } from 'next/navigation';
-import { getOptionColorByValue, formatDateValue, normalizeOption, type SelectOption } from '@/lib/types/properties';
-import { useTranslations } from 'next-intl';
+import { formatDateValue, normalizeOption, type SelectOption } from '@/lib/types/properties';
+import { useLocale, useTranslations } from 'next-intl';
 import { useZoom } from '@/components/providers/ZoomProvider';
 import InlineCellEditor from './InlineCellEditor';
 import { useContextMenu, type MenuItem } from './ContextMenu';
-import { StatusChip, UserChip, UserTags, OptionIcon } from './PropertyTags';
-import { GripHorizontal, GripVertical, Settings, Trash2, Type, List, Hash, AlignLeft, Calendar, Clock, Tags, CircleDashed, User, Users, Plus, Copy, EyeOff, ArrowUp, ArrowDown, Filter, X, RotateCcw, CheckSquare, Square, ExternalLink, ArrowUpRight, Maximize2, Link2 } from 'lucide-react';
+import { StatusChip, UserChip, UserTags, OptionChip, MarkDot, PropertyTypeIcon } from './PropertyTags';
+import { GripHorizontal, GripVertical, Trash2, Plus, Copy, EyeOff, ArrowUp, ArrowDown, Filter, X, RotateCcw, Check, ExternalLink, ArrowUpRight, Maximize2, Link2 } from 'lucide-react';
 import type { ViewFilter, ViewSort, FilterOperator } from '@/lib/types/views';
 import PageIcon from './PageIcon';
 import IconPicker from './IconPicker';
@@ -18,6 +18,11 @@ import { updatePageIcon } from '@/lib/actions/page';
 import { updateDatabaseSchema } from '@/lib/actions/database';
 import { ConfirmDialog } from './ConfirmDialog';
 import { SimpleSelect } from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Tooltip } from '@/components/ui/tooltip';
+import { MENU_SURFACE, MENU_ICON, MENU_LABEL, MENU_SEPARATOR, menuItem } from './editor/menuStyles';
+import { FilterValueField, useFilterOperators } from './database-sidebar/FiltersSection';
 
 // ── Coarse-pointer (touch) detection via useSyncExternalStore ───────────────────
 const COARSE_POINTER_QUERY = '(hover: none)';
@@ -35,21 +40,8 @@ function getCoarsePointerServerSnapshot() {
 }
 
 function getPropertyIcon(type: string) {
-  switch (type) {
-    case 'text':         return <Type size={11} className="text-neutral-600" />;
-    case 'select':       return <List size={11} className="text-neutral-600" />;
-    case 'multi_select': return <Tags size={11} className="text-neutral-600" />;
-    case 'status':       return <CircleDashed size={11} className="text-neutral-600" />;
-    case 'user':         return <User size={11} className="text-neutral-600" />;
-    case 'multi_user':   return <Users size={11} className="text-neutral-600" />;
-    case 'number':       return <Hash size={11} className="text-neutral-600" />;
-    case 'date':         return <Calendar size={11} className="text-neutral-600" />;
-    case 'datetime':     return <Clock size={11} className="text-neutral-600" />;
-    default:             return <AlignLeft size={11} className="text-neutral-600" />;
-  }
+  return <PropertyTypeIcon type={type} size={12} />;
 }
-
-
 
 function getVisibleColumns(schema: any[], columnOrder: string[], hiddenColumns: string[]): any[] {
   const hiddenSet = new Set(hiddenColumns ?? []);
@@ -125,6 +117,7 @@ export default function TableLayout({
 }) {
   const t = useTranslations('Database');
   const tPage = useTranslations('Page');
+  const locale = useLocale();
   const zoom = useZoom();
   const router = useRouter();
   const schema: any[] = database.schema ?? [];
@@ -144,8 +137,17 @@ export default function TableLayout({
   };
 
 
-  // Notion-style right-click menu for rows
-  const rowMenu = useContextMenu();
+  // Floating action bar — tracked via mouse position at row hover
+  const [hoveredPageId, setHoveredPageId] = useState<string | null>(null);
+  const [actionPos, setActionPos] = useState<{ top: number; left: number; height: number } | null>(null);
+  const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Notion-style right-click menu for rows; the grip's click opens the same one.
+  // Closing it also drops the floating grip, whose row the mouse has usually left.
+  const rowMenu = useContextMenu(() => {
+    setHoveredPageId(null);
+    setActionPos(null);
+  });
   const buildRowMenu = (pageId: string): MenuItem[] => [
     { id: 'open', label: t('open'), icon: ArrowUpRight, onSelect: () => onRowClick(pageId) },
     { id: 'open-full', label: t('openInFullPage'), icon: Maximize2, onSelect: () => router.push(`/db/${database.id}/${pageId}`) },
@@ -234,14 +236,7 @@ export default function TableLayout({
   const [activeHeaderMenuColId, setActiveHeaderMenuColId] = useState<string | null>(null);
   const [headerMenuPos, setHeaderMenuPos] = useState<{ x: number; y: number } | null>(null);
 
-  const OPERATORS: { value: FilterOperator; label: string; needsValue: boolean }[] = [
-    { value: 'contains',     label: 'contains',        needsValue: true  },
-    { value: 'not_contains', label: "doesn't contain", needsValue: true  },
-    { value: 'equals',       label: 'is',              needsValue: true  },
-    { value: 'not_equals',   label: 'is not',          needsValue: true  },
-    { value: 'is_empty',     label: 'is empty',        needsValue: false },
-    { value: 'is_not_empty', label: 'is not empty',    needsValue: false },
-  ];
+  const OPERATORS = useFilterOperators();
 
   const handleHeaderClick = (e: React.MouseEvent, colId: string) => {
     e.stopPropagation();
@@ -274,7 +269,7 @@ export default function TableLayout({
       closeToggleMenu();
     } else {
       const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-      const menuWidth = 180;
+      const menuWidth = 240; // w-60
       let x = rect.left;
       if (typeof window !== 'undefined' && x + menuWidth > window.innerWidth) {
         x = Math.max(8, window.innerWidth - menuWidth - 8);
@@ -347,15 +342,6 @@ export default function TableLayout({
   const [dragOverRowId, setDragOverRowId] = useState<string | null>(null);
   const [dropPosition, setDropPosition] = useState<'before' | 'after'>('before');
   const rowRefs = useRef<Map<string, HTMLTableRowElement>>(new Map());
-
-  // Floating action bar — tracked via mouse position at row hover
-  const [hoveredPageId, setHoveredPageId] = useState<string | null>(null);
-  const [actionPos, setActionPos] = useState<{ top: number; left: number; height: number } | null>(null);
-  const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  // Settings dropdown
-  const [activeMenuRowId, setActiveMenuRowId] = useState<string | null>(null);
-  const [menuPos, setMenuPos] = useState<{ x: number; y: number } | null>(null);
 
   // ── Column drag ────────────────────────────────────────────────────────────
   const handleColDragStart = (e: React.DragEvent, colId: string) => {
@@ -460,74 +446,66 @@ export default function TableLayout({
     });
   };
 
-  const handleRowMouseLeave = (_e: React.MouseEvent, pageId: string) => {
-    if (draggedRowId) return;
-    if (activeMenuRowId === pageId) return;
+  const handleRowMouseLeave = () => {
+    if (draggedRowId || rowMenu.isOpen) return;
     scheduleHide();
   };
 
   const handleActionBarMouseLeave = () => {
-    if (draggedRowId || activeMenuRowId) return;
+    if (draggedRowId || rowMenu.isOpen) return;
     scheduleHide();
   };
 
-  // ── Settings menu ──────────────────────────────────────────────────────────
-  const handleMenuToggle = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    const pageId = hoveredPageId;
-    if (!pageId) return;
-    if (activeMenuRowId === pageId) {
-      setActiveMenuRowId(null);
-      setMenuPos(null);
-    } else {
-      const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-      setMenuPos({ x: rect.left / zoom, y: rect.bottom / zoom + 4 });
-      setActiveMenuRowId(pageId);
-    }
-  };
+  const showActionBar = hoveredPageId !== null && actionPos !== null;
 
-  const closeMenu = () => {
-    setActiveMenuRowId(null);
-    setMenuPos(null);
-    setHoveredPageId(null);
-    setActionPos(null);
-  };
+  // Only a select or status can mark a row (a dot needs an option colour).
+  const markColumn = rowColorCol
+    ? schema.find((c) => c.id === rowColorCol && ['select', 'multi_select', 'status'].includes(c.type))
+    : undefined;
 
-  const handleDeleteConfirm = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (!activeMenuRowId) return;
-    requestDelete(activeMenuRowId);
-    closeMenu();
-  };
-
-  // Show action bar while dropdown is open even if hover state drifted
-  const showActionBar = (hoveredPageId !== null || activeMenuRowId !== null) && actionPos !== null;
+  // The hand-placed column menus close on Escape like every other menu.
+  useEffect(() => {
+    if (!activeHeaderMenuColId && !toggleMenuOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      setActiveHeaderMenuColId(null);
+      setHeaderMenuPos(null);
+      setToggleMenuOpen(false);
+      setToggleMenuPos(null);
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [activeHeaderMenuColId, toggleMenuOpen]);
 
   return (
     <>
       <div className="flex-1 overflow-x-auto relative">
         {/* Floating Toggle Columns Button */}
         {showToggleColumnsButton && (
-        <div className="absolute right-2 top-1 z-20">
-          <button
-            onClick={handleToggleMenuClick}
-            className="w-7 h-7 flex items-center justify-center text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/40 rounded transition-colors cursor-pointer"
-            title="Toggle Columns"
-          >
-            <Plus size={14} />
-          </button>
+        <div className="absolute right-1 top-1 z-20">
+          <Tooltip content={t('toggleColumns')}>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={handleToggleMenuClick}
+              aria-label={t('toggleColumns')}
+              aria-expanded={toggleMenuOpen}
+            >
+              <Plus />
+            </Button>
+          </Tooltip>
         </div>
         )}
 
         <table
-          className="text-left text-sm border-collapse"
+          className="text-left text-ui border-collapse"
           style={{
             tableLayout: hasAnyCustomWidth ? 'fixed' : 'auto',
             width: hasAnyCustomWidth ? totalCalculatedWidth : '100%',
             minWidth: '100%'
           }}
         >
-          <thead className="border-b border-neutral-800/60 sticky top-0 z-10">
+          <thead className="border-b border-line sticky top-0 z-10">
             <tr>
               {visibleCols.map((col, idx) => {
                 const isOver = dragOverColId === col.id;
@@ -546,28 +524,33 @@ export default function TableLayout({
                       width: localWidths[col.id],
                       minWidth: col.id === 'title' ? 180 : 100
                     }}
-                    className={`group py-2 px-3 font-medium whitespace-nowrap cursor-grab active:cursor-grabbing transition-colors relative
-                      ${!isLast ? 'border-r border-neutral-800/40' : ''}
-                      ${isOver ? 'border-l-2 border-l-signal/60' : ''}
+                    className={`group py-1.5 px-2 font-normal whitespace-nowrap cursor-grab active:cursor-grabbing transition-colors relative
+                      ${!isLast ? 'border-r border-line/60' : ''}
+                      ${isOver ? 'border-l-2 border-l-signal' : ''}
                       ${isDraggingThis ? 'opacity-25' : ''}
                     `}
                   >
                     <div className="flex items-center justify-between">
-                      <div
+                      <button
+                        type="button"
                         onClick={(e) => handleHeaderClick(e, col.id)}
-                        className="flex items-center gap-1.5 overflow-hidden cursor-pointer hover:bg-neutral-800/30 px-1.5 py-0.5 rounded transition-colors"
-                        title="Click for options (sort, filter, hide)"
+                        className={`flex min-w-0 items-center gap-1.5 overflow-hidden rounded px-1.5 py-0.5 transition-colors cursor-pointer hover:bg-hover ${
+                          activeHeaderMenuColId === col.id ? 'bg-hover' : ''
+                        }`}
+                        title={t('columnOptions')}
+                        aria-haspopup="menu"
+                        aria-expanded={activeHeaderMenuColId === col.id}
                       >
                         {getPropertyIcon(col.type)}
-                        <span className="truncate text-neutral-400 group-hover:text-neutral-200 text-xs transition-colors">
+                        <span className="truncate text-xs text-fg-3 transition-colors group-hover:text-fg-2">
                           {col.name}
                         </span>
                         {(filters ?? []).some((f) => f.columnId === col.id) && (
-                          <Filter size={10} className="text-signal-text shrink-0" />
+                          <Filter size={12} className="text-signal-text shrink-0" aria-label={t('filter')} />
                         )}
-                      </div>
-                      <div className="opacity-0 group-hover:opacity-40 text-neutral-600 cursor-grab transition-opacity pl-1">
-                        <GripHorizontal size={11} />
+                      </button>
+                      <div className="opacity-0 group-hover:opacity-100 text-fg-4 cursor-grab transition-opacity pl-1" aria-hidden>
+                        <GripHorizontal size={12} />
                       </div>
                     </div>
                     {/* Resize handle */}
@@ -575,7 +558,7 @@ export default function TableLayout({
                       onMouseDown={(e) => handleResizeStart(e, col.id)}
                       onClick={(e) => e.stopPropagation()}
                       className="absolute right-0 top-0 bottom-0 w-1.5 hover:bg-signal/40 active:bg-signal cursor-col-resize z-20 transition-colors"
-                      title="Drag to resize"
+                      title={t('resizePanel')}
                     />
                   </th>
                 );
@@ -586,29 +569,13 @@ export default function TableLayout({
           <tbody>
             {pages.length === 0 ? (
               <tr>
-                <td colSpan={visibleCols.length} className="py-16 text-center text-neutral-600 text-sm">
+                <td colSpan={visibleCols.length} className="py-16 text-center text-fg-3 text-sm">
                   {t('noPages')}
                 </td>
               </tr>
             ) : (
               pages.map((page) => {
                 const isRowEditing = editingCell?.pageId === page.id;
-                const colorColSchema = rowColorCol ? schema.find((c) => c.id === rowColorCol) : null;
-                const rowBgColor = colorColSchema ? (() => {
-                  const val = page.properties[rowColorCol as string];
-                  if (!val) return null;
-                  const opts = colorColSchema.options ?? [];
-                  if (colorColSchema.type === 'select') {
-                    return getOptionColorByValue(opts, val).groupBg;
-                  }
-                  if (colorColSchema.type === 'multi_select') {
-                    if (Array.isArray(val) && val.length > 0) {
-                      return getOptionColorByValue(opts, val[0]).groupBg;
-                    }
-                  }
-                  return null;
-                })() : null;
-
                 return (
                 <tr
                   key={page.id}
@@ -620,40 +587,47 @@ export default function TableLayout({
                   onClick={() => onRowClick(page.id)}
                   onContextMenu={(e) => rowMenu.open(e, buildRowMenu(page.id))}
                   onMouseEnter={(e) => handleRowMouseEnter(e, page.id)}
-                  onMouseLeave={(e) => handleRowMouseLeave(e, page.id)}
+                  onMouseLeave={handleRowMouseLeave}
                   onDragOver={(e) => handleRowDragOver(e, page.id)}
                   onDragLeave={() => handleRowDragLeave(page.id)}
                   onDrop={(e) => handleRowDrop(e, page.id)}
-                  style={{ backgroundColor: rowBgColor || undefined }}
+                  // A plain row: no status tint. The row's mark (if the view sets one)
+                  // is a dot or status ring before the title.
                   className={[
-                    'hover:bg-neutral-800/20 cursor-pointer transition-colors group',
+                    'hover:bg-hover/50 cursor-pointer transition-colors group',
                     isRowEditing ? 'relative z-20' : '',
                     draggedRowId === page.id ? 'opacity-25' : '',
                     dragOverRowId === page.id && dropPosition === 'before'
-                      ? 'border-t-2 border-t-signal border-b border-neutral-800/40'
+                      ? 'border-t-2 border-t-signal border-b border-line'
                       : dragOverRowId === page.id && dropPosition === 'after'
                       ? 'border-b-2 border-b-signal'
-                      : 'border-b border-neutral-800/40',
+                      : 'border-b border-line',
                   ].join(' ')}
                 >
                   {visibleCols.map((col, idx) => {
                     const val = page.properties[col.id];
                     const isLast = idx === visibleCols.length - 1;
                     const isEditing = editingCell?.pageId === page.id && editingCell?.colId === col.id;
+                    const isChecked = val === true || val === 'true';
                     const handleCellClick = (e: React.MouseEvent) => {
                       // Touch: let the click bubble to the row → opens the peek modal.
                       // `id` columns show the row's real (immutable) primary key — never editable.
                       if (col.id === 'title' || col.type === 'id' || isCoarsePointer) return;
                       e.stopPropagation();
+                      // A checkbox needs no editor: the cell is the toggle.
+                      if (col.type === 'checkbox') {
+                        handleCellSave(page.id, col.id, !isChecked);
+                        return;
+                      }
                       setEditingCell({ pageId: page.id, colId: col.id });
                     };
                     return (
                       <td
                         key={col.id}
                         onClick={handleCellClick}
-                        className={`py-2 px-3 whitespace-nowrap overflow-hidden relative text-ellipsis group-hover:bg-neutral-800/10 transition-colors
+                        className={`py-1.5 px-2.5 whitespace-nowrap overflow-hidden relative text-ellipsis
                           ${isEditing ? 'z-30 overflow-visible' : ''}
-                          ${!isLast ? 'border-r border-neutral-800/40' : ''}
+                          ${!isLast ? 'border-r border-line/60' : ''}
                         `}
                       >
                         {isEditing ? (
@@ -670,23 +644,26 @@ export default function TableLayout({
                           />
                         ) : col.id === 'title' ? (
                           <div className="flex items-center gap-2 overflow-hidden">
+                            {markColumn && <MarkDot column={markColumn} value={page.properties[markColumn.id]} />}
                             <div className="relative shrink-0 select-none">
                               <button
+                                type="button"
                                 ref={(el) => { itemRefs.current[page.id] = el; }}
                                 onClick={(e) => {
                                   e.preventDefault();
                                   e.stopPropagation();
                                   setActiveIconPickerPageId(activeIconPickerPageId === page.id ? null : page.id);
                                 }}
-                                className="hover:bg-neutral-800 p-0.5 rounded transition-colors flex items-center justify-center cursor-pointer"
-                                title="Change icon"
+                                className="hover:bg-hover p-0.5 rounded transition-colors flex items-center justify-center cursor-pointer"
+                                title={t('changeIcon')}
+                                aria-label={t('changeIcon')}
                               >
-                                <PageIcon 
-                                  icon={page.icon || defaultPageIcon} 
-                                  iconColor={page.iconColor || defaultPageIconColor} 
-                                  size={14} 
-                                  fallbackType="page" 
-                                  className="shrink-0" 
+                                <PageIcon
+                                  icon={page.icon || defaultPageIcon}
+                                  iconColor={page.iconColor || defaultPageIconColor}
+                                  size={16}
+                                  fallbackType="page"
+                                  className="shrink-0"
                                 />
                               </button>
                               {activeIconPickerPageId === page.id && (
@@ -706,7 +683,7 @@ export default function TableLayout({
                                 e.stopPropagation();
                                 setEditingCell({ pageId: page.id, colId: col.id });
                               }}
-                              className="font-medium text-neutral-100 cursor-text hover:underline truncate"
+                              className="font-medium text-fg cursor-text hover:underline decoration-line-strong underline-offset-2 truncate"
                             >
                               {val || tPage('untitled')}
                             </span>
@@ -716,52 +693,32 @@ export default function TableLayout({
                                 agentName={page.agentName ?? null}
                                 tokenName={page.agentTokenName ?? null}
                                 editedAt={page.agentEditedAt}
-                                className="shrink-0 ml-1.5 p-1 rounded-md"
+                                className="shrink-0"
                               />
                             )}
                           </div>
                         ) : col.type === 'id' ? (
-                          <span className="text-[11px] font-mono text-neutral-500 truncate select-text" title={page.id}>{page.id}</span>
+                          <span className="text-2xs font-mono text-fg-3 truncate select-text" title={page.id}>{page.id}</span>
                         ) : col.type === 'select' ? (
-                          val ? (() => {
-                            const c = getOptionColorByValue(col.options || [], val);
-                            return (
-                              <span className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium" style={{ backgroundColor: c.bg, color: c.text }}>
-                                <OptionIcon value={val} options={col.options} />
-                                {val}
-                              </span>
-                            );
-                          })() : (
-                            <span className="text-neutral-500">—</span>
-                          )
+                          val ? <OptionChip value={val} options={col.options} /> : null
                         ) : col.type === 'multi_select' ? (
-                          <span className="flex flex-wrap gap-1">
-                            {Array.isArray(val) && val.length > 0 ? (
-                              val.map((optVal: string) => {
-                                const c = getOptionColorByValue(col.options || [], optVal);
-                                return (
-                                  <span key={optVal} className="inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded-sm" style={{ backgroundColor: c.bg, color: c.text }}>
-                                    <OptionIcon value={optVal} options={col.options} />
-                                    {optVal}
-                                  </span>
-                                );
-                              })
-                            ) : (
-                              <span className="text-neutral-500">—</span>
-                            )}
-                          </span>
+                          Array.isArray(val) && val.length > 0 ? (
+                            <span className="flex flex-wrap gap-1">
+                              {val.map((optVal: string) => <OptionChip key={optVal} value={optVal} options={col.options} />)}
+                            </span>
+                          ) : null
                         ) : col.type === 'status' ? (
-                          val ? <StatusChip value={val} options={col.options} /> : <span className="text-neutral-500">—</span>
+                          val ? <StatusChip value={val} options={col.options} /> : null
                         ) : col.type === 'user' ? (
-                          val ? <UserChip userId={String(val)} /> : <span className="text-neutral-500">—</span>
+                          val ? <UserChip userId={String(val)} /> : null
                         ) : col.type === 'multi_user' ? (
-                          Array.isArray(val) && val.length > 0 ? <UserTags value={val} /> : <span className="text-neutral-500">—</span>
+                          Array.isArray(val) && val.length > 0 ? <UserTags value={val} /> : null
                         ) : (col.type === 'date' || col.type === 'datetime') ? (
-                          <span className="text-xs text-neutral-100">{val ? formatDateValue(val, col.type, col.dateFormat) : '—'}</span>
+                          val ? <span className="text-fg-2">{formatDateValue(val, col.type, col.dateFormat, locale)}</span> : null
                         ) : col.type === 'checkbox' ? (
-                          (val === true || val === 'true')
-                            ? <CheckSquare size={14} className="text-signal-text" />
-                            : <Square size={14} className="text-neutral-600" />
+                          // The cell's own click toggles it; the box only shows the state
+                          // (so a touch tap still opens the row, like every other cell).
+                          <Checkbox checked={isChecked} aria-label={col.name} tabIndex={-1} className="pointer-events-none align-middle" />
                         ) : col.type === 'url' ? (
                           (() => {
                             const safeHref = typeof val === 'string' && /^https?:\/\//i.test(val) ? val : null;
@@ -771,25 +728,25 @@ export default function TableLayout({
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 onClick={(e) => e.stopPropagation()}
-                                className="text-xs text-signal-text hover:text-fg flex items-center gap-0.5 truncate"
+                                className="text-link hover:underline underline-offset-2 flex items-center gap-1 truncate"
                               >
                                 <span className="truncate">{val}</span>
-                                <ExternalLink size={9} className="shrink-0" />
+                                <ExternalLink size={12} className="shrink-0" />
                               </a>
-                            ) : val ? <span className="text-neutral-100 truncate">{val}</span> : <span className="text-neutral-500">—</span>;
+                            ) : val ? <span className="text-fg-2 truncate">{val}</span> : null;
                           })()
                         ) : col.type === 'email' ? (
                           val ? (
                             <a
                               href={`mailto:${val}`}
                               onClick={(e) => e.stopPropagation()}
-                              className="text-xs text-signal-text hover:text-fg truncate"
+                              className="text-link hover:underline underline-offset-2 truncate"
                             >
                               {val}
                             </a>
-                          ) : <span className="text-neutral-500">—</span>
+                          ) : null
                         ) : (
-                          <span className="text-neutral-100">{val || ''}</span>
+                          <span className="text-fg-2">{val || ''}</span>
                         )}
                       </td>
                     );
@@ -804,12 +761,12 @@ export default function TableLayout({
             {pages.length > 0 && onCreatePage && (
               <tr
                 onClick={() => onCreatePage()}
-                className="hover:bg-neutral-800/10 cursor-pointer text-neutral-500 hover:text-neutral-300 transition-colors border-b border-neutral-800/40 group/newrow"
+                className="hover:bg-hover/50 cursor-pointer text-fg-3 hover:text-fg transition-colors border-b border-line"
               >
-                <td colSpan={visibleCols.length} className="py-2 px-3 text-xs font-medium">
-                  <span className="flex items-center gap-1.5 opacity-60 group-hover/newrow:opacity-100 transition-opacity">
-                    <Plus size={13} className="text-neutral-500" />
-                    New
+                <td colSpan={visibleCols.length} className="py-1.5 px-2.5 text-ui">
+                  <span className="flex items-center gap-1.5">
+                    <Plus size={14} />
+                    {t('new')}
                   </span>
                 </td>
               </tr>
@@ -818,11 +775,12 @@ export default function TableLayout({
         </table>
       </div>
 
-      {/* Floating action bar — position: fixed bypasses all overflow clipping */}
+      {/* Floating grip — position: fixed bypasses all overflow clipping. Drag it
+          to reorder; click it for the row menu (the same one as a right-click). */}
       {showActionBar && (
         <div
           data-action-bar
-          className="fixed z-30 flex items-center justify-center bg-neutral-850 rounded-none border-none py-1 px-1"
+          className="fixed z-30 flex items-center justify-center bg-sheet py-1 px-1"
           style={{
             top: actionPos!.top,
             left: actionPos!.left,
@@ -833,286 +791,159 @@ export default function TableLayout({
           onMouseLeave={handleActionBarMouseLeave}
         >
           <button
+            type="button"
             draggable={!hasSorts && !disableRowDrag}
             onDragStart={(e) => {
               e.stopPropagation();
-              const pid = hoveredPageId ?? activeMenuRowId;
-              if (pid) handleGripDragStart(e, pid);
+              if (hoveredPageId) handleGripDragStart(e, hoveredPageId);
             }}
             onDragEnd={handleRowDragEnd}
             onClick={(e) => {
               e.stopPropagation();
-              handleMenuToggle(e);
+              if (hoveredPageId) rowMenu.open(e, buildRowMenu(hoveredPageId));
             }}
-            className={`text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/60 transition-colors rounded flex items-center justify-center cursor-pointer ${
-              hasSorts || disableRowDrag ? 'opacity-50' : 'cursor-grab active:cursor-grabbing'
+            className={`text-fg-3 hover:text-fg hover:bg-hover transition-colors rounded flex items-center justify-center cursor-pointer ${
+              hasSorts || disableRowDrag ? '' : 'cursor-grab active:cursor-grabbing'
             }`}
             style={{ width: 22, height: 24 }}
             title={hasSorts || disableRowDrag ? t('dragMove') : t('dragReorder')}
+            aria-label={hasSorts || disableRowDrag ? t('dragMove') : t('dragReorder')}
           >
             <GripVertical size={14} />
           </button>
         </div>
       )}
 
-      {/* Dropdown — also fixed to bypass overflow clipping */}
-      {activeMenuRowId && menuPos && (
-        <>
-          <div className="fixed inset-0 z-40 cursor-default" onClick={closeMenu} />
-          <div
-            className="fixed z-50 bg-neutral-900 border border-neutral-800 shadow-xl py-1 w-36 rounded overflow-hidden"
-            style={{ left: menuPos.x, top: menuPos.y }}
-          >
-            <button
-              onClick={() => {
-                onDuplicatePage(activeMenuRowId);
-                closeMenu();
-              }}
-              className="w-full px-3 py-2 text-xs text-neutral-300 hover:bg-neutral-800 flex items-center gap-2 cursor-pointer transition-colors border-b border-neutral-850"
-            >
-              <Copy size={13} />
-              <span>{t('duplicatePage')}</span>
-            </button>
-            <button
-              onClick={handleDeleteConfirm}
-              className="w-full px-3 py-2 text-xs text-red-400 hover:bg-neutral-800 flex items-center gap-2 cursor-pointer transition-colors"
-            >
-              <Trash2 size={13} />
-              <span>{tPage('deletePage')}</span>
-            </button>
-          </div>
-        </>
-      )}
-      {/* Header Column Menu Dropdown */}
-      {activeHeaderMenuColId && headerMenuPos && (
+      {/* Column menu — hand-placed (it holds form fields, which a Base UI menu
+          would steal the keys from), in the DropdownMenu look. */}
+      {activeHeaderMenuColId && headerMenuPos && (() => {
+        const activeSort = sorts.find((s) => s.columnId === activeHeaderMenuColId);
+        const activeFilter = filters.find((f) => f.columnId === activeHeaderMenuColId);
+        const opDef = activeFilter ? OPERATORS.find((o) => o.value === activeFilter.operator) : undefined;
+        const colSchema = schema.find((c) => c.id === activeHeaderMenuColId);
+        return (
         <>
           <div className="fixed inset-0 z-40 cursor-default bg-transparent" onClick={closeHeaderMenu} />
           <div
-            className="fixed z-50 bg-neutral-900 border border-neutral-800 shadow-2xl py-1.5 w-60 rounded overflow-hidden text-left"
+            role="menu"
+            className={`fixed z-50 w-60 text-left animate-scale-in ${MENU_SURFACE}`}
             style={{ left: headerMenuPos.x, top: headerMenuPos.y }}
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Sorts section */}
-            <div className="px-1 pb-1 border-b border-neutral-800/40 flex flex-col gap-0.5">
-              {(() => {
-                const activeSort = sorts.find((s) => s.columnId === activeHeaderMenuColId);
-                return (
-                  <>
-                    <button
-                      onClick={() => handleSortCol(activeHeaderMenuColId, 'asc')}
-                      className={`w-full px-2 py-1 text-xs flex items-center justify-between text-neutral-300 hover:bg-neutral-800 transition-colors rounded ${
-                        activeSort?.direction === 'asc' ? 'bg-neutral-800 font-semibold' : ''
-                      }`}
-                    >
-                      <span className="flex items-center gap-2">
-                        <ArrowUp size={13} className="text-neutral-500" />
-                        {t('sortAscending')}
-                      </span>
-                      {activeSort?.direction === 'asc' && <span className="text-[10px] text-signal-text">✓</span>}
-                    </button>
-                    <button
-                      onClick={() => handleSortCol(activeHeaderMenuColId, 'desc')}
-                      className={`w-full px-2 py-1 text-xs flex items-center justify-between text-neutral-300 hover:bg-neutral-800 transition-colors rounded ${
-                        activeSort?.direction === 'desc' ? 'bg-neutral-800 font-semibold' : ''
-                      }`}
-                    >
-                      <span className="flex items-center gap-2">
-                        <ArrowDown size={13} className="text-neutral-500" />
-                        {t('sortDescending')}
-                      </span>
-                      {activeSort?.direction === 'desc' && <span className="text-[10px] text-signal-text">✓</span>}
-                    </button>
-                    {activeSort && (
-                      <button
-                        onClick={() => handleRemoveSort(activeHeaderMenuColId)}
-                        className="w-full px-2 py-1 text-xs flex items-center gap-2 text-red-400 hover:bg-neutral-800 transition-colors rounded"
-                      >
-                        <X size={13} />
-                        Remove Sort
-                      </button>
-                    )}
-                  </>
-                );
-              })()}
-            </div>
+            <button type="button" role="menuitemradio" aria-checked={activeSort?.direction === 'asc'} onClick={() => handleSortCol(activeHeaderMenuColId, 'asc')} className={menuItem()}>
+              <span className={MENU_ICON}><ArrowUp /></span>
+              <span className="flex-1">{t('sortAscending')}</span>
+              {activeSort?.direction === 'asc' && <Check size={16} className="text-fg" />}
+            </button>
+            <button type="button" role="menuitemradio" aria-checked={activeSort?.direction === 'desc'} onClick={() => handleSortCol(activeHeaderMenuColId, 'desc')} className={menuItem()}>
+              <span className={MENU_ICON}><ArrowDown /></span>
+              <span className="flex-1">{t('sortDescending')}</span>
+              {activeSort?.direction === 'desc' && <Check size={16} className="text-fg" />}
+            </button>
+            {activeSort && (
+              <button type="button" role="menuitem" onClick={() => handleRemoveSort(activeHeaderMenuColId)} className={menuItem()}>
+                <span className={MENU_ICON}><X /></span>
+                {t('removeSort')}
+              </button>
+            )}
 
-            {/* Visibility - Hide column (Only if not Title) */}
+            {(activeHeaderMenuColId !== 'title' || localWidths[activeHeaderMenuColId] !== undefined) && (
+              <div className={MENU_SEPARATOR} />
+            )}
+            {/* The title column can't be hidden — every row needs a name to open by. */}
             {activeHeaderMenuColId !== 'title' && (
-              <div className="px-1 py-1 border-b border-neutral-800/40">
-                <button
-                  onClick={() => {
-                    onToggleHideColumn(activeHeaderMenuColId);
-                    closeHeaderMenu();
-                  }}
-                  className="w-full px-2 py-1 text-xs flex items-center gap-2 text-neutral-300 hover:bg-neutral-800 transition-colors rounded"
-                >
-                  <EyeOff size={13} className="text-neutral-500" />
-                  Hide Column
-                </button>
-              </div>
+              <button
+                type="button"
+                role="menuitem"
+                onClick={() => {
+                  onToggleHideColumn(activeHeaderMenuColId);
+                  closeHeaderMenu();
+                }}
+                className={menuItem()}
+              >
+                <span className={MENU_ICON}><EyeOff /></span>
+                {t('hideColumn')}
+              </button>
+            )}
+            {localWidths[activeHeaderMenuColId] !== undefined && (
+              <button type="button" role="menuitem" onClick={() => handleResetColWidth(activeHeaderMenuColId)} className={menuItem()}>
+                <span className={MENU_ICON}><RotateCcw /></span>
+                {t('resetWidth')}
+              </button>
             )}
 
-            {/* Reset Width section */}
-            {activeHeaderMenuColId && localWidths[activeHeaderMenuColId] !== undefined && (
-              <div className="px-1 py-1 border-b border-neutral-800/40">
-                <button
-                  onClick={() => handleResetColWidth(activeHeaderMenuColId)}
-                  className="w-full px-2 py-1 text-xs flex items-center gap-2 text-neutral-300 hover:bg-neutral-800 transition-colors rounded"
-                >
-                  <RotateCcw size={13} className="text-neutral-500" />
-                  Reset Width
-                </button>
+            <div className={MENU_SEPARATOR} />
+            {activeFilter ? (
+              <div className="flex flex-col gap-1.5 px-1.5 pb-1.5">
+                <div className={`${MENU_LABEL} px-1`}>{t('filter')}</div>
+                <div className="flex items-center gap-1">
+                  <SimpleSelect
+                    value={activeFilter.operator}
+                    onValueChange={(v) => handleUpdateFilter(activeFilter.id, { operator: v as FilterOperator })}
+                    options={OPERATORS.map((op) => ({ value: op.value, label: op.label }))}
+                    size="sm"
+                    className="min-w-0 flex-1 shrink"
+                  />
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    onClick={() => handleDeleteFilter(activeFilter.id)}
+                    aria-label={t('remove')}
+                    title={t('remove')}
+                    className="shrink-0 hover:text-red-400"
+                  >
+                    <X />
+                  </Button>
+                </div>
+                {opDef?.needsValue && (
+                  <FilterValueField
+                    filter={activeFilter}
+                    column={colSchema}
+                    onChange={(value) => handleUpdateFilter(activeFilter.id, { value })}
+                  />
+                )}
               </div>
+            ) : (
+              <button type="button" role="menuitem" onClick={() => handleAddFilter(activeHeaderMenuColId)} className={menuItem()}>
+                <span className={MENU_ICON}><Filter /></span>
+                {t('addFilter')}
+              </button>
             )}
-
-            {/* Filter section */}
-            <div className="px-3 py-2 border-b border-neutral-800/40 flex flex-col gap-1.5">
-              <div className="text-2xs text-neutral-500 font-medium flex items-center justify-between">
-                <span>Filter</span>
-                <Filter size={10} />
-              </div>
-              {(() => {
-                const activeFilter = filters.find((f) => f.columnId === activeHeaderMenuColId);
-                if (activeFilter) {
-                  const opDef = OPERATORS.find((o) => o.value === activeFilter.operator);
-                  return (
-                    <div className="flex flex-col gap-1.5 mt-1">
-                      <div className="flex items-center gap-1">
-                        <SimpleSelect
-                          value={activeFilter.operator}
-                          onValueChange={(v) => handleUpdateFilter(activeFilter.id, { operator: v as FilterOperator })}
-                          options={OPERATORS.map((op) => ({ value: op.value, label: op.label }))}
-                          size="sm"
-                          className="min-w-0 flex-1 shrink"
-                        />
-                        <button
-                          onClick={() => handleDeleteFilter(activeFilter.id)}
-                          className="text-neutral-600 hover:text-red-400 transition-colors cursor-pointer p-0.5"
-                          title="Delete Filter"
-                        >
-                          <X size={12} />
-                        </button>
-                      </div>
-                      {opDef?.needsValue && (() => {
-                        const colSchema = schema.find((c) => c.id === activeHeaderMenuColId);
-                        if (colSchema && (colSchema.type === 'select' || colSchema.type === 'multi_select' || colSchema.type === 'status')) {
-                          let selectedList: string[] = [];
-                          if (activeFilter.value) {
-                            if (activeFilter.value.startsWith('[') && activeFilter.value.endsWith(']')) {
-                              try { selectedList = JSON.parse(activeFilter.value); } catch (e) { selectedList = [activeFilter.value]; }
-                            } else {
-                              selectedList = [activeFilter.value];
-                            }
-                          }
-
-                          const toggleOption = (optVal: string) => {
-                            let next: string[];
-                            if (selectedList.includes(optVal)) {
-                              next = selectedList.filter(v => v !== optVal);
-                            } else {
-                              next = [...selectedList, optVal];
-                            }
-                            handleUpdateFilter(activeFilter.id, { value: JSON.stringify(next) });
-                          };
-
-                          return (
-                            <div className="flex flex-col gap-1 border border-neutral-800 bg-neutral-950/40 p-2 rounded max-h-36 overflow-y-auto">
-                              <span className="text-[10px] text-neutral-500 font-semibold mb-1">Select Options:</span>
-                              {(colSchema.options || []).map((rawOpt: string | SelectOption) => {
-                                const opt = normalizeOption(rawOpt);
-                                const isChecked = selectedList.includes(opt.value);
-                                return (
-                                  <button
-                                    key={opt.value}
-                                    onClick={() => toggleOption(opt.value)}
-                                    className="flex items-center gap-2 text-left text-xs text-neutral-300 hover:bg-neutral-800/40 px-1.5 py-1 rounded cursor-pointer transition-colors"
-                                  >
-                                    <span className={`w-3.5 h-3.5 border flex items-center justify-center shrink-0 rounded-sm transition-colors ${
-                                      isChecked ? 'bg-signal border-signal' : 'border-neutral-700'
-                                    }`}>
-                                      {isChecked && <span className="text-2xs font-bold text-signal-fg leading-none">✓</span>}
-                                    </span>
-                                    <span className="truncate">{opt.value}</span>
-                                  </button>
-                                );
-                              })}
-                              {(colSchema.options || []).length === 0 && (
-                                  <span className="text-[10px] text-neutral-600 italic">{t('noOptionsDefined')}</span>
-                              )}
-                            </div>
-                          );
-                        }
-                        return (
-                          <input
-                            type="text"
-                            value={activeFilter.value}
-                            onChange={(e) => handleUpdateFilter(activeFilter.id, { value: e.target.value })}
-                            placeholder="Filter value…"
-                            className="bg-neutral-950 border border-neutral-800 text-neutral-300 text-xs py-1 px-2 rounded outline-none w-full focus:border-neutral-700 font-sans"
-                          />
-                        );
-                      })()}
-                    </div>
-                  );
-                } else {
-                  return (
-                    <button
-                      onClick={() => handleAddFilter(activeHeaderMenuColId)}
-                      className="w-full mt-1 py-1 text-xs flex items-center justify-center gap-1.5 text-signal-text hover:text-fg hover:bg-neutral-800/40 border border-dashed border-neutral-800/80 rounded transition-colors"
-                    >
-                      <Plus size={11} />
-                      Add Filter
-                    </button>
-                  );
-                }
-              })()}
-            </div>
-
-
-
           </div>
         </>
-      )}
+        );
+      })()}
 
       {/* Toggle Columns Popover */}
       {toggleMenuOpen && toggleMenuPos && (
         <>
           <div className="fixed inset-0 z-40 cursor-default bg-transparent" onClick={closeToggleMenu} />
           <div
-            className="fixed z-50 bg-neutral-900 border border-neutral-800 shadow-2xl py-1.5 w-48 rounded overflow-hidden text-left"
+            className={`fixed z-50 w-60 text-left animate-scale-in ${MENU_SURFACE}`}
             style={{ left: toggleMenuPos.x, top: toggleMenuPos.y }}
             onClick={(e) => e.stopPropagation()}
           >
-            <div className="px-1 py-1">
-              <div className="px-2 py-1 text-2xs text-neutral-500 font-medium">
-                Toggle Columns
-              </div>
-              <div className="max-h-56 overflow-y-auto flex flex-col gap-0.5 mt-0.5">
-                {schema.map((c) => {
-                  const isHidden = hiddenColumns.includes(c.id);
-                  const isTitleCol = c.id === 'title';
-                  return (
-                    <button
-                      key={c.id}
-                      onClick={() => !isTitleCol && onToggleHideColumn(c.id)}
+            <div className={MENU_LABEL}>{t('toggleColumns')}</div>
+            <div className="max-h-64 overflow-y-auto flex flex-col">
+              {schema.map((c) => {
+                const isHidden = hiddenColumns.includes(c.id);
+                const isTitleCol = c.id === 'title';
+                return (
+                  <label
+                    key={c.id}
+                    className={`${menuItem()} ${isTitleCol ? 'cursor-not-allowed opacity-50' : ''}`}
+                  >
+                    <span className={MENU_ICON}>{getPropertyIcon(c.type)}</span>
+                    <span className="flex-1 truncate">{c.name}</span>
+                    <Checkbox
+                      size="sm"
+                      checked={!isHidden}
                       disabled={isTitleCol}
-                      className={`w-full px-2 py-1.5 text-xs flex items-center justify-between text-neutral-300 hover:bg-neutral-800 transition-colors rounded ${
-                        isTitleCol ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2 overflow-hidden">
-                        {getPropertyIcon(c.type)}
-                        <span className="truncate text-neutral-400">{c.name}</span>
-                      </div>
-                      <span className={`w-3.5 h-3.5 border flex items-center justify-center shrink-0 rounded-sm transition-colors ${
-                        !isHidden ? 'bg-signal border-signal' : 'border-neutral-700'
-                      }`}>
-                        {!isHidden && <span className="text-2xs font-bold text-signal-fg leading-none">✓</span>}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
+                      onCheckedChange={() => onToggleHideColumn(c.id)}
+                    />
+                  </label>
+                );
+              })}
             </div>
           </div>
         </>

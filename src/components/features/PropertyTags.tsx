@@ -3,6 +3,7 @@
 import { useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslations } from 'next-intl';
+import { AlignLeft, Calendar, CheckSquare, CircleDashed, Clock, Hash, Link2, List, Mail, Phone, Tags, Type, User, Users, Fingerprint } from 'lucide-react';
 import {
   type SelectOption,
   type StatusGroup,
@@ -12,6 +13,31 @@ import {
 } from '@/lib/types/properties';
 import { useMember, type WorkspaceMember } from './MembersContext';
 import PageIcon from './PageIcon';
+
+// ── Property type glyph ──────────────────────────────────────────────────────
+
+const TYPE_ICONS: Record<string, typeof Type> = {
+  text: Type,
+  select: List,
+  multi_select: Tags,
+  status: CircleDashed,
+  user: User,
+  multi_user: Users,
+  number: Hash,
+  date: Calendar,
+  datetime: Clock,
+  checkbox: CheckSquare,
+  url: Link2,
+  email: Mail,
+  phone: Phone,
+  id: Fingerprint,
+};
+
+/** The small glyph that says what kind of property a column is (table header, row page). */
+export function PropertyTypeIcon({ type, size = 14, className = 'text-fg-4' }: { type: string; size?: number; className?: string }) {
+  const Icon = TYPE_ICONS[type] ?? AlignLeft;
+  return <Icon size={size} className={`shrink-0 ${className}`} aria-hidden />;
+}
 
 // ── Select / multi-select option icon ───────────────────────────────────────
 
@@ -49,7 +75,8 @@ export function StatusIcon({
     return (
       <svg width={size} height={size} viewBox="0 0 16 16" className="shrink-0" aria-hidden>
         <circle cx="8" cy="8" r="7" fill={color} />
-        <path d="M4.8 8.2l2 2 4.4-4.6" fill="none" stroke="#fff" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+        {/* The tick is cut out in the sheet colour, so it reads in every theme. */}
+        <path d="M4.8 8.2l2 2 4.4-4.6" fill="none" stroke="var(--color-sheet)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
       </svg>
     );
   }
@@ -73,10 +100,13 @@ export function StatusChip({
   value,
   options,
   iconSize = 12,
+  dense = false,
 }: {
   value: string;
   options?: (string | SelectOption)[];
   iconSize?: number;
+  /** The tighter pill for calendar events. */
+  dense?: boolean;
 }) {
   if (!value) return null;
   const opt = (options ?? []).map(normalizeOption).find((o) => o.value === value);
@@ -84,13 +114,113 @@ export function StatusChip({
   const c = getOptionColorByValue(options ?? [], value);
   return (
     <span
-      className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium align-middle"
+      className={`inline-flex min-w-0 items-center rounded-full font-medium align-middle ${dense ? 'gap-1 px-1.5 py-px text-2xs' : 'gap-1.5 px-2 py-0.5 text-xs'}`}
       style={{ backgroundColor: c.bg, color: c.text }}
     >
       <StatusIcon group={group} color={c.dot} size={iconSize} />
       <span className="truncate">{value}</span>
     </span>
   );
+}
+
+// ── Select option chip + card marks (V2 R8.2) ────────────────────────────────
+
+/** A select / multi-select value: the option's own colour (user data) on a pill. */
+export function OptionChip({
+  value,
+  options,
+  className,
+  dense = false,
+}: {
+  value: string;
+  options?: (string | SelectOption)[];
+  className?: string;
+  /** The tighter pill for calendar events. */
+  dense?: boolean;
+}) {
+  const c = getOptionColorByValue(options ?? [], value);
+  return (
+    <span
+      className={`inline-flex max-w-full shrink-0 items-center rounded-full font-medium ${dense ? 'gap-0.5 px-1.5 py-px text-2xs' : 'gap-1 px-2 py-0.5 text-xs'} ${className ?? ''}`}
+      style={{ backgroundColor: c.bg, color: c.text }}
+    >
+      <OptionIcon value={value} options={options} size={dense ? 10 : 12} />
+      <span className="truncate">{value}</span>
+    </span>
+  );
+}
+
+/**
+ * Values that say what they are on their own — a status, an option chip, a person, a
+ * link — carry no "Label:" on a card; plain text, numbers, dates and checkboxes do
+ * (R8.2: "labels only where the value alone is ambiguous").
+ */
+export function isSelfDescribingType(type: string): boolean {
+  return ['select', 'multi_select', 'status', 'user', 'multi_user', 'url', 'email'].includes(type);
+}
+
+/**
+ * The value that marks a card (the view's "Mark cards by" property), drawn as a badge:
+ * a status chip with its ring glyph, or option chips. Replaces the tinted card
+ * backgrounds and accent stripes (a Notion pattern Remnus does not follow).
+ */
+export function PropertyMark({ column, value }: { column: { type: string; options?: (string | SelectOption)[] }; value: unknown }) {
+  if (value === undefined || value === null || value === '') return null;
+  if (column.type === 'status' && typeof value === 'string') {
+    return <StatusChip value={value} options={column.options} />;
+  }
+  const values = Array.isArray(value) ? (value as string[]) : [String(value)];
+  if (values.length === 0) return null;
+  return (
+    <span className="flex flex-wrap gap-1">
+      {values.map((v) => <OptionChip key={v} value={v} options={column.options} />)}
+    </span>
+  );
+}
+
+/** The mark as a single dot in the option's colour — for tight places (calendar events, table rows). */
+export function MarkDot({
+  column,
+  value,
+  size = 8,
+}: {
+  column: { type: string; options?: (string | SelectOption)[] };
+  value: unknown;
+  size?: number;
+}) {
+  const first = Array.isArray(value) ? (value as string[])[0] : value;
+  if (first === undefined || first === null || first === '') return null;
+  const c = getOptionColorByValue(column.options ?? [], String(first));
+  if (column.type === 'status') {
+    const opt = (column.options ?? []).map(normalizeOption).find((o) => o.value === first);
+    return <StatusIcon group={opt ? getStatusGroup(opt) : 'todo'} color={c.dot} size={size + 4} />;
+  }
+  return (
+    <span
+      aria-hidden
+      className="shrink-0 rounded-full"
+      style={{ width: size, height: size, backgroundColor: c.dot }}
+    />
+  );
+}
+
+/**
+ * A group heading's glyph (kanban column, grouped-table section): the option's ring or
+ * dot, or a hollow ring for the "no value" group. The group's colour lives here, not in
+ * a tinted column or section background.
+ */
+export function GroupGlyph({
+  column,
+  value,
+}: {
+  column?: { type: string; options?: (string | SelectOption)[] };
+  /** The group's option value; null for the "no value" group. */
+  value: string | null;
+}) {
+  if (!column || value === null) {
+    return <span aria-hidden className="size-2 shrink-0 rounded-full shadow-[inset_0_0_0_1.5px_var(--color-fg-4)]" />;
+  }
+  return <MarkDot column={column} value={value} />;
 }
 
 // ── Users ────────────────────────────────────────────────────────────────────
@@ -125,7 +255,7 @@ export function UserAvatar({
       <img
         src={member.image}
         alt={member.name || ''}
-        className="rounded-full object-cover shrink-0 border border-neutral-700/40"
+        className="rounded-full object-cover shrink-0 border border-line-strong/40"
         style={dim}
         referrerPolicy="no-referrer"
       />
@@ -146,7 +276,7 @@ export function UserChip({ userId, avatarSize = 16 }: { userId: string; avatarSi
   const t = useTranslations('Database');
   const member = useMember(userId);
   return (
-    <span className="inline-flex items-center gap-1.5 max-w-full align-middle text-xs text-neutral-100">
+    <span className="inline-flex items-center gap-1.5 max-w-full align-middle text-xs text-fg">
       <UserAvatar member={member} size={avatarSize} />
       <span className="truncate">{member ? member.name || member.email : t('unknownUser')}</span>
     </span>
@@ -158,9 +288,8 @@ export function UserChip({ userId, avatarSize = 16 }: { userId: string; avatarSi
  * calendar cards where space is tight. Avatars **overlap** (GitHub/Notion-style
  * stack) via a negative margin, each carrying a thin ring in the card colour so
  * neighbours read as separate. The viewer's own avatar (when among the
- * assignees) gets a ring in the theme's accent colour (`--color-blue-500`,
- * redefined per `[data-theme]` block in globals.css → theme-aware for free) and
- * is lifted above its neighbours so the accent ring never gets clipped.
+ * assignees) gets an ink ring (the one accent is not spent on identity) and is
+ * lifted above its neighbours so the ring never gets clipped.
  *
  * The accent/separator is a **`ring` (box-shadow), never a `border`** so it does
  * NOT grow the avatar's box — a bordered self-avatar used to be a few px taller
@@ -200,7 +329,7 @@ export function UserAvatarStack({
       ))}
       {hovered && coords && createPortal(
         <div
-          className="fixed z-9999 -translate-y-full bg-neutral-900 border border-neutral-800 rounded-md shadow-xl py-1.5 px-2 flex flex-col gap-1.5 pointer-events-none"
+          className="fixed z-9999 -translate-y-full bg-float rounded-control shadow-float py-1.5 px-2 flex flex-col gap-1.5 pointer-events-none"
           style={{ top: coords.top, left: coords.left }}
         >
           {ids.map((id) => <TooltipRow key={id} userId={id} />)}
@@ -215,8 +344,10 @@ function StackedAvatar({ userId, isSelf, size, first }: { userId: string; isSelf
   const member = useMember(userId);
   return (
     <span
+      // Separator ring in the card colour; "you" gets an ink ring (monochrome — the one
+      // accent is not spent on identity) and sits above its neighbours.
       className={`shrink-0 rounded-full ${first ? '' : '-ml-1.5'} ${
-        isSelf ? 'ring-2 ring-blue-500 relative z-10' : 'ring-2 ring-neutral-900'
+        isSelf ? 'ring-2 ring-fg relative z-10' : 'ring-2 ring-raised'
       }`}
     >
       <UserAvatar member={member} size={size} />
@@ -228,7 +359,7 @@ function TooltipRow({ userId }: { userId: string }) {
   const t = useTranslations('Database');
   const member = useMember(userId);
   return (
-    <span className="flex items-center gap-1.5 text-xs text-neutral-100 whitespace-nowrap">
+    <span className="flex items-center gap-1.5 text-xs text-fg whitespace-nowrap">
       <UserAvatar member={member} size={16} />
       {member ? member.name || member.email : t('unknownUser')}
     </span>
@@ -252,7 +383,7 @@ export function UserTags({
       {ids.map((id) => (
         <span
           key={id}
-          className="inline-flex items-center gap-1.5 bg-neutral-800/60 rounded-full pl-0.5 pr-2 py-0.5 max-w-full"
+          className="inline-flex items-center gap-1.5 bg-hover/60 rounded-full pl-0.5 pr-2 py-0.5 max-w-full"
         >
           <UserChip userId={id} avatarSize={avatarSize} />
         </span>

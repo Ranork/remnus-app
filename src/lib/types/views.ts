@@ -26,10 +26,10 @@ export interface TableViewConfig {
   columnOrder: string[];   // visible column IDs in order; [] = use schema order
   hiddenColumns: string[];
   columnWidths?: Record<string, number>;
-  rowColorCol?: string;    // property ID of a select/multi_select column that drives the row's background tint color
+  rowColorCol?: string;    // property ID of a select/multi_select/status column that marks each row (a dot or status ring before the title; no tint since V2 R8.2)
   groupByCol?: string;     // optional select/status column used to split the table into vertical groups
   groupOrder?: string[];   // option values in display order; []/undefined = use options order
-  groupColBg?: boolean;    // tint each grouped table section with the group option's color
+  groupColBg?: boolean;    // legacy: section tint, ignored since V2 R8.2 (the group's colour is its heading glyph)
   hiddenGroups?: string[];
   collapsedGroups?: string[]; // group values rendered header-only (their rows are hidden)
   filters: ViewFilter[];
@@ -49,10 +49,10 @@ export interface KanbanViewConfig {
   cardProperties?: string[];              // visible property IDs in display order; undefined = first 2
   showPropertyLabels?: boolean;           // show property name before value; default true
   propertyTextClamp?: 'truncate' | 'wrap'; // single-line truncate or multi-line wrap; default truncate
-  cardColorCol?: string;                  // property ID whose select value drives the card's accent line color
-  cardBorderSide?: 'left' | 'top' | 'right' | 'bottom'; // which edge the accent line appears on; default 'left'
-  cardBgCol?: string;                     // property ID whose select value drives the card's full background tint
-  groupColBg?: boolean;                   // tint each column background with the group option's color
+  cardColorCol?: string;                  // property ID that marks each card ("Mark cards by": a status chip or option chips on the card)
+  cardBorderSide?: 'left' | 'top' | 'right' | 'bottom'; // legacy: accent-line edge, ignored since V2 R8.2
+  cardBgCol?: string;                     // legacy: card tint; read as the mark when cardColorCol is unset
+  groupColBg?: boolean;                   // legacy: column tint, ignored since V2 R8.2 (the group's colour is its heading glyph)
   defaultPageIcon?: string;
   defaultPageIconColor?: string;
   hiddenGroups?: string[];
@@ -66,9 +66,9 @@ export interface CalendarViewConfig {
   filters: ViewFilter[];
   sorts: ViewSort[];
   openBehavior?: OpenBehavior;
-  cardColorCol?: string;                  // property ID whose select value drives the card's accent line color
-  cardBorderSide?: 'left' | 'top' | 'right' | 'bottom'; // which edge the accent line appears on; default 'left'
-  cardBgCol?: string;                     // property ID whose select value drives the card's full background tint
+  cardColorCol?: string;                  // property ID that marks each event (a dot or status ring before the title)
+  cardBorderSide?: 'left' | 'top' | 'right' | 'bottom'; // legacy: accent-line edge, ignored since V2 R8.2
+  cardBgCol?: string;                     // legacy: card tint; read as the mark when cardColorCol is unset
   cardProperties?: string[];              // visible property IDs in display order; undefined = first 1
   showPropertyLabels?: boolean;           // show property name before value; default true
   propertyTextClamp?: 'truncate' | 'wrap'; // single-line truncate or multi-line wrap; default truncate

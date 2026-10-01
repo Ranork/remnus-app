@@ -3,7 +3,7 @@
 import { useMemo, useState, type ComponentProps, type DragEvent } from 'react';
 import { ChevronDown, ChevronRight, GripVertical, Plus } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { getOptionColorByValue, normalizeOption } from '@/lib/types/properties';
+import { normalizeOption } from '@/lib/types/properties';
 import {
   UNCATEGORIZED_TABLE_GROUP,
   getEffectiveTableGroupOrder,
@@ -11,13 +11,13 @@ import {
   groupPagesForTable,
 } from '@/lib/tableGrouping';
 import TableLayout from './TableLayout';
+import { GroupGlyph } from './PropertyTags';
 
 type GroupedTableLayoutProps = ComponentProps<typeof TableLayout> & {
   groupByCol: string;
   groupOrder: string[];
   hiddenGroups: string[];
   collapsedGroups?: string[];
-  groupColBg?: boolean;
   onGroupOrderChange: (order: string[]) => void;
   onCollapsedGroupsChange?: (groups: string[]) => void;
 };
@@ -29,7 +29,6 @@ export default function GroupedTableLayout({
   groupOrder,
   hiddenGroups,
   collapsedGroups = [],
-  groupColBg = false,
   onGroupOrderChange,
   onCollapsedGroupsChange,
   onCreatePage,
@@ -119,19 +118,15 @@ export default function GroupedTableLayout({
         const isCollapsed = collapsedSet.has(groupName);
         const isDraggingThis = draggedGroup === groupName;
         const isOver = dragOverGroup === groupName;
-        const groupBgStyle = groupColBg
-          ? (isUncategorized
-              ? { backgroundColor: 'var(--database-muted-group-bg, rgba(56, 59, 65, 0.08))' }
-              : { backgroundColor: getOptionColorByValue(groupColumn?.options || [], groupName).groupBg })
-          : undefined;
 
+        // Sections are plain: the group's colour is its heading glyph, never a tinted
+        // background (V2 R8.2 — the old "group background" setting is ignored).
         return (
           <section
             key={groupName}
             onDragOver={(e) => handleGroupDragOver(e, groupName)}
             onDrop={(e) => handleGroupDrop(e, groupName)}
-            className={`transition-opacity ${groupColBg ? 'p-3 rounded' : ''} ${isDraggingThis ? 'opacity-30' : ''} ${isOver ? 'ring-1 ring-signal/40' : ''}`}
-            style={groupBgStyle}
+            className={`rounded-control transition-opacity ${isDraggingThis ? 'opacity-30' : ''} ${isOver ? 'ring-1 ring-signal/50' : ''}`}
           >
             <div
               draggable={!isUncategorized}
@@ -140,24 +135,27 @@ export default function GroupedTableLayout({
                 setDraggedGroup(null);
                 setDragOverGroup(null);
               }}
-              className={`flex items-center gap-1.5 border-b border-neutral-800/60 pb-2.5 ${isCollapsed ? 'mb-0' : 'mb-3'}`}
+              className={`group/grouphead flex items-center gap-1 pb-1.5 ${isCollapsed ? '' : 'mb-1'}`}
             >
               <button
+                type="button"
                 onClick={() => toggleGroupCollapsed(groupName)}
-                className="shrink-0 p-0.5 text-neutral-500 hover:text-neutral-200 hover:bg-neutral-800/60 rounded transition-colors cursor-pointer"
+                className="flex size-6 shrink-0 items-center justify-center rounded text-fg-3 transition-colors hover:bg-hover hover:text-fg cursor-pointer"
                 title={isCollapsed ? t('expandGroup') : t('collapseGroup')}
+                aria-label={isCollapsed ? t('expandGroup') : t('collapseGroup')}
                 aria-expanded={!isCollapsed}
               >
                 {isCollapsed ? <ChevronRight size={16} /> : <ChevronDown size={16} />}
               </button>
-              <div className={`flex items-center gap-2.5 min-w-0 ${!isUncategorized ? 'cursor-grab active:cursor-grabbing' : ''}`}>
-                {!isUncategorized && <GripVertical size={15} className="text-neutral-600 shrink-0" />}
-                <h3 draggable={!isUncategorized} className="text-lg font-semibold text-neutral-200 truncate">
+              <div className={`flex min-w-0 items-center gap-2 ${!isUncategorized ? 'cursor-grab active:cursor-grabbing' : ''}`}>
+                <GroupGlyph column={groupColumn} value={isUncategorized ? null : groupName} />
+                <h3 className="truncate text-sm font-semibold text-fg">
                   {isUncategorized ? t('uncategorized') : groupName}
                 </h3>
-                <span className="shrink-0 rounded-full border border-neutral-700/70 bg-neutral-800/70 px-2 py-0.5 text-xs font-medium text-neutral-400 tabular-nums">
-                  {groupRows.length}
-                </span>
+                <span className="shrink-0 text-xs text-fg-3 tabular-nums">{groupRows.length}</span>
+                {!isUncategorized && (
+                  <GripVertical size={14} aria-hidden className="shrink-0 text-fg-4 opacity-0 transition-opacity group-hover/grouphead:opacity-100" />
+                )}
               </div>
             </div>
 
@@ -175,10 +173,11 @@ export default function GroupedTableLayout({
               />
             ) : (
               <button
+                type="button"
                 onClick={() => onCreatePage?.(isUncategorized ? {} : { [groupByCol]: groupName })}
-                className="w-full py-4 text-xs text-neutral-500 hover:text-neutral-300 hover:bg-neutral-800/10 transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                className="flex w-full cursor-pointer items-center gap-1.5 rounded-control px-2.5 py-1.5 text-ui text-fg-3 transition-colors hover:bg-hover/50 hover:text-fg"
               >
-                <Plus size={13} />
+                <Plus size={14} />
                 {t('new')}
               </button>
             )}

@@ -2,15 +2,18 @@
 
 import React, { useState, useMemo, useRef, useEffect, useLayoutEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { createPortal } from 'react-dom';
-import { getOptionColorByValue, getCardBorderAccents, getCardBgColor, formatDateValue } from '@/lib/types/properties';
-import { ChevronLeft, ChevronRight, ChevronDown, ChevronsDownUp, ChevronsUpDown, GripVertical, Trash2, Calendar as CalendarIcon, Clock, Plus, Copy, ArrowUpRight, Maximize2, Link2, Repeat, Unlink } from 'lucide-react';
-import { useTranslations } from 'next-intl';
+import { formatDateValue } from '@/lib/types/properties';
+import { ChevronLeft, ChevronRight, ChevronDown, ChevronsDownUp, ChevronsUpDown, GripVertical, Trash2, Calendar as CalendarIcon, Plus, Copy, ArrowUpRight, Maximize2, Link2, Repeat, Unlink } from 'lucide-react';
+import { useLocale, useTranslations } from 'next-intl';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { EmptyState } from '@/components/ui/empty-state';
+import { Tooltip } from '@/components/ui/tooltip';
 import { useContextMenu, type MenuItem } from './ContextMenu';
 import PageIcon from './PageIcon';
 import IconPicker from './IconPicker';
 import AgentEditBadge from './AgentEditBadge';
-import { StatusChip, UserAvatarStack, OptionIcon } from './PropertyTags';
+import { StatusChip, UserAvatarStack, OptionChip, MarkDot, isSelfDescribingType } from './PropertyTags';
 import { updatePageIcon, updatePageCardCollapsed, updatePagesCardCollapsed } from '@/lib/actions/page';
 import { ConfirmDialog } from './ConfirmDialog';
 import { useRecurrenceControls } from './recurrence/useRecurrenceControls';
@@ -30,9 +33,9 @@ interface CalendarViewProps {
   onCardDateChange: (pageId: string, newDateStr: string, targetPageId?: string, position?: 'before' | 'after') => void;
   onDeletePage: (pageId: string) => void;
   onDuplicatePage: (pageId: string) => void;
-  cardColorCol?: string;
-  cardBorderSide?: 'left' | 'top' | 'right' | 'bottom';
-  cardBgCol?: string;
+  /** The property whose value marks each event (a dot in the option's colour before
+   *  the title) — replaces the old tinted backgrounds and accent stripes. */
+  cardMarkCol?: string;
   cardProperties?: string[];
   showPropertyLabels?: boolean;
   propertyTextClamp?: 'truncate' | 'wrap';
@@ -104,8 +107,21 @@ const getWeekDays = (date: Date, firstDayOfWeek: 'sunday' | 'monday') => {
   return days;
 };
 
-const WEEKDAYS_SUN = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
-const WEEKDAYS_MON = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN'];
+/** "septiembre de 2026" → "Septiembre de 2026": a heading starts with a capital in every locale. */
+const sentenceCase = (text: string, locale: string) =>
+  text.charAt(0).toLocaleUpperCase(locale) + text.slice(1);
+
+/** Localized short weekday names in grid order, with which of them fall on a weekend.
+ *  4 Jan 2026 is a Sunday — any known Sunday works as the reference week. */
+function weekdayHeaders(locale: string, firstDayOfWeek: 'sunday' | 'monday') {
+  const fmt = new Intl.DateTimeFormat(locale, { weekday: 'short' });
+  const order = firstDayOfWeek === 'monday' ? [1, 2, 3, 4, 5, 6, 0] : [0, 1, 2, 3, 4, 5, 6];
+  return order.map((dow) => ({
+    dow,
+    label: fmt.format(new Date(2026, 0, 4 + dow)),
+    isWeekend: dow === 0 || dow === 6,
+  }));
+}
 
 export default function CalendarView({
   database,
@@ -119,9 +135,7 @@ export default function CalendarView({
   onCardDateChange,
   onDeletePage,
   onDuplicatePage,
-  cardColorCol,
-  cardBorderSide = 'left',
-  cardBgCol,
+  cardMarkCol,
   cardProperties,
   showPropertyLabels = true,
   propertyTextClamp = 'truncate',
@@ -136,6 +150,7 @@ export default function CalendarView({
   const t = useTranslations('Database');
   const tPage = useTranslations('Page');
   const tRec = useTranslations('Recurrence');
+  const locale = useLocale();
   const router = useRouter();
   const [currentDate, setCurrentDate] = useState(() => new Date());
   const [activeIconPickerPageId, setActiveIconPickerPageId] = useState<string | null>(null);
@@ -169,8 +184,6 @@ export default function CalendarView({
   // the dragged card would land (mirrors KanbanBoard's own indicator).
   const [dragOverCardId, setDragOverCardId] = useState<string | null>(null);
   const [dragOverPosition, setDragOverPosition] = useState<'before' | 'after' | null>(null);
-  const [activeMenuCardId, setActiveMenuCardId] = useState<string | null>(null);
-  const [menuCoords, setMenuCoords] = useState<{ top: number; left: number } | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
 
   // ── Recurrence ─────────────────────────────────────────────────────────────
@@ -244,6 +257,10 @@ export default function CalendarView({
     ? cardProperties.map((id) => availableProps.find((c) => c.id === id)).filter(Boolean) as any[]
     : availableProps.slice(0, 1);
   const textClass = propertyTextClamp === 'wrap' ? 'break-words whitespace-pre-wrap' : 'truncate';
+  // The "Mark events by" property — only a select/status can mark (a dot needs a colour).
+  const markColumn = cardMarkCol
+    ? schema.find((c) => c.id === cardMarkCol && ['select', 'multi_select', 'status'].includes(c.type))
+    : undefined;
 
   const days = useMemo(() => {
     return viewMode === 'month' ? getMonthDays(currentDate, firstDayOfWeek) : getWeekDays(currentDate, firstDayOfWeek);
@@ -328,29 +345,22 @@ export default function CalendarView({
 
   const getHeaderLabel = () => {
     if (viewMode === 'month') {
-      return currentDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-    } else {
-      let currentDay = currentDate.getDay();
-      if (firstDayOfWeek === 'monday') {
-        currentDay = currentDay === 0 ? 6 : currentDay - 1;
-      }
-      const start = new Date(currentDate);
-      start.setDate(currentDate.getDate() - currentDay);
-      const end = new Date(start);
-      end.setDate(start.getDate() + 6);
-      
-      const startMonth = start.toLocaleDateString('en-US', { month: 'short' });
-      const endMonth = end.toLocaleDateString('en-US', { month: 'short' });
-      
-      if (start.getFullYear() !== end.getFullYear()) {
-        return `${startMonth} ${start.getDate()}, ${start.getFullYear()} – ${endMonth} ${end.getDate()}, ${end.getFullYear()}`;
-      } else if (start.getMonth() !== end.getMonth()) {
-        return `${startMonth} ${start.getDate()} – ${endMonth} ${end.getDate()}, ${end.getFullYear()}`;
-      } else {
-        return `${startMonth} ${start.getDate()} – ${end.getDate()}, ${end.getFullYear()}`;
-      }
+      return currentDate.toLocaleDateString(locale, { month: 'long', year: 'numeric' });
     }
+    let currentDay = currentDate.getDay();
+    if (firstDayOfWeek === 'monday') {
+      currentDay = currentDay === 0 ? 6 : currentDay - 1;
+    }
+    const start = new Date(currentDate);
+    start.setDate(currentDate.getDate() - currentDay);
+    const end = new Date(start);
+    end.setDate(start.getDate() + 6);
+    // formatRange drops the repeated month/year the way each locale expects
+    // ("Sep 28 – Oct 4, 2026", "28 Eyl – 4 Eki 2026").
+    return new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric', year: 'numeric' }).formatRange(start, end);
   };
+
+  const weekdays = weekdayHeaders(locale, firstDayOfWeek);
 
   const isSameDay = (d1: Date, d2: Date) => {
     return (
@@ -386,52 +396,49 @@ export default function CalendarView({
 
   if (!dateCol) {
     return (
-      <div className="flex flex-col items-center justify-center text-neutral-500 py-20 text-center gap-3">
-        <CalendarIcon size={28} className="text-neutral-600 animate-pulse" />
-        <span className="text-sm">Please select a date property in the Layout Settings to enable the Calendar View.</span>
-        <span className="text-xs text-neutral-600 max-w-xs">
-          Open <strong>Settings &gt; Layout</strong> tab in the top right to bind this calendar to a date property.
-        </span>
-      </div>
+      <EmptyState
+        icon={<CalendarIcon />}
+        title={t('calendarNeedsDate')}
+        description={t('calendarNeedsDateHint')}
+      />
     );
   }
 
   const todayStr = formatYYYYMMDD(new Date());
+  const prevLabel = viewMode === 'month' ? t('calendarPrevMonth') : t('calendarPrevWeek');
+  const nextLabel = viewMode === 'month' ? t('calendarNextMonth') : t('calendarNextWeek');
 
   return (
-    <div className="flex flex-col bg-neutral-850 text-neutral-200 h-full">
+    <div className="flex flex-col text-fg h-full">
       {/* Calendar Header Nav */}
-      <div className="flex items-center justify-between pb-3.5 mb-2.5 border-b border-neutral-850/60 shrink-0 select-none">
-        <div className="flex items-center gap-1.5">
-          <button
-            onClick={handlePrev}
-            className="p-1.5 hover:bg-neutral-800/60 hover:text-neutral-100 border border-neutral-850 bg-neutral-900/10 transition-colors cursor-pointer rounded"
-          >
-            <ChevronLeft size={14} />
-          </button>
-          <button
-            onClick={handleToday}
-            className="px-3 py-1 text-xs font-semibold hover:bg-neutral-800/60 hover:text-neutral-100 border border-neutral-850 bg-neutral-900/10 transition-colors cursor-pointer rounded"
-          >
+      <div className="flex items-center justify-between gap-3 pb-3 mb-2 shrink-0 select-none">
+        <div className="flex items-center gap-1">
+          <Tooltip content={prevLabel}>
+            <Button variant="ghost" size="icon-sm" onClick={handlePrev} aria-label={prevLabel}>
+              <ChevronLeft />
+            </Button>
+          </Tooltip>
+          <Button variant="secondary" size="sm" onClick={handleToday}>
             {t('today')}
-          </button>
-          <button
-            onClick={handleNext}
-            className="p-1.5 hover:bg-neutral-800/60 hover:text-neutral-100 border border-neutral-850 bg-neutral-900/10 transition-colors cursor-pointer rounded"
-          >
-            <ChevronRight size={14} />
-          </button>
-          <span className="text-sm font-semibold ml-2.5 text-neutral-100 shrink-0">
-            {getHeaderLabel()}
-          </span>
+          </Button>
+          <Tooltip content={nextLabel}>
+            <Button variant="ghost" size="icon-sm" onClick={handleNext} aria-label={nextLabel}>
+              <ChevronRight />
+            </Button>
+          </Tooltip>
+          <h3 className="ml-2 shrink-0 text-sm font-semibold text-fg">
+            {sentenceCase(getHeaderLabel(), locale)}
+          </h3>
         </div>
 
-        {/* Small badge of dateCol binding — desktop only; on mobile it collides
-            with the nav row and is secondary info (set in Layout settings). */}
-        <div className="hidden lg:flex items-center gap-1.5 text-2xs text-neutral-500 bg-neutral-900/30 border border-neutral-850 px-2 py-0.5 rounded">
-          <Clock size={10} />
-          <span>Mapped to: {dateProperty?.name || 'Unknown'}</span>
-        </div>
+        {/* Which date property the calendar follows — desktop only; on mobile it
+            collides with the nav row and is secondary info (set in Layout settings). */}
+        {dateProperty && (
+          <span className="hidden lg:inline-flex items-center gap-1.5 text-xs text-fg-3">
+            <CalendarIcon size={12} aria-hidden />
+            {t('calendarByProperty', { name: dateProperty.name })}
+          </span>
+        )}
       </div>
 
       {/* Scrollable calendar body — on phones a 7-col month grid squeezes each
@@ -442,13 +449,13 @@ export default function CalendarView({
       <div ref={scrollContainerRef} className="flex-1 min-h-0 overflow-auto">
       <div className="min-w-170 lg:min-w-0">
       {/* Weekdays names row — sticky so it never scrolls out of view */}
-      <div className="grid grid-cols-7 border-b border-neutral-800/80 bg-neutral-850 shrink-0 select-none sticky top-0 z-20">
-        {(firstDayOfWeek === 'monday' ? WEEKDAYS_MON : WEEKDAYS_SUN).map((day) => (
+      <div className="grid grid-cols-7 bg-sheet shrink-0 select-none sticky top-0 z-20">
+        {weekdays.map(({ dow, label, isWeekend }) => (
           <div
-            key={day}
-            className="text-[10px] text-neutral-500 font-semibold tracking-wider text-center py-2"
+            key={dow}
+            className={`px-2 py-1.5 text-xs font-medium ${isWeekend ? 'text-fg-4' : 'text-fg-3'}`}
           >
-            {day}
+            {label}
           </div>
         ))}
       </div>
@@ -456,7 +463,7 @@ export default function CalendarView({
       {/* Grid Container */}
       <div>
         <div
-          className="grid grid-cols-7 border-l border-t border-neutral-800/80 bg-neutral-850 h-auto"
+          className="grid grid-cols-7 border-l border-t border-line h-auto"
           style={{
             // `auto` (not `1fr`) so each week row grows to fit its busiest day
             // independently — a week packed with cards expands without dragging
@@ -468,6 +475,8 @@ export default function CalendarView({
           {days.map(({ date, isCurrentMonth }, idx) => {
             const dayStr = formatYYYYMMDD(date);
             const isToday = dayStr === todayStr;
+            const isOutside = !isCurrentMonth && viewMode === 'month';
+            const isWeekend = date.getDay() === 0 || date.getDay() === 6;
             const dayPages = getPagesForDay(date);
             // "Expand all" only once every card on the day is collapsed; a single
             // expanded card keeps the button meaning "collapse all".
@@ -501,105 +510,68 @@ export default function CalendarView({
                   }
                   resetDragState();
                 }}
-                className={`relative border-r border-b border-neutral-800/80 p-1 lg:p-2 min-h-24 flex flex-col transition-colors overflow-visible group/day ${
+                className={`relative border-r border-b border-line p-1 lg:p-1.5 min-h-24 flex flex-col transition-colors overflow-visible group/day ${
                   isDragOver
-                    ? 'bg-neutral-800/15'
-                    : isToday
-                    ? 'bg-signal/12'
-                    : !isCurrentMonth && viewMode === 'month'
-                    ? 'bg-neutral-950/20'
-                    : 'bg-transparent'
-                } ${isToday ? 'ring-1 ring-inset ring-signal/70 z-10' : ''}`}
+                    ? 'bg-hover/50'
+                    : isOutside
+                    ? 'bg-desk/40'
+                    : ''
+                }`}
               >
                 {/* Day Number / Indicator */}
-                <div className="flex items-center justify-between gap-1 mb-1.5 shrink-0 select-none">
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    <span
-                      className={`shrink-0 text-xs font-semibold py-0.5 px-1.5 ${
-                        isToday
-                          ? 'bg-ink text-ink-fg font-bold'
-                          : isCurrentMonth
-                          ? 'text-neutral-200'
-                          : 'text-neutral-500'
-                      }`}
-                    >
-                      {date.getDate()}
-                    </span>
-                    {/* Spells out what the blue square means, so "today" reads as
-                        today instead of just "the highlighted one". */}
-                    {isToday && (
-                      <span className="truncate rounded border border-signal/40 bg-signal/15 px-1 py-px text-2xs font-medium text-signal-text">
-                        {t('today')}
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-1.5 h-6 shrink-0">
+                <div className="flex items-center justify-between gap-1 mb-1 shrink-0 select-none">
+                  {/* Today is the one filled number (signal); weekend and
+                      other-month days step back to the faintest ink. */}
+                  <span
+                    aria-current={isToday ? 'date' : undefined}
+                    aria-label={isToday ? `${t('today')}, ${date.getDate()}` : undefined}
+                    className={`inline-flex h-6 min-w-6 shrink-0 items-center justify-center rounded-full px-1 text-xs tabular-nums ${
+                      isToday
+                        ? 'bg-signal font-semibold text-signal-fg'
+                        : isOutside || isWeekend
+                        ? 'font-medium text-fg-4'
+                        : 'font-medium text-fg-2'
+                    }`}
+                  >
+                    {date.getDate()}
+                  </span>
+                  {/* The day's card count sits at the right edge; on hover (or when
+                      a button inside has focus) the day's actions take its place. */}
+                  <div className="relative flex h-6 shrink-0 items-center justify-end">
                     {dayPages.length > 0 && (
-                      <span className="text-[10px] text-neutral-600 font-medium font-mono group-hover/day:hidden">
+                      <span className="px-1 text-2xs text-fg-4 tabular-nums group-hover/day:invisible group-focus-within/day:invisible">
                         {dayPages.length}
                       </span>
                     )}
-                    {dayPages.length > 0 && (
+                    <div className="absolute inset-y-0 right-0 flex items-center gap-0.5 opacity-0 transition-opacity group-hover/day:opacity-100 focus-within:opacity-100">
+                      {dayPages.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={() => handleToggleDayCollapsed(dayPages, !allDayCardsCollapsed)}
+                          className="flex size-6 items-center justify-center rounded text-fg-3 transition-colors hover:bg-hover hover:text-fg cursor-pointer"
+                          title={allDayCardsCollapsed ? t('expandAllCards') : t('collapseAllCards')}
+                          aria-label={allDayCardsCollapsed ? t('expandAllCards') : t('collapseAllCards')}
+                        >
+                          {allDayCardsCollapsed ? <ChevronsUpDown size={14} /> : <ChevronsDownUp size={14} />}
+                        </button>
+                      )}
                       <button
-                        onClick={() => handleToggleDayCollapsed(dayPages, !allDayCardsCollapsed)}
-                        className="opacity-0 group-hover/day:opacity-100 transition-opacity p-0.5 hover:bg-neutral-800 text-neutral-500 hover:text-neutral-200 rounded cursor-pointer duration-100"
-                        title={allDayCardsCollapsed ? t('expandAllCards') : t('collapseAllCards')}
+                        type="button"
+                        onClick={() => onCreatePage?.({ [dateCol]: dayStr })}
+                        className="flex size-6 items-center justify-center rounded text-fg-3 transition-colors hover:bg-hover hover:text-fg cursor-pointer"
+                        title={t('calendarAddToDay')}
+                        aria-label={t('calendarAddToDay')}
                       >
-                        {allDayCardsCollapsed ? <ChevronsUpDown size={12} /> : <ChevronsDownUp size={12} />}
+                        <Plus size={14} />
                       </button>
-                    )}
-                    <button
-                      onClick={() => onCreatePage?.({ [dateCol]: dayStr })}
-                      className="opacity-0 group-hover/day:opacity-100 transition-opacity p-0.5 hover:bg-neutral-800 text-neutral-500 hover:text-neutral-200 rounded cursor-pointer duration-100"
-                      title="Add a page to this day"
-                    >
-                      <Plus size={12} />
-                    </button>
+                    </div>
                   </div>
                 </div>
 
                 {/* Cards Container inside day */}
                 <div className="flex-1 flex flex-col gap-1.5 min-h-10">
                   {dayPages.map((page) => {
-                    const colorColSchema = cardColorCol ? schema.find((c) => c.id === cardColorCol) : null;
-                    const borderAccents = getCardBorderAccents(colorColSchema, page.properties[cardColorCol ?? '']);
-                    // Only worth thickening the line for the icon when the card is
-                    // actually collapsed — expanded cards already show the select's
-                    // icon in its own property chip, no need to duplicate it here.
-                    const showAccentIcons = page.cardCollapsed && borderAccents.some((a) => a.icon);
-                    const bgColSchema = cardBgCol ? schema.find((c) => c.id === cardBgCol) : null;
-                    const bgColor = getCardBgColor(bgColSchema, page.properties[cardBgCol ?? '']);
-                    // Thick+icon only while truly collapsed — the card root already
-                    // carries `group` (used by the existing hover-peek), so on hover
-                    // the bar animates straight back to its normal thin state, same
-                    // moment the property list peeks back open beneath it. `lg:`-gated
-                    // like the property block itself: mobile never reveals the peek
-                    // (touch has no real hover), so the bar shouldn't try to thin
-                    // there either — it'd revert with nothing to reveal underneath.
-                    const borderLineClass = cardBorderSide === 'top'
-                      ? `absolute top-0 inset-x-0 flex flex-row transition-[height] duration-200 ease-out ${showAccentIcons ? 'h-6 lg:group-hover:h-0.75' : 'h-0.75'}`
-                      : cardBorderSide === 'right'
-                      ? `absolute right-0 inset-y-0 flex flex-col transition-[width] duration-200 ease-out ${showAccentIcons ? 'w-6 lg:group-hover:w-0.75' : 'w-0.75'}`
-                      : cardBorderSide === 'bottom'
-                      ? `absolute bottom-0 inset-x-0 flex flex-row transition-[height] duration-200 ease-out ${showAccentIcons ? 'h-6 lg:group-hover:h-0.75' : 'h-0.75'}`
-                      : `absolute left-0 inset-y-0 flex flex-col transition-[width] duration-200 ease-out ${showAccentIcons ? 'w-6 lg:group-hover:w-0.75' : 'w-0.75'}`;
-                    // Calendar cards are much tighter than Kanban's (py-1/px-1 on
-                    // mobile), so the 24px thickened bar needs its own side's
-                    // padding pulled out to 28px or the icon would sit under the
-                    // title text instead of beside it. On hover (lg: only, matching
-                    // the bar's own gate — mobile has no real hover to revert on)
-                    // it eases back to the normal responsive value in step with the
-                    // bar thinning, so the title/properties actually slide over to
-                    // meet it instead of leaving a gap; the other three sides never move.
-                    const cardPaddingClass = !showAccentIcons
-                      ? 'py-1 lg:py-2.5 px-1 lg:px-2'
-                      : cardBorderSide === 'right'
-                      ? 'py-1 lg:py-2.5 pl-1 lg:pl-2 pr-7 lg:group-hover:pr-2'
-                      : cardBorderSide === 'top'
-                      ? 'px-1 lg:px-2 pb-1 lg:pb-2.5 pt-7 lg:group-hover:pt-2.5'
-                      : cardBorderSide === 'bottom'
-                      ? 'px-1 lg:px-2 pt-1 lg:pt-2.5 pb-7 lg:group-hover:pb-2.5'
-                      : 'py-1 lg:py-2.5 pr-1 lg:pr-2 pl-7 lg:group-hover:pl-2';
+                    const markValue = markColumn ? page.properties[markColumn.id] : undefined;
                     return (
                     <div
                       key={page.id}
@@ -636,43 +608,37 @@ export default function CalendarView({
                         resetDragState();
                       }}
                       onDragEnd={resetDragState}
-                      className={`database-card relative cursor-pointer transition-colors group flex flex-col select-none overflow-hidden rounded ${
+                      // The board's card language: a raised surface with a hairline —
+                      // no tint, no stripe. The mark is a dot before the title, and the
+                      // drop line (signal) shows where a dragged card lands.
+                      className={`group relative flex cursor-pointer flex-col rounded-control bg-raised shadow-[inset_0_0_0_1px_var(--color-line)] transition-shadow select-none hover:shadow-[inset_0_0_0_1px_var(--color-line-strong)] ${
                         draggedCardId === page.id ? 'opacity-25' : ''
-                      } ${dragOverCardId === page.id && dragOverPosition === 'before' ? 'border-t-2 border-t-signal/60' : ''} ${
-                        dragOverCardId === page.id && dragOverPosition === 'after' ? 'border-b-2 border-b-signal/60' : ''
+                      } ${dragOverCardId === page.id && dragOverPosition === 'before' ? 'before:absolute before:inset-x-0 before:-top-1 before:h-0.5 before:rounded-full before:bg-signal' : ''} ${
+                        dragOverCardId === page.id && dragOverPosition === 'after' ? 'after:absolute after:inset-x-0 after:-bottom-1 after:h-0.5 after:rounded-full after:bg-signal' : ''
                       }`}
-                      style={{ backgroundColor: bgColor ?? 'var(--database-card-bg, rgba(64,68,75,0.55))' }}
                     >
-                      {borderAccents.length > 0 && (
-                        <div className={`${borderLineClass} pointer-events-none`} aria-hidden>
-                          {borderAccents.map((accent, i) => (
-                            <div key={i} className="flex-1 flex items-center justify-center" style={{ backgroundColor: accent.color }}>
-                              {showAccentIcons && accent.icon && (
-                                <span className="transition-opacity duration-150 lg:group-hover:opacity-0">
-                                  <PageIcon icon={accent.icon} iconColor={accent.iconColor} size={16} hideFallback style={{ color: '#fff' }} />
-                                </span>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      )}
                       {/* Hover Actions — desktop only (drag-reschedule uses HTML5
                           DnD which doesn't fire on touch; the invisible grip also
                           stole taps meant to open the card on mobile). */}
                       <div
-                        className="hidden lg:flex absolute right-1 top-1.5 opacity-0 group-hover:opacity-100 items-center transition-opacity z-10"
+                        className="hidden lg:flex absolute right-1 top-1 z-10 items-center opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100"
                         onClick={(e) => e.stopPropagation()}
                       >
                         {/* Collapse/expand — hides the property list, keeping just the title */}
                         <button
+                          type="button"
                           onClick={() => handleToggleCollapsed(page.id, !page.cardCollapsed)}
-                          className="p-1 hover:bg-neutral-700/60 text-neutral-400 hover:text-neutral-200 transition-colors rounded cursor-pointer"
+                          className="flex size-6 cursor-pointer items-center justify-center rounded text-fg-3 transition-colors hover:bg-hover hover:text-fg"
                           title={page.cardCollapsed ? t('expandCard') : t('collapseCard')}
+                          aria-label={page.cardCollapsed ? t('expandCard') : t('collapseCard')}
                         >
-                          {page.cardCollapsed ? <ChevronRight size={12} /> : <ChevronDown size={12} />}
+                          {page.cardCollapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
                         </button>
-                        {/* Drag handle & Actions */}
+                        {/* Drag handle; a click opens the same menu as a right-click
+                            (repeat, detach, duplicate, delete — this button is the
+                            only affordance most people ever find on a card). */}
                         <button
+                          type="button"
                           draggable={true}
                           onDragStart={(e) => {
                             e.stopPropagation();
@@ -682,122 +648,46 @@ export default function CalendarView({
                           }}
                           onClick={(e) => {
                             e.stopPropagation();
-                            if (activeMenuCardId === page.id) {
-                              setActiveMenuCardId(null);
-                              setMenuCoords(null);
-                            } else {
-                              const rect = e.currentTarget.getBoundingClientRect();
-                              setMenuCoords({ top: rect.bottom + 4, left: rect.right - 128 });
-                              setActiveMenuCardId(page.id);
-                            }
+                            cardMenu.open(e, buildCardMenu(page.id));
                           }}
-                          className="p-1 hover:bg-neutral-700/60 text-neutral-400 hover:text-neutral-200 cursor-grab active:cursor-grabbing transition-colors rounded"
+                          className="flex size-6 cursor-grab items-center justify-center rounded text-fg-3 transition-colors hover:bg-hover hover:text-fg active:cursor-grabbing"
                           title={t('dragReschedule')}
+                          aria-label={t('dragReschedule')}
                         >
-                          <GripVertical size={12} />
+                          <GripVertical size={14} />
                         </button>
                       </div>
 
-                      {/* Card Dropdown Menu — rendered via portal to escape overflow-hidden */}
-                      {activeMenuCardId === page.id && menuCoords && createPortal(
-                        <div onClick={(e) => e.stopPropagation()}>
-                          <div
-                            className="fixed inset-0 z-9998 cursor-default"
-                            onClick={(e) => { e.stopPropagation(); setActiveMenuCardId(null); setMenuCoords(null); }}
-                          />
-                          <div
-                            className="fixed z-9999 bg-neutral-900 border border-neutral-800 shadow-xl py-1 w-40 rounded text-left animate-fade-in animate-duration-100 overflow-hidden"
-                            style={{ top: menuCoords.top, left: menuCoords.left }}
-                          >
-                            {/* Repeat lives here as well as in the right-click
-                                menu: this ⋯ button is the only affordance most
-                                people ever find on a card, so leaving recurrence
-                                exclusively behind a right-click hid the feature. */}
-                            {parseDateValue(page.properties?.[dateCol]) && (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  recurrence.openRepeat(page.id);
-                                  setActiveMenuCardId(null);
-                                  setMenuCoords(null);
-                                }}
-                                className="w-full px-2.5 py-1.5 text-[11px] text-neutral-300 hover:bg-neutral-800 flex items-center gap-1.5 cursor-pointer transition-colors border-b border-neutral-850"
-                              >
-                                <Repeat size={11} />
-                                <span>{page.seriesId && !page.seriesDetached ? tRec('menuEditRepeat') : tRec('menuRepeat')}</span>
-                              </button>
-                            )}
-                            {page.seriesId && !page.seriesDetached && (
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  recurrence.run(() => detachPageFromSeries(page.id));
-                                  setActiveMenuCardId(null);
-                                  setMenuCoords(null);
-                                }}
-                                className="w-full px-2.5 py-1.5 text-[11px] text-neutral-300 hover:bg-neutral-800 flex items-center gap-1.5 cursor-pointer transition-colors border-b border-neutral-850"
-                              >
-                                <Unlink size={11} />
-                                <span>{tRec('menuDetach')}</span>
-                              </button>
-                            )}
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onDuplicatePage(page.id);
-                                setActiveMenuCardId(null);
-                                setMenuCoords(null);
-                              }}
-                              className="w-full px-2.5 py-1.5 text-[11px] text-neutral-300 hover:bg-neutral-800 flex items-center gap-1.5 cursor-pointer transition-colors border-b border-neutral-850"
-                            >
-                              <Copy size={11} />
-                              <span>{t('duplicatePage')}</span>
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                recurrence.requestDelete(page.id);
-                                setActiveMenuCardId(null);
-                                setMenuCoords(null);
-                              }}
-                              className="w-full px-2.5 py-1.5 text-[11px] text-red-400 hover:bg-neutral-800 flex items-center gap-1.5 cursor-pointer transition-colors"
-                            >
-                              <Trash2 size={11} />
-                              <span>{tPage('deletePage')}</span>
-                            </button>
-                          </div>
-                        </div>,
-                        document.body
-                      )}
-
-                      {/* Owns the padding (not the `group` root above) — `group-hover:`
-                          utilities only match descendants of `.group`, never the
-                          group element itself, so the accent-side padding's hover
-                          reversion has to live on a child for it to actually fire. */}
-                      <div className={`${cardPaddingClass} transition-[padding] duration-200 ease-out flex-1 flex flex-col min-w-0`}>
-                      {/* Page Title. lg:pr-8 (room for the collapse/grip buttons,
+                      <div className="flex min-w-0 flex-1 flex-col px-1.5 py-1 lg:px-2 lg:py-1.5">
+                      {/* Page Title. lg:pr-12 (room for the collapse/grip buttons,
                           `hidden lg:flex` themselves) only reserved on hover —
                           those buttons are `opacity-0` until then, so holding the
                           space permanently truncated titles that had the room to
                           show more. */}
-                      <h4 className={`text-[11px] lg:text-sm text-neutral-100 group-hover:text-neutral-50 font-medium leading-snug transition-[padding-right] duration-200 ease-out pr-1 lg:group-hover:pr-8 mb-0 lg:mb-1 flex items-center gap-1 ${propertyTextClamp === 'truncate' ? 'overflow-hidden' : 'wrap-break-word whitespace-normal overflow-visible'}`}>
+                      <h4 className={`flex items-center gap-1.5 pr-1 text-2xs font-medium leading-snug text-fg transition-[padding-right] duration-200 ease-out lg:text-ui lg:group-hover:pr-12 ${propertyTextClamp === 'truncate' ? 'overflow-hidden' : 'wrap-break-word whitespace-normal overflow-visible'}`}>
+                        {markColumn && <MarkDot column={markColumn} value={markValue} />}
+                        {/* Room is short in a day cell: only a chosen icon is shown,
+                            not the generic page glyph every untouched row has. */}
+                        {(page.icon || defaultPageIcon) && (
                         <div className="relative shrink-0 select-none hidden lg:block">
                           <button
+                            type="button"
                             onClick={(e) => {
                               e.preventDefault();
                               e.stopPropagation();
                               activeAnchorRef.current = e.currentTarget;
                               setActiveIconPickerPageId(activeIconPickerPageId === page.id ? null : page.id);
                             }}
-                            className="hover:bg-neutral-800 p-0.5 rounded transition-colors flex items-center justify-center cursor-pointer"
-                            title="Change icon"
+                            className="flex cursor-pointer items-center justify-center rounded p-0.5 transition-colors hover:bg-hover"
+                            title={t('changeIcon')}
+                            aria-label={t('changeIcon')}
                           >
-                            <PageIcon 
-                              icon={page.icon || defaultPageIcon} 
-                              iconColor={page.iconColor || defaultPageIconColor} 
-                              size={14} 
-                              fallbackType="page" 
-                              className="shrink-0" 
+                            <PageIcon
+                              icon={page.icon || defaultPageIcon}
+                              iconColor={page.iconColor || defaultPageIconColor}
+                              size={14}
+                              fallbackType="page"
+                              className="shrink-0"
                             />
                           </button>
                           {activeIconPickerPageId === page.id && (
@@ -810,6 +700,7 @@ export default function CalendarView({
                             />
                           )}
                         </div>
+                        )}
                         <span className={propertyTextClamp === 'truncate' ? 'truncate min-w-0' : ''}>{page.properties['title'] || tPage('untitled')}</span>
                         <RecurringBadge
                           seriesId={page.seriesId}
@@ -822,7 +713,7 @@ export default function CalendarView({
                         agentName={page.agentName ?? null}
                         tokenName={page.agentTokenName ?? null}
                         editedAt={page.agentEditedAt ?? null}
-                        className="absolute bottom-0 right-0 rounded-tl-xl p-1.5 z-10 translate-x-0.5 translate-y-0.5"
+                        className="absolute bottom-1 right-1 z-10 hidden lg:inline-flex"
                       />
 
                       {/* Card properties — hidden on mobile for a compact,
@@ -838,7 +729,7 @@ export default function CalendarView({
                       <div className="hidden lg:block shrink-0">
                       <div className={`grid transition-[grid-template-rows] duration-200 ease-out ${page.cardCollapsed ? 'grid-rows-[0fr] group-hover:grid-rows-[1fr]' : 'grid-rows-[1fr]'}`}>
                       <div className="overflow-hidden">
-                      <div className="pt-1.5 flex flex-col gap-1.5 select-none">
+                      <div className="flex flex-col gap-1 pt-1.5 select-none">
                         {propsToShow.map((c) => {
                             const val = page.properties[c.id];
                             const isEmpty =
@@ -846,58 +737,51 @@ export default function CalendarView({
                               val === null ||
                               val === '' ||
                               (Array.isArray(val) && val.length === 0);
-                            if (isEmpty) return null;
+                            // An unticked checkbox is a value too ("not done"), but on a
+                            // card it only adds noise — show it only once ticked.
+                            const isUnchecked = c.type === 'checkbox' && !(val === true || val === 'true');
+                            if (isEmpty || isUnchecked) return null;
 
                             let display: React.ReactNode;
                             if (c.type === 'select' && typeof val === 'string') {
-                              const sc = getOptionColorByValue(c.options || [], val);
-                              display = (
-                                <span className="inline-flex items-center gap-0.5 text-[9px] px-1.5 py-px rounded-full font-medium" style={{ backgroundColor: sc.bg, color: sc.text }}>
-                                  <OptionIcon value={val} options={c.options} size={9} />
-                                  {val}
-                                </span>
-                              );
+                              display = <OptionChip value={val} options={c.options} dense />;
                             } else if (c.type === 'status' && typeof val === 'string') {
-                              display = <StatusChip value={val} options={c.options} iconSize={10} />;
+                              display = <StatusChip value={val} options={c.options} iconSize={11} dense />;
                             } else if (c.type === 'user' || c.type === 'multi_user') {
                               display = <UserAvatarStack value={val} currentUserId={currentUserId} size={18} />;
                             } else if (c.type === 'multi_select' && Array.isArray(val)) {
                               display = (
-                                <span className={`flex gap-0.5 ${propertyTextClamp === 'wrap' ? 'flex-wrap' : 'flex-nowrap overflow-hidden'}`}>
-                                  {val.map((optVal: string) => {
-                                    const mc = getOptionColorByValue(c.options || [], optVal);
-                                    return (
-                                      <span key={optVal} className="inline-flex items-center gap-0.5 text-[9px] px-1.5 py-px rounded-full font-medium shrink-0" style={{ backgroundColor: mc.bg, color: mc.text }}>
-                                        <OptionIcon value={optVal} options={c.options} size={9} />
-                                        {optVal}
-                                      </span>
-                                    );
-                                  })}
+                                <span className={`flex gap-1 ${propertyTextClamp === 'wrap' ? 'flex-wrap' : 'flex-nowrap overflow-hidden'}`}>
+                                  {val.map((optVal: string) => <OptionChip key={optVal} value={optVal} options={c.options} dense />)}
                                 </span>
                               );
                             } else if ((c.type === 'date' || c.type === 'datetime') && val) {
                               display = (
-                                <span className={`text-neutral-100 text-[9px] ${textClass}`}>
-                                  {formatDateValue(val, c.type as 'date' | 'datetime', c.dateFormat)}
+                                <span className={`text-fg-2 ${textClass}`}>
+                                  {formatDateValue(val, c.type as 'date' | 'datetime', c.dateFormat, locale)}
                                 </span>
                               );
+                            } else if (c.type === 'checkbox') {
+                              display = <Checkbox size="sm" checked readOnly aria-label={c.name} className="cursor-default" />;
                             } else {
                               display = (
-                                <span className={`text-neutral-100 text-[9px] ${textClass}`}>{val !== undefined && val !== null ? String(val) : ''}</span>
+                                <span className={`text-fg-2 ${textClass}`}>{String(val)}</span>
                               );
                             }
 
-                             return (
-                               <div
-                                 key={c.id}
-                                 className={`text-[9px] leading-relaxed flex gap-1 ${propertyTextClamp === 'wrap' ? 'items-start' : 'items-center'}`}
-                               >
-                                 {showPropertyLabels && (
-                                   <span className="text-neutral-300 shrink-0">{c.name}:</span>
-                                 )}
-                                 {display}
-                               </div>
-                             );
+                            return (
+                              <div
+                                key={c.id}
+                                className={`flex min-w-0 gap-1.5 text-2xs leading-relaxed ${propertyTextClamp === 'wrap' ? 'items-start' : 'items-center'}`}
+                              >
+                                {/* A value that says what it is (a chip, a person, a
+                                    link) needs no "Label:" — only ambiguous ones do. */}
+                                {showPropertyLabels && !isSelfDescribingType(c.type) && (
+                                  <span className="shrink-0 text-fg-3">{c.name}</span>
+                                )}
+                                {display}
+                              </div>
+                            );
                           })}
                       </div>
                       </div>

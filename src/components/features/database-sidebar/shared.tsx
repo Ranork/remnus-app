@@ -2,38 +2,63 @@
 
 import { useState } from 'react';
 import { Type, List, Tags, Hash, Calendar, Clock, AlignLeft, CheckSquare, CircleDashed, User, Users, Link, Mail, Phone, ChevronDown, Fingerprint } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { cn } from '@/lib/cn';
 
 export function getPropertyIcon(type: string) {
+  const cls = 'text-fg-3 shrink-0';
   switch (type) {
-    case 'id':           return <Fingerprint size={11} className="text-neutral-500 shrink-0" />;
-    case 'text':         return <Type size={11} className="text-neutral-500 shrink-0" />;
-    case 'select':       return <List size={11} className="text-neutral-500 shrink-0" />;
-    case 'multi_select': return <Tags size={11} className="text-neutral-500 shrink-0" />;
-    case 'status':       return <CircleDashed size={11} className="text-neutral-500 shrink-0" />;
-    case 'user':         return <User size={11} className="text-neutral-500 shrink-0" />;
-    case 'multi_user':   return <Users size={11} className="text-neutral-500 shrink-0" />;
-    case 'number':       return <Hash size={11} className="text-neutral-500 shrink-0" />;
-    case 'date':         return <Calendar size={11} className="text-neutral-500 shrink-0" />;
-    case 'datetime':     return <Clock size={11} className="text-neutral-500 shrink-0" />;
-    case 'checkbox':     return <CheckSquare size={11} className="text-neutral-500 shrink-0" />;
-    case 'url':          return <Link size={11} className="text-neutral-500 shrink-0" />;
-    case 'email':        return <Mail size={11} className="text-neutral-500 shrink-0" />;
-    case 'phone':        return <Phone size={11} className="text-neutral-500 shrink-0" />;
-    default:             return <AlignLeft size={11} className="text-neutral-500 shrink-0" />;
+    case 'id':           return <Fingerprint size={12} className={cls} />;
+    case 'text':         return <Type size={12} className={cls} />;
+    case 'select':       return <List size={12} className={cls} />;
+    case 'multi_select': return <Tags size={12} className={cls} />;
+    case 'status':       return <CircleDashed size={12} className={cls} />;
+    case 'user':         return <User size={12} className={cls} />;
+    case 'multi_user':   return <Users size={12} className={cls} />;
+    case 'number':       return <Hash size={12} className={cls} />;
+    case 'date':         return <Calendar size={12} className={cls} />;
+    case 'datetime':     return <Clock size={12} className={cls} />;
+    case 'checkbox':     return <CheckSquare size={12} className={cls} />;
+    case 'url':          return <Link size={12} className={cls} />;
+    case 'email':        return <Mail size={12} className={cls} />;
+    case 'phone':        return <Phone size={12} className={cls} />;
+    default:             return <AlignLeft size={12} className={cls} />;
   }
 }
 
-export function Checkbox({ checked }: { checked: boolean }) {
+/**
+ * One on/off row of the view settings (a column to show, a group to hide, a card
+ * property): the whole row is the label, the box is the shared `Checkbox`.
+ */
+export function ToggleRow({
+  checked,
+  onToggle,
+  disabled,
+  children,
+  className,
+}: {
+  checked: boolean;
+  onToggle: () => void;
+  disabled?: boolean;
+  children: React.ReactNode;
+  className?: string;
+}) {
   return (
-    <span className={`w-3.5 h-3.5 border flex items-center justify-center shrink-0 transition-colors rounded-sm ${
-      checked ? 'bg-signal border-signal' : 'border-neutral-700'
-    }`}>
-      {checked && <span className="text-2xs font-bold text-signal-fg leading-none">✓</span>}
-    </span>
+    <label
+      className={cn(
+        'flex items-center gap-2 px-4 py-1.5 text-xs transition-colors',
+        disabled ? 'cursor-not-allowed opacity-45' : 'cursor-pointer hover:bg-hover/60',
+        className,
+      )}
+    >
+      {children}
+      <Checkbox size="sm" checked={checked} onCheckedChange={() => onToggle()} disabled={disabled} className="ml-auto" />
+    </label>
   );
 }
 
-export const selectCls = 'bg-neutral-950 border border-neutral-800 text-neutral-300 outline-none cursor-pointer focus:border-neutral-700 transition-colors rounded text-xs py-1.5 px-2';
+// A compact field-shaped control (the sort direction toggle); matches SimpleSelect sm.
+export const selectCls = 'h-7 rounded-control border border-line bg-raised px-2 text-xs text-fg-2 outline-none cursor-pointer transition-colors hover:border-line-strong hover:text-fg focus-visible:border-focus';
 
 export function CollapsibleSection({
   label,
@@ -46,15 +71,17 @@ export function CollapsibleSection({
 }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className="border-b border-neutral-800/60">
+    <div className="border-b border-line">
       <button
+        type="button"
+        aria-expanded={open}
         onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center justify-between px-4 py-2.5 hover:bg-neutral-800/10 transition-colors cursor-pointer"
+        className="w-full flex items-center justify-between px-4 py-2.5 cursor-pointer text-ui font-medium text-fg-2 transition-colors hover:text-fg"
       >
-        <span className="text-2xs text-neutral-500">{label}</span>
+        <span>{label}</span>
         <ChevronDown
-          size={12}
-          className={`text-neutral-600 transition-transform duration-150 ${open ? '' : '-rotate-90'}`}
+          size={14}
+          className={`text-fg-4 transition-transform duration-150 ${open ? '' : '-rotate-90'}`}
         />
       </button>
       {open && children}

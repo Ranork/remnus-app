@@ -134,7 +134,8 @@ export default function MobileNavWrapper({
       // Add a new row to the current database
       setIsAdding(true);
       try {
-        const pageId = await createPage(currentDatabaseId, 'New Page');
+        // Untitled, like a row added in the view: the page shows the localized placeholder.
+        const pageId = await createPage(currentDatabaseId, '');
         if (pageId) router.push(`/db/${currentDatabaseId}/${pageId}`);
       } finally {
         setIsAdding(false);

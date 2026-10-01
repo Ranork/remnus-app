@@ -2,10 +2,10 @@
 import { useState, useMemo, useEffect, useRef, useCallback, forwardRef, useImperativeHandle } from 'react';
 import { updatePageContent, updatePageProperties, duplicatePage, deletePage, updatePageIcon } from '@/lib/actions/page';
 import { updateDatabaseSchema } from '@/lib/actions/database';
-import { ArrowLeft, X, Check, ChevronDown, CheckSquare, Square, ExternalLink, Plus } from 'lucide-react';
+import { ArrowLeft, ExternalLink } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
 import { useQueryClient } from '@tanstack/react-query';
 import { tabKeys } from './tabs/keys';
 import BlockEditor, { type BlockEditorHandle } from '@/components/features/editor/BlockEditor';
@@ -21,21 +21,24 @@ import { PageHistoryModal } from './PageHistoryModal';
 import PageBacklinksPanel from './PageBacklinksPanel';
 import LocalGraphPanel from './graph/LocalGraphPanel';
 import KnowledgeContextPanel from './KnowledgeContextPanel';
-import PageCommentsPanel from './PageCommentsPanel';
+import PageCommentsPanel, { CommentsJumpLink } from './PageCommentsPanel';
+import { pageContainerClass, scrollToSection } from './pageLayout';
 import SeriesPanel from './recurrence/SeriesPanel';
 import type { WorkspaceItemRow } from '@/lib/actions/workspace';
-import {
-  type SelectOption,
-  normalizeOption,
-  getOptionColorByValue,
-  getOptionColor,
-  getStatusGroup,
-  STATUS_GROUP_ORDER,
-  formatDateValue,
-} from '@/lib/types/properties';
+import { type SelectOption, normalizeOption, formatDateValue } from '@/lib/types/properties';
+import { Checkbox } from '@/components/ui/checkbox';
 import DateRangePicker from './DateRangePicker';
-import { useMembers } from './MembersContext';
-import { StatusChip, StatusIcon, UserAvatar, UserChip, UserTags, OptionIcon } from './PropertyTags';
+import { OptionChip, PropertyTypeIcon, StatusChip, UserChip, UserTags } from './PropertyTags';
+import { PropertyValuePicker } from './PropertyValuePicker';
+
+/** Value kinds edited by picking rather than typing (the shared PropertyValuePicker). */
+const PICKED_TYPES = new Set(['select', 'multi_select', 'status', 'user', 'multi_user']);
+
+/** A property value that edits in place: no chrome until hover, a focus edge when active. */
+const PROP_FIELD =
+  'rounded-control px-1.5 -mx-1.5 outline-none transition-colors hover:bg-hover/60 focus-visible:bg-transparent focus-visible:shadow-[inset_0_0_0_1px_var(--color-focus)]';
+const PROP_INPUT =
+  'h-8 w-full min-w-0 bg-transparent text-ui text-fg placeholder:text-fg-4 focus:bg-transparent focus:shadow-[inset_0_0_0_1px_var(--color-focus)]';
 
 function debounce<T extends (...args: any[]) => any>(fn: T, delay: number) {
   let timer: ReturnType<typeof setTimeout>;
@@ -126,24 +129,14 @@ const PageEditor = forwardRef<PageEditorHandle, PageEditorProps>(function PageEd
   const t = useTranslations('Page');
   const tDb = useTranslations('Database');
   const tEditor = useTranslations('Editor');
-  const members = useMembers();
-  const statusGroupLabel = {
-    todo: tDb('statusGroupTodo'),
-    in_progress: tDb('statusGroupInProgress'),
-    complete: tDb('statusGroupComplete'),
-  } as const;
+  const locale = useLocale();
   const [properties, setProperties] = useState<Record<string, any>>(initialPage.properties || {});
   const [icon, setIcon] = useState<string | null>(initialPage.icon);
   const [iconColor, setIconColor] = useState<string | null>(initialPage.iconColor);
   const [showIconPicker, setShowIconPicker] = useState(false);
   const [saveState, setSaveState] = useState<SaveState>('idle');
-  const [openSelectId, setOpenSelectId] = useState<string | null>(null);
-  const [selectSearchQuery, setSelectSearchQuery] = useState('');
-  const [multiSelectNewCol, setMultiSelectNewCol] = useState<string | null>(null);
-  const [multiSelectNewValue, setMultiSelectNewValue] = useState('');
   const [openDateColId, setOpenDateColId] = useState<string | null>(null);
   const [dateAnchorRect, setDateAnchorRect] = useState<DOMRect | null>(null);
-  const selectDropdownRef = useRef<HTMLDivElement>(null);
   const iconButtonRef = useRef<HTMLButtonElement>(null);
   const [showShareModal, setShowShareModal] = useState(false);
   const [markdownDraft, setMarkdownDraft] = useState<string | null>(null);
@@ -160,6 +153,8 @@ const PageEditor = forwardRef<PageEditorHandle, PageEditorProps>(function PageEd
 
   const router = useRouter();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [commentCount, setCommentCount] = useState(0);
+  const commentsRef = useRef<HTMLElement>(null);
   const editorRef = useRef<BlockEditorHandle>(null);
 
   useImperativeHandle(ref, () => ({
@@ -193,17 +188,6 @@ const PageEditor = forwardRef<PageEditorHandle, PageEditorProps>(function PageEd
     iconRef.current = icon;
     iconColorRef.current = iconColor;
   }, [properties, icon, iconColor]);
-
-  useEffect(() => {
-    if (!openSelectId) return;
-    const handler = (e: MouseEvent) => {
-      if (selectDropdownRef.current && !selectDropdownRef.current.contains(e.target as Node)) {
-        setOpenSelectId(null);
-      }
-    };
-    document.addEventListener('mousedown', handler);
-    return () => document.removeEventListener('mousedown', handler);
-  }, [openSelectId]);
 
   useEffect(() => {
     setIcon(initialPage.icon);
@@ -265,7 +249,7 @@ const PageEditor = forwardRef<PageEditorHandle, PageEditorProps>(function PageEd
     if (calendarView?.dateCol) return calendarView.dateCol as string;
     return schema.find((c: any) => c.type === 'date' || c.type === 'datetime')?.id ?? null;
   }, [database.views, schema]);
-  const pageTitle = properties['title'] || 'Untitled';
+  const pageTitle = properties['title'] || t('untitled');
 
   // Re-applied after every server refresh too (`initialPage` is a new object then): the
   // refresh re-renders the layout's default "Remnus" <title>, which would otherwise stay.
@@ -342,14 +326,6 @@ const PageEditor = forwardRef<PageEditorHandle, PageEditorProps>(function PageEd
     }
   };
 
-  const handleMultiSelectToggle = async (colId: string, option: string) => {
-    const current: string[] = Array.isArray(properties[colId]) ? properties[colId] : [];
-    const newVal = current.includes(option)
-      ? current.filter(v => v !== option)
-      : [...current, option];
-    await handlePropertyChange(colId, newVal);
-  };
-
   // Persists a newly-typed select/multi_select option onto the column's schema.
   const handleCreateOption = (colId: string, value: string) => {
     const col = schema.find((c: any) => c.id === colId);
@@ -363,13 +339,7 @@ const PageEditor = forwardRef<PageEditorHandle, PageEditorProps>(function PageEd
     updateDatabaseSchema(database.id, nextSchema);
   };
 
-  const containerClass = isPeek
-    ? 'p-6 md:p-10 lg:py-16 lg:px-24'
-    : widthMode === 'full'
-    ? 'px-4 sm:px-8 md:px-16 py-6 sm:py-10'
-    : widthMode === 'wide'
-    ? 'max-w-7xl mx-auto px-4 sm:px-8 lg:px-12 py-6 sm:py-10'
-    : 'max-w-4xl mx-auto px-4 sm:px-8 lg:px-16 py-6 sm:py-10';
+  const containerClass = isPeek ? 'p-6 md:p-10 lg:py-16 lg:px-24' : pageContainerClass(widthMode);
 
   return (
     <div className={containerClass}>
@@ -464,365 +434,159 @@ const PageEditor = forwardRef<PageEditorHandle, PageEditorProps>(function PageEd
             agentName={initialPage.agentName ?? null}
             tokenName={initialPage.agentTokenName ?? null}
             editedAt={initialPage.agentEditedAt}
-            className="p-1 rounded-control"
           />
           <span className="text-xs text-fg-3 select-none">{tDb('agentEditedLabel')}</span>
         </div>
       )}
 
-      {/* Properties Section */}
-      <div className={isPeek ? 'mb-6 space-y-1' : 'mb-12 space-y-4'}>
+      {/* Properties Section — a quiet two-column list: name (with its type glyph)
+          on the left, the value on the right; every value edits in place. */}
+      <div className={`flex flex-col ${isPeek ? 'mb-6 gap-0.5' : 'mb-10 gap-1'}`}>
         {schema.filter((col) => col.id !== 'title').map((col) => {
           const val = properties[col.id];
+          const isEmptyVal = val === undefined || val === null || val === '' || (Array.isArray(val) && val.length === 0);
+
+          let editor: React.ReactNode;
+          if (PICKED_TYPES.has(col.type)) {
+            const list: string[] = Array.isArray(val) ? val : val ? [String(val)] : [];
+            let display: React.ReactNode;
+            if (list.length === 0) {
+              display = <span className="text-fg-4">{col.type === 'user' || col.type === 'multi_user' ? tDb('unassigned') : tDb('empty')}</span>;
+            } else if (col.type === 'select') {
+              display = <OptionChip value={list[0]} options={col.options} />;
+            } else if (col.type === 'status') {
+              display = <StatusChip value={list[0]} options={col.options} />;
+            } else if (col.type === 'user') {
+              display = <UserChip userId={list[0]} />;
+            } else if (col.type === 'multi_user') {
+              display = <UserTags value={list} />;
+            } else {
+              display = (
+                <span className="flex flex-wrap gap-1">
+                  {list.map((v) => <OptionChip key={v} value={v} options={col.options} />)}
+                </span>
+              );
+            }
+            editor = (
+              <PropertyValuePicker
+                column={col}
+                value={val}
+                onChange={(next) => handlePropertyChange(col.id, next)}
+                onCreateOption={col.type === 'select' || col.type === 'multi_select' ? (v) => handleCreateOption(col.id, v) : undefined}
+                triggerClassName={`${PROP_FIELD} flex min-h-8 w-full flex-wrap items-center gap-1 py-1 text-left cursor-pointer`}
+                triggerLabel={col.name}
+              >
+                {display}
+              </PropertyValuePicker>
+            );
+          } else if (col.type === 'date' || col.type === 'datetime') {
+            editor = (
+              <div className="relative w-full">
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    setDateAnchorRect((e.currentTarget as HTMLElement).getBoundingClientRect());
+                    setOpenDateColId(openDateColId === col.id ? null : col.id);
+                  }}
+                  className={`${PROP_FIELD} flex h-8 w-full items-center text-left cursor-pointer`}
+                >
+                  <span className={val ? 'text-fg' : 'text-fg-4'}>
+                    {val ? formatDateValue(String(val), col.type as 'date' | 'datetime', col.dateFormat, locale) : tDb('empty')}
+                  </span>
+                </button>
+                {openDateColId === col.id && (
+                  <DateRangePicker
+                    value={String(val || '')}
+                    showTime={col.type === 'datetime'}
+                    anchorRect={dateAnchorRect}
+                    onChange={(v) => handlePropertyChange(col.id, v)}
+                    onClose={() => setOpenDateColId(null)}
+                  />
+                )}
+              </div>
+            );
+          } else if (col.type === 'checkbox') {
+            editor = (
+              <div className="flex h-8 items-center">
+                <Checkbox
+                  checked={val === true || val === 'true'}
+                  onCheckedChange={(next) => handlePropertyChange(col.id, next ? 'true' : 'false')}
+                  aria-label={col.name}
+                />
+              </div>
+            );
+          } else if (col.type === 'url') {
+            editor = (
+              <div className="flex w-full items-center gap-1">
+                <input
+                  type="url"
+                  value={val || ''}
+                  onChange={(e) => handleTextPropertyChange(col.id, e.target.value)}
+                  placeholder={tDb('empty')}
+                  aria-label={col.name}
+                  className={`${PROP_FIELD} ${PROP_INPUT}`}
+                />
+                {typeof val === 'string' && /^https?:\/\//i.test(val) && (
+                  <a
+                    href={val}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex size-7 shrink-0 items-center justify-center rounded-control text-fg-3 transition-colors hover:bg-hover hover:text-fg"
+                    aria-label={tDb('openLink')}
+                    title={tDb('openLink')}
+                  >
+                    <ExternalLink size={14} />
+                  </a>
+                )}
+              </div>
+            );
+          } else if (col.type === 'email' || col.type === 'phone' || col.type === 'number') {
+            editor = (
+              <input
+                type={col.type === 'email' ? 'email' : col.type === 'phone' ? 'tel' : 'number'}
+                value={val || ''}
+                onChange={(e) => handleTextPropertyChange(col.id, e.target.value)}
+                placeholder={tDb('empty')}
+                aria-label={col.name}
+                className={`${PROP_FIELD} ${PROP_INPUT}`}
+              />
+            );
+          } else if (col.type === 'id') {
+            editor = <span className="flex h-8 items-center truncate font-mono text-xs text-fg-3 select-text">{initialPage.id}</span>;
+          } else {
+            editor = (
+              <AutoGrowTextarea
+                value={val || ''}
+                onChange={(e) => handleTextPropertyChange(col.id, e.target.value)}
+                placeholder={tDb('empty')}
+                className={`${PROP_FIELD} ${PROP_INPUT} resize-none overflow-hidden block py-1.5 leading-snug`}
+              />
+            );
+          }
 
           return (
-            <div key={col.id} className={`flex items-start gap-2 border-b border-neutral-800/60 group ${isPeek ? 'flex-row gap-3 pb-1.5' : 'flex-col sm:flex-row sm:gap-8 pb-3'}`}>
-              <div className={`text-neutral-500 shrink-0 font-medium group-hover:text-neutral-400 transition-colors pt-1 ${isPeek ? 'w-24 text-xs' : 'w-32 text-sm'}`}>{col.name}</div>
- 
-              {col.type === 'select' ? (
-                <div className="relative flex-1 max-w-xs pt-0.5" ref={openSelectId === col.id ? selectDropdownRef : undefined}>
-                  <button
-                    onClick={() => {
-                      setSelectSearchQuery('');
-                      setOpenSelectId(openSelectId === col.id ? null : col.id);
-                    }}
-                    className="flex items-center gap-1.5 text-sm focus:outline-none cursor-pointer"
-                  >
-                    {val ? (() => {
-                      const c = getOptionColorByValue(col.options || [], val);
-                      return (
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded" style={{ backgroundColor: c.bg, color: c.text }}>
-                          <OptionIcon value={val} options={col.options} />
-                          {val}
-                        </span>
-                      );
-                    })() : (
-                      <span className="text-neutral-600 text-sm">{tDb('empty')}</span>
-                    )}
-                    <ChevronDown size={12} className="text-neutral-600" />
-                  </button>
-                  {openSelectId === col.id && (() => {
-                    const allOpts = (col.options || []).map(normalizeOption);
-                    const q = selectSearchQuery.trim().toLowerCase();
-                    const filteredOpts = q ? allOpts.filter((o: SelectOption) => o.value.toLowerCase().includes(q)) : allOpts;
-                    const exactMatch = q ? allOpts.some((o: SelectOption) => o.value.toLowerCase() === q) : true;
-                    const canCreate = !!selectSearchQuery.trim() && !exactMatch;
-                    const createOption = () => {
-                      const newVal = selectSearchQuery.trim();
-                      if (!newVal) return;
-                      handleCreateOption(col.id, newVal);
-                      handlePropertyChange(col.id, newVal);
-                      setOpenSelectId(null);
-                    };
-                    return (
-                      <div className="absolute z-50 top-full left-0 mt-1 bg-neutral-900 border border-neutral-700 min-w-32 py-1 rounded shadow-xl overflow-hidden max-h-72 overflow-y-auto" style={{ minWidth: 160 }}>
-                        <input
-                          autoFocus
-                          type="text"
-                          value={selectSearchQuery}
-                          onChange={(e) => setSelectSearchQuery(e.target.value)}
-                          onKeyDown={(e) => { if (e.key === 'Enter' && canCreate) createOption(); }}
-                          placeholder={tDb('searchOrCreateOption')}
-                          className="mx-2 mb-1 px-2 py-1 text-xs bg-neutral-950 border border-neutral-800 rounded focus:outline-none focus:border-neutral-700 text-neutral-200 placeholder-neutral-600"
-                        />
-                        {!selectSearchQuery && (
-                          <button
-                            onClick={() => { handlePropertyChange(col.id, ''); setOpenSelectId(null); }}
-                            className="w-full text-left px-3 py-1.5 text-xs text-neutral-500 hover:bg-neutral-800 transition-colors cursor-pointer"
-                          >
-                            {tDb('empty')}
-                          </button>
-                        )}
-                        {filteredOpts.map((opt: SelectOption) => {
-                          const c = getOptionColor(opt);
-                          return (
-                            <button
-                              key={opt.value}
-                              onClick={() => { handlePropertyChange(col.id, opt.value); setOpenSelectId(null); }}
-                              className="w-full text-left px-3 py-1.5 flex items-center gap-2 hover:bg-neutral-800 transition-colors cursor-pointer"
-                            >
-                              <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded" style={{ backgroundColor: c.bg, color: c.text }}>
-                                <OptionIcon value={opt.value} options={col.options} />
-                                {opt.value}
-                              </span>
-                            </button>
-                          );
-                        })}
-                        {canCreate && (
-                          <button onClick={createOption} className="w-full text-left px-3 py-1.5 flex items-center gap-1.5 text-xs text-neutral-300 hover:bg-neutral-800 transition-colors cursor-pointer">
-                            <Plus size={12} className="text-neutral-500 shrink-0" />
-                            <span className="truncate">{tDb('createOptionLabel', { value: selectSearchQuery.trim() })}</span>
-                          </button>
-                        )}
-                      </div>
-                    );
-                  })()}
-                </div>
-              ) : col.type === 'multi_select' ? (
-                <div className="flex-1 flex flex-col gap-2 pt-0.5">
-                  {Array.isArray(val) && val.length > 0 && (
-                    <div className="flex flex-wrap gap-1.5">
-                      {val.map((optVal: string) => {
-                        const c = getOptionColorByValue(col.options || [], optVal);
-                        return (
-                          <span key={optVal} className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium" style={{ backgroundColor: c.bg, color: c.text }}>
-                            <OptionIcon value={optVal} options={col.options} />
-                            {optVal}
-                            <button
-                              onClick={() => handleMultiSelectToggle(col.id, optVal)}
-                              className="opacity-60 hover:opacity-100 transition-opacity cursor-pointer"
-                            >
-                              <X size={10} />
-                            </button>
-                          </span>
-                        );
-                      })}
-                    </div>
-                  )}
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    {col.options && (col.options as (string | SelectOption)[])
-                      .filter((o) => !(Array.isArray(val) && val.includes(normalizeOption(o).value)))
-                      .map((rawOpt) => {
-                        const opt = normalizeOption(rawOpt);
-                        const c = getOptionColor(opt);
-                        return (
-                          <button
-                            key={opt.value}
-                            onClick={() => handleMultiSelectToggle(col.id, opt.value)}
-                            className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium border border-neutral-700/40 opacity-50 hover:opacity-80 transition-opacity cursor-pointer"
-                            style={{ backgroundColor: c.bg, color: c.text }}
-                          >
-                            + <OptionIcon value={opt.value} options={col.options} />{opt.value}
-                          </button>
-                        );
-                      })}
-                    {multiSelectNewCol === col.id ? (
-                      <input
-                        autoFocus
-                        type="text"
-                        value={multiSelectNewValue}
-                        onChange={(e) => setMultiSelectNewValue(e.target.value)}
-                        onBlur={() => { if (!multiSelectNewValue.trim()) setMultiSelectNewCol(null); }}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') {
-                            const newVal = multiSelectNewValue.trim();
-                            if (newVal) {
-                              handleCreateOption(col.id, newVal);
-                              handleMultiSelectToggle(col.id, newVal);
-                            }
-                            setMultiSelectNewValue('');
-                            setMultiSelectNewCol(null);
-                          } else if (e.key === 'Escape') {
-                            setMultiSelectNewValue('');
-                            setMultiSelectNewCol(null);
-                          }
-                        }}
-                        placeholder={tDb('searchOrCreateOption')}
-                        className="px-2 py-0.5 text-xs bg-neutral-900 border border-neutral-700 rounded-full focus:outline-none focus:border-neutral-600 text-neutral-200 placeholder-neutral-600 w-32"
-                      />
-                    ) : (
-                      <button
-                        onClick={() => { setMultiSelectNewCol(col.id); setMultiSelectNewValue(''); }}
-                        className="inline-flex items-center gap-1 text-xs px-2 py-0.5 rounded-full font-medium border border-dashed border-neutral-700 text-neutral-500 hover:text-neutral-300 hover:border-neutral-600 transition-colors cursor-pointer"
-                      >
-                        <Plus size={10} />
-                        {tDb('addOption')}
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ) : col.type === 'status' ? (
-                <div className="relative flex-1 max-w-xs pt-0.5" ref={openSelectId === col.id ? selectDropdownRef : undefined}>
-                  <button
-                    onClick={() => setOpenSelectId(openSelectId === col.id ? null : col.id)}
-                    className="flex items-center gap-1.5 text-sm focus:outline-none cursor-pointer"
-                  >
-                    {val ? <StatusChip value={String(val)} options={col.options} /> : <span className="text-neutral-600 text-sm">{tDb('empty')}</span>}
-                    <ChevronDown size={12} className="text-neutral-600" />
-                  </button>
-                  {openSelectId === col.id && (
-                    <div className="absolute z-50 top-full left-0 mt-1 bg-neutral-900 border border-neutral-700 py-1 rounded shadow-xl overflow-hidden max-h-72 overflow-y-auto" style={{ minWidth: 192 }}>
-                      <button
-                        onClick={() => { handlePropertyChange(col.id, ''); setOpenSelectId(null); }}
-                        className="w-full text-left px-3 py-1.5 text-xs text-neutral-500 hover:bg-neutral-800 transition-colors cursor-pointer"
-                      >
-                        {tDb('empty')}
-                      </button>
-                      {STATUS_GROUP_ORDER.map((g) => {
-                        const groupOpts = (col.options || []).map(normalizeOption).filter((o: SelectOption) => getStatusGroup(o) === g);
-                        if (groupOpts.length === 0) return null;
-                        return (
-                          <div key={g}>
-                            <div className="px-3 pt-1.5 pb-0.5 text-2xs text-neutral-500 font-medium">{statusGroupLabel[g]}</div>
-                            {groupOpts.map((opt: SelectOption) => {
-                              const c = getOptionColor(opt);
-                              return (
-                                <button
-                                  key={opt.value}
-                                  onClick={() => { handlePropertyChange(col.id, opt.value); setOpenSelectId(null); }}
-                                  className="w-full text-left px-3 py-1.5 flex items-center gap-2 hover:bg-neutral-800 transition-colors cursor-pointer"
-                                >
-                                  <span className="inline-flex items-center gap-1.5 px-2 py-0.5 text-xs rounded-full font-medium" style={{ backgroundColor: c.bg, color: c.text }}>
-                                    <StatusIcon group={g} color={c.dot} size={12} />
-                                    {opt.value}
-                                  </span>
-                                </button>
-                              );
-                            })}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              ) : (col.type === 'user' || col.type === 'multi_user') ? (
-                (() => {
-                  const isMulti = col.type === 'multi_user';
-                  const ids: string[] = isMulti ? (Array.isArray(val) ? val : []) : (val ? [String(val)] : []);
-                  const toggle = (id: string) => {
-                    if (isMulti) {
-                      handlePropertyChange(col.id, ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]);
-                    } else {
-                      handlePropertyChange(col.id, ids[0] === id ? '' : id);
-                      setOpenSelectId(null);
-                    }
-                  };
-                  return (
-                    <div className="relative flex-1 max-w-xs pt-0.5" ref={openSelectId === col.id ? selectDropdownRef : undefined}>
-                      <button
-                        onClick={() => setOpenSelectId(openSelectId === col.id ? null : col.id)}
-                        className="flex items-center gap-1.5 text-sm focus:outline-none cursor-pointer min-h-6"
-                      >
-                        {ids.length > 0
-                          ? (isMulti ? <UserTags value={ids} /> : <UserChip userId={ids[0]} />)
-                          : <span className="text-neutral-600 text-sm">{tDb('unassigned')}</span>}
-                        <ChevronDown size={12} className="text-neutral-600 shrink-0" />
-                      </button>
-                      {openSelectId === col.id && (
-                        <div className="absolute z-50 top-full left-0 mt-1 bg-neutral-900 border border-neutral-700 py-1 rounded shadow-xl overflow-hidden max-h-72 overflow-y-auto" style={{ minWidth: 208 }}>
-                          {!isMulti && (
-                            <button
-                              onClick={() => { handlePropertyChange(col.id, ''); setOpenSelectId(null); }}
-                              className="w-full text-left px-3 py-1.5 text-xs text-neutral-500 hover:bg-neutral-800 transition-colors cursor-pointer"
-                            >
-                              {tDb('unassigned')}
-                            </button>
-                          )}
-                          {members.length === 0 && (
-                            <div className="px-3 py-2 text-xs text-neutral-600">{tDb('noMembers')}</div>
-                          )}
-                          {members.map((m) => {
-                            const sel = ids.includes(m.id);
-                            return (
-                              <button
-                                key={m.id}
-                                onClick={() => toggle(m.id)}
-                                className={`w-full text-left px-3 py-1.5 flex items-center justify-between gap-2 hover:bg-neutral-800 transition-colors cursor-pointer ${sel ? 'bg-neutral-850' : ''}`}
-                              >
-                                <span className="inline-flex items-center gap-2 min-w-0">
-                                  <UserAvatar member={m} size={18} />
-                                  <span className="text-xs text-neutral-200 truncate">{m.name || m.email}</span>
-                                </span>
-                                {sel && <Check size={12} className="text-neutral-400 shrink-0" />}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })()
-              ) : (col.type === 'date' || col.type === 'datetime') ? (
-                <div className="relative">
-                  <button
-                    onClick={(e) => {
-                      setDateAnchorRect((e.currentTarget as HTMLElement).getBoundingClientRect());
-                      setOpenDateColId(openDateColId === col.id ? null : col.id);
-                    }}
-                    className="flex items-center gap-1.5 text-sm text-neutral-200 hover:text-white cursor-pointer p-1 -ml-1 hover:bg-neutral-800/40 rounded transition-colors"
-                  >
-                    <span className={val ? 'text-neutral-200' : 'text-neutral-600'}>
-                      {val ? formatDateValue(String(val), col.type as 'date' | 'datetime', col.dateFormat) : tDb('empty')}
-                    </span>
-                  </button>
-                  {openDateColId === col.id && (
-                    <DateRangePicker
-                      value={String(val || '')}
-                      showTime={col.type === 'datetime'}
-                      anchorRect={dateAnchorRect}
-                      onChange={(v) => handlePropertyChange(col.id, v)}
-                      onClose={() => setOpenDateColId(null)}
-                    />
-                  )}
-                </div>
-              ) : col.type === 'checkbox' ? (
-                <button
-                  onClick={() => handlePropertyChange(col.id, val === true || val === 'true' ? 'false' : 'true')}
-                  className="flex items-center gap-1.5 text-sm cursor-pointer pt-1"
-                >
-                  {val === true || val === 'true'
-                    ? <CheckSquare size={16} className="text-signal-text" />
-                    : <Square size={16} className="text-neutral-500" />
-                  }
-                </button>
-              ) : col.type === 'url' ? (
-                <div className="flex items-center gap-1.5 flex-1">
-                  <input
-                    type="url"
-                    value={val || ''}
-                    onChange={(e) => handleTextPropertyChange(col.id, e.target.value)}
-                    placeholder={tDb('empty')}
-                    className="bg-transparent text-neutral-100 focus:outline-none focus:ring-2 focus:ring-neutral-700 rounded p-1 -ml-1 flex-1 text-sm placeholder:text-neutral-700 transition-shadow"
-                  />
-                  {typeof val === 'string' && /^https?:\/\//i.test(val) && (
-                    <a href={val} target="_blank" rel="noopener noreferrer" className="text-signal-text hover:text-fg shrink-0">
-                      <ExternalLink size={13} />
-                    </a>
-                  )}
-                </div>
-              ) : col.type === 'email' ? (
-                <input
-                  type="email"
-                  value={val || ''}
-                  onChange={(e) => handleTextPropertyChange(col.id, e.target.value)}
-                  placeholder={tDb('empty')}
-                  className="bg-transparent text-neutral-100 focus:outline-none focus:ring-2 focus:ring-neutral-700 rounded p-1 -ml-1 flex-1 text-sm placeholder:text-neutral-700 transition-shadow"
-                />
-              ) : col.type === 'phone' ? (
-                <input
-                  type="tel"
-                  value={val || ''}
-                  onChange={(e) => handleTextPropertyChange(col.id, e.target.value)}
-                  placeholder={tDb('empty')}
-                  className="bg-transparent text-neutral-100 focus:outline-none focus:ring-2 focus:ring-neutral-700 rounded p-1 -ml-1 flex-1 text-sm placeholder:text-neutral-700 transition-shadow"
-                />
-              ) : col.type === 'number' ? (
-                <input
-                  type="number"
-                  value={val || ''}
-                  onChange={(e) => handleTextPropertyChange(col.id, e.target.value)}
-                  placeholder={tDb('empty')}
-                  className="bg-transparent text-neutral-100 focus:outline-none focus:ring-2 focus:ring-neutral-700 rounded p-1 -ml-1 flex-1 text-sm placeholder:text-neutral-700 transition-shadow"
-                />
-              ) : (
-                <AutoGrowTextarea
-                  value={val || ''}
-                  onChange={(e) => handleTextPropertyChange(col.id, e.target.value)}
-                  placeholder={tDb('empty')}
-                  className="bg-transparent text-neutral-100 focus:outline-none focus:ring-2 focus:ring-neutral-700 rounded p-1 -ml-1 flex-1 text-sm placeholder:text-neutral-700 transition-shadow resize-none overflow-hidden block w-full leading-snug"
-                />
-              )}
+            <div key={col.id} className="flex items-start gap-3 sm:gap-4">
+              <div
+                className={`flex h-8 shrink-0 items-center gap-2 text-fg-3 select-none ${isPeek ? 'w-28 text-xs' : 'w-28 sm:w-40 text-ui'}`}
+                title={col.name}
+              >
+                <PropertyTypeIcon type={col.type} />
+                <span className="truncate">{col.name}</span>
+              </div>
+              <div className={`flex min-w-0 flex-1 items-center text-ui ${isEmptyVal ? '' : 'text-fg'}`}>{editor}</div>
             </div>
           );
         })}
       </div>
 
-      {/* Comments — directly under the attributes, above everything else in the
-          properties/body gap, so it reads as part of "what is this card" rather
-          than a footer note. Shown in peek too (unlike Knowledge/Backlinks
-          below), since a peeked card is often exactly where an agent's running
-          comments need to be visible without a full open. */}
-      <PageCommentsPanel workspaceId={database.workspaceId} pageId={initialPage.id} isPeek={isPeek} />
+      {/* The comment thread lives under the body (R8.1). Right under the attributes
+          only its count stays, as a way down — in peek too, since a peeked card is
+          often exactly where an agent's running comments need to be found. */}
+      {commentCount > 0 && (
+        <div className={isPeek ? '-mt-2 mb-5' : '-mt-8 mb-8'}>
+          <CommentsJumpLink count={commentCount} onJump={() => scrollToSection(commentsRef.current)} />
+        </div>
+      )}
 
       {/* Recurrence — sits between the properties and the body because that is
           the order the question gets asked: what is this card, then is it one
@@ -853,6 +617,13 @@ const PageEditor = forwardRef<PageEditorHandle, PageEditorProps>(function PageEd
         onImmediateSave={saveContent}
       />
 
+      <PageCommentsPanel
+        workspaceId={database.workspaceId}
+        pageId={initialPage.id}
+        isPeek={isPeek}
+        onCountChange={setCommentCount}
+        sectionRef={commentsRef}
+      />
       {!isPeek && <KnowledgeContextPanel workspaceId={database.workspaceId} pageId={initialPage.id} />}
       {!isPeek && <PageBacklinksPanel workspaceId={database.workspaceId} pageId={initialPage.id} />}
       {!isPeek && <LocalGraphPanel workspaceId={database.workspaceId} pageId={initialPage.id} />}

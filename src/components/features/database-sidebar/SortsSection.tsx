@@ -2,6 +2,7 @@
 import { useTranslations } from 'next-intl';
 import { Plus, X } from 'lucide-react';
 import type { ViewSort } from '@/lib/types/views';
+import { Button } from '@/components/ui/button';
 import { selectCls } from './shared';
 import { SimpleSelect } from '@/components/ui/select';
 
@@ -27,38 +28,44 @@ export default function SortsSection({ sorts, schema, onSortsChange }: SortsSect
 
   return (
     <div>
-      <div className="flex items-center justify-between px-4 py-2.5">
-        <span className="text-2xs text-neutral-500">
-          {t('sorts')}{sorts.length > 0 && ` (${sorts.length})`}
+      <div className="flex items-center justify-between px-4 py-2">
+        <span className="text-ui font-medium text-fg-2">
+          {t('sorts')}{sorts.length > 0 && <span className="font-normal text-fg-3"> ({sorts.length})</span>}
         </span>
-        <button onClick={addSort} className="flex items-center gap-1 text-[10px] text-signal-text hover:text-fg cursor-pointer">
-          <Plus size={10} /> Add
-        </button>
+        <Button variant="ghost" size="xs" onClick={addSort}>
+          <Plus /> {t('addSort')}
+        </Button>
       </div>
       {sorts.length === 0 ? (
-        <p className="text-[11px] text-neutral-700 text-center py-4">{t('noSorts')}</p>
+        <p className="px-4 pb-3 text-xs text-fg-3">{t('noSorts')}</p>
       ) : (
-        <div className="flex flex-col">
+        <div className="flex flex-col pb-1">
           {sorts.map((sort) => (
-            <div key={sort.id} className="flex items-center gap-1.5 px-4 py-2.5 border-b border-neutral-800/40">
+            <div key={sort.id} className="flex items-center gap-1.5 px-4 py-2">
               <SimpleSelect
                 value={sort.columnId}
                 onValueChange={(v) => updateSort(sort.id, { columnId: v })}
                 options={schema.map((col) => ({ value: col.id, label: col.name }))}
+                size="sm"
                 className="min-w-0 flex-1 shrink"
               />
               <button
+                type="button"
                 onClick={() => updateSort(sort.id, { direction: sort.direction === 'asc' ? 'desc' : 'asc' })}
-                className={`${selectCls} shrink-0 hover:bg-neutral-800 transition-colors`}
+                className={`${selectCls} shrink-0`}
               >
                 {sort.direction === 'asc' ? t('sortAscending') : t('sortDescending')}
               </button>
-              <button
+              <Button
+                variant="ghost"
+                size="icon-sm"
                 onClick={() => deleteSort(sort.id)}
-                className="text-neutral-600 hover:text-red-400 transition-colors cursor-pointer p-0.5 shrink-0"
+                aria-label={t('remove')}
+                title={t('remove')}
+                className="shrink-0 hover:text-red-400"
               >
-                <X size={12} />
-              </button>
+                <X />
+              </Button>
             </div>
           ))}
         </div>

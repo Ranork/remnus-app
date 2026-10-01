@@ -449,10 +449,6 @@
   --elev-shade-deep: rgb(16 24 40 / 0.16);
   --selection: rgb(245 179 0 / 0.3);
   --overlay: rgb(16 24 40 / 0.32);
-  --database-card-bg: #ffffff;
-  --database-muted-group-bg: #f4f5f7;
-  --code-block-fade-start: rgba(247,248,250,0);
-  --code-block-fade-mid: rgba(247,248,250,0.82);
 
   /* select/multi-select chip colors — soft tints for light bg */
   --chip-default-bg:    #f1f5f9; --chip-default-text: #475569; --chip-default-dot: #94a3b8; --chip-default-group: rgba(148,163,184,0.12);
@@ -681,12 +677,6 @@ body:has(.marketing-site) {
 .modal-shadow { box-shadow: var(--shadow-modal); }
 @media (min-width: 640px) {
   .sm\:modal-shadow { box-shadow: var(--shadow-modal); }
-}
-
-/* Kanban / calendar cards: on the white light-theme sheet a card needs an edge. */
-[data-theme="catppuccin"] .database-card {
-  border: 1px solid var(--color-line);
-  box-shadow: 0 1px 2px rgb(16 24 40 / 0.04);
 }
 
 /* Neutral controls that intentionally use white ink in dark mode need dark

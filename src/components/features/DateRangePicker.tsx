@@ -2,13 +2,15 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { useTranslations } from 'next-intl';
+import { useLocale, useTranslations } from 'next-intl';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
-const MONTHS = [
-  'January','February','March','April','May','June',
-  'July','August','September','October','November','December',
-];
-const DAYS = ['Mo','Tu','We','Th','Fr','Sa','Su'];
+/** Localized short weekday names, Monday first (5 Jan 2026 is a Monday). */
+function weekdayNames(locale: string): string[] {
+  const fmt = new Intl.DateTimeFormat(locale, { weekday: 'short' });
+  return Array.from({ length: 7 }, (_, i) => fmt.format(new Date(2026, 0, 5 + i)));
+}
 
 function ymd(d: Date): string {
   const y = d.getFullYear();
@@ -43,6 +45,7 @@ export default function DateRangePicker({
   onClose,
 }: DateRangePickerProps) {
   const t = useTranslations('Database');
+  const locale = useLocale();
 
   // Parse incoming value (single date, range, or datetime)
   const parts = typeof value === 'string' && value.includes('/') ? value.split('/') : [value ?? '', ''];
@@ -165,26 +168,34 @@ export default function DateRangePicker({
 
     const base = 'w-8 h-8 flex items-center justify-center text-xs cursor-pointer select-none transition-colors';
 
+    // Chosen days are ink; the span between them a soft signal tint; today keeps the
+    // calendar's signal as a ring (the fill belongs to the choice).
     if (isStart || isEnd || (isHoverEnd && phase === 'picking-end' && !isStart)) {
       return `${base} rounded-full bg-ink text-ink-fg font-semibold`;
     }
     if (inRange) {
-      return `${base} rounded-none bg-signal/20 text-neutral-200`;
+      return `${base} rounded-none bg-signal-soft text-fg`;
     }
     if (isToday) {
-      return `${base} rounded-full ring-1 ring-inset ring-signal/60 text-neutral-200 hover:bg-neutral-700`;
+      return `${base} rounded-full font-semibold text-fg shadow-[inset_0_0_0_1.5px_var(--color-signal)] hover:bg-hover`;
     }
-    return `${base} rounded-full text-neutral-300 hover:bg-neutral-700`;
+    return `${base} rounded-full text-fg-2 hover:bg-hover hover:text-fg`;
   };
 
   if (typeof document === 'undefined') return null;
+
+  const monthLabel = new Date(viewYear, viewMonth, 1).toLocaleDateString(locale, { month: 'long', year: 'numeric' });
+  const formatDay = (str: string) => {
+    const d = parseDate(str);
+    return d ? d.toLocaleDateString(locale, { day: 'numeric', month: 'short', year: 'numeric' }) : str;
+  };
 
   return createPortal(
     <>
       {/* transparent backdrop handled by mousedown on document */}
       <div
         ref={containerRef}
-        className="absolute z-[9999] bg-neutral-850 border border-neutral-700 shadow-2xl p-3 select-none"
+        className="absolute z-9999 rounded-surface bg-float p-3 text-fg shadow-float select-none animate-scale-in"
         style={{
           width: 288,
           top:  pos?.top  ?? 0,
@@ -195,21 +206,21 @@ export default function DateRangePicker({
       >
         {/* Month navigation */}
         <div className="flex items-center justify-between mb-2">
-          <button onClick={prevMonth} className="p-1 hover:bg-neutral-700 rounded cursor-pointer text-neutral-400 hover:text-neutral-200 transition-colors">
-            <ChevronLeft size={13} />
-          </button>
-          <span className="text-xs font-semibold text-neutral-200">
-            {MONTHS[viewMonth]} {viewYear}
+          <Button variant="ghost" size="icon-sm" onClick={prevMonth} aria-label={t('calendarPrevMonth')}>
+            <ChevronLeft />
+          </Button>
+          <span className="text-ui font-semibold text-fg">
+            {monthLabel.charAt(0).toLocaleUpperCase(locale) + monthLabel.slice(1)}
           </span>
-          <button onClick={nextMonth} className="p-1 hover:bg-neutral-700 rounded cursor-pointer text-neutral-400 hover:text-neutral-200 transition-colors">
-            <ChevronRight size={13} />
-          </button>
+          <Button variant="ghost" size="icon-sm" onClick={nextMonth} aria-label={t('calendarNextMonth')}>
+            <ChevronRight />
+          </Button>
         </div>
 
         {/* Weekday headers */}
         <div className="grid grid-cols-7 mb-1">
-          {DAYS.map(d => (
-            <div key={d} className="w-8 h-6 flex items-center justify-center text-[10px] text-neutral-600 font-medium">
+          {weekdayNames(locale).map((d, i) => (
+            <div key={i} className={`w-8 h-6 flex items-center justify-center text-2xs font-medium ${i >= 5 ? 'text-fg-4' : 'text-fg-3'}`}>
               {d}
             </div>
           ))}
@@ -237,41 +248,41 @@ export default function DateRangePicker({
 
         {/* Time input (datetime only) */}
         {showTime && (
-          <div className="mt-3 pt-3 border-t border-neutral-800 flex items-center gap-2">
-            <span className="text-2xs text-neutral-500 w-8">{t('time')}</span>
-            <input
+          <div className="mt-3 pt-3 border-t border-line flex items-center gap-2">
+            <span className="text-xs text-fg-3">{t('time')}</span>
+            <Input
+              size="sm"
               type="time"
               value={timeStr}
               onChange={(e) => setTimeStr(e.target.value)}
-              className="bg-neutral-800 border border-neutral-700 text-white text-xs px-2 py-1 focus:outline-none focus:border-neutral-500 transition-colors scheme-dark"
+              aria-label={t('time')}
+              className="w-28 scheme-dark"
             />
           </div>
         )}
 
         {/* Footer */}
-        <div className="mt-3 pt-2 border-t border-neutral-800 flex items-center justify-between">
-          <span className="text-[10px] text-neutral-600 truncate max-w-[160px]">
+        <div className="mt-3 pt-2 border-t border-line flex items-center justify-between">
+          <span className="text-xs text-fg-3 truncate max-w-40">
             {phase === 'picking-end'
               ? t('datePickerClickEnd')
               : startStr && endStr
-                ? `${startStr} → ${endStr}`
-                : startStr || t('datePickerNoDate')
+                ? t('dateRange', { start: formatDay(startStr), end: formatDay(endStr) })
+                : startStr ? formatDay(startStr) : t('datePickerNoDate')
             }
           </span>
           <div className="flex items-center gap-1">
-            <button
+            <Button
+              variant="ghost"
+              size="xs"
               onClick={() => { setStartStr(''); setEndStr(''); setPhase('idle'); onChange(''); onClose(); }}
-              className="text-[10px] text-neutral-500 hover:text-neutral-300 cursor-pointer px-2 py-0.5 hover:bg-neutral-800 rounded transition-colors"
             >
               {t('clear')}
-            </button>
+            </Button>
             {phase !== 'picking-end' && startStr && (
-              <button
-                onClick={() => save(startStr, endStr, timeStr)}
-                className="text-[10px] text-signal-text hover:text-fg cursor-pointer px-2 py-0.5 hover:bg-neutral-800 rounded transition-colors"
-              >
+              <Button variant="primary" size="xs" onClick={() => save(startStr, endStr, timeStr)}>
                 {t('done')}
-              </button>
+              </Button>
             )}
           </div>
         </div>

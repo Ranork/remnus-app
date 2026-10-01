@@ -15,6 +15,7 @@ import {
   DEFAULT_STATUS_OPTIONS,
 } from '@/lib/types/properties';
 import { getPropertyIcon } from './shared';
+import { Button } from '@/components/ui/button';
 import { SimpleSelect } from '@/components/ui/select';
 import PageIcon from '../PageIcon';
 import IconPicker from '../IconPicker';
@@ -43,6 +44,8 @@ export default function PropertiesPanel({
 }: PropertiesPanelProps) {
   const t = useTranslations('Database');
   const tWs = useTranslations('Workspace');
+  const tPage = useTranslations('Page');
+  const tEditor = useTranslations('Editor');
 
   const [colorPickerOpen, setColorPickerOpen] = useState<string | null>(null);
   const colorPickerRef = useRef<HTMLDivElement>(null);
@@ -68,8 +71,8 @@ export default function PropertiesPanel({
         const isIdColumn = col.type === 'id';
         return (
           <div key={col.id}>
-            <div className="flex items-center gap-2 px-3 py-2 border-b border-neutral-800/50 hover:bg-neutral-800/10 group transition-colors">
-              <GripVertical size={11} className={`shrink-0 ${isTitle ? 'invisible' : 'text-neutral-700 cursor-grab'}`} />
+            <div className="flex items-center gap-2 px-3 py-2 border-b border-line hover:bg-hover/40 group transition-colors">
+              <GripVertical size={12} className={`shrink-0 ${isTitle ? 'invisible' : 'text-fg-4 cursor-grab'}`} />
               {getPropertyIcon(col.type)}
               <input
                 type="text"
@@ -77,7 +80,7 @@ export default function PropertiesPanel({
                 onChange={(e) => onUpdateColumn(idx, { name: e.target.value })}
                 disabled={isTitle}
                 placeholder={t('propertyName')}
-                className="flex-1 min-w-0 bg-transparent text-xs text-neutral-200 focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
+                className="flex-1 min-w-0 bg-transparent text-xs text-fg focus:outline-none disabled:opacity-50 disabled:cursor-not-allowed"
               />
               <SimpleSelect
                 value={col.type}
@@ -88,7 +91,7 @@ export default function PropertiesPanel({
                 }}
                 disabled={isTitle || isIdColumn}
                 size="sm"
-                className="w-28 text-neutral-400"
+                className="w-28 text-fg-3"
                 options={[
                   ...(isIdColumn ? [{ value: 'id', label: t('typeId') }] : []),
                   { value: 'text', label: t('typeText') },
@@ -107,7 +110,7 @@ export default function PropertiesPanel({
                 ]}
               />
               {!isTitle ? (
-                <button onClick={() => onRemoveColumn(idx)} className="text-neutral-500 hover:text-red-400 p-0.5 transition-colors cursor-pointer shrink-0">
+                <button type="button" onClick={() => onRemoveColumn(idx)} aria-label={t('remove')} title={t('remove')} className="flex size-6 items-center justify-center rounded text-fg-3 hover:bg-red-500/12 hover:text-red-400 transition-colors cursor-pointer shrink-0">
                   <X size={12} />
                 </button>
               ) : (
@@ -116,15 +119,15 @@ export default function PropertiesPanel({
             </div>
 
             {(col.type === 'date' || col.type === 'datetime') && (
-              <div className="pl-10 pr-3 py-2 bg-neutral-900/30 border-b border-neutral-800/50 flex flex-col gap-1.5">
+              <div className="pl-10 pr-3 py-2 bg-sheet/60 border-b border-line flex flex-col gap-1.5">
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-2xs text-neutral-500">{t('dateFormat')}</span>
+                  <span className="text-xs text-fg-3">{t('dateFormat')}</span>
                   <div className="flex items-center gap-2">
                     <SimpleSelect
                       value={col.dateFormat || 'default'}
                       onValueChange={(v) => onUpdateColumn(idx, { dateFormat: v })}
                       size="sm"
-                      className="w-28 text-neutral-400"
+                      className="w-28 text-fg-3"
                       aria-label={t('dateFormat')}
                       options={[
                         { value: 'default', label: t('dateFormatDefault') },
@@ -141,17 +144,17 @@ export default function PropertiesPanel({
             )}
 
             {(col.type === 'select' || col.type === 'multi_select' || col.type === 'status') && (
-              <div className="pl-10 pr-3 py-2 bg-neutral-900/30 border-b border-neutral-800/50">
+              <div className="pl-10 pr-3 py-2 bg-sheet/60 border-b border-line">
                 <div className="flex flex-wrap gap-1 mb-1.5">
                   {(col.options || []).map((rawOpt: string | SelectOption, optIdx: number) => {
                     const opt = normalizeOption(rawOpt);
                     const c = getOptionColor(opt);
                     const pickerKey = `${idx}-${optIdx}`;
                     return (
-                      <span key={optIdx} className="relative flex items-center gap-0.5 text-[10px] px-1.5 py-0.5 border border-neutral-700/30 rounded" style={{ backgroundColor: c.bg, color: c.text }}>
+                      <span key={optIdx} className="relative flex items-center gap-0.5 text-2xs px-1.5 py-0.5 border border-line-strong/30 rounded" style={{ backgroundColor: c.bg, color: c.text }}>
                         <button
                           ref={(el) => { if (el) iconBtnRefs.current.set(pickerKey, el); else iconBtnRefs.current.delete(pickerKey); }}
-                          title="Icon"
+                          title={tPage('changeIcon')}
                           onClick={(e) => { e.stopPropagation(); setIconPickerOpen(iconPickerOpen === pickerKey ? null : pickerKey); }}
                           className="w-3 h-3 flex items-center justify-center shrink-0 mr-0.5 cursor-pointer opacity-70 hover:opacity-100"
                         >
@@ -181,7 +184,7 @@ export default function PropertiesPanel({
                           />
                         )}
                         <button
-                          title="Change color"
+                          title={t('optionColor')}
                           onClick={(e) => { e.stopPropagation(); setColorPickerOpen(colorPickerOpen === pickerKey ? null : pickerKey); }}
                           className="w-2.5 h-2.5 rounded-full shrink-0 mr-0.5 cursor-pointer border border-white/10 hover:scale-110 transition-transform"
                           style={{ backgroundColor: c.dot }}
@@ -198,7 +201,7 @@ export default function PropertiesPanel({
                             if (col.defaultValue === opt.value) updates.defaultValue = newVal;
                             onUpdateColumn(idx, updates);
                           }}
-                          className="bg-transparent border-none focus:outline-none focus:bg-white/10 px-0.5 rounded text-[10px] py-0 font-medium cursor-text"
+                          className="bg-transparent border-none focus:outline-none focus:bg-white/10 px-0.5 rounded text-2xs py-0 font-medium cursor-text"
                           style={{ color: c.text, width: `${Math.max(30, opt.value.length * 6 + 8)}px`, minWidth: '24px' }}
                         />
                         {col.type === 'status' && (
@@ -213,7 +216,7 @@ export default function PropertiesPanel({
                               onUpdateColumn(idx, { options: newOpts });
                             }}
                             size="xs"
-                            className="ml-0.5 h-4 min-w-0 border-none bg-black/20 px-0.5 text-[9px] font-normal hover:border-transparent"
+                            className="ml-0.5 h-4 min-w-0 border-none bg-black/20 px-0.5 text-2xs font-normal hover:border-transparent"
                             style={{ color: c.text }}
                             title={t('statusGroup')}
                             aria-label={t('statusGroup')}
@@ -254,7 +257,7 @@ export default function PropertiesPanel({
                         {colorPickerOpen === pickerKey && (
                           <div
                             ref={colorPickerRef}
-                            className="absolute z-50 top-full left-0 mt-1 p-1.5 bg-neutral-900 border border-neutral-700 flex flex-wrap gap-1 rounded shadow-xl overflow-hidden"
+                            className="absolute z-50 top-full left-0 mt-1 p-1.5 bg-float flex flex-wrap gap-1 rounded-control shadow-float"
                             style={{ width: 110 }}
                             onClick={(e) => e.stopPropagation()}
                           >
@@ -264,7 +267,7 @@ export default function PropertiesPanel({
                               return (
                                 <button
                                   key={colorKey}
-                                  title={colorKey}
+                                  title={colorKey === 'default' ? tEditor('bubbleColorDefault') : tEditor(`color${colorKey[0].toUpperCase()}${colorKey.slice(1)}`)}
                                   onClick={() => {
                                     const newOpts = [...(col.options || [])].map((o: string | SelectOption, i: number) =>
                                       i === optIdx ? { ...normalizeOption(o), color: colorKey as SelectOptionColor } : o,
@@ -272,7 +275,7 @@ export default function PropertiesPanel({
                                     onUpdateColumn(idx, { options: newOpts });
                                     setColorPickerOpen(null);
                                   }}
-                                  className={`w-5 h-5 rounded-full border cursor-pointer hover:scale-110 transition-transform ${isActive ? 'border-white/60 ring-1 ring-white/30' : 'border-white/10'}`}
+                                  className={`size-5 rounded-full cursor-pointer transition-shadow ${isActive ? 'ring-2 ring-fg ring-offset-2 ring-offset-float' : 'hover:ring-2 hover:ring-line-strong hover:ring-offset-1 hover:ring-offset-float'}`}
                                   style={{ backgroundColor: cc.dot }}
                                 />
                               );
@@ -300,7 +303,7 @@ export default function PropertiesPanel({
                       }
                     }
                   }}
-                  className="w-full bg-transparent text-[10px] text-neutral-400 placeholder-neutral-600 focus:outline-none focus:text-neutral-200 transition-colors"
+                  className="w-full bg-transparent text-xs text-fg-3 placeholder:text-fg-4 focus:outline-none focus:text-fg transition-colors"
                 />
               </div>
             )}
@@ -310,20 +313,20 @@ export default function PropertiesPanel({
 
       <button
         onClick={onAddColumn}
-        className="flex items-center gap-1.5 px-4 py-2.5 w-full text-xs text-neutral-500 hover:text-neutral-300 hover:bg-neutral-800/10 transition-colors text-left cursor-pointer border-b border-neutral-800/50"
+        className="flex items-center gap-1.5 px-4 py-2.5 w-full text-xs text-fg-3 hover:text-fg hover:bg-hover/40 transition-colors text-left cursor-pointer border-b border-line"
       >
         <Plus size={12} />
         {t('addProperty')}
       </button>
 
       {isSchemaDirty && (
-        <div className="sticky bottom-0 flex items-center justify-end gap-2 px-4 py-2.5 bg-neutral-850 border-t border-neutral-800">
-          <button onClick={onReset} disabled={isSavingSchema} className="text-xs text-neutral-500 hover:text-neutral-300 transition-colors cursor-pointer">
+        <div className="sticky bottom-0 flex items-center justify-end gap-2 px-4 py-2.5 bg-raised border-t border-line">
+          <Button variant="ghost" size="sm" onClick={onReset} disabled={isSavingSchema}>
             {tWs('cancel')}
-          </button>
-          <button onClick={onSave} disabled={isSavingSchema} className="px-3 py-1 bg-ink hover:bg-ink/88 text-ink-fg text-xs font-medium disabled:opacity-50 transition-colors cursor-pointer">
-            {isSavingSchema ? tWs('saving') : tWs('save')}
-          </button>
+          </Button>
+          <Button variant="primary" size="sm" onClick={onSave} loading={isSavingSchema}>
+            {tWs('save')}
+          </Button>
         </div>
       )}
     </div>

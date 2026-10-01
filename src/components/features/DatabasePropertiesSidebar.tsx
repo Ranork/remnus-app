@@ -3,7 +3,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { useTranslations } from 'next-intl';
 import { X, Database, LayoutTemplate } from 'lucide-react';
-import { CollapsibleSection } from './database-sidebar/shared';
+import { CollapsibleSection, ToggleRow } from './database-sidebar/shared';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsList, TabsTab } from '@/components/ui/tabs';
 import PageIcon from './PageIcon';
 import IconPicker from './IconPicker';
 import { updateDatabaseSchema } from '@/lib/actions/database';
@@ -47,16 +50,10 @@ interface DatabasePropertiesSidebarProps {
   onViewModeChange?: (mode: 'month' | 'week') => void;
   firstDayOfWeek?: 'sunday' | 'monday';
   onFirstDayOfWeekChange?: (day: 'sunday' | 'monday') => void;
-  cardColorCol?: string;
-  onCardColorColChange?: (colId: string) => void;
-  cardBorderSide?: 'left' | 'top' | 'right' | 'bottom';
-  onCardBorderSideChange?: (side: 'left' | 'top' | 'right' | 'bottom') => void;
-  cardBgCol?: string;
-  onCardBgColChange?: (colId: string) => void;
+  cardMarkCol?: string;
+  onCardMarkColChange?: (colId: string) => void;
   rowColorCol?: string;
   onRowColorColChange?: (colId: string) => void;
-  groupColBg?: boolean;
-  onGroupColBgChange?: (enabled: boolean) => void;
   defaultPageIcon?: string;
   defaultPageIconColor?: string;
   onDefaultPageIconChange?: (icon: string | null, color: string | null) => void;
@@ -94,16 +91,10 @@ export default function DatabasePropertiesSidebar({
   onViewModeChange,
   firstDayOfWeek,
   onFirstDayOfWeekChange,
-  cardColorCol,
-  onCardColorColChange,
-  cardBorderSide,
-  onCardBorderSideChange,
-  cardBgCol,
-  onCardBgColChange,
+  cardMarkCol,
+  onCardMarkColChange,
   rowColorCol,
   onRowColorColChange,
-  groupColBg,
-  onGroupColBgChange,
   defaultPageIcon,
   defaultPageIconColor,
   onDefaultPageIconChange,
@@ -112,6 +103,7 @@ export default function DatabasePropertiesSidebar({
 }: DatabasePropertiesSidebarProps) {
   const t = useTranslations('Database');
   const tPage = useTranslations('Page');
+  const tUi = useTranslations('UI');
 
   const [schema, setSchema] = useState<any[]>(() => database.schema || []);
   const [isSavingSchema, setIsSavingSchema] = useState(false);
@@ -124,7 +116,7 @@ export default function DatabasePropertiesSidebar({
   const colorColumns = schema.filter((c: any) => c.type === 'select' || c.type === 'multi_select' || c.type === 'status');
 
   const addColumn = () =>
-    setSchema([...schema, { id: `col_${crypto.randomUUID().slice(0, 8)}`, name: 'New Column', type: 'text', options: [] }]);
+    setSchema([...schema, { id: `col_${crypto.randomUUID().slice(0, 8)}`, name: t('newProperty'), type: 'text', options: [] }]);
   const updateColumn = (index: number, updates: any) => {
     const next = [...schema];
     next[index] = { ...next[index], ...updates };
@@ -146,36 +138,34 @@ export default function DatabasePropertiesSidebar({
   const viewType = activeView.config.type;
 
   return (
-    <div className="w-full sm:w-72 sm:shrink-0 bg-neutral-850 sm:border-l border-neutral-800 flex flex-col sm:h-full overflow-y-auto sm:overflow-hidden animate-in slide-in-from-bottom sm:slide-in-from-right duration-200">
+    // A raised panel with a hairline on the sheet (V2 R8.2) — the same surface as a
+    // field or a card inside the page, not a second sheet.
+    <div className="w-full sm:w-72 sm:shrink-0 bg-raised sm:border-l border-line flex flex-col sm:h-full overflow-y-auto sm:overflow-hidden animate-in slide-in-from-bottom sm:slide-in-from-right duration-200">
       {/* Header */}
-      <div className="flex items-center justify-between px-4 py-2.5 border-b border-neutral-800 shrink-0">
+      <div className="flex items-center justify-between gap-2 px-4 py-2 border-b border-line shrink-0">
         <div className="flex items-center gap-2 min-w-0">
-          <span className="text-xs font-semibold text-neutral-200">{t('settings')}</span>
-          <span className="text-[10px] text-neutral-500 border border-neutral-800 px-1.5 py-0.5 shrink-0 rounded">{activeView.name}</span>
+          <span className="text-ui font-semibold text-fg">{t('settings')}</span>
+          <Badge variant="outline" className="min-w-0"><span className="truncate">{activeView.name}</span></Badge>
         </div>
-        <button onClick={onClose} className="text-neutral-500 hover:text-neutral-200 transition-colors p-1 cursor-pointer ml-2">
-          <X size={14} />
-        </button>
+        <Button variant="ghost" size="icon-sm" onClick={onClose} aria-label={tUi('close')} title={tUi('close')}>
+          <X />
+        </Button>
       </div>
 
       {/* Tabs */}
-      <div className="flex border-b border-neutral-800 shrink-0">
-        {([
-          { id: 'layout',     label: t('layout'),     icon: LayoutTemplate },
-          { id: 'properties', label: t('properties'), icon: Database },
-        ] as const).map(({ id, label, icon: Icon }) => (
-          <button
-            key={id}
-            onClick={() => setActiveTab(id)}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-medium border-b-2 -mb-px transition-colors cursor-pointer ${
-              activeTab === id ? 'border-signal text-fg' : 'border-transparent text-neutral-500 hover:text-neutral-300'
-            }`}
-          >
-            <Icon size={12} />
-            {label}
-          </button>
-        ))}
-      </div>
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as 'properties' | 'layout')} className="shrink-0 px-2">
+        <TabsList>
+          {([
+            { id: 'layout',     label: t('layout'),     icon: LayoutTemplate },
+            { id: 'properties', label: t('properties'), icon: Database },
+          ] as const).map(({ id, label, icon: Icon }) => (
+            <TabsTab key={id} value={id} className="flex-1 justify-center">
+              <Icon />
+              {label}
+            </TabsTab>
+          ))}
+        </TabsList>
+      </Tabs>
 
       {/* Scrollable content */}
       <div className="flex-1 overflow-y-auto">
@@ -199,7 +189,7 @@ export default function DatabasePropertiesSidebar({
             <CollapsibleSection label={t('sectionPages')}>
               <div className="px-4 pb-3 flex flex-col gap-3 relative">
                 <div>
-                  <span className="block text-2xs text-neutral-500 mb-1.5">{t('openPagesAs')}</span>
+                  <span className="block text-xs text-fg-3 mb-1.5">{t('openPagesAs')}</span>
                   <SimpleSelect
                     value={openBehavior}
                     onValueChange={(v) => onOpenBehaviorChange(v as 'center' | 'side' | 'full')}
@@ -212,20 +202,21 @@ export default function DatabasePropertiesSidebar({
                   />
                 </div>
                 <div>
-                  <span className="block text-2xs text-neutral-500 mb-1.5">{t('defaultPageIcon')}</span>
+                  <span className="block text-xs text-fg-3 mb-1.5">{t('defaultPageIcon')}</span>
                   <div className="flex items-center gap-2">
-                    <button
+                    <Button
                       ref={defaultIconBtnRef}
+                      variant="secondary"
+                      size="sm"
                       onClick={() => setShowDefaultIconPicker(!showDefaultIconPicker)}
-                      className="flex items-center gap-2 px-3 py-1.5 bg-neutral-900 border border-neutral-800 text-neutral-300 hover:border-neutral-700 hover:text-white transition-colors rounded text-xs cursor-pointer shrink-0 font-medium"
                     >
                       <PageIcon icon={defaultPageIcon || null} iconColor={defaultPageIconColor || null} size={14} fallbackType="page" />
                       <span>{defaultPageIcon ? tPage('changeIcon') : tPage('addIcon')}</span>
-                    </button>
+                    </Button>
                     {defaultPageIcon && (
-                      <button onClick={() => onDefaultPageIconChange?.(null, null)} className="text-[10px] text-neutral-500 hover:text-red-400 transition-colors cursor-pointer">
+                      <Button variant="ghost" size="sm" onClick={() => onDefaultPageIconChange?.(null, null)} className="hover:text-red-400">
                         {t('remove')}
-                      </button>
+                      </Button>
                     )}
                   </div>
                 </div>
@@ -248,55 +239,48 @@ export default function DatabasePropertiesSidebar({
                   schema={schema}
                   groupByCol={groupByCol}
                   onGroupByColChange={onGroupByColChange}
-                  groupColBg={groupColBg}
-                  onGroupColBgChange={onGroupColBgChange}
                   hiddenGroups={hiddenGroups}
                   onHiddenGroupsChange={onHiddenGroupsChange}
                   allowNoGrouping
                 />
                 <CollapsibleSection label={t('sectionAppearance')}>
-                  <div className="px-4 pb-3 flex flex-col gap-3">
+                  <div className="px-4 pb-2 flex flex-col gap-3">
                     <div>
-                      <span className="block text-2xs text-neutral-500 mb-1.5">{t('rowColor')}</span>
+                      <span className="block text-xs text-fg-3 mb-1.5">{t('rowColor')}</span>
                       {colorColumns.length > 0 ? (
                         <SimpleSelect
                           value={rowColorCol ?? ''}
                           onValueChange={(v) => onRowColorColChange?.(v)}
-                          options={[{ value: '', label: 'None' }, ...colorColumns.map((col: any) => ({ value: col.id, label: col.name }))]}
+                          options={[{ value: '', label: t('none') }, ...colorColumns.map((col: any) => ({ value: col.id, label: col.name }))]}
                           className="w-full"
                         />
                       ) : (
-                        <span className="text-xs text-amber-500/80">{t('addSelectProperty')}</span>
+                        <span className="text-xs text-fg-3">{t('addSelectProperty')}</span>
                       )}
                     </div>
-                    <div>
-                      <div className="flex items-center justify-between mb-1.5">
-                        <span className="text-2xs text-neutral-500">{t('columns')}</span>
-                        <div className="flex gap-3">
-                          <button onClick={() => onHiddenColumnsChange([])} className="text-[10px] text-signal-text hover:text-fg cursor-pointer">{t('showAll')}</button>
-                          <button onClick={() => onHiddenColumnsChange(schema.map((c) => c.id).filter((id) => id !== 'title'))} className="text-[10px] text-neutral-500 hover:text-neutral-300 cursor-pointer">{t('hideAll')}</button>
-                        </div>
-                      </div>
-                      <div className="flex flex-col">
-                        {schema.map((col) => {
-                          const isHidden = hiddenColumns.includes(col.id);
-                          const isTitle = col.id === 'title';
-                          return (
-                            <button
-                              key={col.id}
-                              onClick={() => !isTitle && onToggleHideColumn(col.id)}
-                              disabled={isTitle}
-                              className={`flex items-center gap-2 px-1 py-1.5 border-b border-neutral-800/30 text-left transition-colors ${isTitle ? 'opacity-40 cursor-not-allowed' : 'hover:bg-neutral-800/10 cursor-pointer'}`}
-                            >
-                              <span className="flex-1 text-xs text-neutral-300 truncate">{col.name}</span>
-                              <span className={`w-3.5 h-3.5 border flex items-center justify-center shrink-0 transition-colors rounded-sm ${!isHidden ? 'bg-signal border-signal' : 'border-neutral-700'}`}>
-                                {!isHidden && <span className="text-2xs font-bold text-signal-fg leading-none">✓</span>}
-                              </span>
-                            </button>
-                          );
-                        })}
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs text-fg-3">{t('columns')}</span>
+                      <div className="flex gap-1">
+                        <Button variant="ghost" size="xs" onClick={() => onHiddenColumnsChange([])}>{t('showAll')}</Button>
+                        <Button variant="ghost" size="xs" onClick={() => onHiddenColumnsChange(schema.map((c) => c.id).filter((id) => id !== 'title'))}>{t('hideAll')}</Button>
                       </div>
                     </div>
+                  </div>
+                  <div className="flex flex-col pb-2">
+                    {schema.map((col) => {
+                      const isHidden = hiddenColumns.includes(col.id);
+                      const isTitle = col.id === 'title';
+                      return (
+                        <ToggleRow
+                          key={col.id}
+                          checked={!isHidden}
+                          disabled={isTitle}
+                          onToggle={() => { if (!isTitle) onToggleHideColumn(col.id); }}
+                        >
+                          <span className="flex-1 truncate text-fg-2">{col.name}</span>
+                        </ToggleRow>
+                      );
+                    })}
                   </div>
                 </CollapsibleSection>
               </>
@@ -314,14 +298,8 @@ export default function DatabasePropertiesSidebar({
                 onShowPropertyLabelsChange={onShowPropertyLabelsChange}
                 propertyTextClamp={propertyTextClamp}
                 onPropertyTextClampChange={onPropertyTextClampChange}
-                cardColorCol={cardColorCol}
-                onCardColorColChange={onCardColorColChange}
-                cardBorderSide={cardBorderSide}
-                onCardBorderSideChange={onCardBorderSideChange}
-                cardBgCol={cardBgCol}
-                onCardBgColChange={onCardBgColChange}
-                groupColBg={groupColBg}
-                onGroupColBgChange={onGroupColBgChange}
+                cardMarkCol={cardMarkCol}
+                onCardMarkColChange={onCardMarkColChange}
                 hiddenGroups={hiddenGroups}
                 onHiddenGroupsChange={onHiddenGroupsChange}
               />
@@ -337,12 +315,8 @@ export default function DatabasePropertiesSidebar({
                 onViewModeChange={onViewModeChange}
                 firstDayOfWeek={firstDayOfWeek}
                 onFirstDayOfWeekChange={onFirstDayOfWeekChange}
-                cardColorCol={cardColorCol}
-                onCardColorColChange={onCardColorColChange}
-                cardBorderSide={cardBorderSide}
-                onCardBorderSideChange={onCardBorderSideChange}
-                cardBgCol={cardBgCol}
-                onCardBgColChange={onCardBgColChange}
+                cardMarkCol={cardMarkCol}
+                onCardMarkColChange={onCardMarkColChange}
                 cardProperties={cardProperties}
                 onCardPropertiesChange={onCardPropertiesChange}
                 showPropertyLabels={showPropertyLabels}

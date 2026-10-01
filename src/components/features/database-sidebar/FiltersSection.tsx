@@ -3,7 +3,9 @@ import { useTranslations } from 'next-intl';
 import { Plus, X } from 'lucide-react';
 import { type SelectOption, normalizeOption } from '@/lib/types/properties';
 import type { ViewFilter, FilterOperator } from '@/lib/types/views';
-import { Checkbox, selectCls } from './shared';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
 import { SimpleSelect } from '@/components/ui/select';
 
 const OPERATOR_KEYS: { value: FilterOperator; key: string; needsValue: boolean }[] = [
@@ -15,6 +17,79 @@ const OPERATOR_KEYS: { value: FilterOperator; key: string; needsValue: boolean }
   { value: 'is_not_empty', key: 'operatorIsNotEmpty',     needsValue: false },
 ];
 
+/** The filter operators with their translated labels (shared with the table's column menu). */
+export function useFilterOperators() {
+  const t = useTranslations('Database');
+  return OPERATOR_KEYS.map((op) => ({ ...op, label: t(op.key as Parameters<typeof t>[0]) }));
+}
+
+/** A select-type filter stores its chosen options as a JSON array (older rows: one bare value). */
+function parseSelectedOptions(value: string): string[] {
+  if (!value) return [];
+  if (value.startsWith('[') && value.endsWith(']')) {
+    try { return JSON.parse(value); } catch { return [value]; }
+  }
+  return [value];
+}
+
+/**
+ * The value half of a filter: option checkboxes for a select/status column, a text field
+ * otherwise. Shared by this section and the table's column menu so both edit a filter
+ * the same way.
+ */
+export function FilterValueField({
+  filter,
+  column,
+  onChange,
+}: {
+  filter: ViewFilter;
+  column: any;
+  onChange: (value: string) => void;
+}) {
+  const t = useTranslations('Database');
+  const isSelectType = column && (column.type === 'select' || column.type === 'multi_select' || column.type === 'status');
+
+  if (!isSelectType) {
+    return (
+      <Input
+        size="sm"
+        value={filter.value}
+        onChange={(e) => onChange(e.target.value)}
+        placeholder={t('filterValue')}
+      />
+    );
+  }
+
+  const selectedList = parseSelectedOptions(filter.value);
+  return (
+    <div className="flex max-h-40 flex-col overflow-y-auto rounded-control border border-line bg-sheet py-1">
+      {(column.options || []).map((rawOpt: string | SelectOption) => {
+        const opt = normalizeOption(rawOpt);
+        const on = selectedList.includes(opt.value);
+        return (
+          <label
+            key={opt.value}
+            className="flex cursor-pointer items-center gap-2 px-2 py-1 text-xs text-fg-2 transition-colors hover:bg-hover/60"
+          >
+            <Checkbox
+              size="sm"
+              checked={on}
+              onCheckedChange={() => {
+                const next = on ? selectedList.filter((v) => v !== opt.value) : [...selectedList, opt.value];
+                onChange(JSON.stringify(next));
+              }}
+            />
+            <span className="truncate">{opt.value}</span>
+          </label>
+        );
+      })}
+      {(column.options || []).length === 0 && (
+        <span className="px-2 py-1 text-xs text-fg-3">{t('noOptionsDefined')}</span>
+      )}
+    </div>
+  );
+}
+
 interface FiltersSectionProps {
   filters: ViewFilter[];
   schema: any[];
@@ -23,7 +98,7 @@ interface FiltersSectionProps {
 
 export default function FiltersSection({ filters, schema, onFiltersChange }: FiltersSectionProps) {
   const t = useTranslations('Database');
-  const OPERATORS = OPERATOR_KEYS.map((op) => ({ ...op, label: t(op.key as Parameters<typeof t>[0]) }));
+  const OPERATORS = useFilterOperators();
 
   const addFilter = () => {
     const col = schema[0];
@@ -36,88 +111,56 @@ export default function FiltersSection({ filters, schema, onFiltersChange }: Fil
     onFiltersChange(filters.filter((f) => f.id !== id));
 
   return (
-    <div>
-      <div className="flex items-center justify-between px-4 py-2.5">
-        <span className="text-2xs text-neutral-500">
-          {t('filters')}{filters.length > 0 && ` (${filters.length})`}
+    <div className="border-b border-line">
+      <div className="flex items-center justify-between px-4 py-2">
+        <span className="text-ui font-medium text-fg-2">
+          {t('filters')}{filters.length > 0 && <span className="font-normal text-fg-3"> ({filters.length})</span>}
         </span>
-        <button onClick={addFilter} className="flex items-center gap-1 text-[10px] text-signal-text hover:text-fg cursor-pointer">
-          <Plus size={10} /> Add
-        </button>
+        <Button variant="ghost" size="xs" onClick={addFilter}>
+          <Plus /> {t('addFilter')}
+        </Button>
       </div>
       {filters.length === 0 ? (
-        <p className="text-[11px] text-neutral-700 text-center py-4">{t('noFilters')}</p>
+        <p className="px-4 pb-3 text-xs text-fg-3">{t('noFilters')}</p>
       ) : (
-        <div className="flex flex-col">
+        <div className="flex flex-col pb-1">
           {filters.map((filter) => {
             const opDef = OPERATORS.find((o) => o.value === filter.operator);
             const colSchema = schema.find((c) => c.id === filter.columnId);
-            const isSelectType = colSchema && (colSchema.type === 'select' || colSchema.type === 'multi_select' || colSchema.type === 'status');
-
-            let selectedList: string[] = [];
-            if (filter.value) {
-              if (filter.value.startsWith('[') && filter.value.endsWith(']')) {
-                try { selectedList = JSON.parse(filter.value); } catch { selectedList = [filter.value]; }
-              } else {
-                selectedList = [filter.value];
-              }
-            }
 
             return (
-              <div key={filter.id} className="px-4 py-2.5 border-b border-neutral-800/40 flex flex-col gap-1.5">
+              <div key={filter.id} className="px-4 py-2 flex flex-col gap-1.5">
                 <div className="flex items-center gap-1.5">
                   <SimpleSelect
                     value={filter.columnId}
                     onValueChange={(v) => updateFilter(filter.id, { columnId: v })}
                     options={schema.map((col) => ({ value: col.id, label: col.name }))}
+                    size="sm"
                     className="min-w-0 flex-1 shrink"
                   />
                   <SimpleSelect
                     value={filter.operator}
                     onValueChange={(v) => updateFilter(filter.id, { operator: v as FilterOperator })}
                     options={OPERATORS.map((op) => ({ value: op.value, label: op.label }))}
+                    size="sm"
                     className="min-w-0 flex-1 shrink"
                   />
-                  <button
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
                     onClick={() => deleteFilter(filter.id)}
-                    className="text-neutral-600 hover:text-red-400 transition-colors cursor-pointer shrink-0 p-0.5"
+                    aria-label={t('remove')}
+                    title={t('remove')}
+                    className="shrink-0 hover:text-red-400"
                   >
-                    <X size={12} />
-                  </button>
+                    <X />
+                  </Button>
                 </div>
-                {opDef?.needsValue && isSelectType && (
-                  <div className="flex flex-col gap-1 border border-neutral-800 bg-neutral-950/40 p-2 rounded max-h-36 overflow-y-auto">
-                    <span className="text-[10px] text-neutral-500 font-semibold mb-1">Select Options:</span>
-                    {(colSchema.options || []).map((rawOpt: string | SelectOption) => {
-                      const opt = normalizeOption(rawOpt);
-                      return (
-                        <button
-                          key={opt.value}
-                          onClick={() => {
-                            const next = selectedList.includes(opt.value)
-                              ? selectedList.filter(v => v !== opt.value)
-                              : [...selectedList, opt.value];
-                            updateFilter(filter.id, { value: JSON.stringify(next) });
-                          }}
-                          className="flex items-center gap-2 text-left text-xs text-neutral-300 hover:bg-neutral-800/40 px-1.5 py-1 rounded cursor-pointer transition-colors"
-                        >
-                          <Checkbox checked={selectedList.includes(opt.value)} />
-                          <span className="truncate">{opt.value}</span>
-                        </button>
-                      );
-                    })}
-                    {(colSchema.options || []).length === 0 && (
-                      <span className="text-[10px] text-neutral-600 italic">{t('noOptionsDefined')}</span>
-                    )}
-                  </div>
-                )}
-                {opDef?.needsValue && !isSelectType && (
-                  <input
-                    type="text"
-                    value={filter.value}
-                    onChange={(e) => updateFilter(filter.id, { value: e.target.value })}
-                    placeholder={t('filterValue')}
-                    className={`${selectCls} w-full focus:border-neutral-700`}
+                {opDef?.needsValue && (
+                  <FilterValueField
+                    filter={filter}
+                    column={colSchema}
+                    onChange={(value) => updateFilter(filter.id, { value })}
                   />
                 )}
               </div>

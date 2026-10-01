@@ -2,26 +2,25 @@
 
 import { useTranslations } from 'next-intl';
 import { normalizeOption } from '@/lib/types/properties';
-import { Checkbox, CollapsibleSection } from './shared';
+import { CollapsibleSection, ToggleRow } from './shared';
 import { SimpleSelect } from '@/components/ui/select';
 
 interface GroupingLayoutSectionProps {
   schema: any[];
   groupByCol?: string;
   onGroupByColChange?: (colId: string) => void;
-  groupColBg?: boolean;
-  onGroupColBgChange?: (enabled: boolean) => void;
   hiddenGroups?: string[];
   onHiddenGroupsChange?: (hidden: string[]) => void;
   allowNoGrouping?: boolean;
 }
 
+// Groups no longer take a background tint (V2 R8.2: the group's colour shows as its
+// heading glyph), so the old "group background" toggle is gone; a stored
+// `groupColBg` is simply ignored.
 export default function GroupingLayoutSection({
   schema,
   groupByCol,
   onGroupByColChange,
-  groupColBg,
-  onGroupColBgChange,
   hiddenGroups = [],
   onHiddenGroupsChange,
   allowNoGrouping = false,
@@ -36,7 +35,7 @@ export default function GroupingLayoutSection({
       <div className="px-4 pb-3 flex flex-col gap-2">
         {selectColumns.length > 0 ? (
           <div>
-            <span className="block text-2xs text-neutral-500 mb-1.5">{t('groupBy')}</span>
+            <span className="block text-xs text-fg-3 mb-1.5">{t('groupBy')}</span>
             <SimpleSelect
               value={groupByCol ?? ''}
               onValueChange={(v) => onGroupByColChange?.(v)}
@@ -48,31 +47,25 @@ export default function GroupingLayoutSection({
             />
           </div>
         ) : (
-          <span className="text-xs text-amber-500/80">{t('addSelectForGroup')}</span>
+          <span className="text-xs text-fg-3">{t('addSelectForGroup')}</span>
         )}
-        <button onClick={() => onGroupColBgChange?.(!groupColBg)} className="w-full flex items-center justify-between py-1.5 hover:bg-neutral-800/10 transition-colors cursor-pointer rounded">
-          <span className="text-xs text-neutral-300">{t('groupBackground')}</span>
-          <Checkbox checked={!!groupColBg} />
-        </button>
       </div>
 
       {groupColumn && (
         <div className="pb-2">
-          <div className="flex flex-col">
-            {[...options, 'Uncategorized'].map((colName) => {
-              const isHidden = hiddenGroups.includes(colName);
-              return (
-                <button
-                  key={colName}
-                  onClick={() => onHiddenGroupsChange?.(isHidden ? hiddenGroups.filter((g) => g !== colName) : [...hiddenGroups, colName])}
-                  className="w-full flex items-center justify-between px-4 py-2 border-b border-neutral-800/30 hover:bg-neutral-800/10 transition-colors cursor-pointer text-left"
-                >
-                  <span className="text-xs text-neutral-300 truncate">{colName === 'Uncategorized' ? t('uncategorized') : colName}</span>
-                  <Checkbox checked={!isHidden} />
-                </button>
-              );
-            })}
-          </div>
+          <span className="block px-4 pb-1 text-xs text-fg-3">{t('visibleGroups')}</span>
+          {[...options, 'Uncategorized'].map((colName) => {
+            const isHidden = hiddenGroups.includes(colName);
+            return (
+              <ToggleRow
+                key={colName}
+                checked={!isHidden}
+                onToggle={() => onHiddenGroupsChange?.(isHidden ? hiddenGroups.filter((g) => g !== colName) : [...hiddenGroups, colName])}
+              >
+                <span className="truncate text-fg-2">{colName === 'Uncategorized' ? t('uncategorized') : colName}</span>
+              </ToggleRow>
+            );
+          })}
         </div>
       )}
     </CollapsibleSection>

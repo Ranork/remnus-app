@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState, useMemo, useRef, useCallback, useEffect, useTransition, useSyncExternalStore } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
@@ -7,7 +7,16 @@ import { useTranslations } from 'next-intl';
 import { createPage, getPage, deletePage, duplicatePage, reorderPages, updatePageProperties } from '@/lib/actions/page';
 import { updateDatabaseViews } from '@/lib/actions/database';
 import { updateWorkspaceItemIcon, updateWorkspaceItemTitle } from '@/lib/actions/workspace';
-import { Plus, Settings, Columns3, Filter, ArrowUpDown, X, Maximize2, Database, ArrowLeftRight, MoreHorizontal, Trash2, Copy, ChevronLeft, RefreshCw, ClipboardList, FileCode2, Globe, History } from 'lucide-react';
+import { Plus, Settings, X, Maximize2, ArrowLeftRight, MoreHorizontal, Trash2, Copy, ChevronLeft, RefreshCw, ClipboardList, FileCode2, Globe, History, Loader2 } from 'lucide-react';
+import { Button, buttonVariants } from '@/components/ui/button';
+import { Tooltip } from '@/components/ui/tooltip';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import TableLayout from './TableLayout';
 import GroupedTableLayout from './GroupedTableLayout';
 import { ConfirmDialog } from './ConfirmDialog';
@@ -76,6 +85,8 @@ const SIDE_PEEK_WIDTH_STORAGE_KEY = 'remnus_side_peek_width';
 // The `id` column (row's real primary key) is always seeded into new databases but
 // starts hidden — it's a precision tool (e.g. targeting exact rows in bulk update),
 // not something most people need visible in every table view.
+// View names are user data, so a new view is named in the UI language at creation
+// (callers pass `t('viewTable')` etc.); the English defaults only serve non-UI callers.
 function defaultTableView(schema: any[], name = 'Table'): DatabaseView {
   const hasIdColumn = schema.some((c: any) => c.type === 'id');
   return {
@@ -217,7 +228,6 @@ export default function DatabaseView({
 }) {
   const t = useTranslations('Database');
   const tPage = useTranslations('Page');
-  const tSharing = useTranslations('Sharing');
   const tWs = useTranslations('Workspace');
   // Schema mutations (new inline option, settings-panel save) only persist server-side
   // and revalidate the route for the NEXT navigation — they never touch this already-
@@ -292,7 +302,6 @@ export default function DatabaseView({
   // True once the peek content is scrolled past the page title, so the header
   // bar can reveal the title and keep it visible.
   const [peekScrolled, setPeekScrolled] = useState(false);
-  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [markdownDraft, setMarkdownDraft] = useState<string | null>(null);
   const [showSharePeek, setShowSharePeek] = useState(false);
   const [showHistoryPeek, setShowHistoryPeek] = useState(false);
@@ -376,7 +385,7 @@ export default function DatabaseView({
   const [views, setViews] = useState<DatabaseView[]>(() => {
     const saved = database.views as DatabaseView[] | null | undefined;
     if (Array.isArray(saved) && saved.length > 0) return saved;
-    return [defaultTableView(schema)];
+    return [defaultTableView(schema, t('viewTable'))];
   });
 
   const [activeViewId, setActiveViewId] = useState(() => views[0].id);
@@ -546,12 +555,14 @@ export default function DatabaseView({
       ? Math.max(...localPages.map((p) => p.sortOrder ?? 0))
       : 0;
 
+    // A new row starts without a title (every view shows the localized "Untitled"
+    // placeholder) — a stored English "New Page" had to be deleted before typing.
     const optimisticPage = {
       id: tempId,
       databaseId: database.id,
-      title: 'New Page',
+      title: '',
       content: '',
-      properties: { title: 'New Page', ...mergedProperties },
+      properties: { title: '', ...mergedProperties },
       sortOrder: maxSort + 1,
       icon: defaultIcon,
       iconColor: defaultIconColor,
@@ -566,7 +577,7 @@ export default function DatabaseView({
       try {
         const realId = await createPage(
           database.id,
-          'New Page',
+          '',
           mergedProperties,
           defaultIcon,
           defaultIconColor,
@@ -769,9 +780,7 @@ export default function DatabaseView({
 
   const handleAddView = (type: 'table' | 'kanban' | 'calendar') => {
     const count = views.filter((v) => v.config.type === type).length;
-    let base = 'Table';
-    if (type === 'kanban') base = 'Board';
-    else if (type === 'calendar') base = 'Calendar';
+    const base = type === 'kanban' ? t('viewBoard') : type === 'calendar' ? t('viewCalendar') : t('viewTable');
     const name = count === 0 ? base : `${base} ${count + 1}`;
     
     let newView: DatabaseView;
@@ -915,20 +924,16 @@ export default function DatabaseView({
   const handleFirstDayOfWeekChange = (firstDayOfWeek: 'sunday' | 'monday') =>
     mutateConfig((cfg) => ({ ...cfg, firstDayOfWeek }));
 
-  const handleCardColorColChange = (cardColorCol: string) =>
-    mutateConfig((cfg) => ({ ...cfg, cardColorCol: cardColorCol || undefined }));
-
-  const handleCardBorderSideChange = (side: 'left' | 'top' | 'right' | 'bottom') =>
-    mutateConfig((cfg) => ({ ...cfg, cardBorderSide: side }));
-
-  const handleCardBgColChange = (cardBgCol: string) =>
-    mutateConfig((cfg) => ({ ...cfg, cardBgCol: cardBgCol || undefined }));
+  // One "mark cards by" setting (V2 R8.2): a card shows that property's value as a badge
+  // (kanban) or its colour as a dot (calendar) — no tinted backgrounds, no accent
+  // stripes. The older split into an accent-line property and a background property is
+  // folded into it (`cardMarkCol` reads `cardColorCol ?? cardBgCol`); choosing a mark
+  // clears the legacy background field so a card is never marked by two properties.
+  const handleCardMarkColChange = (col: string) =>
+    mutateConfig((cfg) => ({ ...cfg, cardColorCol: col || undefined, cardBgCol: undefined }));
 
   const handleRowColorColChange = (rowColorCol: string) =>
     mutateConfig((cfg) => ({ ...cfg, rowColorCol: rowColorCol || undefined }));
-
-  const handleGroupColBgChange = (groupColBg: boolean) =>
-    mutateConfig((cfg) => ({ ...cfg, groupColBg }));
 
   const handleCardDateChange = async (
     pageId: string,
@@ -1012,6 +1017,23 @@ export default function DatabaseView({
     mutateConfig((cfg) => ({ ...cfg, hiddenColumns: nextHidden }));
   };
 
+  // Shared by the center and side peek headers.
+  const peekHeaderActions = {
+    onClose: () => setPeekPageId(null),
+    onOpenFull: () => {
+      router.push(`/db/${database.id}/${peekPageId}`);
+      setPeekPageId(null);
+    },
+    onMarkdown: () => setMarkdownDraft(peekEditorRef.current?.getMarkdown() ?? peekPage?.content ?? ''),
+    onShare: () => setShowSharePeek(true),
+    onHistory: () => setShowHistoryPeek(true),
+    onDuplicate: async () => {
+      const newId = await handleDuplicatePage(peekPageId!);
+      if (newId) setPeekPageId(newId);
+    },
+    onDelete: () => recurrence.requestDelete(peekPageId!),
+  };
+
   return (
     <MembersProvider members={members}>
     <div className="relative flex-1 flex flex-col overflow-hidden min-w-0 h-full">
@@ -1021,7 +1043,7 @@ export default function DatabaseView({
         <div className="mb-4 shrink-0">
           <Link
             href={`/page/${database.parentId}`}
-            className="inline-flex items-center gap-1 text-sm text-neutral-500 hover:text-neutral-300 transition-colors"
+            className="inline-flex items-center gap-1 text-sm text-fg-3 hover:text-fg-2 transition-colors"
           >
             <ChevronLeft size={14} />
             {tPage('back')}
@@ -1036,17 +1058,17 @@ export default function DatabaseView({
             <button
               ref={dbButtonRef}
               onClick={() => setShowIconPicker(!showIconPicker)}
-              className="p-1 hover:bg-neutral-800 rounded transition-colors duration-150 cursor-pointer flex items-center justify-center shrink-0"
-              title={database.icon ? "Change icon" : "Add icon"}
+              className="p-1 hover:bg-hover rounded-surface transition-colors duration-150 cursor-pointer flex items-center justify-center shrink-0"
+              title={database.icon ? tPage('changeIcon') : tPage('addIcon')}
             >
-              <PageIcon icon={database.icon} iconColor={database.iconColor} size={40} fallbackType="database" />
+              <PageIcon icon={database.icon} iconColor={database.iconColor} size={36} fallbackType="database" />
             </button>
             {database.icon && (
               <button
                 onClick={() => handleIconSelect(null, null)}
-                className="absolute -top-7 left-1/2 -translate-x-1/2 opacity-0 group-hover/icon-wrapper:opacity-100 px-1.5 py-0.5 text-[9px] bg-neutral-850 border border-neutral-800 text-neutral-400 hover:text-white rounded transition-all cursor-pointer font-medium whitespace-nowrap shadow-xl z-20"
+                className="absolute -top-7 left-1/2 -translate-x-1/2 opacity-0 group-hover/icon-wrapper:opacity-100 focus-visible:opacity-100 h-6 px-2 text-2xs bg-fg text-desk rounded-control transition-opacity cursor-pointer font-medium whitespace-nowrap shadow-float z-20"
               >
-                Remove
+                {tPage('removeIcon')}
               </button>
             )}
           </div>
@@ -1074,13 +1096,13 @@ export default function DatabaseView({
               }
             }}
             placeholder={tPage('untitled')}
-            className="w-full bg-transparent text-neutral-100 font-bold text-2xl sm:text-3xl focus:outline-none placeholder:text-neutral-700 tracking-tight leading-none py-1"
+            className="w-full bg-transparent text-fg font-semibold text-[28px] sm:text-[34px] leading-tight tracking-[-0.025em] outline-none placeholder:text-fg-4 py-1"
           />
         </div>
       </div>
 
       {/* Top bar */}
-      <div className="flex items-end justify-between border-b border-neutral-800">
+      <div className="flex items-end justify-between border-b border-line">
         <ViewsBar
           views={views}
           activeViewId={activeView.id}
@@ -1093,61 +1115,60 @@ export default function DatabaseView({
           onUpdateIcon={handleUpdateViewIcon}
         />
 
-        <div className="flex items-center gap-0 pb-1.5">
+        <div className="flex items-center gap-0.5 pb-1.5">
           {/* Row/card drag-reorder + property save feedback — Table/Kanban/Calendar
               all funnel through the same persistReorder/trackSave helpers.
               Renders nothing (no layout footprint) once idle/faded, same as
               every other SaveStatus consumer in the app. */}
           <SaveStatus state={saveState} className="mr-1" />
 
-          {/* Refresh Button */}
-          <button
-            onClick={handleManualRefresh}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-neutral-500 hover:text-neutral-200 transition-colors cursor-pointer rounded"
-            title={tWs('refresh') || 'Refresh'}
-          >
-            <RefreshCw size={13} className={isRefreshing ? 'animate-spin text-signal-text' : ''} />
-            {tWs('refresh')}
-          </button>
+          <Tooltip content={tWs('refresh')}>
+            <Button variant="ghost" size="icon-sm" onClick={handleManualRefresh} aria-label={tWs('refresh')}>
+              <RefreshCw className={isRefreshing ? 'animate-spin' : ''} />
+            </Button>
+          </Tooltip>
 
-          {/* Full Width Toggle — hidden on mobile */}
-          <button
-            onClick={cycleWidth}
-            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs text-neutral-500 hover:text-neutral-200 transition-colors cursor-pointer rounded"
-          >
-            <ArrowLeftRight size={13} />
-            {widthLabels[widthMode]}
-          </button>
-
-          {/* Settings Button */}
-          <button
-            onClick={() => handleToggleSidebar(sidebarTab)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs transition-colors cursor-pointer rounded ${
-              sidebarOpen
-                ? 'text-signal-text font-semibold'
-                : 'text-neutral-500 hover:text-neutral-200'
-            }`}
-          >
-            <Settings size={13} /> {t('settings')}
-          </button>
+          {/* Width — hidden on mobile; the label names the current width */}
+          <Tooltip content={tPage('widthLabel')}>
+            <Button variant="ghost" size="sm" onClick={cycleWidth} className="hidden sm:inline-flex">
+              <ArrowLeftRight />
+              {widthLabels[widthMode]}
+            </Button>
+          </Tooltip>
 
           {/* Bulk add/update — hidden on mobile, paste-driven multi-row add/update */}
-          <button
-            onClick={() => setBulkDialogOpen(true)}
-            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-xs text-neutral-500 hover:text-neutral-200 transition-colors cursor-pointer rounded"
-            title={t('bulkImport.button')}
+          <Tooltip content={t('bulkImport.button')}>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              onClick={() => setBulkDialogOpen(true)}
+              aria-label={t('bulkImport.button')}
+              className="hidden sm:inline-flex"
+            >
+              <ClipboardList />
+            </Button>
+          </Tooltip>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => handleToggleSidebar(sidebarTab)}
+            aria-pressed={sidebarOpen}
+            className={sidebarOpen ? 'bg-hover text-fg' : ''}
           >
-            <ClipboardList size={13} />
-          </button>
+            <Settings /> {t('settings')}
+          </Button>
 
           {/* New Page button — hidden on mobile (available via bottom nav) */}
-          <button
+          <Button
+            variant="primary"
+            size="sm"
             onClick={handleHeaderNewClick}
-            disabled={pendingPageIds.size > 0}
-            className="hidden sm:flex items-center gap-1.5 bg-neutral-100 text-neutral-900 hover:bg-white px-4 py-1.5 transition-colors text-sm font-medium disabled:opacity-50 ml-1 cursor-pointer rounded"
+            loading={pendingPageIds.size > 0}
+            className="hidden sm:inline-flex ml-1.5"
           >
-            <Plus size={14} /> {t('new')}
-          </button>
+            <Plus /> {t('new')}
+          </Button>
         </div>
       </div>
 
@@ -1171,7 +1192,6 @@ export default function DatabaseView({
                 groupOrder={tableConfig.groupOrder ?? []}
                 hiddenGroups={tableConfig.hiddenGroups ?? []}
                 collapsedGroups={tableConfig.collapsedGroups ?? []}
-                groupColBg={tableConfig.groupColBg ?? false}
                 onGroupOrderChange={handleGroupOrderChange}
                 onCollapsedGroupsChange={handleCollapsedGroupsChange}
                 columnOrder={tableConfig.columnOrder}
@@ -1243,10 +1263,7 @@ export default function DatabaseView({
               cardProperties={kanbanConfig.cardProperties}
               showPropertyLabels={kanbanConfig.showPropertyLabels ?? true}
               propertyTextClamp={kanbanConfig.propertyTextClamp ?? 'truncate'}
-              cardColorCol={kanbanConfig.cardColorCol}
-              cardBorderSide={kanbanConfig.cardBorderSide ?? 'left'}
-              cardBgCol={kanbanConfig.cardBgCol}
-              groupColBg={kanbanConfig.groupColBg ?? false}
+              cardMarkCol={kanbanConfig.cardColorCol ?? kanbanConfig.cardBgCol}
               onUpdatePageProperties={handleUpdatePageProperties}
               onCreatePage={(initialProperties) => handleAddRow(initialProperties, { openAfterCreate: true })}
               defaultPageIcon={config.defaultPageIcon}
@@ -1272,9 +1289,7 @@ export default function DatabaseView({
               onSeriesChanged={() => tabNav.refresh()}
               onDeletePage={handleDeletePage}
               onDuplicatePage={handleDuplicatePage}
-              cardColorCol={calendarConfig.cardColorCol}
-              cardBorderSide={calendarConfig.cardBorderSide ?? 'left'}
-              cardBgCol={calendarConfig.cardBgCol}
+              cardMarkCol={calendarConfig.cardColorCol ?? calendarConfig.cardBgCol}
               cardProperties={calendarConfig.cardProperties}
               showPropertyLabels={calendarConfig.showPropertyLabels ?? true}
               propertyTextClamp={calendarConfig.propertyTextClamp ?? 'truncate'}
@@ -1292,7 +1307,7 @@ export default function DatabaseView({
         {/* Backdrop — desktop: transparent click-to-close, mobile: dark overlay */}
         {sidebarOpen && (
           <div
-            className="absolute inset-0 sm:bg-transparent bg-black/40 z-20 cursor-default sm:pointer-events-auto"
+            className="absolute inset-0 bg-overlay sm:bg-transparent z-20 cursor-default sm:pointer-events-auto"
             onClick={() => setSidebarOpen(false)}
           />
         )}
@@ -1301,7 +1316,7 @@ export default function DatabaseView({
         {sidebarOpen && (
           <div className="
             z-30 flex flex-col overflow-hidden
-            fixed inset-x-0 bottom-14 max-h-[85vh] rounded-t-2xl border-t border-neutral-800
+            fixed inset-x-0 bottom-14 max-h-[85vh] rounded-t-2xl border-t border-line
             sm:absolute sm:inset-x-auto sm:bottom-auto sm:top-0 sm:right-0 sm:h-full sm:max-h-none sm:rounded-none sm:border-t-0 sm:flex-row sm:overflow-visible
           ">
             <DatabasePropertiesSidebar
@@ -1337,16 +1352,14 @@ export default function DatabaseView({
               onViewModeChange={handleViewModeChange}
               firstDayOfWeek={calendarConfig?.firstDayOfWeek}
               onFirstDayOfWeekChange={handleFirstDayOfWeekChange}
-              cardColorCol={kanbanConfig?.cardColorCol ?? calendarConfig?.cardColorCol}
-              onCardColorColChange={handleCardColorColChange}
-              cardBorderSide={kanbanConfig?.cardBorderSide ?? calendarConfig?.cardBorderSide}
-              onCardBorderSideChange={handleCardBorderSideChange}
-              cardBgCol={kanbanConfig?.cardBgCol ?? calendarConfig?.cardBgCol}
-              onCardBgColChange={handleCardBgColChange}
+              cardMarkCol={
+                kanbanConfig ? (kanbanConfig.cardColorCol ?? kanbanConfig.cardBgCol)
+                : calendarConfig ? (calendarConfig.cardColorCol ?? calendarConfig.cardBgCol)
+                : undefined
+              }
+              onCardMarkColChange={handleCardMarkColChange}
               rowColorCol={(config as TableViewConfig).rowColorCol}
               onRowColorColChange={handleRowColorColChange}
-              groupColBg={tableConfig?.groupColBg ?? kanbanConfig?.groupColBg ?? false}
-              onGroupColBgChange={handleGroupColBgChange}
               defaultPageIcon={config.defaultPageIcon}
               defaultPageIconColor={config.defaultPageIconColor}
               onDefaultPageIconChange={(icon, color) =>
@@ -1374,134 +1387,31 @@ export default function DatabaseView({
       {/* Peek Overlay & Container (Center / Side Peek) */}
       {peekPageId && (
         <>
-          {/* Dark Glassmorphism Backdrop */}
           <div
             onClick={() => setPeekPageId(null)}
-            className="absolute inset-0 bg-black/40 backdrop-blur-xs z-50 animate-fade-in transition-opacity cursor-pointer animate-duration-200"
+            className="absolute inset-0 bg-overlay z-50 animate-fade-in transition-opacity cursor-pointer animate-duration-200"
           />
 
           {/* Center Peek Modal */}
           {(config.openBehavior ?? 'center') === 'center' && (
-            <div className="absolute z-50 inset-x-0 bottom-0 sm:inset-0 sm:flex sm:items-center sm:justify-center sm:p-4 md:p-10 sm:pointer-events-none">
-              <div className="w-full sm:max-w-4xl max-h-[92vh] sm:max-h-[90vh] bg-neutral-850 border-t sm:border border-neutral-800 flex flex-col sm:modal-shadow overflow-hidden rounded-t-2xl sm:rounded-lg pointer-events-auto animate-in slide-in-from-bottom sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-200">
-                {/* Peek Sticky Header */}
-                <div className="flex items-center justify-between px-6 py-3 border-b border-neutral-850 shrink-0 bg-neutral-900/30">
-                  <div className="flex items-center gap-3">
-                    <button
-                      onClick={() => setPeekPageId(null)}
-                      className="text-neutral-500 hover:text-neutral-200 transition-colors p-1 cursor-pointer rounded"
-                    >
-                      <X size={16} />
-                    </button>
-                    <span className={`hidden sm:inline-block text-xs bg-neutral-800 text-neutral-400 font-medium py-0.5 px-2 border border-neutral-700/40 rounded transition-opacity ${peekScrolled ? 'opacity-0 sm:hidden' : ''}`}>
-                      {t('openCenter')}
-                    </span>
-                    {peekScrolled && peekPage && (
-                      <span className="text-sm font-medium text-neutral-200 truncate max-w-[50vw] sm:max-w-xs animate-fade-in">
-                        {peekPage.properties?.title || tPage('untitled')}
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => {
-                        router.push(`/db/${database.id}/${peekPageId}`);
-                        setPeekPageId(null);
-                      }}
-                      className="hidden sm:flex items-center gap-1.5 text-xs text-neutral-400 hover:text-neutral-200 transition-colors py-1 px-2.5 hover:bg-neutral-800/40 border border-neutral-800 cursor-pointer rounded"
-                    >
-                      <Maximize2 size={12} />
-                      <span>{t('openInFullPage')}</span>
-                    </button>
-                    <div className="relative">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setOpenMenuId(openMenuId === peekPageId ? null : peekPageId);
-                        }}
-                        className="flex items-center justify-center p-1.5 text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/40 border border-neutral-800 cursor-pointer rounded transition-colors"
-                      >
-                        <MoreHorizontal size={12} />
-                      </button>
-                      {openMenuId === peekPageId && (
-                        <>
-                          <div className="fixed inset-0 z-40 cursor-default" onClick={() => setOpenMenuId(null)} />
-                          <div className="absolute right-0 top-full mt-1.5 z-50 bg-neutral-850 border border-neutral-800 shadow-xl py-1 w-40 rounded overflow-hidden text-left animate-fade-in animate-duration-100">
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setOpenMenuId(null);
-                                setMarkdownDraft(peekEditorRef.current?.getMarkdown() ?? peekPage?.content ?? '');
-                              }}
-                              className="w-full px-3 py-2 text-xs text-neutral-300 hover:bg-neutral-800 flex items-center gap-2 cursor-pointer transition-colors border-b border-neutral-850"
-                            >
-                              <FileCode2 size={13} />
-                              <span>{tPage('markdown.button')}</span>
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setOpenMenuId(null);
-                                setShowSharePeek(true);
-                              }}
-                              className="w-full px-3 py-2 text-xs text-neutral-300 hover:bg-neutral-800 flex items-center gap-2 cursor-pointer transition-colors border-b border-neutral-850"
-                            >
-                              <Globe size={13} />
-                              <span>{tSharing('shareButton')}</span>
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setOpenMenuId(null);
-                                setShowHistoryPeek(true);
-                              }}
-                              className="w-full px-3 py-2 text-xs text-neutral-300 hover:bg-neutral-800 flex items-center gap-2 cursor-pointer transition-colors border-b border-neutral-850"
-                            >
-                              <History size={13} />
-                              <span>{tPage('history.button')}</span>
-                            </button>
-                            <button
-                              onClick={async (e) => {
-                                e.stopPropagation();
-                                setOpenMenuId(null);
-                                const newId = await handleDuplicatePage(peekPageId!);
-                                if (newId) {
-                                  setPeekPageId(newId);
-                                }
-                              }}
-                              className="w-full px-3 py-2 text-xs text-neutral-300 hover:bg-neutral-800 flex items-center gap-2 cursor-pointer transition-colors border-b border-neutral-850"
-                            >
-                              <Copy size={13} />
-                              <span>{t('duplicatePage')}</span>
-                            </button>
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setOpenMenuId(null);
-                                recurrence.requestDelete(peekPageId!);
-                              }}
-                              className="w-full px-3 py-2 text-xs text-red-400 hover:bg-neutral-800 flex items-center gap-2 cursor-pointer transition-colors"
-                            >
-                              <Trash2 size={13} />
-                              <span>{tPage('deletePage')}</span>
-                            </button>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                </div>
+            // Sized to the view's own box, not the viewport: a vh height ran past the
+            // top of the view on phones, under whatever sits above it (the demo bar).
+            <div className="absolute z-50 inset-0 flex items-end pt-3 pointer-events-none sm:items-center sm:justify-center sm:p-4 md:p-10">
+              <div className="w-full sm:max-w-4xl max-h-full bg-sheet flex flex-col shadow-modal overflow-hidden rounded-t-surface sm:rounded-surface pointer-events-auto animate-in slide-in-from-bottom sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-200">
+                <PeekHeader
+                  title={peekScrolled && peekPage ? (peekPage.properties?.title || tPage('untitled')) : null}
+                  {...peekHeaderActions}
+                />
 
                 {/* Peek Editor Scrollable Content */}
                 <div
-                  className="flex-1 overflow-y-auto min-h-0 bg-neutral-850"
+                  className="flex-1 overflow-y-auto min-h-0"
                   onScroll={(e) => setPeekScrolled(e.currentTarget.scrollTop > 40)}
                 >
                   {isPageLoading ? (
-                    <div className="flex flex-col items-center justify-center py-20 text-neutral-500 gap-2 animate-fade-in">
-                      <div className="w-5 h-5 border-2 border-neutral-800 border-t-neutral-500 rounded-full animate-spin" />
-                      <span className="text-xs">Loading page...</span>
+                    <div className="flex flex-col items-center justify-center py-20 text-fg-3 gap-2 animate-fade-in">
+                      <Loader2 size={20} className="animate-spin" aria-hidden />
+                      <span className="text-xs">{t('loadingPage')}</span>
                     </div>
                   ) : (
                     peekPage && (
@@ -1524,7 +1434,7 @@ export default function DatabaseView({
           {/* Side Peek Drawer */}
           {(config.openBehavior ?? 'center') === 'side' && (
             <div
-              className="absolute z-50 flex flex-col overflow-hidden bg-neutral-850 inset-x-0 bottom-0 max-h-[92vh] rounded-t-2xl border-t border-neutral-800 sm:left-auto sm:top-0 sm:right-0 sm:bottom-0 sm:h-full sm:max-h-none sm:rounded-none sm:border-t-0 sm:border-l sm:modal-shadow animate-in slide-in-from-bottom sm:slide-in-from-right duration-300"
+              className="absolute z-50 flex flex-col overflow-hidden bg-sheet inset-x-0 bottom-0 max-h-[calc(100%-0.75rem)] rounded-t-surface shadow-modal sm:left-auto sm:top-0 sm:right-0 sm:bottom-0 sm:h-full sm:max-h-none sm:rounded-none animate-in slide-in-from-bottom sm:slide-in-from-right duration-300"
               style={isDesktopViewport ? { width: sidePeekWidth, maxWidth: '95vw' } : undefined}
             >
               {isDesktopViewport && (
@@ -1535,124 +1445,20 @@ export default function DatabaseView({
                   title={t('resizePanel')}
                 />
               )}
-              {/* Peek Sticky Header */}
-              <div className="flex items-center justify-between px-6 py-3 border-b border-neutral-850 shrink-0 bg-neutral-900/30">
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={() => setPeekPageId(null)}
-                    className="text-neutral-500 hover:text-neutral-200 transition-colors p-1 cursor-pointer rounded"
-                  >
-                    <X size={16} />
-                  </button>
-                  <span className={`text-xs bg-neutral-800 text-neutral-400 font-medium py-0.5 px-2 border border-neutral-700/40 rounded transition-opacity ${peekScrolled ? 'hidden' : ''}`}>
-                    {t('openSide')}
-                  </span>
-                  {peekScrolled && peekPage && (
-                    <span className="text-sm font-medium text-neutral-200 truncate max-w-[50vw] sm:max-w-xs animate-fade-in">
-                      {peekPage.properties?.title || tPage('untitled')}
-                    </span>
-                  )}
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => {
-                      router.push(`/db/${database.id}/${peekPageId}`);
-                      setPeekPageId(null);
-                    }}
-                    className="flex items-center gap-1.5 text-xs text-neutral-400 hover:text-neutral-200 transition-colors py-1 px-2.5 hover:bg-neutral-800/40 border border-neutral-800 cursor-pointer rounded"
-                  >
-                    <Maximize2 size={12} />
-                    <span>{t('openInFullPage')}</span>
-                  </button>
-                  <div className="relative">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setOpenMenuId(openMenuId === peekPageId ? null : peekPageId);
-                      }}
-                      className="flex items-center justify-center p-1.5 text-neutral-400 hover:text-neutral-200 hover:bg-neutral-800/40 border border-neutral-800 cursor-pointer rounded transition-colors"
-                    >
-                      <MoreHorizontal size={12} />
-                    </button>
-                    {openMenuId === peekPageId && (
-                      <>
-                        <div className="fixed inset-0 z-40 cursor-default" onClick={() => setOpenMenuId(null)} />
-                        <div className="absolute right-0 top-full mt-1.5 z-50 bg-neutral-850 border border-neutral-800 shadow-xl py-1 w-40 rounded overflow-hidden text-left animate-fade-in animate-duration-100">
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setOpenMenuId(null);
-                              setMarkdownDraft(peekEditorRef.current?.getMarkdown() ?? peekPage?.content ?? '');
-                            }}
-                            className="w-full px-3 py-2 text-xs text-neutral-300 hover:bg-neutral-800 flex items-center gap-2 cursor-pointer transition-colors border-b border-neutral-850"
-                          >
-                            <FileCode2 size={13} />
-                            <span>{tPage('markdown.button')}</span>
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setOpenMenuId(null);
-                              setShowSharePeek(true);
-                            }}
-                            className="w-full px-3 py-2 text-xs text-neutral-300 hover:bg-neutral-800 flex items-center gap-2 cursor-pointer transition-colors border-b border-neutral-850"
-                          >
-                            <Globe size={13} />
-                            <span>{tSharing('shareButton')}</span>
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setOpenMenuId(null);
-                              setShowHistoryPeek(true);
-                            }}
-                            className="w-full px-3 py-2 text-xs text-neutral-300 hover:bg-neutral-800 flex items-center gap-2 cursor-pointer transition-colors border-b border-neutral-850"
-                          >
-                            <History size={13} />
-                            <span>{tPage('history.button')}</span>
-                          </button>
-                          <button
-                            onClick={async (e) => {
-                              e.stopPropagation();
-                              setOpenMenuId(null);
-                              const newId = await handleDuplicatePage(peekPageId!);
-                              if (newId) {
-                                setPeekPageId(newId);
-                              }
-                            }}
-                            className="w-full px-3 py-2 text-xs text-neutral-300 hover:bg-neutral-800 flex items-center gap-2 cursor-pointer transition-colors border-b border-neutral-850"
-                          >
-                            <Copy size={13} />
-                            <span>Duplicate page</span>
-                          </button>
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setOpenMenuId(null);
-                              recurrence.requestDelete(peekPageId!);
-                            }}
-                            className="w-full px-3 py-2 text-xs text-red-400 hover:bg-neutral-800 flex items-center gap-2 cursor-pointer transition-colors"
-                          >
-                            <Trash2 size={13} />
-                            <span>{tPage('deletePage')}</span>
-                          </button>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </div>
-              </div>
+              <PeekHeader
+                title={peekScrolled && peekPage ? (peekPage.properties?.title || tPage('untitled')) : null}
+                {...peekHeaderActions}
+              />
 
               {/* Peek Editor Scrollable Content */}
               <div
-                className="flex-1 overflow-y-auto min-h-0 bg-neutral-850"
+                className="flex-1 overflow-y-auto min-h-0"
                 onScroll={(e) => setPeekScrolled(e.currentTarget.scrollTop > 40)}
               >
                 {isPageLoading ? (
-                  <div className="flex flex-col items-center justify-center py-20 text-neutral-500 gap-2 animate-fade-in">
-                    <div className="w-5 h-5 border-2 border-neutral-800 border-t-neutral-500 rounded-full animate-spin" />
-                    <span className="text-xs">Loading page...</span>
+                  <div className="flex flex-col items-center justify-center py-20 text-fg-3 gap-2 animate-fade-in">
+                    <Loader2 size={20} className="animate-spin" aria-hidden />
+                    <span className="text-xs">{t('loadingPage')}</span>
                   </div>
                 ) : (
                   peekPage && (
@@ -1708,5 +1514,87 @@ export default function DatabaseView({
       {recurrence.node}
     </div>
     </MembersProvider>
+  );
+}
+
+/**
+ * The row peek's top bar: close on the left (with the row's title once the body has
+ * scrolled past it), "Open in full page" and the row's menu on the right.
+ */
+function PeekHeader({
+  title,
+  onClose,
+  onOpenFull,
+  onMarkdown,
+  onShare,
+  onHistory,
+  onDuplicate,
+  onDelete,
+}: {
+  title: string | null;
+  onClose: () => void;
+  onOpenFull: () => void;
+  onMarkdown: () => void;
+  onShare: () => void;
+  onHistory: () => void;
+  onDuplicate: () => void;
+  onDelete: () => void;
+}) {
+  const t = useTranslations('Database');
+  const tPage = useTranslations('Page');
+  const tSharing = useTranslations('Sharing');
+  const tUi = useTranslations('UI');
+  return (
+    <div className="flex h-12 shrink-0 items-center justify-between gap-3 border-b border-line px-3 sm:px-4">
+      <div className="flex min-w-0 items-center gap-2">
+        <Tooltip content={tUi('close')}>
+          <Button variant="ghost" size="icon-sm" onClick={onClose} aria-label={tUi('close')}>
+            <X />
+          </Button>
+        </Tooltip>
+        {title && (
+          <span className="truncate text-sm font-medium text-fg animate-fade-in">{title}</span>
+        )}
+      </div>
+
+      <div className="flex shrink-0 items-center gap-1">
+        <Button variant="ghost" size="sm" onClick={onOpenFull} aria-label={t('openInFullPage')}>
+          <Maximize2 />
+          <span className="hidden sm:inline">{t('openInFullPage')}</span>
+        </Button>
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            className={buttonVariants({ variant: 'ghost', size: 'icon-sm' })}
+            aria-label={tPage('pageOptions')}
+            title={tPage('pageOptions')}
+          >
+            <MoreHorizontal />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end">
+            <DropdownMenuItem onClick={onMarkdown}>
+              <FileCode2 />
+              {tPage('markdown.button')}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={onShare}>
+              <Globe />
+              {tSharing('shareButton')}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={onHistory}>
+              <History />
+              {tPage('history.button')}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={onDuplicate}>
+              <Copy />
+              {t('duplicatePage')}
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem variant="destructive" onClick={onDelete}>
+              <Trash2 />
+              {tPage('deletePage')}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    </div>
   );
 }

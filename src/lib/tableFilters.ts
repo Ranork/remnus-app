@@ -44,8 +44,10 @@ export function applyFilters<T extends RowLike>(rows: T[], filters: FilterSpec[]
       }
 
       if (targetValues.length === 0) {
-        // Empty filters should usually not filter out everything, but for select lists we want it to match nothing
-        return false;
+        // A filter with nothing to compare against yet (just added, or every option
+        // unticked) is not applied: it used to hide every row the moment "Add filter"
+        // was clicked, which read as the data having vanished.
+        return true;
       }
 
       switch (f.operator) {

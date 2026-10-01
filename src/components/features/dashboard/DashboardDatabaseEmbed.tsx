@@ -6,6 +6,8 @@ import { useTranslations } from 'next-intl';
 import TableLayout from '@/components/features/TableLayout';
 import KanbanBoard from '@/components/features/KanbanBoard';
 import { MembersProvider, type WorkspaceMember } from '@/components/features/MembersContext';
+import { EmptyState } from '@/components/ui/empty-state';
+import { Rows3 } from 'lucide-react';
 import { deletePage, duplicatePage, updatePageProperties } from '@/lib/actions/page';
 import type { DatabaseView, ViewFilter, ViewSort } from '@/lib/types/views';
 
@@ -53,6 +55,8 @@ export default function DashboardDatabaseEmbed({
     groupOrder?: string[];
     cardProperties?: string[];
     cardColorCol?: string;
+    /** Legacy "card background" setting — read as the card mark when no mark is set. */
+    cardBgCol?: string;
     filters?: ViewFilter[];
     sorts?: ViewSort[];
   };
@@ -113,7 +117,7 @@ export default function DashboardDatabaseEmbed({
           onDuplicatePage={copyRow}
           hasSorts={sorts.length > 0}
           cardProperties={config.cardProperties}
-          cardColorCol={config.cardColorCol}
+          cardMarkCol={config.cardColorCol ?? config.cardBgCol}
           onUpdatePageProperties={patchProperties}
         />
       );
@@ -149,7 +153,7 @@ export default function DashboardDatabaseEmbed({
   }, [localRows, columnOrder, hiddenColumns, filters, sorts, groupOrder, config, database]);
 
   if (!localRows.length) {
-    return <p className="px-1 py-6 text-center text-xs text-neutral-500">{t('noRows')}</p>;
+    return <EmptyState size="sm" icon={<Rows3 />} title={t('noRows')} />;
   }
 
   return (

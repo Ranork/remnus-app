@@ -74,7 +74,20 @@ export async function createPage(
   const existing = await db.select({ sortOrder: pages.sortOrder }).from(pages).where(eq(pages.databaseId, databaseId));
   const maxSort = existing.reduce((max, p) => p.sortOrder > max ? p.sortOrder : max, 0);
 
-  const defaultProps = { title: title, status: 'To Do', ...initialProperties };
+  // Defaults come from the database's own schema: a select/status column's configured
+  // default, and — for the stock "Status" column (To Do / In Progress / Done) — its
+  // "To Do". A hard-coded `status: 'To Do'` used to land on every new row, so a board
+  // with other status options (or none) got a stray, colourless "To Do".
+  const [dbRow] = await db.select({ schema: databases.schema }).from(databases).where(eq(databases.id, databaseId)).limit(1);
+  const schema = (Array.isArray(dbRow?.schema) ? dbRow.schema : []) as DatabaseColumn[];
+  const stockStatus = schema.find((c) => c.id === 'status' && (c.type === 'select' || c.type === 'status'));
+  const stockStatusDefault =
+    stockStatus && !stockStatus.defaultValue &&
+    (stockStatus.options ?? []).some((o) => (typeof o === 'string' ? o : o?.value) === 'To Do')
+      ? { status: 'To Do' }
+      : {};
+
+  const defaultProps = { title: title, ...stockStatusDefault, ...getSchemaDefaults(schema), ...initialProperties };
 
   const now = new Date();
   await db.insert(pages).values({

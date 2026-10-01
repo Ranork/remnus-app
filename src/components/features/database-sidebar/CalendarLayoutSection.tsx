@@ -1,8 +1,9 @@
 'use client';
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { GripVertical, ArrowLeft, ArrowUp, ArrowRight, ArrowDown } from 'lucide-react';
-import { getPropertyIcon, Checkbox, CollapsibleSection } from './shared';
+import { GripVertical } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { getPropertyIcon, CollapsibleSection, ToggleRow } from './shared';
 import { SimpleSelect } from '@/components/ui/select';
 
 interface CalendarLayoutSectionProps {
@@ -13,12 +14,9 @@ interface CalendarLayoutSectionProps {
   onViewModeChange?: (mode: 'month' | 'week') => void;
   firstDayOfWeek?: 'sunday' | 'monday';
   onFirstDayOfWeekChange?: (day: 'sunday' | 'monday') => void;
-  cardColorCol?: string;
-  onCardColorColChange?: (colId: string) => void;
-  cardBorderSide?: 'left' | 'top' | 'right' | 'bottom';
-  onCardBorderSideChange?: (side: 'left' | 'top' | 'right' | 'bottom') => void;
-  cardBgCol?: string;
-  onCardBgColChange?: (colId: string) => void;
+  /** The property whose colour marks every event (a dot before its title). */
+  cardMarkCol?: string;
+  onCardMarkColChange?: (colId: string) => void;
   cardProperties?: string[];
   onCardPropertiesChange?: (props: string[]) => void;
   showPropertyLabels?: boolean;
@@ -35,12 +33,8 @@ export default function CalendarLayoutSection({
   onViewModeChange,
   firstDayOfWeek,
   onFirstDayOfWeekChange,
-  cardColorCol,
-  onCardColorColChange,
-  cardBorderSide = 'left',
-  onCardBorderSideChange,
-  cardBgCol,
-  onCardBgColChange,
+  cardMarkCol,
+  onCardMarkColChange,
   cardProperties,
   onCardPropertiesChange,
   showPropertyLabels = true,
@@ -92,30 +86,30 @@ export default function CalendarLayoutSection({
       <CollapsibleSection label={t('sectionCalendar')}>
         <div className="px-4 pb-3 flex flex-col gap-2">
           <div>
-            <span className="block text-2xs text-neutral-500 mb-1.5">{t('calendarBy')}</span>
+            <span className="block text-xs text-fg-3 mb-1.5">{t('calendarBy')}</span>
             {dateColumns.length > 0 ? (
               <SimpleSelect
                 value={dateCol ?? ''}
                 onValueChange={(v) => onDateColChange?.(v)}
-                options={[{ value: '', label: 'Select property…' }, ...dateColumns.map((col: any) => ({ value: col.id, label: col.name }))]}
+                options={[{ value: '', label: t('selectProperty') }, ...dateColumns.map((col: any) => ({ value: col.id, label: col.name }))]}
                 className="w-full"
               />
             ) : (
-              <span className="text-xs text-amber-500/80">{t('addDateForCalendar')}</span>
+              <span className="text-xs text-fg-3">{t('addDateForCalendar')}</span>
             )}
           </div>
           <div className="flex gap-3">
             <div className="flex-1">
-              <span className="block text-2xs text-neutral-500 mb-1.5">View</span>
+              <span className="block text-xs text-fg-3 mb-1.5">{t('calendarViewMode')}</span>
               <SimpleSelect
                 value={viewMode ?? 'month'}
                 onValueChange={(v) => onViewModeChange?.(v as 'month' | 'week')}
-                options={[{ value: 'month', label: 'Month' }, { value: 'week', label: 'Week' }]}
+                options={[{ value: 'month', label: t('calendarMonth') }, { value: 'week', label: t('calendarWeek') }]}
                 className="w-full"
               />
             </div>
             <div className="flex-1">
-              <span className="block text-2xs text-neutral-500 mb-1.5">{t('weekStart')}</span>
+              <span className="block text-xs text-fg-3 mb-1.5">{t('weekStart')}</span>
               <SimpleSelect
                 value={firstDayOfWeek || 'sunday'}
                 onValueChange={(v) => onFirstDayOfWeekChange?.(v as 'sunday' | 'monday')}
@@ -130,7 +124,7 @@ export default function CalendarLayoutSection({
       {/* Cards */}
       <CollapsibleSection label={t('sectionCards')}>
         {calAvailableCardProps.length === 0 ? (
-          <p className="text-[11px] text-neutral-700 text-center pb-3">{t('noAdditionalProperties')}</p>
+          <p className="text-xs text-fg-3 text-center pb-3">{t('noAdditionalProperties')}</p>
         ) : (
           <div className="flex flex-col">
             {visibleCalCardProps.map((col) => (
@@ -141,91 +135,54 @@ export default function CalendarLayoutSection({
                 onDragOver={(e) => { e.preventDefault(); if (draggingCalProp && draggingCalProp !== col.id) setDragOverCalProp(col.id); }}
                 onDrop={() => handleDrop(col.id)}
                 onDragEnd={() => { setDraggingCalProp(null); setDragOverCalProp(null); }}
-                className={`flex items-center gap-2 px-4 py-2 border-b border-neutral-800/30 hover:bg-neutral-800/10 transition-colors cursor-default ${draggingCalProp === col.id ? 'opacity-30' : ''} ${dragOverCalProp === col.id ? 'border-t-2 border-t-signal/50' : ''}`}
+                className={`flex items-center gap-2 px-4 py-1.5 text-xs transition-colors hover:bg-hover/60 cursor-default ${draggingCalProp === col.id ? 'opacity-30' : ''} ${dragOverCalProp === col.id ? 'shadow-[inset_0_2px_0_var(--color-signal)]' : ''}`}
               >
-                <GripVertical size={11} className="text-neutral-600 cursor-grab shrink-0" />
+                <GripVertical size={12} className="text-fg-4 cursor-grab shrink-0" />
                 {getPropertyIcon(col.type)}
-                <span className="flex-1 text-xs text-neutral-300 truncate">{col.name}</span>
-                <button onClick={() => toggleCalCardProp(col.id)} className="cursor-pointer"><Checkbox checked={true} /></button>
+                <span className="flex-1 text-fg-2 truncate">{col.name}</span>
+                <Checkbox size="sm" checked onCheckedChange={() => toggleCalCardProp(col.id)} aria-label={col.name} />
               </div>
             ))}
             {hiddenCalCardProps.map((col: any) => (
-              <button key={col.id} onClick={() => toggleCalCardProp(col.id)} className="flex items-center gap-2 px-4 py-2 border-b border-neutral-800/30 hover:bg-neutral-800/10 transition-colors cursor-pointer text-left">
-                <span className="w-2.75 shrink-0" />
+              <ToggleRow key={col.id} checked={false} onToggle={() => toggleCalCardProp(col.id)}>
+                <span className="w-3 shrink-0" />
                 {getPropertyIcon(col.type)}
-                <span className="flex-1 text-xs text-neutral-500 truncate">{col.name}</span>
-                <Checkbox checked={false} />
-              </button>
+                <span className="flex-1 text-fg-3 truncate">{col.name}</span>
+              </ToggleRow>
             ))}
           </div>
         )}
-        <div className="px-4 py-2.5 flex flex-col gap-2">
-          <button onClick={() => onShowPropertyLabelsChange?.(!showPropertyLabels)} className="w-full flex items-center justify-between cursor-pointer">
-            <span className="text-xs text-neutral-300">{t('showLabels')}</span>
-            <Checkbox checked={showPropertyLabels} />
-          </button>
-          <div className="flex items-center justify-between gap-3">
-            <span className="text-xs text-neutral-300 shrink-0">{t('propertyText')}</span>
+        <div className="flex flex-col gap-2 pt-1 pb-3">
+          <ToggleRow checked={showPropertyLabels} onToggle={() => onShowPropertyLabelsChange?.(!showPropertyLabels)}>
+            <span className="text-fg-2">{t('showLabels')}</span>
+          </ToggleRow>
+          <div className="flex items-center justify-between gap-3 px-4">
+            <span className="text-xs text-fg-2 shrink-0">{t('propertyText')}</span>
             <SimpleSelect
               value={propertyTextClamp}
               onValueChange={(v) => onPropertyTextClampChange?.(v as 'truncate' | 'wrap')}
               options={[{ value: 'truncate', label: t('truncate') }, { value: 'wrap', label: t('wrap') }]}
+              size="sm"
               className="w-28"
             />
           </div>
+          {colorColumns.length > 0 && (
+            <div className="flex flex-col gap-1.5 px-4 pt-1">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-xs text-fg-2 shrink-0">{t('cardMark')}</span>
+                <SimpleSelect
+                  value={cardMarkCol ?? ''}
+                  onValueChange={(v) => onCardMarkColChange?.(v)}
+                  options={[{ value: '', label: t('none') }, ...colorColumns.map((col: any) => ({ value: col.id, label: col.name }))]}
+                  size="sm"
+                  className="w-32"
+                />
+              </div>
+              <p className="text-xs leading-relaxed text-fg-3">{t('cardMarkCalendarHint')}</p>
+            </div>
+          )}
         </div>
       </CollapsibleSection>
-
-      {/* Card colors */}
-      {colorColumns.length > 0 && (
-        <CollapsibleSection label={t('cardColors')} defaultOpen={false}>
-          <div className="px-4 pb-3 flex flex-col gap-2">
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-xs text-neutral-300 shrink-0">{t('cardBackground')}</span>
-              <SimpleSelect
-                value={cardBgCol ?? ''}
-                onValueChange={(v) => onCardBgColChange?.(v)}
-                options={[{ value: '', label: 'None' }, ...colorColumns.map((col: any) => ({ value: col.id, label: col.name }))]}
-                className="w-32"
-              />
-            </div>
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-xs text-neutral-300 shrink-0">{t('accentLine')}</span>
-              <SimpleSelect
-                value={cardColorCol ?? ''}
-                onValueChange={(v) => onCardColorColChange?.(v)}
-                options={[{ value: '', label: 'None' }, ...colorColumns.map((col: any) => ({ value: col.id, label: col.name }))]}
-                className="w-32"
-              />
-            </div>
-            {cardColorCol && (
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-xs text-neutral-500 shrink-0 pl-3">{t('accentPosition')}</span>
-                <div className="flex gap-1">
-                  {([
-                    { side: 'left', Icon: ArrowLeft },
-                    { side: 'top', Icon: ArrowUp },
-                    { side: 'right', Icon: ArrowRight },
-                    { side: 'bottom', Icon: ArrowDown },
-                  ] as const).map(({ side, Icon }) => (
-                    <button
-                      key={side}
-                      onClick={() => onCardBorderSideChange?.(side)}
-                      className={`w-7 h-7 flex items-center justify-center border rounded transition-colors cursor-pointer ${
-                        cardBorderSide === side
-                          ? 'border-signal/60 text-signal-text bg-signal/10'
-                          : 'border-neutral-700 text-neutral-500 hover:border-neutral-600 hover:text-neutral-400'
-                      }`}
-                    >
-                      <Icon size={12} />
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </CollapsibleSection>
-      )}
     </>
   );
 }

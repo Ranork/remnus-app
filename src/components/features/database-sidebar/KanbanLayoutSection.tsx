@@ -1,8 +1,9 @@
 'use client';
 import { useState } from 'react';
 import { useTranslations } from 'next-intl';
-import { GripVertical, ArrowLeft, ArrowUp, ArrowRight, ArrowDown } from 'lucide-react';
-import { getPropertyIcon, Checkbox, CollapsibleSection } from './shared';
+import { GripVertical } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { getPropertyIcon, CollapsibleSection, ToggleRow } from './shared';
 import { SimpleSelect } from '@/components/ui/select';
 import GroupingLayoutSection from './GroupingLayoutSection';
 
@@ -16,14 +17,9 @@ interface KanbanLayoutSectionProps {
   onShowPropertyLabelsChange?: (show: boolean) => void;
   propertyTextClamp?: 'truncate' | 'wrap';
   onPropertyTextClampChange?: (clamp: 'truncate' | 'wrap') => void;
-  cardColorCol?: string;
-  onCardColorColChange?: (colId: string) => void;
-  cardBorderSide?: 'left' | 'top' | 'right' | 'bottom';
-  onCardBorderSideChange?: (side: 'left' | 'top' | 'right' | 'bottom') => void;
-  cardBgCol?: string;
-  onCardBgColChange?: (colId: string) => void;
-  groupColBg?: boolean;
-  onGroupColBgChange?: (enabled: boolean) => void;
+  /** The property whose value marks every card (a badge at the card's top). */
+  cardMarkCol?: string;
+  onCardMarkColChange?: (colId: string) => void;
   hiddenGroups?: string[];
   onHiddenGroupsChange?: (hidden: string[]) => void;
 }
@@ -38,14 +34,8 @@ export default function KanbanLayoutSection({
   onShowPropertyLabelsChange,
   propertyTextClamp = 'truncate',
   onPropertyTextClampChange,
-  cardColorCol,
-  onCardColorColChange,
-  cardBorderSide = 'left',
-  onCardBorderSideChange,
-  cardBgCol,
-  onCardBgColChange,
-  groupColBg,
-  onGroupColBgChange,
+  cardMarkCol,
+  onCardMarkColChange,
   hiddenGroups = [],
   onHiddenGroupsChange,
 }: KanbanLayoutSectionProps) {
@@ -92,8 +82,6 @@ export default function KanbanLayoutSection({
         schema={schema}
         groupByCol={groupByCol}
         onGroupByColChange={onGroupByColChange}
-        groupColBg={groupColBg}
-        onGroupColBgChange={onGroupColBgChange}
         hiddenGroups={hiddenGroups}
         onHiddenGroupsChange={onHiddenGroupsChange}
       />
@@ -101,7 +89,7 @@ export default function KanbanLayoutSection({
       {/* Cards */}
       <CollapsibleSection label={t('sectionCards')}>
         {availableCardProps.length === 0 ? (
-          <p className="text-[11px] text-neutral-700 text-center pb-3">{t('noAdditionalProperties')}</p>
+          <p className="text-xs text-fg-3 text-center pb-3">{t('noAdditionalProperties')}</p>
         ) : (
           <div className="flex flex-col">
             {visibleCardProps.map((col) => (
@@ -112,85 +100,50 @@ export default function KanbanLayoutSection({
                 onDragOver={(e) => { e.preventDefault(); if (draggingCardProp && draggingCardProp !== col.id) setDragOverCardProp(col.id); }}
                 onDrop={() => handleDrop(col.id)}
                 onDragEnd={() => { setDraggingCardProp(null); setDragOverCardProp(null); }}
-                className={`flex items-center gap-2 px-4 py-2 border-b border-neutral-800/30 hover:bg-neutral-800/10 transition-colors cursor-default ${draggingCardProp === col.id ? 'opacity-30' : ''} ${dragOverCardProp === col.id ? 'border-t-2 border-t-signal/50' : ''}`}
+                className={`flex items-center gap-2 px-4 py-1.5 text-xs transition-colors hover:bg-hover/60 cursor-default ${draggingCardProp === col.id ? 'opacity-30' : ''} ${dragOverCardProp === col.id ? 'shadow-[inset_0_2px_0_var(--color-signal)]' : ''}`}
               >
-                <GripVertical size={11} className="text-neutral-600 cursor-grab shrink-0" />
+                <GripVertical size={12} className="text-fg-4 cursor-grab shrink-0" />
                 {getPropertyIcon(col.type)}
-                <span className="flex-1 text-xs text-neutral-300 truncate">{col.name}</span>
-                <button onClick={() => toggleCardProp(col.id)} className="cursor-pointer"><Checkbox checked={true} /></button>
+                <span className="flex-1 text-fg-2 truncate">{col.name}</span>
+                <Checkbox size="sm" checked onCheckedChange={() => toggleCardProp(col.id)} aria-label={col.name} />
               </div>
             ))}
             {hiddenCardProps.map((col: any) => (
-              <button key={col.id} onClick={() => toggleCardProp(col.id)} className="flex items-center gap-2 px-4 py-2 border-b border-neutral-800/30 hover:bg-neutral-800/10 transition-colors cursor-pointer text-left">
-                <span className="w-2.75 shrink-0" />
+              <ToggleRow key={col.id} checked={false} onToggle={() => toggleCardProp(col.id)}>
+                <span className="w-3 shrink-0" />
                 {getPropertyIcon(col.type)}
-                <span className="flex-1 text-xs text-neutral-500 truncate">{col.name}</span>
-                <Checkbox checked={false} />
-              </button>
+                <span className="flex-1 text-fg-3 truncate">{col.name}</span>
+              </ToggleRow>
             ))}
           </div>
         )}
-        <div className="px-4 py-2.5 flex flex-col gap-2">
-          <button onClick={() => onShowPropertyLabelsChange?.(!showPropertyLabels)} className="w-full flex items-center justify-between cursor-pointer">
-            <span className="text-xs text-neutral-300">{t('showLabels')}</span>
-            <Checkbox checked={showPropertyLabels} />
-          </button>
-          <div className="flex items-center justify-between gap-3">
-            <span className="text-xs text-neutral-300 shrink-0">{t('propertyText')}</span>
+        <div className="flex flex-col gap-2 pt-1 pb-3">
+          <ToggleRow checked={showPropertyLabels} onToggle={() => onShowPropertyLabelsChange?.(!showPropertyLabels)}>
+            <span className="text-fg-2">{t('showLabels')}</span>
+          </ToggleRow>
+          <div className="flex items-center justify-between gap-3 px-4">
+            <span className="text-xs text-fg-2 shrink-0">{t('propertyText')}</span>
             <SimpleSelect
               value={propertyTextClamp}
               onValueChange={(v) => onPropertyTextClampChange?.(v as 'truncate' | 'wrap')}
               options={[{ value: 'truncate', label: t('truncate') }, { value: 'wrap', label: t('wrap') }]}
+              size="sm"
               className="w-28"
             />
           </div>
-        </div>
-      </CollapsibleSection>
-
-      {/* Card colors */}
-      <CollapsibleSection label={t('cardColors')} defaultOpen={false}>
-        <div className="px-4 pb-3 flex flex-col gap-2">
-          <div className="flex items-center justify-between gap-3">
-            <span className="text-xs text-neutral-300 shrink-0">{t('cardBackground')}</span>
-            <SimpleSelect
-              value={cardBgCol ?? ''}
-              onValueChange={(v) => onCardBgColChange?.(v)}
-              options={[{ value: '', label: 'None' }, ...colorColumns.map((col: any) => ({ value: col.id, label: col.name }))]}
-              className="w-32"
-            />
-          </div>
-          <div className="flex items-center justify-between gap-3">
-            <span className="text-xs text-neutral-300 shrink-0">{t('accentLine')}</span>
-            <SimpleSelect
-              value={cardColorCol ?? ''}
-              onValueChange={(v) => onCardColorColChange?.(v)}
-              options={[{ value: '', label: 'None' }, ...colorColumns.map((col: any) => ({ value: col.id, label: col.name }))]}
-              className="w-32"
-            />
-          </div>
-          {cardColorCol && (
-            <div className="flex items-center justify-between gap-3">
-              <span className="text-xs text-neutral-500 shrink-0 pl-3">{t('accentPosition')}</span>
-              <div className="flex gap-1">
-                {([
-                  { side: 'left', Icon: ArrowLeft },
-                  { side: 'top', Icon: ArrowUp },
-                  { side: 'right', Icon: ArrowRight },
-                  { side: 'bottom', Icon: ArrowDown },
-                ] as const).map(({ side, Icon }) => (
-                  <button
-                    key={side}
-                    onClick={() => onCardBorderSideChange?.(side)}
-                    className={`w-7 h-7 flex items-center justify-center border rounded transition-colors cursor-pointer ${
-                      cardBorderSide === side
-                        ? 'border-signal/60 text-signal-text bg-signal/10'
-                        : 'border-neutral-700 text-neutral-500 hover:border-neutral-600 hover:text-neutral-400'
-                    }`}
-                  >
-                    <Icon size={12} />
-                  </button>
-                ))}
+          {colorColumns.length > 0 && (
+            <div className="flex flex-col gap-1.5 px-4 pt-1">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-xs text-fg-2 shrink-0">{t('cardMark')}</span>
+                <SimpleSelect
+                  value={cardMarkCol ?? ''}
+                  onValueChange={(v) => onCardMarkColChange?.(v)}
+                  options={[{ value: '', label: t('none') }, ...colorColumns.map((col: any) => ({ value: col.id, label: col.name }))]}
+                  size="sm"
+                  className="w-32"
+                />
               </div>
+              <p className="text-xs leading-relaxed text-fg-3">{t('cardMarkHint')}</p>
             </div>
           )}
         </div>
