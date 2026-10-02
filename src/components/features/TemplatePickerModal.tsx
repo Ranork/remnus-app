@@ -9,6 +9,7 @@ import { Field } from '@/components/ui/settings';
 import { TEMPLATE_CATALOG, type TemplateCatalogEntry } from '@/lib/templates';
 import { switchWorkspace } from '@/lib/actions/workspace';
 import { createFromTemplate } from '@/lib/actions/templates';
+import { formatYMD } from '@/lib/recurrence/rule';
 
 interface TemplatePickerModalProps {
   workspaceId: string;
@@ -72,12 +73,13 @@ export default function TemplatePickerModal({
     onClose();
 
     // Persist to server in background. The server fills the template in the UI
-    // language (columns, options, views, sample rows, page body).
+    // language (columns, options, views, sample rows, page body) and places the
+    // sample dates around the local date sent along.
     startTransition(async () => {
       if (workspaceId !== activeWorkspaceId) {
         await switchWorkspace(workspaceId);
       }
-      const created = await createFromTemplate(workspaceId, selectedTemplate.id, title.trim(), parentId);
+      const created = await createFromTemplate(workspaceId, selectedTemplate.id, title.trim(), parentId, formatYMD(new Date()));
       onCreated(created.type, created.navId, tempId, created.type === 'database' ? created.itemId : undefined);
     });
   };

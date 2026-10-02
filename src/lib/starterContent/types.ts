@@ -8,6 +8,8 @@
 // Server-only by convention: the text is loaded where the content is created
 // (`getTemplateText` / `getSampleText`), never shipped to the client bundle.
 
+import type { Locale } from '@/i18n/routing';
+
 /** The stock database: the blank template, "/database" and every bare "new database". */
 export interface StockDatabaseText {
   /** The title column. Every template's title column uses this name too. */
@@ -25,10 +27,15 @@ export type BookKey = 'pragmatic' | 'dune' | 'sapiens' | 'cleanCode' | 'threeBod
 export type MemoryRowKey = 'postgres' | 'functional' | 'rateLimit' | 'tokens';
 
 export interface TemplateText {
+  /** The language of these words; formats the dates written into page bodies. */
+  locale: Locale;
   stock: StockDatabaseText;
   views: { table: string; board: string; calendar: string };
-  /** Page bodies, markdown. */
+  /** Page bodies, markdown. Neither names a fixed date, year or quarter: a template is
+   *  made in any year. */
   meetingNotes: string;
+  /** `{{kickoff}}`, `{{designDone}}`, `{{beta}}`, `{{launch}}` mark the timeline dates,
+   *  filled in at creation (`buildTemplate`). */
   projectBrief: string;
   taskTracker: {
     columns: { priority: string; assignee: string; dueDate: string };

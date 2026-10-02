@@ -1,4 +1,5 @@
 import type { DatabaseView } from '@/lib/types/views';
+import { addDays, formatYMD, parseYMD } from '@/lib/recurrence/rule';
 import type {
   BookKey,
   EventRowKey,
@@ -158,30 +159,35 @@ export function stockStatusDefault(
   return entries.find((o) => o.group === 'todo')?.value ?? entries.find((o) => o.value === 'To Do')?.value;
 }
 
+// Sample dates are days from the Monday of the week the template is created in
+// (`weekDay`), never fixed dates: the calendar opens on a grid that starts one week
+// before the current one and runs four weeks ahead, so every event lands on it, and
+// due dates sit around today in any year. Weekdays hold — the standup is a Monday,
+// the offsite a Friday; done tasks were due last week.
 const TASK_TRACKER_ROWS: {
   key: TaskTrackerRowKey;
   status: keyof TemplateText['taskTracker']['status'];
   priority: keyof TemplateText['taskTracker']['priority'];
   assignee: string;
-  dueDate: string;
+  due: number | null;
 }[] = [
-  { key: 'landing', status: 'backlog', priority: 'high', assignee: 'Aisha Patel', dueDate: '2026-06-10' },
-  { key: 'ci', status: 'inProgress', priority: 'high', assignee: 'Marcus Johnson', dueDate: '2026-05-28' },
-  { key: 'tests', status: 'inProgress', priority: 'medium', assignee: 'Kai Rivera', dueDate: '2026-05-30' },
-  { key: 'review', status: 'review', priority: 'medium', assignee: 'Marcus Johnson', dueDate: '2026-05-22' },
-  { key: 'docs', status: 'backlog', priority: 'low', assignee: '', dueDate: '' },
-  { key: 'staging', status: 'done', priority: 'high', assignee: 'Marcus Johnson', dueDate: '2026-05-19' },
-  { key: 'loginBug', status: 'done', priority: 'high', assignee: 'Kai Rivera', dueDate: '2026-05-18' },
+  { key: 'landing', status: 'backlog', priority: 'high', assignee: 'Aisha Patel', due: 16 },
+  { key: 'ci', status: 'inProgress', priority: 'high', assignee: 'Marcus Johnson', due: 10 },
+  { key: 'tests', status: 'inProgress', priority: 'medium', assignee: 'Kai Rivera', due: 11 },
+  { key: 'review', status: 'review', priority: 'medium', assignee: 'Marcus Johnson', due: 4 },
+  { key: 'docs', status: 'backlog', priority: 'low', assignee: '', due: null },
+  { key: 'staging', status: 'done', priority: 'high', assignee: 'Marcus Johnson', due: -3 },
+  { key: 'loginBug', status: 'done', priority: 'high', assignee: 'Kai Rivera', due: -4 },
 ];
 
-const EVENT_ROWS: { key: EventRowKey; eventDate: string; category: keyof TemplateText['eventCalendar']['category'] }[] = [
-  { key: 'standup', eventDate: '2026-05-21', category: 'meeting' },
-  { key: 'planning', eventDate: '2026-05-22', category: 'meeting' },
-  { key: 'productReview', eventDate: '2026-05-26', category: 'meeting' },
-  { key: 'mvp', eventDate: '2026-05-30', category: 'deadline' },
-  { key: 'summit', eventDate: '2026-06-05', category: 'conference' },
-  { key: 'handoff', eventDate: '2026-06-03', category: 'deadline' },
-  { key: 'offsite', eventDate: '2026-06-12', category: 'personal' },
+const EVENT_ROWS: { key: EventRowKey; day: number; category: keyof TemplateText['eventCalendar']['category'] }[] = [
+  { key: 'standup', day: 0, category: 'meeting' },
+  { key: 'planning', day: 1, category: 'meeting' },
+  { key: 'productReview', day: 3, category: 'meeting' },
+  { key: 'mvp', day: 11, category: 'deadline' },
+  { key: 'summit', day: 17, category: 'conference' },
+  { key: 'handoff', day: 9, category: 'deadline' },
+  { key: 'offsite', day: 25, category: 'personal' },
 ];
 
 const BOOK_ROWS: {
@@ -204,27 +210,48 @@ const MEMORY_ROWS: {
   key: MemoryRowKey;
   type: keyof TemplateText['agentMemory']['type'];
   tags: (keyof TemplateText['agentMemory']['tags'])[];
-  date: string;
+  day: number;
 }[] = [
-  { key: 'postgres', type: 'decision', tags: ['architecture', 'database'], date: '2026-07-01' },
-  { key: 'functional', type: 'preference', tags: ['conventions'], date: '2026-07-02' },
-  { key: 'rateLimit', type: 'gotcha', tags: ['api', 'infra'], date: '2026-07-04' },
-  { key: 'tokens', type: 'fact', tags: ['conventions'], date: '2026-07-05' },
+  { key: 'postgres', type: 'decision', tags: ['architecture', 'database'], day: -12 },
+  { key: 'functional', type: 'preference', tags: ['conventions'], day: -11 },
+  { key: 'rateLimit', type: 'gotcha', tags: ['api', 'infra'], day: -6 },
+  { key: 'tokens', type: 'fact', tags: ['conventions'], day: -4 },
 ];
+
+/** The Project Brief's timeline, same reckoning: kickoff next Monday, launch ~two months on. */
+const BRIEF_MILESTONES = { kickoff: 7, designDone: 25, beta: 51, launch: 65 } as const;
 
 const TABLE_DEFAULTS = { filters: [], sorts: [], openBehavior: 'center' as const };
 
-/** One template, filled in with one language's words. */
-export function buildTemplate(id: TemplateId, text: TemplateText): TemplateDefinition {
+/** `today` (`YYYY-MM-DD`) → the date `n` days from the Monday of its week. */
+function weekDays(today: string): (n: number) => string {
+  const date = parseYMD(today) ?? new Date();
+  const monday = addDays(date, -((date.getDay() + 6) % 7));
+  return (n) => formatYMD(addDays(monday, n));
+}
+
+/**
+ * One template, filled in with one language's words. `today` places the sample dates;
+ * pass the creator's local date (the server's own date can be a day off).
+ */
+export function buildTemplate(id: TemplateId, text: TemplateText, today: string = formatYMD(new Date())): TemplateDefinition {
   const title: SchemaColumn = { id: 'title', name: text.stock.title, type: 'text' };
+  const weekDay = weekDays(today);
 
   switch (id) {
     case 'page-blank':
       return { id, category: 'page', initialContent: '' };
     case 'page-meeting-notes':
       return { id, category: 'page', initialContent: text.meetingNotes };
-    case 'page-project-brief':
-      return { id, category: 'page', initialContent: text.projectBrief };
+    case 'page-project-brief': {
+      const longDate = new Intl.DateTimeFormat(text.locale, { dateStyle: 'long' });
+      const initialContent = text.projectBrief.replace(/\{\{(\w+)\}\}/g, (marker, key: string) =>
+        key in BRIEF_MILESTONES
+          ? longDate.format(parseYMD(weekDay(BRIEF_MILESTONES[key as keyof typeof BRIEF_MILESTONES]))!)
+          : marker,
+      );
+      return { id, category: 'page', initialContent };
+    }
     case 'dashboard-blank':
       return { id, category: 'dashboard', spec: { version: 1, blocks: [] } };
 
@@ -301,7 +328,7 @@ export function buildTemplate(id: TemplateId, text: TemplateText): TemplateDefin
             status: t.status[row.status],
             priority: t.priority[row.priority],
             assignee: row.assignee,
-            dueDate: row.dueDate,
+            dueDate: row.due === null ? '' : weekDay(row.due),
           },
         })),
       };
@@ -357,7 +384,7 @@ export function buildTemplate(id: TemplateId, text: TemplateText): TemplateDefin
         ],
         seedRows: EVENT_ROWS.map((row) => ({
           title: t.rows[row.key].title,
-          properties: { eventDate: row.eventDate, category: t.category[row.category], notes: t.rows[row.key].notes },
+          properties: { eventDate: weekDay(row.day), category: t.category[row.category], notes: t.rows[row.key].notes },
         })),
       };
     }
@@ -470,7 +497,7 @@ export function buildTemplate(id: TemplateId, text: TemplateText): TemplateDefin
         ],
         seedRows: MEMORY_ROWS.map((row) => ({
           title: t.rows[row.key],
-          properties: { type: t.type[row.type], tags: row.tags.map((tag) => t.tags[tag]), date: row.date },
+          properties: { type: t.type[row.type], tags: row.tags.map((tag) => t.tags[tag]), date: weekDay(row.day) },
         })),
       };
     }

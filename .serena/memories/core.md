@@ -97,7 +97,7 @@ src/
     auth/session.ts         # getCurrentUser() — React.cache wrapper around auth()
     types/properties.ts     # SelectOption, color system, helpers
     types/views.ts          # DatabaseView, ViewFilter, ViewSort types
-    templates.ts            # language-free template structure: TEMPLATE_CATALOG (picker), buildTemplate(id, TemplateText), stockDatabaseSchema, stockStatusDefault
+    templates.ts            # language-free template structure: TEMPLATE_CATALOG (picker), buildTemplate(id, TemplateText, today?) — seed dates are day offsets from today's Monday, stockDatabaseSchema, stockStatusDefault
     starterContent/         # V2 R8.9: the WORDS of templates (templates/<locale>.ts) + sample workspace (sample/<locale>.ts), typed in types.ts, loaded server-side per locale (getTemplateText/getSampleText). Not in messages/ (client payload). npm run test:starter
     seed.ts                 # createSeedWorkspace(userId, name, locale?) + createDemoSeedData(userId, sampleText); structure only, words from starterContent/sample
 messages/                   # i18n JSON (en, tr, hi, es, fr, de)

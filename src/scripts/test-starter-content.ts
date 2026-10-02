@@ -13,7 +13,8 @@ import { join } from 'node:path';
 import { routing } from '@/i18n/routing';
 import { localeFromAcceptLanguage } from '@/i18n/requestLocale';
 import { getSampleText, getTemplateText } from '@/lib/starterContent';
-import { TEMPLATE_CATALOG, buildTemplate, stockDatabaseSchema, stockStatusDefault, type SchemaColumn } from '@/lib/templates';
+import { TEMPLATE_CATALOG, buildTemplate, stockDatabaseSchema, stockStatusDefault, type SchemaColumn, type TemplateId } from '@/lib/templates';
+import { addDays, daysBetween, formatYMD, parseYMD } from '@/lib/recurrence/rule';
 
 const optionValues = (column: SchemaColumn) =>
   (column.options ?? []).map((o) => (typeof o === 'string' ? o : o.value));
@@ -50,6 +51,7 @@ async function main() {
 
   for (const locale of routing.locales) {
     const text = await getTemplateText(locale);
+    assert.equal(text.locale, locale, `${locale}: TemplateText.locale`);
     const ui = messages(locale).Database;
 
     // The template views use the UI's own view names, so a template's "Table" and a
@@ -71,6 +73,7 @@ async function main() {
 
       if (template.category === 'page') {
         checkMarkdown(where, template.initialContent);
+        assert.ok(!template.initialContent.includes('{{'), `${where}: an unfilled {{marker}}`);
         if (entry.id !== 'page-blank') assert.ok(template.initialContent.trim(), `${where}: empty body`);
         continue;
       }
@@ -137,6 +140,57 @@ async function main() {
       const seen = memoryWords.get(word);
       assert.ok(!seen || seen === type, `${locale}: Agent Memory "${word}" means both ${seen} and ${type}`);
       memoryWords.set(word, type);
+    }
+  }
+
+  // Sample dates follow the day the template is made. Every event lands on the grid the
+  // calendar opens on (the week before this one + five more, Monday-first), the standup
+  // is a Monday, done tasks were due before today and open ones after, memories are past.
+  const en = await getTemplateText('en');
+  const isSampleDate = (v: unknown): v is string => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v);
+  for (const today of ['2026-10-02', '2026-10-05', '2026-10-11', '2027-01-31', '2028-02-29', '2026-03-29']) {
+    const day = parseYMD(today)!;
+    const gridStart = formatYMD(addDays(day, -((day.getDay() + 6) % 7) - 7));
+    const rows = (id: TemplateId) => {
+      const template = buildTemplate(id, en, today);
+      return template.category === 'database' ? template.seedRows ?? [] : [];
+    };
+
+    for (const row of rows('db-event-calendar')) {
+      const date = row.properties.eventDate;
+      assert.ok(isSampleDate(date), `${today}: event "${row.title}" has no date`);
+      const cell = daysBetween(gridStart, date);
+      assert.ok(cell >= 0 && cell < 42, `${today}: event "${row.title}" (${date}) is off the opening calendar grid`);
+    }
+    const standup = rows('db-event-calendar').find((r) => r.title === en.eventCalendar.rows.standup.title)!;
+    assert.equal(parseYMD(standup.properties.eventDate as string)!.getDay(), 1, `${today}: the standup is not on a Monday`);
+
+    const status = en.taskTracker.status;
+    for (const row of rows('db-task-tracker')) {
+      const due = row.properties.dueDate;
+      if (due === '') continue;
+      assert.ok(isSampleDate(due), `${today}: task "${row.title}" has a malformed due date`);
+      if (row.properties.status === status.done) assert.ok(daysBetween(today, due) < 0, `${today}: done task "${row.title}" is due ${due}`);
+      if (row.properties.status === status.backlog || row.properties.status === status.inProgress) {
+        assert.ok(daysBetween(today, due) > 0, `${today}: open task "${row.title}" was due ${due}`);
+      }
+    }
+
+    for (const row of rows('db-agent-memory')) {
+      const date = row.properties.date;
+      assert.ok(isSampleDate(date) && daysBetween(today, date) < 0, `${today}: memory "${row.title}" is dated ${String(date)}`);
+    }
+  }
+
+  // Page bodies name no fixed year; the Project Brief's timeline is dated from the creation day.
+  for (const locale of routing.locales) {
+    const text = await getTemplateText(locale);
+    for (const id of ['page-meeting-notes', 'page-project-brief'] as const) {
+      const page = buildTemplate(id, text, '2031-05-07');
+      assert.ok(page.category === 'page' && !page.initialContent.includes('2026'), `${locale} ${id}: a fixed 2026 date`);
+      if (id === 'page-project-brief') {
+        assert.equal(page.initialContent.match(/2031/g)?.length, 4, `${locale} ${id}: the timeline is not dated from today`);
+      }
     }
   }
 

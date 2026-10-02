@@ -1,6 +1,6 @@
 # Remnus V2 Revizeleri — Chat Promptları
 
-> **Durum (2026-10-01): R1–R4 tamamlandı ve canlıda; R5–R8 + R8.1–R8.6 tamamlandı (commit'siz); R8.7 tamamlandı (yeni site `/`'de; eski landing `/landing-old`, `/landing-next` arşivde); R8.8 tamamlandı (commit'siz, migration yok); R8.9 tamamlandı (commit'siz, migration yok); R9–R11 sırada.** Her prompt bitince
+> **Durum (2026-10-02): R1–R4 tamamlandı ve canlıda; R5–R8 + R8.1–R8.6 tamamlandı (commit'siz); R8.7 tamamlandı (yeni site `/`'de; eski landing `/landing-old`, `/landing-next` arşivde); R8.8 tamamlandı (commit'siz, migration yok); R8.9 tamamlandı (commit'siz, migration yok; şablon tarih açığı 2026-10-02'de kapatıldı); R9–R11 sırada.** Her prompt bitince
 > kendi bölümünün sonuna "Tamamlandı" notu düşer; bu satırı da güncelle.
 
 Hazırlanma tarihi: 2026-09-26. Kaynak: Hakan'ın "RemnusV2 Revizeler" listesi (18 madde +
@@ -2311,6 +2311,32 @@ yalnız YouTube gömme hataları. Dev durduruldu, test demo hesapları silindi.
   Memory" veritabanları İngilizce kalır.
 - Şablon tarih örnekleri (Etkinlik Takvimi Mayıs–Haziran 2026, Görev Takipçisi son tarihleri) sabit ve geçmişte kaldı;
   takvim bugünün ayında boş açılıyor. Dil işi değil, ayrı küçük iş: tarihleri oluşturma gününe göre kaydırmak.
+  → **Kapatıldı, aşağıya bak.**
+
+**✅ Tarih açığı kapatıldı (2026-10-02, Claude; commit'lendi, push yok, migration yok, paket eklenmedi).** Hakan "R8.10" adıyla
+istedi; dosyada R8.10 bölümü yok (R8.9 "R8.x'in sonu"), iş bu notun altına yazıldı.
+- `src/lib/templates.ts`: Görev Takipçisi, Etkinlik Takvimi ve Ajan Hafızası örnek tarihleri artık sabit dizgi değil,
+  oluşturma haftasının pazartesisinden gün ofseti (`weekDays(today)`; `recurrence/rule` yerel tarih yardımcıları).
+  `buildTemplate(id, text, today = bugün)`. Takvim görünümü bir hafta önceden başlayan 6 haftalık kayan ızgara açtığı için
+  ofsetler 0…25 → her etkinlik açılışta ızgarada; haftanın günü tutuyor ("her pazartesi" toplantısı pazartesi — eskiden
+  perşembeydi, gezi cuma). Bitti görevleri geçen hafta, açık görevler bugünden sonra, inceleme bu cuma; hafıza kayıtları
+  geçmiş iki haftada.
+- `createFromTemplate(…, today?)`: `TemplatePickerModal` kullanıcının yerel tarihini gönderiyor (sunucu UTC'de bir gün
+  kayabilir); sunucu tarihinden 2 günden fazla saparsa yok sayılıyor.
+- Tarih kayınca yanlış kalacak metinler 8 dilde düzeltildi: "Frontend Summit 2026" → "Frontend Summit",
+  "Q3 product review" → "Quarterly product review" (tr "Çeyrek sonu ürün değerlendirmesi" vb.).
+- `npm run test:starter` 6 farklı "bugün" (pazartesi, pazar, ay/yıl sonu, artık gün, DST pazarı) için: her etkinlik açılış
+  ızgarasında, toplantı pazartesi, bitti < bugün < açık, hafıza geçmişte.
+- Changelog `2026-10-02-template-dates-start-this-week` (fixed, 8 dil); AGENTS.md (TemplatePickerModal + templates.ts),
+  Serena `core`.
+- Doğrulama: `npx tsc --noEmit` temiz, eslint (değişen dosyalar) temiz, `npm run test:starter` geçti; tr şablonu
+  2026-10-02 için üretilen tarihler elle kontrol edildi (28 Eyl–23 Eki). UI değişmedi; Playwright çalıştırılmadı.
+- **Sayfa şablonları da (Hakan'ın isteği, aynı gün):** Proje Özeti zaman çizelgesi `{{kickoff}}`/`{{designDone}}`/`{{beta}}`/
+  `{{launch}}` işaretleriyle; `buildTemplate` pazartesiden 7/25/51/65 gün sonrasını `Intl` uzun tarihle
+  (`TemplateText.locale`, 8 dosyaya yeni alan) yazıyor — 2026-10-02 için 5 Ekim → 2 Aralık 2026. Toplantı Notları'nda
+  "Q3" / "temmuz sonu" → "gelecek çeyrek" / "gelecek ayın sonu" (8 dil). Test: dolmamış `{{` yok, iki sayfada sabit
+  2026 yok, 2031'de oluşturulan özetin 4 tarihi 2031. Changelog kaydına Proje Özeti eklendi (id aynı, henüz yayınlanmadı).
+  Şablonlarda sabit tarih kalmadı.
 
 ---
 

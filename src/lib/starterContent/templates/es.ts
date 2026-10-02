@@ -1,6 +1,7 @@
 import type { TemplateText } from '../types';
 
 const text: TemplateText = {
+  locale: 'es',
   stock: {
     title: 'Título',
     status: 'Estado',
@@ -20,14 +21,14 @@ const text: TemplateText = {
 ## Orden del día
 
 1. Revisión del sprint y de la velocidad
-2. Prioridades de la hoja de ruta del tercer trimestre
+2. Prioridades de la hoja de ruta del próximo trimestre
 3. Novedades del sistema de diseño
 
 ## Notas
 
 En general, el sprint fue bien. La velocidad quedó algo por encima de lo estimado. El nuevo flujo de inicio de sesión ya está en producción y funciona como se esperaba.
 
-Prioridades del tercer trimestre: centrarse en mejorar el onboarding y la adaptación a móviles. Marketing necesita el nuevo panel antes de que acabe julio.
+Prioridades del próximo trimestre: centrarse en mejorar el onboarding y la adaptación a móviles. Marketing necesita el nuevo panel antes de que acabe el mes que viene.
 
 Sistema de diseño: Aisha compartirá la biblioteca de componentes actualizada la semana que viene.
 
@@ -35,7 +36,7 @@ Sistema de diseño: Aisha compartirá la biblioteca de componentes actualizada l
 
 - [ ] Marcus: preparar el entorno de staging antes del viernes
 - [ ] Aisha: compartir el borrador del sistema de diseño v2 antes del próximo martes
-- [ ] Sarah: enviar el borrador de la hoja de ruta del tercer trimestre para que el equipo lo revise
+- [ ] Sarah: enviar el borrador de la hoja de ruta del próximo trimestre para que el equipo lo revise
 `,
 
   projectBrief: `## Resumen
@@ -52,10 +53,10 @@ Un panel de analítica de nueva generación que ayuda a los equipos a seguir sus
 
 | Hito | Fecha |
 |------|-------|
-| Arranque | 2 de junio de 2026 |
-| Diseño terminado | 20 de junio de 2026 |
-| Versión beta | 15 de julio de 2026 |
-| Lanzamiento | 1 de agosto de 2026 |
+| Arranque | {{kickoff}} |
+| Diseño terminado | {{designDone}} |
+| Versión beta | {{beta}} |
+| Lanzamiento | {{launch}} |
 
 ## Equipo
 
@@ -85,9 +86,9 @@ Un panel de analítica de nueva generación que ayuda a los equipos a seguir sus
     rows: {
       standup: { title: 'Reunión semanal del equipo', notes: 'Se repite cada lunes' },
       planning: { title: 'Planificación del sprint', notes: 'Arranque del sprint 14' },
-      productReview: { title: 'Revisión de producto del tercer trimestre', notes: 'Repasar la hoja de ruta con las partes interesadas' },
+      productReview: { title: 'Revisión trimestral de producto', notes: 'Repasar la hoja de ruta con las partes interesadas' },
       mvp: { title: 'Fecha límite del MVP', notes: 'Todas las funciones deben estar fusionadas en main' },
-      summit: { title: 'Frontend Summit 2026', notes: 'En línea — inscripción en frontendsummit.io' },
+      summit: { title: 'Frontend Summit', notes: 'En línea — inscripción en frontendsummit.io' },
       handoff: { title: 'Entrega del sistema de diseño', notes: 'Aisha entrega los componentes v2' },
       offsite: { title: 'Retiro del equipo', notes: 'Estambul — 2 noches' },
     },

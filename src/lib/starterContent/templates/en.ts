@@ -1,6 +1,7 @@
 import type { TemplateText } from '../types';
 
 const text: TemplateText = {
+  locale: 'en',
   stock: {
     title: 'Title',
     status: 'Status',
@@ -20,14 +21,14 @@ const text: TemplateText = {
 ## Agenda
 
 1. Sprint review & velocity check
-2. Q3 roadmap priorities
+2. Next quarter's roadmap priorities
 3. Design system updates
 
 ## Notes
 
 Sprint went well overall. Velocity was slightly above estimate. The new auth flow is live and performing as expected.
 
-Q3 priorities: focus on onboarding improvements and mobile responsiveness. Marketing needs the new dashboard by end of July.
+Next quarter's priorities: focus on onboarding improvements and mobile responsiveness. Marketing needs the new dashboard by the end of next month.
 
 Design system: Aisha will share updated component library next week.
 
@@ -35,7 +36,7 @@ Design system: Aisha will share updated component library next week.
 
 - [ ] Marcus: set up staging environment by Friday
 - [ ] Aisha: share design system v2 draft by next Tuesday
-- [ ] Sarah: send Q3 roadmap draft for team review
+- [ ] Sarah: send next quarter's roadmap draft for team review
 `,
 
   projectBrief: `## Overview
@@ -52,10 +53,10 @@ A next-generation analytics dashboard that helps teams track key metrics in real
 
 | Milestone | Date |
 |-----------|------|
-| Kickoff | June 2, 2026 |
-| Design complete | June 20, 2026 |
-| Beta release | July 15, 2026 |
-| Launch | August 1, 2026 |
+| Kickoff | {{kickoff}} |
+| Design complete | {{designDone}} |
+| Beta release | {{beta}} |
+| Launch | {{launch}} |
 
 ## Team
 
@@ -85,9 +86,9 @@ A next-generation analytics dashboard that helps teams track key metrics in real
     rows: {
       standup: { title: 'Weekly team standup', notes: 'Recurring every Monday' },
       planning: { title: 'Sprint planning', notes: 'Sprint 14 kickoff' },
-      productReview: { title: 'Q3 product review', notes: 'Review roadmap with stakeholders' },
+      productReview: { title: 'Quarterly product review', notes: 'Review roadmap with stakeholders' },
       mvp: { title: 'Project MVP deadline', notes: 'All features must be merged to main' },
-      summit: { title: 'Frontend Summit 2026', notes: 'Remote — register at frontendsummit.io' },
+      summit: { title: 'Frontend Summit', notes: 'Remote — register at frontendsummit.io' },
       handoff: { title: 'Design system handoff', notes: 'Aisha delivers v2 components' },
       offsite: { title: 'Team offsite', notes: 'Istanbul — 2 nights' },
     },

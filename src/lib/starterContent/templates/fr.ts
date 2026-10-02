@@ -1,6 +1,7 @@
 import type { TemplateText } from '../types';
 
 const text: TemplateText = {
+  locale: 'fr',
   stock: {
     title: 'Titre',
     status: 'Statut',
@@ -20,14 +21,14 @@ const text: TemplateText = {
 ## Ordre du jour
 
 1. Bilan du sprint et vélocité
-2. Priorités de la feuille de route du troisième trimestre
+2. Priorités de la feuille de route du prochain trimestre
 3. Évolutions du design system
 
 ## Notes
 
 Le sprint s’est bien passé dans l’ensemble. La vélocité a été légèrement supérieure à l’estimation. Le nouveau parcours de connexion est en ligne et fonctionne comme prévu.
 
-Priorités du troisième trimestre : améliorer l’onboarding et l’affichage sur mobile. Le marketing a besoin du nouveau tableau de bord d’ici fin juillet.
+Priorités du prochain trimestre : améliorer l’onboarding et l’affichage sur mobile. Le marketing a besoin du nouveau tableau de bord d’ici la fin du mois prochain.
 
 Design system : Aisha partagera la bibliothèque de composants mise à jour la semaine prochaine.
 
@@ -35,7 +36,7 @@ Design system : Aisha partagera la bibliothèque de composants mise à jour la s
 
 - [ ] Marcus : mettre en place l’environnement de préproduction d’ici vendredi
 - [ ] Aisha : partager le brouillon du design system v2 d’ici mardi prochain
-- [ ] Sarah : envoyer le brouillon de la feuille de route du troisième trimestre à l’équipe pour relecture
+- [ ] Sarah : envoyer le brouillon de la feuille de route du prochain trimestre à l’équipe pour relecture
 `,
 
   projectBrief: `## Présentation
@@ -52,10 +53,10 @@ Un tableau de bord analytique de nouvelle génération qui aide les équipes à 
 
 | Étape | Date |
 |-------|------|
-| Lancement du projet | 2 juin 2026 |
-| Design terminé | 20 juin 2026 |
-| Version bêta | 15 juillet 2026 |
-| Mise en ligne | 1er août 2026 |
+| Lancement du projet | {{kickoff}} |
+| Design terminé | {{designDone}} |
+| Version bêta | {{beta}} |
+| Mise en ligne | {{launch}} |
 
 ## Équipe
 
@@ -85,9 +86,9 @@ Un tableau de bord analytique de nouvelle génération qui aide les équipes à 
     rows: {
       standup: { title: 'Point d’équipe hebdomadaire', notes: 'Tous les lundis' },
       planning: { title: 'Planification du sprint', notes: 'Lancement du sprint 14' },
-      productReview: { title: 'Revue produit du troisième trimestre', notes: 'Passer en revue la feuille de route avec les parties prenantes' },
+      productReview: { title: 'Revue produit trimestrielle', notes: 'Passer en revue la feuille de route avec les parties prenantes' },
       mvp: { title: 'Échéance du MVP', notes: 'Toutes les fonctionnalités doivent être fusionnées dans main' },
-      summit: { title: 'Frontend Summit 2026', notes: 'En ligne — inscription sur frontendsummit.io' },
+      summit: { title: 'Frontend Summit', notes: 'En ligne — inscription sur frontendsummit.io' },
       handoff: { title: 'Livraison du design system', notes: 'Aisha livre les composants v2' },
       offsite: { title: 'Séminaire d’équipe', notes: 'Istanbul — 2 nuits' },
     },

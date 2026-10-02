@@ -1,6 +1,7 @@
 import type { TemplateText } from '../types';
 
 const text: TemplateText = {
+  locale: 'de',
   stock: {
     title: 'Titel',
     status: 'Status',
@@ -20,14 +21,14 @@ const text: TemplateText = {
 ## Tagesordnung
 
 1. Sprint-Review und Velocity-Check
-2. Prioritäten der Roadmap für das dritte Quartal
+2. Prioritäten der Roadmap für das nächste Quartal
 3. Neuerungen im Designsystem
 
 ## Notizen
 
 Der Sprint lief insgesamt gut. Die Velocity lag leicht über der Schätzung. Der neue Login-Ablauf ist live und läuft wie erwartet.
 
-Prioritäten für das dritte Quartal: Fokus auf ein besseres Onboarding und die mobile Darstellung. Das Marketing braucht das neue Dashboard bis Ende Juli.
+Prioritäten für das nächste Quartal: Fokus auf ein besseres Onboarding und die mobile Darstellung. Das Marketing braucht das neue Dashboard bis Ende nächsten Monats.
 
 Designsystem: Aisha teilt nächste Woche die aktualisierte Komponentenbibliothek.
 
@@ -35,7 +36,7 @@ Designsystem: Aisha teilt nächste Woche die aktualisierte Komponentenbibliothek
 
 - [ ] Marcus: Staging-Umgebung bis Freitag einrichten
 - [ ] Aisha: Entwurf des Designsystems v2 bis nächsten Dienstag teilen
-- [ ] Sarah: Entwurf der Roadmap für das dritte Quartal zur Durchsicht ans Team schicken
+- [ ] Sarah: Entwurf der Roadmap für das nächste Quartal zur Durchsicht ans Team schicken
 `,
 
   projectBrief: `## Überblick
@@ -52,10 +53,10 @@ Ein Analyse-Dashboard der nächsten Generation, mit dem Teams ihre wichtigsten K
 
 | Meilenstein | Datum |
 |-------------|-------|
-| Kick-off | 2. Juni 2026 |
-| Design fertig | 20. Juni 2026 |
-| Beta-Release | 15. Juli 2026 |
-| Launch | 1. August 2026 |
+| Kick-off | {{kickoff}} |
+| Design fertig | {{designDone}} |
+| Beta-Release | {{beta}} |
+| Launch | {{launch}} |
 
 ## Team
 
@@ -85,9 +86,9 @@ Ein Analyse-Dashboard der nächsten Generation, mit dem Teams ihre wichtigsten K
     rows: {
       standup: { title: 'Wöchentliches Team-Stand-up', notes: 'Jeden Montag' },
       planning: { title: 'Sprintplanung', notes: 'Start von Sprint 14' },
-      productReview: { title: 'Produkt-Review drittes Quartal', notes: 'Roadmap mit den Stakeholdern durchgehen' },
+      productReview: { title: 'Vierteljährliches Produkt-Review', notes: 'Roadmap mit den Stakeholdern durchgehen' },
       mvp: { title: 'Frist für das MVP', notes: 'Alle Features müssen in main gemergt sein' },
-      summit: { title: 'Frontend Summit 2026', notes: 'Online — Anmeldung unter frontendsummit.io' },
+      summit: { title: 'Frontend Summit', notes: 'Online — Anmeldung unter frontendsummit.io' },
       handoff: { title: 'Übergabe des Designsystems', notes: 'Aisha liefert die v2-Komponenten' },
       offsite: { title: 'Team-Offsite', notes: 'Istanbul — 2 Nächte' },
     },

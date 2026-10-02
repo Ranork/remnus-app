@@ -1,6 +1,7 @@
 import type { TemplateText } from '../types';
 
 const text: TemplateText = {
+  locale: 'tr',
   stock: {
     title: 'Başlık',
     status: 'Durum',
@@ -20,14 +21,14 @@ const text: TemplateText = {
 ## Gündem
 
 1. Sprint değerlendirmesi ve hız kontrolü
-2. 3. çeyrek yol haritası öncelikleri
+2. Gelecek çeyreğin yol haritası öncelikleri
 3. Tasarım sistemi güncellemeleri
 
 ## Notlar
 
 Sprint genel olarak iyi geçti. Hız tahminin biraz üzerindeydi. Yeni giriş akışı yayında ve beklendiği gibi çalışıyor.
 
-3. çeyrek öncelikleri: ilk kullanım deneyimi iyileştirmelerine ve mobil uyumluluğa odaklanmak. Pazarlama ekibinin yeni panoya temmuz sonuna kadar ihtiyacı var.
+Gelecek çeyreğin öncelikleri: ilk kullanım deneyimi iyileştirmelerine ve mobil uyumluluğa odaklanmak. Pazarlama ekibinin yeni panoya gelecek ayın sonuna kadar ihtiyacı var.
 
 Tasarım sistemi: Aisha güncellenmiş bileşen kütüphanesini gelecek hafta paylaşacak.
 
@@ -35,7 +36,7 @@ Tasarım sistemi: Aisha güncellenmiş bileşen kütüphanesini gelecek hafta pa
 
 - [ ] Marcus: test ortamını cumaya kadar kurmak
 - [ ] Aisha: tasarım sistemi v2 taslağını gelecek salıya kadar paylaşmak
-- [ ] Sarah: 3. çeyrek yol haritası taslağını ekibin incelemesine göndermek
+- [ ] Sarah: gelecek çeyreğin yol haritası taslağını ekibin incelemesine göndermek
 `,
 
   projectBrief: `## Genel bakış
@@ -52,10 +53,10 @@ Ekiplerin temel metrikleri gerçek zamanlı takip etmesine yardım eden yeni nes
 
 | Kilometre taşı | Tarih |
 |----------------|-------|
-| Başlangıç | 2 Haziran 2026 |
-| Tasarımın tamamlanması | 20 Haziran 2026 |
-| Beta sürümü | 15 Temmuz 2026 |
-| Lansman | 1 Ağustos 2026 |
+| Başlangıç | {{kickoff}} |
+| Tasarımın tamamlanması | {{designDone}} |
+| Beta sürümü | {{beta}} |
+| Lansman | {{launch}} |
 
 ## Ekip
 
@@ -85,9 +86,9 @@ Ekiplerin temel metrikleri gerçek zamanlı takip etmesine yardım eden yeni nes
     rows: {
       standup: { title: 'Haftalık ekip toplantısı', notes: 'Her pazartesi tekrarlanır' },
       planning: { title: 'Sprint planlaması', notes: 'Sprint 14 başlangıcı' },
-      productReview: { title: '3. çeyrek ürün değerlendirmesi', notes: 'Yol haritasını paydaşlarla gözden geçir' },
+      productReview: { title: 'Çeyrek sonu ürün değerlendirmesi', notes: 'Yol haritasını paydaşlarla gözden geçir' },
       mvp: { title: 'Proje MVP son tarihi', notes: 'Tüm özellikler main dalına birleştirilmiş olmalı' },
-      summit: { title: 'Frontend Summit 2026', notes: 'Çevrim içi — kayıt: frontendsummit.io' },
+      summit: { title: 'Frontend Summit', notes: 'Çevrim içi — kayıt: frontendsummit.io' },
       handoff: { title: 'Tasarım sistemi teslimi', notes: 'Aisha v2 bileşenlerini teslim ediyor' },
       offsite: { title: 'Ekip gezisi', notes: 'İstanbul — 2 gece' },
     },

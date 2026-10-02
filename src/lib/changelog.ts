@@ -45,6 +45,31 @@ const FIRST_VISIT_WINDOW_DAYS = 7;
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-10-02-template-dates-start-this-week',
+    date: '2026-10-02',
+    category: 'fixed',
+    title: {
+      en: 'Template examples start this week',
+      tr: 'Şablon örnekleri bu haftadan başlıyor',
+      de: 'Vorlagenbeispiele beginnen diese Woche',
+      es: 'Los ejemplos de las plantillas empiezan esta semana',
+      fr: 'Les exemples des modèles commencent cette semaine',
+      hi: 'टेम्पलेट के उदाहरण अब इसी हफ़्ते से',
+      ru: 'Примеры в шаблонах начинаются с этой недели',
+      zh: '模板示例从本周开始',
+    },
+    summary: {
+      en: 'The Event Calendar, Task Tracker, Agent Memory and Project Brief templates now place their example dates around the day you create them, so a new calendar opens with its events in view instead of empty.',
+      tr: 'Etkinlik Takvimi, Görev Takipçisi, Ajan Hafızası ve Proje Özeti şablonları örnek tarihlerini artık oluşturduğun güne göre yerleştiriyor, böylece yeni bir takvim boş değil, etkinlikleri görünür hâlde açılıyor.',
+      de: 'Die Vorlagen Veranstaltungskalender, Aufgabenverfolgung, Agent-Gedächtnis und Projektübersicht legen ihre Beispieldaten jetzt rund um den Tag, an dem du sie erstellst, sodass ein neuer Kalender mit sichtbaren Terminen statt leer öffnet.',
+      es: 'Las plantillas Calendario de eventos, Seguimiento de tareas, Memoria del agente y Resumen de proyecto colocan ahora sus fechas de ejemplo alrededor del día en que las creas, así que un calendario nuevo se abre con sus eventos a la vista en lugar de vacío.',
+      fr: 'Les modèles Calendrier d’événements, Suivi des tâches, Mémoire de l’agent et Brief de projet placent désormais leurs dates d’exemple autour du jour où tu les crées, si bien qu’un nouveau calendrier s’ouvre avec ses événements visibles au lieu d’être vide.',
+      hi: 'इवेंट कैलेंडर, टास्क ट्रैकर, एजेंट मेमोरी और प्रोजेक्ट ब्रीफ टेम्पलेट अब अपनी उदाहरण तारीखें उसी दिन के आसपास रखते हैं जिस दिन आप उन्हें बनाते हैं, इसलिए नया कैलेंडर खाली नहीं बल्कि अपने इवेंट दिखाते हुए खुलता है।',
+      ru: 'Шаблоны «Календарь событий», «Трекер задач», «Память агента» и «Бриф проекта» теперь размещают примерные даты вокруг дня, когда вы их создаёте, поэтому новый календарь открывается с видимыми событиями, а не пустым.',
+      zh: '活动日历、任务跟踪器、智能体记忆和项目简介模板现在会围绕你创建它们的那一天安排示例日期，新建的日历打开时就能看到活动，而不是一片空白。',
+    },
+  },
+  {
     id: '2026-10-01-templates-in-your-language',
     date: '2026-10-01',
     category: 'improved',

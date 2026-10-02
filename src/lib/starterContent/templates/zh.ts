@@ -1,6 +1,7 @@
 import type { TemplateText } from '../types';
 
 const text: TemplateText = {
+  locale: 'zh',
   stock: {
     title: '标题',
     status: '状态',
@@ -20,14 +21,14 @@ const text: TemplateText = {
 ## 议程
 
 1. 冲刺回顾与速率检查
-2. 第三季度路线图优先级
+2. 下季度路线图优先级
 3. 设计系统更新
 
 ## 记录
 
 本次冲刺整体顺利，速率略高于预估。新的登录流程已上线，运行符合预期。
 
-第三季度优先事项：重点改进新用户引导和移动端适配。市场部需要在 7 月底前拿到新的仪表板。
+下季度优先事项：重点改进新用户引导和移动端适配。市场部需要在下个月底前拿到新的仪表板。
 
 设计系统：Aisha 下周会分享更新后的组件库。
 
@@ -35,7 +36,7 @@ const text: TemplateText = {
 
 - [ ] Marcus：周五前搭好预发布环境
 - [ ] Aisha：下周二前分享设计系统 v2 草稿
-- [ ] Sarah：把第三季度路线图草稿发给团队评审
+- [ ] Sarah：把下季度路线图草稿发给团队评审
 `,
 
   projectBrief: `## 概述
@@ -52,10 +53,10 @@ const text: TemplateText = {
 
 | 里程碑 | 日期 |
 |--------|------|
-| 启动 | 2026 年 6 月 2 日 |
-| 设计完成 | 2026 年 6 月 20 日 |
-| Beta 发布 | 2026 年 7 月 15 日 |
-| 正式上线 | 2026 年 8 月 1 日 |
+| 启动 | {{kickoff}} |
+| 设计完成 | {{designDone}} |
+| Beta 发布 | {{beta}} |
+| 正式上线 | {{launch}} |
 
 ## 团队
 
@@ -85,9 +86,9 @@ const text: TemplateText = {
     rows: {
       standup: { title: '每周团队站会', notes: '每周一例行' },
       planning: { title: '冲刺规划', notes: '第 14 个冲刺启动' },
-      productReview: { title: '第三季度产品评审', notes: '与相关方一起评审路线图' },
+      productReview: { title: '季度产品评审', notes: '与相关方一起评审路线图' },
       mvp: { title: '项目 MVP 截止', notes: '所有功能都必须合并到 main' },
-      summit: { title: 'Frontend Summit 2026', notes: '线上参加，在 frontendsummit.io 报名' },
+      summit: { title: 'Frontend Summit', notes: '线上参加，在 frontendsummit.io 报名' },
       handoff: { title: '设计系统交付', notes: 'Aisha 交付 v2 组件' },
       offsite: { title: '团队外出团建', notes: '伊斯坦布尔，住 2 晚' },
     },
