@@ -4,7 +4,7 @@ import { getAllUsers } from '@/lib/actions/auth';
 import { getEngagementOverview, getActivationFunnel, getDemoUsage } from '@/lib/actions/analytics';
 import { getDemoFeedback } from '@/lib/actions/demoFeedback';
 import { getProspectInvitesOverview } from '@/lib/actions/prospectInvites';
-import Link from 'next/link';
+import Link from '@/components/ui/link';
 import { Shield, Users, TrendingUp, MonitorPlay, Share2, Workflow, MessageCircle, Mail, Gift, Laptop, Download } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import AdminUsersTable from '@/components/features/AdminUsersTable';

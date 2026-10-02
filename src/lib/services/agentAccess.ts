@@ -23,7 +23,7 @@
 // Cookie-free by design (the service-layer convention).
 
 import { db } from '@/db';
-import { agentTokens, oauthAccessTokens, users, workspaceMembers } from '@/db/schema';
+import { agentTokens, oauthAccessTokens, users, workspaceContextPolicies, workspaceMembers } from '@/db/schema';
 import { and, eq, inArray, isNull } from 'drizzle-orm';
 import { maxScopeForRole, type MemberRole } from './accessRequests';
 
@@ -54,6 +54,23 @@ export function effectiveAgentScope(grant: AgentGrant): AgentScope | null {
   return maxScopeForRole(role) === 'read' ? 'read' : grant.tokenScope;
 }
 
+/** The token's workspace context policy, read in the same query as the token (V2 R9) —
+ *  null when the workspace has none stored (the default policy applies). */
+export type StoredContextPolicy = {
+  mode: 'manual' | 'smart' | 'strict';
+  autoMaxTokens: number;
+  trustPolicy: 'any' | 'prefer-human-reviewed' | 'human-reviewed-only';
+} | null;
+
+function policyFrom(row: { policyMode: string | null; policyAutoMaxTokens: number | null; policyTrust: string | null }): StoredContextPolicy {
+  if (!row.policyMode) return null;
+  return {
+    mode: row.policyMode as NonNullable<StoredContextPolicy>['mode'],
+    autoMaxTokens: row.policyAutoMaxTokens ?? 2000,
+    trustPolicy: (row.policyTrust ?? 'prefer-human-reviewed') as NonNullable<StoredContextPolicy>['trustPolicy'],
+  };
+}
+
 function grantFrom(
   tokenScope: string,
   userId: string | null,
@@ -77,6 +94,10 @@ export async function findPatForAuth(prefix: string) {
       memberRole: workspaceMembers.role,
       accountId: users.id,
       accountRole: users.role,
+      accountConsent: users.analyticsConsent,
+      policyMode: workspaceContextPolicies.mode,
+      policyAutoMaxTokens: workspaceContextPolicies.autoMaxTokens,
+      policyTrust: workspaceContextPolicies.trustPolicy,
     })
     .from(agentTokens)
     .leftJoin(workspaceMembers, and(
@@ -84,6 +105,7 @@ export async function findPatForAuth(prefix: string) {
       eq(workspaceMembers.userId, agentTokens.createdBy),
     ))
     .leftJoin(users, eq(users.id, agentTokens.createdBy))
+    .leftJoin(workspaceContextPolicies, eq(workspaceContextPolicies.workspaceId, agentTokens.workspaceId))
     .where(and(eq(agentTokens.tokenPrefix, prefix), isNull(agentTokens.revokedAt)))
     .limit(1);
 
@@ -96,6 +118,9 @@ export async function findPatForAuth(prefix: string) {
       { id: row.accountId, role: row.accountRole },
       row.memberRole,
     ),
+    policy: policyFrom(row),
+    // The owner's analytics decision rides along, so logging a call needs no extra read (V2 R9.5).
+    analytics: { allowed: row.accountConsent === 'granted', role: row.accountRole ?? null },
   };
 }
 
@@ -107,6 +132,10 @@ export async function findOAuthTokenForAuth(prefix: string) {
       memberRole: workspaceMembers.role,
       accountId: users.id,
       accountRole: users.role,
+      accountConsent: users.analyticsConsent,
+      policyMode: workspaceContextPolicies.mode,
+      policyAutoMaxTokens: workspaceContextPolicies.autoMaxTokens,
+      policyTrust: workspaceContextPolicies.trustPolicy,
     })
     .from(oauthAccessTokens)
     .leftJoin(workspaceMembers, and(
@@ -114,6 +143,7 @@ export async function findOAuthTokenForAuth(prefix: string) {
       eq(workspaceMembers.userId, oauthAccessTokens.userId),
     ))
     .leftJoin(users, eq(users.id, oauthAccessTokens.userId))
+    .leftJoin(workspaceContextPolicies, eq(workspaceContextPolicies.workspaceId, oauthAccessTokens.workspaceId))
     .where(and(eq(oauthAccessTokens.tokenPrefix, prefix), isNull(oauthAccessTokens.revokedAt)))
     .limit(1);
 
@@ -126,6 +156,9 @@ export async function findOAuthTokenForAuth(prefix: string) {
       { id: row.accountId, role: row.accountRole },
       row.memberRole,
     ),
+    policy: policyFrom(row),
+    // The owner's analytics decision rides along, so logging a call needs no extra read (V2 R9.5).
+    analytics: { allowed: row.accountConsent === 'granted', role: row.accountRole ?? null },
   };
 }
 

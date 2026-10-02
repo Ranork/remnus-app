@@ -44,6 +44,13 @@ export type WorkspaceItemRow = {
   databaseId: string | null;
 };
 
+/**
+ * A sidebar row as the app shell receives it. Its timestamps stay on the server: the
+ * shell never shows them, and as two dates per item they were ~11% of every app page's
+ * RSC payload — first load and every live refresh (V2 R9).
+ */
+export type ShellItemRow = Omit<WorkspaceItemRow, 'createdAt' | 'updatedAt'>;
+
 /** The stored name of something created without one — in the UI language, like every UI-created default. */
 async function untitledName(): Promise<string> {
   const t = await getTranslations({ locale: await getRequestLocale(), namespace: 'Page' });

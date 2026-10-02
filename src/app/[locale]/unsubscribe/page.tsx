@@ -5,7 +5,7 @@
 // instead. Whitelisted in auth.config.ts.
 
 import Image from 'next/image';
-import Link from 'next/link';
+import Link from '@/components/ui/link';
 import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { MailX, MailCheck, AlertTriangle } from 'lucide-react';

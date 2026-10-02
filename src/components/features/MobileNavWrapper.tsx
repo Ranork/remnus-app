@@ -3,18 +3,14 @@ import { useState, useEffect, useTransition } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import WorkspaceSidebar from './WorkspaceSidebar';
 import type { AgentPresence } from '@/lib/agentPresence';
-import type { WorkspaceItemRow } from '@/lib/actions/workspace';
+import type { ShellItemRow } from '@/lib/actions/workspace';
 import { logout } from '@/lib/actions/auth';
 import { createPage } from '@/lib/actions/page';
 import { setLocale } from '@/lib/actions/locale';
 import { X, Plus, Layers, LogOut, Shield, User, Settings, Bot, CreditCard, Trash2, Sparkles } from 'lucide-react';
 import { useTranslations, useLocale } from 'next-intl';
-import TemplatePickerModal from './TemplatePickerModal';
 import FlagIcon from './FlagIcon';
-import UserSettingsModal from './UserSettingsModal';
-import AgentsModal from './AgentsModal';
-import BillingModal from './BillingModal';
-import TrashModal from './TrashModal';
+import { AgentsModal, BillingModal, TemplatePickerModal, TrashModal, UserSettingsModal } from './lazyDialogs';
 import { useWhatsNew } from './WhatsNewButton';
 
 type WorkspaceType = { id: string; name: string };
@@ -84,8 +80,9 @@ export default function MobileNavWrapper({
   currentUser,
   isProjectWindow = false,
   presence,
+  whatsNewUnseen = 0,
 }: {
-  items: WorkspaceItemRow[];
+  items: ShellItemRow[];
   workspaces: WorkspaceType[];
   activeWorkspace: WorkspaceType;
   currentUser: CurrentUser;
@@ -94,6 +91,8 @@ export default function MobileNavWrapper({
   isProjectWindow?: boolean;
   /** Agent presence for the drawer's copy of the sidebar (see `WorkspaceSidebar`). */
   presence?: AgentPresence;
+  /** Unread What's New entries, counted by the layout (see `WorkspaceSidebar`). */
+  whatsNewUnseen?: number;
 }) {
   const t = useTranslations('MobileNav');
   const tLang = useTranslations('LanguageSwitcher');
@@ -103,6 +102,11 @@ export default function MobileNavWrapper({
   const pathname = usePathname();
   const router = useRouter();
   const [openSheet, setOpenSheet] = useState<Sheet>(null);
+  // The drawer's copy of the sidebar mounts the first time the drawer opens, not with
+  // the page (V2 R9): mounted hidden, it ran every one of the sidebar's own reads on
+  // every load — on desktop too, where the drawer never opens — doubling them.
+  const [drawerSidebarMounted, setDrawerSidebarMounted] = useState(false);
+  if (openSheet === 'workspace' && !drawerSidebarMounted) setDrawerSidebarMounted(true);
   const [templatePickerParentId, setTemplatePickerParentId] = useState<string | undefined>();
   const [isTemplatePickerOpen, setIsTemplatePickerOpen] = useState(false);
   const [isAdding, setIsAdding] = useState(false);
@@ -110,7 +114,7 @@ export default function MobileNavWrapper({
   const [agentsModalOpen, setAgentsModalOpen] = useState(false);
   const [billingModalOpen, setBillingModalOpen] = useState(false);
   const [trashModalOpen, setTrashModalOpen] = useState(false);
-  const whatsNew = useWhatsNew();
+  const whatsNew = useWhatsNew(whatsNewUnseen);
   const [, startLangTransition] = useTransition();
 
   // Close sheets on route change
@@ -176,15 +180,18 @@ export default function MobileNavWrapper({
           </button>
         </div>
         <div className="flex-1 overflow-hidden">
-          <WorkspaceSidebar
-            items={items}
-            workspaces={workspaces}
-            activeWorkspace={activeWorkspace}
-            currentUser={currentUser}
-            hideBrandHeader
-            isProjectWindow={isProjectWindow}
-            presence={presence}
-          />
+          {drawerSidebarMounted && (
+            <WorkspaceSidebar
+              items={items}
+              workspaces={workspaces}
+              activeWorkspace={activeWorkspace}
+              currentUser={currentUser}
+              hideBrandHeader
+              isProjectWindow={isProjectWindow}
+              presence={presence}
+              whatsNewUnseen={whatsNewUnseen}
+            />
+          )}
         </div>
       </BottomSheet>
 

@@ -1,20 +1,17 @@
 'use client';
 import { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 
-import Link from 'next/link';
+import Link from '@/components/ui/link';
 import { ChevronLeft, RefreshCw } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { useQueryClient } from '@tanstack/react-query';
 import { updateStandalonePageContent, updateWorkspaceItemTitle, updateWorkspaceItemIcon } from '@/lib/actions/workspace';
 import BlockEditor, { type BlockEditorHandle } from '@/components/features/editor/BlockEditor';
 import PageIcon from './PageIcon';
-import IconPicker from './IconPicker';
 import SaveStatus, { type SaveState } from './SaveStatus';
 import PageActionsMenu from './PageActionsMenu';
 import { Button } from '@/components/ui/button';
-import ShareModal from '@/components/share/ShareModal';
-import { PageMarkdownDialog } from './PageMarkdownDialog';
-import { PageHistoryModal } from './PageHistoryModal';
+import { IconPicker, PageHistoryModal, PageMarkdownDialog, ShareModal } from './lazyDialogs';
 import PageBacklinksPanel from './PageBacklinksPanel';
 import LocalGraphPanel from './graph/LocalGraphPanel';
 import KnowledgeContextPanel from './KnowledgeContextPanel';

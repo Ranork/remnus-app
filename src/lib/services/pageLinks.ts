@@ -91,20 +91,28 @@ export async function syncPageLinks(
 ): Promise<void> {
   try {
     const refs = extractPageRefs(content).filter(r => r.toId !== fromId);
-    await db.delete(pageLinks).where(eq(pageLinks.fromId, fromId));
-    if (refs.length === 0) return;
+    const clear = db.delete(pageLinks).where(eq(pageLinks.fromId, fromId));
+    if (refs.length === 0) {
+      await clear;
+      return;
+    }
     const now = new Date();
-    await db.insert(pageLinks).values(
-      refs.map(r => ({
-        workspaceId,
-        fromId,
-        fromType,
-        toId: r.toId,
-        toType: r.toType,
-        linkKind: r.linkKind,
-        createdAt: now,
-      })),
-    );
+    // Delete and re-insert in one batch: one round trip (V2 R9), and never a moment
+    // with the old rows gone and the new ones not yet written.
+    await db.batch([
+      clear,
+      db.insert(pageLinks).values(
+        refs.map(r => ({
+          workspaceId,
+          fromId,
+          fromType,
+          toId: r.toId,
+          toType: r.toType,
+          linkKind: r.linkKind,
+          createdAt: now,
+        })),
+      ),
+    ]);
   } catch {
     // Swallow — see module doc comment.
   }

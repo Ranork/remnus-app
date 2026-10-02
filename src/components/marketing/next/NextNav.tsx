@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import Link from '@/components/ui/link';
 import { getTranslations } from 'next-intl/server';
 import { auth } from '@/auth';
 import LanguageSwitcher from '@/components/features/LanguageSwitcher';

@@ -1,11 +1,11 @@
 import { NextResponse } from 'next/server';
-import { desc, eq } from 'drizzle-orm';
+import { and, desc, eq, gte, sql } from 'drizzle-orm';
 import { getSessionAllowingWorkspaceLock } from '@/lib/auth/session';
 import { lockClaimsOf } from '@/lib/auth/workspaceLock';
 import { db } from '@/db';
 import { userSessions, demoSessions } from '@/db/schema';
 import { isTauriRequest } from '@/lib/server/platform';
-import { heartbeatSignals, signalExtras, visibleWorkspaceIds } from '@/lib/services/changeVersion';
+import { heartbeatSignalsForUser, signalExtras } from '@/lib/services/changeVersion';
 
 // Heartbeat endpoint. The client pings while the user is active (see
 // ActivityTracker). Each ping extends the most recent open session, or opens a
@@ -75,42 +75,46 @@ export async function POST() {
   if (!userId) return NextResponse.json({ ok: false }, { status: 401 });
 
   // Cheap change-detection signal — computed for everyone (admins included) so
-  // their tabs still reflect live edits.
-  let changeVersion = 0;
-  let agentActive = false;
-  let extras: { n?: number; h?: 1 } = {};
-  try {
-    const ids = await visibleWorkspaceIds(userId, lockClaimsOf(session?.user).workspaceLock ?? null);
-    ({ version: changeVersion, agentActive } = await heartbeatSignals(ids));
-    extras = signalExtras(changeVersion, ids.length);
-  } catch {
-    // best-effort — a missing version just means "no refresh this tick"
-  }
-  const body = { ok: true, changeVersion, ...extras, ...(agentActive ? { agent: true } : {}) };
+  // their tabs still reflect live edits. It (one round trip) and the session
+  // bookkeeping below are independent, so they run side by side: the reply waits for
+  // the slower of the two, not their sum.
+  const signal = heartbeatSignalsForUser(userId, lockClaimsOf(session?.user).workspaceLock ?? null)
+    .catch(() => null); // best-effort — a missing version just means "no refresh this tick"
 
   // Don't track admins — their browsing would create noise rows in the
   // engagement stats they're meant to be reviewing. (Still return changeVersion.)
-  if (session.user.role === 'admin') {
-    return NextResponse.json(body);
-  }
+  if (session.user.role !== 'admin') await trackSession(userId, session.user.role);
 
+  const result = await signal;
+  const changeVersion = result?.version ?? 0;
+  const extras = result ? signalExtras(changeVersion, result.count) : {};
+  return NextResponse.json({ ok: true, changeVersion, ...extras, ...(result?.agentActive ? { agent: true } : {}) });
+}
+
+async function trackSession(userId: string, role: string) {
   try {
     const now = new Date();
 
-    const [latest] = await db
-      .select()
+    // Extend the latest session in ONE statement (V2 R9.8) — it used to be a read, then
+    // an update. Nothing matches when the latest session is older than the gap (or a
+    // legacy TEXT stamp), and only then does a new session cost a second statement.
+    const latest = db
+      .select({ id: userSessions.id })
       .from(userSessions)
       .where(eq(userSessions.userId, userId))
       .orderBy(desc(userSessions.lastSeenAt))
       .limit(1);
+    const extended = await db
+      .update(userSessions)
+      .set({ lastSeenAt: now, durationSeconds: sql`${Math.floor(now.getTime() / 1000)} - ${userSessions.startedAt}` })
+      .where(and(
+        sql`${userSessions.id} = (${latest})`,
+        sql`typeof(${userSessions.lastSeenAt}) = 'integer'`,
+        gte(userSessions.lastSeenAt, new Date(now.getTime() - SESSION_GAP_MS)),
+      ))
+      .returning({ id: userSessions.id });
 
-    if (latest && now.getTime() - latest.lastSeenAt.getTime() <= SESSION_GAP_MS) {
-      const durationSeconds = Math.round((now.getTime() - latest.startedAt.getTime()) / 1000);
-      await db
-        .update(userSessions)
-        .set({ lastSeenAt: now, durationSeconds })
-        .where(eq(userSessions.id, latest.id));
-    } else {
+    if (extended.length === 0) {
       await db.insert(userSessions).values({
         userId,
         startedAt: now,
@@ -120,10 +124,8 @@ export async function POST() {
       });
     }
 
-    if (session.user.role === 'demo') await touchDemoSession(userId, now);
+    if (role === 'demo') await touchDemoSession(userId, now);
   } catch {
     // best-effort tracking — swallow errors
   }
-
-  return NextResponse.json(body);
 }

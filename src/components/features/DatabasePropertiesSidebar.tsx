@@ -8,7 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTab } from '@/components/ui/tabs';
 import PageIcon from './PageIcon';
-import IconPicker from './IconPicker';
+import { IconPicker } from './lazyDialogs';
 import { updateDatabaseSchema } from '@/lib/actions/database';
 import type { DatabaseView, ViewFilter, ViewSort } from '@/lib/types/views';
 import PropertiesPanel from './database-sidebar/PropertiesPanel';

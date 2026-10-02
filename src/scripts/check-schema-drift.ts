@@ -20,6 +20,7 @@ dotenv.config();
 import { createClient } from '@libsql/client';
 import { getTableConfig, SQLiteTable } from 'drizzle-orm/sqlite-core';
 import * as schema from '@/db/schema';
+import { CONTENT_CLOCK_TRIGGERS } from '@/db/contentClock';
 
 const url = process.env.DATABASE_URL!;
 const authToken = process.env.DATABASE_AUTH_TOKEN;
@@ -78,6 +79,14 @@ async function main() {
   const presentNames = new Set(present.rows.map((r) => String(r.name)));
   for (const name of searchObjects) {
     if (!presentNames.has(name)) problems.push(`missing search index object: ${name} (apply-0052-search-index.ts)`);
+  }
+
+  // The content-clock triggers (migration 0056): without them the live-refresh signal
+  // stops seeing body/row edits — silently, like the search triggers above.
+  const clock = await client.execute(`select name from sqlite_master where type = 'trigger' and name like 'content_clock%'`);
+  const clockNames = new Set(clock.rows.map((r) => String(r.name)));
+  for (const [name] of CONTENT_CLOCK_TRIGGERS) {
+    if (!clockNames.has(name)) problems.push(`missing content-clock trigger: ${name} (apply-0056-content-clock.ts)`);
   }
 
   // Content a deleted workspace left behind. Every deletion path goes through

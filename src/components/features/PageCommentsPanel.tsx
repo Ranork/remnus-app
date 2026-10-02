@@ -3,6 +3,7 @@ import { useState, useEffect, useRef, useCallback, useTransition } from 'react';
 import { MessageSquare, Loader2, Trash2 } from 'lucide-react';
 import { useTranslations, useLocale } from 'next-intl';
 import { addComment, deleteComment, getComments } from '@/lib/actions/comments';
+import { loadPagePanel } from '@/lib/pagePanels';
 import type { CommentRow } from '@/lib/services/comments';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -156,7 +157,8 @@ export default function PageCommentsPanel({
 
   useEffect(() => {
     let cancelled = false;
-    getComments(workspaceId, pageId)
+    // Not in a peek: the body's three panels share one first read (lib/pagePanels.ts).
+    (isPeek ? getComments(workspaceId, pageId) : loadPagePanel(workspaceId, pageId, 'comments'))
       .then((res) => {
         if (cancelled) return;
         setComments(res.comments);
@@ -164,7 +166,7 @@ export default function PageCommentsPanel({
       })
       .catch(() => { if (!cancelled) setComments([]); });
     return () => { cancelled = true; };
-  }, [workspaceId, pageId]);
+  }, [workspaceId, pageId, isPeek]);
 
   const count = comments?.length ?? 0;
   useEffect(() => {

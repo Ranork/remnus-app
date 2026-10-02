@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { Trash2 } from 'lucide-react';
 import PageIcon from '@/components/features/PageIcon';
-import IconPicker from '@/components/features/IconPicker';
+import { IconPicker } from '@/components/features/lazyDialogs';
 import { updateWorkspaceItemIcon, updateWorkspaceItemTitle, deleteWorkspaceItem } from '@/lib/actions/workspace';
 import { ConfirmDialog } from '@/components/features/ConfirmDialog';
 import { Button } from '@/components/ui/button';

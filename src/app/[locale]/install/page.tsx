@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
-import Link from 'next/link';
+import Link from '@/components/ui/link';
 import { getTranslations } from 'next-intl/server';
 import { eq, and } from 'drizzle-orm';
 import { db } from '@/db';

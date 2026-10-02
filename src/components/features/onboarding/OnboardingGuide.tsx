@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import ConnectModal from '@/components/features/agents/ConnectModal';
+import { ConnectModal } from '@/components/features/lazyDialogs';
 import WelcomeModal from './WelcomeModal';
 import GettingStartedChecklist from './GettingStartedChecklist';
 import { getOnboardingProgress, type OnboardingProgress } from '@/lib/actions/onboarding';
@@ -12,6 +12,9 @@ const COLLAPSED_KEY = 'remnus_onboarding_collapsed';   // minimized-to-button to
 interface Props {
   /** Skip onboarding entirely for ephemeral demo accounts. */
   userRole?: string;
+  /** Progress the sidebar already read (`getSidebarStatus`) — the first read is skipped.
+   *  Null or absent: the guide asks for itself. */
+  initialProgress?: OnboardingProgress | null;
 }
 
 /**
@@ -24,7 +27,7 @@ interface Props {
  * localStorage. Polls gently while waiting for the first agent call so the tick
  * lands without a manual refresh.
  */
-export default function OnboardingGuide({ userRole }: Props) {
+export default function OnboardingGuide({ userRole, initialProgress }: Props) {
   const isEligible = userRole !== 'demo';
 
   const [progress, setProgress] = useState<OnboardingProgress | null>(null);
@@ -34,33 +37,39 @@ export default function OnboardingGuide({ userRole }: Props) {
   const [collapsed, setCollapsed] = useState(false);
   const welcomeResolved = useRef(false);
 
-  const refresh = useCallback(async () => {
-    try {
-      const p = await getOnboardingProgress();
-      setProgress(p);
+  const apply = useCallback((p: OnboardingProgress) => {
+    setProgress(p);
 
-      // Decide the welcome modal exactly once per mount, after the first fetch:
-      // show only to a genuinely new user (no token yet) who hasn't seen it.
-      if (!welcomeResolved.current) {
-        welcomeResolved.current = true;
-        const seen = localStorage.getItem(WELCOME_SEEN_KEY) === '1';
-        if (!seen && !p.hasToken) setWelcomeOpen(true);
-      }
-    } catch {
-      // best-effort — onboarding never blocks the app
+    // Decide the welcome modal exactly once per mount, after the first read:
+    // show only to a genuinely new user (no token yet) who hasn't seen it.
+    if (!welcomeResolved.current) {
+      welcomeResolved.current = true;
+      const seen = localStorage.getItem(WELCOME_SEEN_KEY) === '1';
+      if (!seen && !p.hasToken) setWelcomeOpen(true);
     }
   }, []);
 
-  // Mount + initial fetch. Wrapped in an async IIFE so the localStorage read +
-  // setState don't run synchronously in the effect body (cascading-render lint).
+  const refresh = useCallback(async () => {
+    try {
+      apply(await getOnboardingProgress());
+    } catch {
+      // best-effort — onboarding never blocks the app
+    }
+  }, [apply]);
+
+  // Mount + initial read (skipped when the sidebar already brought it). Wrapped in an
+  // async IIFE so the localStorage read + setState don't run synchronously in the
+  // effect body (cascading-render lint).
+  const initial = useRef(initialProgress);
   useEffect(() => {
     if (!isEligible) return;
     void (async () => {
       setDismissed(localStorage.getItem(DISMISSED_KEY) === '1');
       setCollapsed(localStorage.getItem(COLLAPSED_KEY) === '1');
-      await refresh();
+      if (initial.current) apply(initial.current);
+      else await refresh();
     })();
-  }, [isEligible, refresh]);
+  }, [isEligible, apply, refresh]);
 
   // Re-check when the user returns to the tab (they may have run the agent elsewhere).
   useEffect(() => {

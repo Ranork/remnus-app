@@ -1,9 +1,10 @@
 'use client';
 import { useEffect, useState } from 'react';
-import Link from 'next/link';
+import Link from '@/components/ui/link';
 import { Link2, FileText, Database as DatabaseIcon, LayoutDashboard } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { getPageRelations, type RelatedPageRef } from '@/lib/actions/workspace';
+import type { RelatedPageRef } from '@/lib/actions/workspace';
+import { loadPagePanel } from '@/lib/pagePanels';
 import PageSection from './PageSection';
 
 const TYPE_ICON: Record<RelatedPageRef['type'], typeof FileText> = {
@@ -34,7 +35,7 @@ export default function PageBacklinksPanel({ workspaceId, pageId }: { workspaceI
   useEffect(() => {
     let cancelled = false;
     setBacklinks(null);
-    getPageRelations(workspaceId, pageId)
+    loadPagePanel(workspaceId, pageId, 'relations')
       .then((rel) => { if (!cancelled) setBacklinks(rel.backlinks); })
       .catch(() => { if (!cancelled) setBacklinks([]); });
     return () => { cancelled = true; };

@@ -37,13 +37,88 @@ export interface ChangelogEntry {
 }
 
 /** Client-readable cookie holding the id of the newest entry the user has seen. */
-export const CHANGELOG_SEEN_COOKIE = 'remnus_whatsnew_seen';
+export { CHANGELOG_SEEN_COOKIE } from '@/lib/constants/cookies';
 
 /** A brand-new account has no cookie; only entries this fresh count as unread for
  *  them, so signing up never greets you with a "24 updates" badge. */
 const FIRST_VISIT_WINDOW_DAYS = 7;
 
 export const CHANGELOG: ChangelogEntry[] = [
+  {
+    id: '2026-10-02-large-tables-open-faster',
+    date: '2026-10-02',
+    category: 'improved',
+    title: {
+      en: 'Large tables open faster',
+      tr: 'Büyük tablolar daha hızlı açılıyor',
+      de: 'Große Tabellen öffnen schneller',
+      es: 'Las tablas grandes se abren más rápido',
+      fr: 'Les grands tableaux s’ouvrent plus vite',
+      hi: 'बड़ी तालिकाएँ अब तेज़ी से खुलती हैं',
+      ru: 'Большие таблицы открываются быстрее',
+      zh: '大型表格打开更快了',
+    },
+    summary: {
+      en: 'A database with hundreds of rows now appears in about half the time and stays smooth while you move across its rows, and switching tabs in the desktop app is quicker.',
+      tr: 'Yüzlerce satırlı bir veritabanı artık yaklaşık yarı sürede ekrana geliyor ve satırları üzerinde gezinirken akıcı kalıyor; masaüstü uygulamasında sekmeler arasında geçiş de daha hızlı.',
+      de: 'Eine Datenbank mit Hunderten von Zeilen erscheint jetzt in etwa der halben Zeit und bleibt flüssig, während du über ihre Zeilen fährst, und in der Desktop-App wechselst du schneller zwischen Tabs.',
+      es: 'Una base de datos con cientos de filas ahora aparece en aproximadamente la mitad del tiempo y se mantiene fluida mientras recorres sus filas, y en la app de escritorio cambiar de pestaña es más rápido.',
+      fr: 'Une base de données de plusieurs centaines de lignes s’affiche désormais en environ deux fois moins de temps et reste fluide quand vous parcourez ses lignes, et dans l’application de bureau, passer d’un onglet à l’autre est plus rapide.',
+      hi: 'सैकड़ों पंक्तियों वाला डेटाबेस अब लगभग आधे समय में दिखता है और उसकी पंक्तियों पर चलते समय सहज रहता है, और डेस्कटॉप ऐप में टैब बदलना तेज़ हो गया है।',
+      ru: 'База данных с сотнями строк теперь появляется примерно вдвое быстрее и остаётся плавной, пока вы ведёте курсор по её строкам, а в настольном приложении вкладки переключаются быстрее.',
+      zh: '包含数百行的数据库现在大约只需一半时间即可显示，在各行之间移动时依然流畅；在桌面应用中切换标签页也更快了。',
+    },
+  },
+  {
+    id: '2026-10-02-faster-app',
+    date: '2026-10-02',
+    category: 'improved',
+    title: {
+      en: 'Remnus opens faster',
+      tr: 'Remnus daha hızlı açılıyor',
+      de: 'Remnus öffnet schneller',
+      es: 'Remnus se abre más rápido',
+      fr: 'Remnus s’ouvre plus vite',
+      hi: 'Remnus अब तेज़ी से खुलता है',
+      ru: 'Remnus открывается быстрее',
+      zh: 'Remnus 打开更快了',
+    },
+    summary: {
+      en: 'Pages, dashboards and the knowledge map now load with far less to download, comments and backlinks appear sooner, and your agents’ edits reach your screen with less waiting.',
+      tr: 'Sayfalar, panolar ve bilgi haritası artık çok daha az şey indirerek yükleniyor, yorumlar ve geri bağlantılar daha erken geliyor, ajanlarının düzenlemeleri de ekranına daha az beklemeyle ulaşıyor.',
+      de: 'Seiten, Dashboards und die Wissenskarte laden jetzt mit deutlich weniger Download, Kommentare und Rückverweise erscheinen früher, und die Änderungen deiner Agenten kommen mit weniger Wartezeit auf deinem Bildschirm an.',
+      es: 'Las páginas, los paneles y el mapa de conocimiento cargan ahora descargando mucho menos, los comentarios y los enlaces entrantes aparecen antes y los cambios de tus agentes llegan a tu pantalla con menos espera.',
+      fr: 'Les pages, les tableaux de bord et la carte des connaissances se chargent désormais en téléchargeant bien moins, les commentaires et les rétroliens apparaissent plus tôt, et les modifications de tes agents arrivent à l’écran avec moins d’attente.',
+      hi: 'पेज, डैशबोर्ड और नॉलेज मैप अब बहुत कम डाउनलोड के साथ लोड होते हैं, टिप्पणियाँ और बैकलिंक जल्दी दिखते हैं, और आपके एजेंटों के बदलाव कम इंतज़ार में आपकी स्क्रीन तक पहुँचते हैं।',
+      ru: 'Страницы, панели и карта знаний теперь загружаются с гораздо меньшим объёмом данных, комментарии и обратные ссылки появляются раньше, а правки ваших агентов доходят до экрана быстрее.',
+      zh: '页面、看板和知识地图现在需要下载的内容少得多，评论和反向链接出现得更早，你的智能体所做的修改也能更快显示在屏幕上。',
+    },
+  },
+  {
+    id: '2026-10-02-project-links-open-their-workspace',
+    date: '2026-10-02',
+    category: 'fixed',
+    title: {
+      en: 'Project links open the right workspace',
+      tr: 'Proje bağlantıları doğru çalışma alanını açıyor',
+      de: 'Projektlinks öffnen den richtigen Arbeitsbereich',
+      es: 'Los enlaces de proyecto abren el espacio de trabajo correcto',
+      fr: 'Les liens de projet ouvrent le bon espace de travail',
+      hi: 'प्रोजेक्ट लिंक अब सही वर्कस्पेस खोलते हैं',
+      ru: 'Ссылки на проект открывают нужное рабочее пространство',
+      zh: '项目链接会打开正确的工作区',
+    },
+    summary: {
+      en: 'Opening a project from the terminal or the desktop app now takes you straight into that project’s workspace, even when another workspace was open last.',
+      tr: 'Bir projeyi terminalden ya da masaüstü uygulamasından açtığında, en son başka bir çalışma alanı açık olsa bile artık doğrudan o projenin çalışma alanına gidiyorsun.',
+      de: 'Wenn du ein Projekt aus dem Terminal oder der Desktop-App öffnest, landest du jetzt direkt im Arbeitsbereich dieses Projekts, auch wenn zuletzt ein anderer offen war.',
+      es: 'Al abrir un proyecto desde la terminal o la aplicación de escritorio, ahora entras directamente en el espacio de trabajo de ese proyecto, aunque la última vez tuvieras otro abierto.',
+      fr: 'Quand tu ouvres un projet depuis le terminal ou l’application de bureau, tu arrives désormais directement dans l’espace de travail de ce projet, même si un autre était ouvert en dernier.',
+      hi: 'टर्मिनल या डेस्कटॉप ऐप से कोई प्रोजेक्ट खोलने पर अब आप सीधे उसी प्रोजेक्ट के वर्कस्पेस में पहुँचते हैं, भले ही पिछली बार कोई और वर्कस्पेस खुला हो।',
+      ru: 'Если открыть проект из терминала или настольного приложения, вы теперь сразу попадаете в рабочее пространство этого проекта, даже если в прошлый раз было открыто другое.',
+      zh: '从终端或桌面应用打开项目时，现在会直接进入该项目的工作区，即使上次打开的是别的工作区。',
+    },
+  },
   {
     id: '2026-10-02-template-dates-start-this-week',
     date: '2026-10-02',

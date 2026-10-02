@@ -105,19 +105,21 @@ export async function createDashboard(
 export async function getDashboardByItemId(
   itemId: string,
 ): Promise<{ item: DashboardItem; resolved: ResolvedDashboard } | null> {
-  const [item] = await db.select().from(workspaceItems).where(eq(workspaceItems.id, itemId)).limit(1);
+  // The item and its spec in one read (V2 R9) — the spec is only used after the access
+  // check below, as before.
+  const [found] = await db
+    .select({ item: workspaceItems, spec: dashboards.spec })
+    .from(workspaceItems)
+    .leftJoin(dashboards, eq(dashboards.itemId, workspaceItems.id))
+    .where(eq(workspaceItems.id, itemId))
+    .limit(1);
+  const item = found?.item;
   if (!item || item.type !== 'dashboard') return null;
 
   await assertWorkspaceAccess(item.workspaceId);
 
-  const [row] = await db
-    .select({ spec: dashboards.spec })
-    .from(dashboards)
-    .where(eq(dashboards.itemId, itemId))
-    .limit(1);
-
   const [resolved, homeId] = await Promise.all([
-    resolveDashboard(item.workspaceId, row?.spec ?? EMPTY_DASHBOARD_SPEC),
+    resolveDashboard(item.workspaceId, found.spec ?? EMPTY_DASHBOARD_SPEC),
     getHomeDashboardItemId(item.workspaceId),
   ]);
 

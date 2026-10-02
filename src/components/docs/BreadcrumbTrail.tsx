@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import Link from '@/components/ui/link';
 import { ChevronRight } from 'lucide-react';
 
 export type BreadcrumbItem = { name: string; href?: string };

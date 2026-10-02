@@ -31,8 +31,14 @@ const eslintConfig = defineConfig([
       // be React-Compiler-clean. The genuinely bug-catching compiler rules
       // (`static-components`, `immutability`, `purity`) stay as errors.
       "react-hooks/set-state-in-effect": "off",
-      "react-hooks/refs": "off"
+      "react-hooks/refs": "off",
+      // Links prefetch on intent, not on sight (V2 R9.4): use @/components/ui/link.
+      "no-restricted-imports": ["error", { paths: [{ name: "next/link", message: "Use @/components/ui/link (prefetches on hover/focus instead of on entering the viewport)." }] }]
     }
+  },
+  {
+    files: ["src/components/ui/link.tsx"],
+    rules: { "no-restricted-imports": "off" }
   }
 ]);
 

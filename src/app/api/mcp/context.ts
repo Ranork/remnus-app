@@ -2,6 +2,7 @@ import { AsyncLocalStorage } from 'async_hooks';
 import { db } from '@/db';
 import { agentActivity } from '@/db/schema';
 import { captureAgentCall } from '@/lib/analytics/server';
+import type { StoredContextPolicy } from '@/lib/services/agentAccess';
 
 export type TokenContext = {
   tokenId: string;
@@ -12,6 +13,12 @@ export type TokenContext = {
   agentName: string | null;
   /** The user who owns the token (PAT creator / OAuth grantee) — for funnel attribution. */
   ownerUserId: string | null;
+  /** The workspace's context policy as stored, read with the token (V2 R9). Null = none
+   *  stored, the default applies; undefined = not read (scripts) — callers then ask. */
+  contextPolicy?: StoredContextPolicy;
+  /** The owner's analytics consent and role, read with the token (V2 R9.5). Unset outside a
+   *  real request — captureAgentCall then reads it. */
+  ownerAnalytics?: { allowed: boolean; role: string | null };
   /** Origin the MCP request reached (the app is served from the same one) — for links
    *  an agent can hand to a human. Unset outside a real request (scripts, benchmarks). */
   appOrigin?: string;
@@ -81,6 +88,6 @@ export async function logActivity(
   // Funnel: 'agent_call' (final activation step). Successful calls only, so a
   // failed/unauthorized probe doesn't count as activation. Fire-and-forget.
   if (status === 'success' && ctx.ownerUserId) {
-    void captureAgentCall(ctx.ownerUserId, tool, ctx.workspaceId, metrics?.analytics);
+    void captureAgentCall(ctx.ownerUserId, tool, ctx.workspaceId, metrics?.analytics, ctx.ownerAnalytics);
   }
 }

@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react';
 import Image from 'next/image';
-import Link from 'next/link';
+import Link from '@/components/ui/link';
 import { getTranslations } from 'next-intl/server';
 import { BadgeCheck } from 'lucide-react';
 import AIMark from './AIMark';

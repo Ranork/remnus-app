@@ -6,6 +6,8 @@ import { NextIntlClientProvider } from 'next-intl';
 import { getMessages } from 'next-intl/server';
 import { notFound } from 'next/navigation';
 import { routing } from '@/i18n/routing';
+import { CLIENT_NAMESPACES } from '@/i18n/clientNamespaces';
+import { pickClientMessages } from '@/i18n/pickClientMessages';
 import { PostHogProvider } from '@/components/providers/PostHogProvider';
 import PostHogPageView from '@/components/providers/PostHogPageView';
 import PostHogIdentify from '@/components/providers/PostHogIdentify';
@@ -99,11 +101,14 @@ export default async function LocaleLayout({
         ) : (
           <AttributionCapture />
         )}
-        <NextIntlClientProvider messages={messages}>
+        {/* Only the namespaces every page's client code reads; route scopes add theirs with
+            <ClientMessages> (V2 R9.1) instead of the whole catalogue riding on every refresh. */}
+        <NextIntlClientProvider messages={pickClientMessages(messages, CLIENT_NAMESPACES.root)}>
           <ConsentProvider
             consentRequired={consentRequired}
             initialConsent={initialConsent}
             userRole={sessionUser?.role}
+            userId={sessionUser?.id}
           >
             {children}
             <CookieConsentBanner />

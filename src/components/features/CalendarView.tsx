@@ -11,7 +11,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useContextMenu, type MenuItem } from './ContextMenu';
 import PageIcon from './PageIcon';
-import IconPicker from './IconPicker';
+import { IconPicker } from './lazyDialogs';
 import AgentEditBadge from './AgentEditBadge';
 import { StatusChip, UserAvatarStack, OptionChip, MarkDot, isSelfDescribingType } from './PropertyTags';
 import { updatePageIcon, updatePageCardCollapsed, updatePagesCardCollapsed } from '@/lib/actions/page';

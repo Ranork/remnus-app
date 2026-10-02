@@ -118,29 +118,40 @@ export async function maybeSnapshotContentUpdate(input: ContentUpdateInput): Pro
   try {
     if (input.newContent === input.priorContent) return; // autosave tick with no real change
 
-    const [lastSnap] = await db
-      .select({ id: pageSnapshots.id, createdAt: pageSnapshots.createdAt, content: pageSnapshots.content })
-      .from(pageSnapshots)
-      .where(and(
-        eq(pageSnapshots.workspaceId, input.workspaceId),
-        eq(pageSnapshots.originalId, input.originalId),
-        eq(pageSnapshots.reason, 'update'),
-      ))
-      .orderBy(desc(pageSnapshots.createdAt))
-      .limit(1);
+    // Only the debounce gate needs the last version; an agent write (never debounced)
+    // skips the read (V2 R9).
+    if (input.debounced) {
+      const [lastSnap] = await db
+        .select({ id: pageSnapshots.id, createdAt: pageSnapshots.createdAt, content: pageSnapshots.content })
+        .from(pageSnapshots)
+        .where(and(
+          eq(pageSnapshots.workspaceId, input.workspaceId),
+          eq(pageSnapshots.originalId, input.originalId),
+          eq(pageSnapshots.reason, 'update'),
+        ))
+        .orderBy(desc(pageSnapshots.createdAt))
+        .limit(1);
 
-    if (input.debounced && lastSnap) {
-      const gapMs = Date.now() - lastSnap.createdAt.getTime();
-      const lastLen = (lastSnap.content ?? '').length;
-      const sizeChangeRatio = lastLen > 0 ? Math.abs(input.newContent.length - lastLen) / lastLen : 1;
-      if (gapMs <= VERSION_GAP_MS && sizeChangeRatio <= VERSION_SIZE_THRESHOLD) return; // still the same "session"
+      if (lastSnap) {
+        const gapMs = Date.now() - lastSnap.createdAt.getTime();
+        const lastLen = (lastSnap.content ?? '').length;
+        const sizeChangeRatio = lastLen > 0 ? Math.abs(input.newContent.length - lastLen) / lastLen : 1;
+        if (gapMs <= VERSION_GAP_MS && sizeChangeRatio <= VERSION_SIZE_THRESHOLD) return; // still the same "session"
+      }
     }
     // Not debounced (agent/MCP/restore), or debounced with no prior snapshot
     // (first tracked edit — establish a baseline), or the gap/size gate
     // tripped: snapshot the content about to be lost.
 
     const contentHash = crypto.createHash('sha256').update(input.priorContent).digest('hex');
-    await db.insert(pageSnapshots).values({
+    // The new version and the per-page cap in one batch (one round trip): the cap is
+    // enforced at write time since a page can accumulate versions indefinitely over
+    // months (unlike a delete snapshot, which is naturally one-shot per item). The
+    // delete keeps the newest MAX_VERSIONS_PER_PAGE, the one just inserted included.
+    const sameVersions = sql`${pageSnapshots.workspaceId} = ${input.workspaceId}
+      and ${pageSnapshots.originalId} = ${input.originalId}
+      and ${pageSnapshots.reason} = 'update'`;
+    await db.batch([db.insert(pageSnapshots).values({
       workspaceId: input.workspaceId,
       reason: 'update',
       originalId: input.originalId,
@@ -154,24 +165,10 @@ export async function maybeSnapshotContentUpdate(input: ContentUpdateInput): Pro
       tokenId: input.changedBy.kind === 'agent' ? input.changedBy.tokenId ?? null : null,
       oauthTokenId: input.changedBy.kind === 'agent' ? input.changedBy.oauthTokenId ?? null : null,
       createdAt: new Date(),
-    });
-
-    // Per-page cap — enforced at write time since a page can accumulate
-    // versions indefinitely over months (unlike a delete snapshot, which is
-    // naturally one-shot per item).
-    const existing = await db
-      .select({ id: pageSnapshots.id })
-      .from(pageSnapshots)
-      .where(and(
-        eq(pageSnapshots.workspaceId, input.workspaceId),
-        eq(pageSnapshots.originalId, input.originalId),
-        eq(pageSnapshots.reason, 'update'),
-      ))
-      .orderBy(desc(pageSnapshots.createdAt));
-    if (existing.length > MAX_VERSIONS_PER_PAGE) {
-      const staleIds = existing.slice(MAX_VERSIONS_PER_PAGE).map((r) => r.id);
-      await db.delete(pageSnapshots).where(inArray(pageSnapshots.id, staleIds));
-    }
+    }), db.run(sql`delete from ${pageSnapshots} where ${pageSnapshots.id} in (
+      select ${pageSnapshots.id} from ${pageSnapshots} where ${sameVersions}
+      order by ${pageSnapshots.createdAt} desc, rowid desc limit -1 offset ${MAX_VERSIONS_PER_PAGE}
+    )`)]);
   } catch {
     // Swallow — see doc comment above.
   }

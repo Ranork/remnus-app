@@ -3,9 +3,15 @@ import { memo, useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTabs, isKeepAlivePane } from './TabsContext';
 import { CHANGE_EVENT, changeIsHot } from './ActivityTracker';
-import TabPane from '@/components/features/tabs/TabPane';
+import { lazyComponent } from '@/lib/lazyComponent';
 import { invalidateTabHref } from '@/components/features/tabs/keys';
 import { createInteractionGate } from '@/lib/interactionGate';
+
+// The panes render the editors and database views. They only exist in the desktop app
+// (on the web this host renders nothing), so their code is not part of the web app
+// shell's first load (V2 R9) — every web route paid for the whole editor through here.
+// lazyComponent, not next/dynamic: no Suspense reveal delay on the first pane.
+const TabPane = lazyComponent(() => import('@/components/features/tabs/TabPane').then((m) => m.default));
 
 // Memoized so the once-a-minute `now` tick (which changes the suspendedIds Set
 // identity and re-renders TabHost) doesn't re-render every pane's editor — only

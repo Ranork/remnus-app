@@ -1,7 +1,7 @@
 'use client';
 import { useCallback, useEffect, useState } from 'react';
 import { useIsTauri } from '@/lib/hooks/useIsTauri';
-import ConnectModal from '@/components/features/agents/ConnectModal';
+import { ConnectModal } from '@/components/features/lazyDialogs';
 import { getOnboardingProgress } from '@/lib/actions/onboarding';
 import AgentDetectModal from './AgentDetectModal';
 import AgentDetectNotice from './AgentDetectNotice';

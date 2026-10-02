@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import Link from '@/components/ui/link';
 import type { BlogPost } from '@/lib/content/manifest';
 
 // One article card on the /docs blog index.

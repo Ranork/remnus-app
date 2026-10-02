@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import Link from 'next/link';
+import Link from '@/components/ui/link';
 import { useTranslations } from 'next-intl';
 import { ChevronRight, ChevronDown, List } from 'lucide-react';
 import PageIcon from '@/components/features/PageIcon';

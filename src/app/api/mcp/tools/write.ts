@@ -175,7 +175,7 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
       }
       try {
         const result = await createPageInWorkspace(ctx.workspaceId, { title, content, parentId, databaseId, properties, icon, iconColor }, { tokenId: ctx.tokenId });
-        const knowledgeCaptured = await recordGeneratedKnowledge(ctx.workspaceId, result.id, actorId(ctx), knowledge).then(() => true).catch(() => false);
+        const knowledgeCaptured = await recordGeneratedKnowledge(ctx.workspaceId, result.id, actorId(ctx), knowledge, result.type === 'db-row' ? 'database_row' : 'page').then(() => true).catch(() => false);
 
         // Recurrence is applied after the row exists, and its failure is
         // reported rather than thrown: the row was created successfully, so
@@ -242,8 +242,8 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
         return iconErrorResult(iconProblem);
       }
       try {
-        await updatePageById(ctx.workspaceId, pageId, { title, content, tick, append, properties, icon, iconColor }, { tokenId: ctx.tokenId }, agentActor(ctx));
-        const knowledgeCaptured = await recordGeneratedKnowledge(ctx.workspaceId, pageId, actorId(ctx), knowledge).then(() => true).catch(() => false);
+        const updated = await updatePageById(ctx.workspaceId, pageId, { title, content, tick, append, properties, icon, iconColor }, { tokenId: ctx.tokenId }, agentActor(ctx));
+        const knowledgeCaptured = await recordGeneratedKnowledge(ctx.workspaceId, pageId, actorId(ctx), knowledge, updated.itemType).then(() => true).catch(() => false);
 
         // Reported, never thrown: the field update above already landed, so a
         // refused rhythm change must not read as "nothing happened".
@@ -623,7 +623,7 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
             viewResults.push({ name: view.name, created: false, error: err instanceof Error ? err.message : String(err) });
           }
         }
-        const knowledgeCaptured = await recordGeneratedKnowledge(ctx.workspaceId, result.id, actorId(ctx), knowledge).then(() => true).catch(() => false);
+        const knowledgeCaptured = await recordGeneratedKnowledge(ctx.workspaceId, result.id, actorId(ctx), knowledge, 'database').then(() => true).catch(() => false);
         const out = { id: result.id, databaseId: result.databaseId, knowledgeCaptured, ...(viewResults.length ? { views: viewResults } : {}) };
         const text = JSON.stringify(out);
         await logActivity(ctx, 'create_database', 'success', 'database', result.databaseId, text);

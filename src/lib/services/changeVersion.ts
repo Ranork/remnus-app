@@ -1,17 +1,6 @@
-import { and, eq, gte, inArray, sql } from 'drizzle-orm';
-import { unionAll, type SQLiteColumn } from 'drizzle-orm/sqlite-core';
+import { eq, inArray, sql, type SQL } from 'drizzle-orm';
 import { db } from '@/db';
-import {
-  workspaces,
-  workspaceMembers,
-  workspaceItems,
-  standalonePages,
-  databases,
-  pages,
-  pageComments,
-  deletedItems,
-  agentActivity,
-} from '@/db/schema';
+import { workspaces, workspaceMembers } from '@/db/schema';
 import { AGENT_ACTIVE_WINDOW_MS } from '@/lib/agentPresence';
 
 /**
@@ -31,11 +20,20 @@ import { AGENT_ACTIVE_WINDOW_MS } from '@/lib/agentPresence';
  * `max()` returns that TEXT value for the whole table and pins it there forever
  * — `Number()` then yields NaN, which JSON serializes to `null`, and the client
  * drops the tick. The result was that live refresh silently never fired in any
- * workspace containing even one legacy row. Ignore non-integer values so the
- * aggregate only ever considers real epoch timestamps.
+ * workspace containing even one legacy row. Only integer timestamps may count.
+ *
+ * How they are kept out matters for cost (V2 R9). This was
+ * `max(case when typeof(col) = 'integer' then col else 0 end)`: correct, but an
+ * expression SQLite cannot answer from an index, so every poll read every row of
+ * the caller's workspaces — all their items, every row of every database — and,
+ * for comments, which had no workspace index, the whole table across all tenants.
+ * Now each maximum is `max(col) … where col < EPOCH_CEILING`: TEXT compares above
+ * every number in SQLite, so the bound drops exactly the legacy rows the CASE
+ * zeroed, and a plain max under a range on an index's second column is one seek
+ * to the end of that range (migration 0055 adds the `(…, updated_at)` indexes).
+ * Same number, a few index entries per workspace and database instead of a scan.
  */
-const epochMax = (col: SQLiteColumn) =>
-  sql<number>`max(case when typeof(${col}) = 'integer' then ${col} else 0 end)`;
+const EPOCH_CEILING = 100_000_000_000; // epoch seconds: the year 5138
 
 /** Coerce a possibly-null/NaN aggregate into a comparable epoch number. */
 function toEpoch(value: unknown): number {
@@ -59,29 +57,67 @@ export async function visibleWorkspaceIds(
     .filter((id) => !workspaceLock || id === workspaceLock);
 }
 
+/** The same set as `visibleWorkspaceIds`, as a subquery — so the signal endpoints
+ *  need no separate membership read before the version (one round trip, not two). */
+function visibleWorkspacesSql(userId: string, workspaceLock: string | null): SQL {
+  return workspaceLock
+    ? sql`select workspace_id as id from workspace_members where user_id = ${userId} and workspace_id = ${workspaceLock}`
+    : sql`select workspace_id as id from workspace_members where user_id = ${userId}`;
+}
+
+function idListSql(ids: string[]): SQL {
+  return sql`select value as id from json_each(${JSON.stringify(ids)})`;
+}
+
 /**
- * Highest change timestamp (epoch seconds) across everything the caller can see:
+ * Highest change timestamp (epoch seconds) across everything in the workspace set:
  * workspace items, standalone-page content, database schema/views, database rows,
- * comments, deletions, and the workspace rows themselves.
+ * comments, deletions, and the workspace rows themselves. Returns one row
+ * `{ m, n }`: the version and how many workspaces the set holds.
  *
- * **Deletions matter.** Without the `deleted_items` tombstone aggregate this is a
+ * **Deletions matter.** Without the `deleted_items` tombstone maximum this is a
  * `max(updatedAt)` over surviving rows only — and removing the newest row lowers
  * that maximum rather than raising it, so a delete never advanced the version and
  * never triggered a refresh. Tombstones are insert-only (`services/workspace.ts`
  * writes them, nothing deletes them), so folding `max(deleted_at)` in keeps the
  * number monotonic as well as correct.
  *
- * Emitted as ONE `UNION ALL` statement rather than seven awaited queries: this runs
- * on every poll — as often as every few seconds in a project window watching an
- * agent write — and against Turso the round-trips, not the aggregates, are the
- * cost. Every branch is an indexed aggregate.
+ * ONE statement: it runs on every poll — as often as every few seconds in a project
+ * window watching an agent write — and against Turso the round-trips are a cost of
+ * their own. Per workspace: one seek each into items, comments and tombstones, and the
+ * workspace row — nothing grows with the workspace (V2 R9.8). Body, schema/view and row
+ * edits arrive through `workspaces.content_updated_at`, which SQLite triggers keep at the
+ * newest such `updated_at` on every write path (migration 0056, `src/db/contentClock.ts`);
+ * before it, each poll sought every item's body, database and rows.
  */
+function changeVersionSql(workspaceSet: SQL): SQL {
+  const c = sql.raw(String(EPOCH_CEILING));
+  // Branches, in order: items; comments (they carry their own workspace_id, so an agent's
+  // add_comment reaches a viewer already on that page); tombstones (the only trace a
+  // hard-deleted page leaves); the workspace row (rename, icon, home dashboard, every
+  // touchWorkspaces() bump); then the content clock — content edits (standalone pages),
+  // schema/view edits (databases) and rows, kept by the 0056 triggers.
+  return sql`with ws(id) as (${workspaceSet})
+select max(m) as m, (select count(*) from ws) as n from (
+  select (select max(updated_at) from workspace_items where workspace_id = ws.id and updated_at < ${c}) as m from ws
+  union all
+  select (select max(updated_at) from page_comments where workspace_id = ws.id and updated_at < ${c}) from ws
+  union all
+  select (select max(deleted_at) from deleted_items where workspace_id = ws.id and deleted_at < ${c}) from ws
+  union all
+  select max(updated_at) from workspaces where id in (select id from ws) and updated_at < ${c}
+  union all
+  select max(content_updated_at) from workspaces where id in (select id from ws) and content_updated_at < ${c}
+)`;
+}
+
+/** The version for an explicit workspace set (an MCP token's one workspace, the corpus key). */
 export async function computeChangeVersion(ids: string[]): Promise<number> {
   if (ids.length === 0) return 0;
   return changeVersionFromRows(await changeVersionQuery(ids));
 }
 
-/** Fold the per-table maxima `changeVersionQuery` returns into one number. */
+/** Fold the rows `changeVersionQuery` returns into one number. */
 export function changeVersionFromRows(rows: Array<{ m: unknown }>): number {
   return rows.reduce<number>((max, row) => Math.max(max, toEpoch(row.m)), 0);
 }
@@ -92,51 +128,26 @@ export function changeVersionFromRows(rows: Array<{ m: unknown }>): number {
  * (the prepare_context corpus key does). `ids` must be non-empty.
  */
 export function changeVersionQuery(ids: string[]) {
-  return unionAll(
-    db
-      .select({ m: epochMax(workspaceItems.updatedAt) })
-      .from(workspaceItems)
-      .where(inArray(workspaceItems.workspaceId, ids)),
-    db
-      .select({ m: epochMax(standalonePages.updatedAt) })
-      .from(standalonePages)
-      .innerJoin(workspaceItems, eq(standalonePages.itemId, workspaceItems.id))
-      .where(inArray(workspaceItems.workspaceId, ids)),
-    // Database schema/view edits (e.g. renaming a view, adding a column) bump
-    // only `databases.updatedAt`, so without this a view change never refreshed.
-    db
-      .select({ m: epochMax(databases.updatedAt) })
-      .from(databases)
-      .innerJoin(workspaceItems, eq(databases.itemId, workspaceItems.id))
-      .where(inArray(workspaceItems.workspaceId, ids)),
-    db
-      .select({ m: epochMax(pages.updatedAt) })
-      .from(pages)
-      .innerJoin(databases, eq(pages.databaseId, databases.id))
-      .innerJoin(workspaceItems, eq(databases.itemId, workspaceItems.id))
-      .where(inArray(workspaceItems.workspaceId, ids)),
-    // page_comments carries its own workspaceId (it can point at either a
-    // standalone page or a database row) so no join is needed — otherwise an
-    // agent's MCP add_comment call would never show up for a viewer already
-    // on that page until they manually reloaded.
-    db
-      .select({ m: epochMax(pageComments.updatedAt) })
-      .from(pageComments)
-      .where(inArray(pageComments.workspaceId, ids)),
-    // Tombstones — the only trace a hard-deleted page leaves behind.
-    db
-      .select({ m: epochMax(deletedItems.deletedAt) })
-      .from(deletedItems)
-      .where(inArray(deletedItems.workspaceId, ids)),
-    // The workspace row itself: rename, icon and home dashboard write it, and
-    // `touchWorkspaces` bumps it for every change that has no versioned column
-    // of its own (sidebar order, membership, access requests …). A primary-key
-    // lookup over a handful of rows, so it costs the poll next to nothing.
-    db
-      .select({ m: epochMax(workspaces.updatedAt) })
-      .from(workspaces)
-      .where(inArray(workspaces.id, ids)),
-  );
+  return db.all<{ m: unknown; n: unknown }>(changeVersionSql(idListSql(ids)));
+}
+
+/**
+ * The change signal for a signed-in caller: `version` over every workspace they can
+ * see (narrowed to the window's one in a project window) and `count`, the size of that
+ * set (`n` on the wire — see `signalExtras`). Membership is resolved inside the same
+ * statement, so this is one round trip.
+ */
+export async function changeSignalForUser(
+  userId: string,
+  workspaceLock: string | null,
+): Promise<{ version: number; count: number }> {
+  const [row] = await db.all<{ m: unknown; n: unknown }>(changeSignalSql(userId, workspaceLock));
+  return { version: toEpoch(row?.m), count: toEpoch(row?.n) };
+}
+
+/** The statement behind `changeSignalForUser` (exported for `bench:change-signal`). */
+export function changeSignalSql(userId: string, workspaceLock: string | null): SQL {
+  return changeVersionSql(visibleWorkspacesSql(userId, workspaceLock));
 }
 
 /**
@@ -177,29 +188,30 @@ export function signalExtras(version: number, visibleCount: number, now = Date.n
 export { AGENT_ACTIVE_WINDOW_MS };
 
 /**
- * The heartbeat's answer: the change version plus whether an agent has called
- * Remnus in any of these workspaces within `AGENT_ACTIVE_WINDOW_MS` — the cue for a
+ * The heartbeat's answer: the change signal plus whether an agent has called Remnus
+ * in any of the caller's workspaces within `AGENT_ACTIVE_WINDOW_MS` — the cue for a
  * normal tab to poll as closely as a project window while it lasts (see
- * `ActivityTracker`). One batch, one round trip. The agent probe is an index seek on
- * `agent_activity (workspace_id, created_at)` stopped at the first hit, so it reads
- * a row or none however large the audit log grows. Every MCP call logs a row, reads
- * included, so an agent usually "arrives" before its first write does.
+ * `ActivityTracker`). One batch, one round trip, membership included. The agent probe
+ * is an index seek on `agent_activity (workspace_id, created_at)` stopped at the first
+ * hit, so it reads a row or none however large the audit log grows. Every MCP call
+ * logs a row, reads included, so an agent usually "arrives" before its first write
+ * does.
  */
-export async function heartbeatSignals(
-  ids: string[],
+export async function heartbeatSignalsForUser(
+  userId: string,
+  workspaceLock: string | null,
   now = Date.now(),
-): Promise<{ version: number; agentActive: boolean }> {
-  if (ids.length === 0) return { version: 0, agentActive: false };
+): Promise<{ version: number; count: number; agentActive: boolean }> {
+  const visible = visibleWorkspacesSql(userId, workspaceLock);
+  const since = Math.floor((now - AGENT_ACTIVE_WINDOW_MS) / 1000);
   const [versionRows, agentRows] = await db.batch([
-    changeVersionQuery(ids),
-    db
-      .select({ one: sql<number>`1` })
-      .from(agentActivity)
-      .where(and(
-        inArray(agentActivity.workspaceId, ids),
-        gte(agentActivity.createdAt, new Date(now - AGENT_ACTIVE_WINDOW_MS)),
-      ))
-      .limit(1),
+    db.all<{ m: unknown; n: unknown }>(changeVersionSql(visible)),
+    db.all<{ one: number }>(sql`select 1 as one from agent_activity
+      where workspace_id in (${visible}) and created_at >= ${since} and created_at < ${sql.raw(String(EPOCH_CEILING))} limit 1`),
   ]);
-  return { version: changeVersionFromRows(versionRows), agentActive: agentRows.length > 0 };
+  return {
+    version: toEpoch(versionRows[0]?.m),
+    count: toEpoch(versionRows[0]?.n),
+    agentActive: agentRows.length > 0,
+  };
 }

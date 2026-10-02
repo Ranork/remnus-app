@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import Link from '@/components/ui/link';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { cn } from '@/lib/cn';
 import SavingsCalculator, { type CalculatorCopy } from './SavingsCalculator';

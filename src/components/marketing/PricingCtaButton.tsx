@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
+import Link from '@/components/ui/link';
 import { Loader2 } from 'lucide-react';
 import { createCheckoutSession } from '@/lib/actions/billing';
 import DemoBillingNotice from '@/components/features/DemoBillingNotice';

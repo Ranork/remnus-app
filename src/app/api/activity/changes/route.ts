@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getSessionAllowingWorkspaceLock } from '@/lib/auth/session';
 import { lockClaimsOf } from '@/lib/auth/workspaceLock';
-import { computeChangeVersion, signalExtras, visibleWorkspaceIds } from '@/lib/services/changeVersion';
+import { changeSignalForUser, signalExtras } from '@/lib/services/changeVersion';
 
 // The change signal, split out from the activity heartbeat.
 //
@@ -18,7 +18,7 @@ import { computeChangeVersion, signalExtras, visibleWorkspaceIds } from '@/lib/s
 // where nothing changed must stay a few bytes. Don't grow this response.
 //
 // Project windows are served too — watching an agent work is the point of the
-// window — scoped by `visibleWorkspaceIds` to the one workspace their lock allows.
+// window — scoped to the one workspace their lock allows (`changeSignalForUser`).
 // Besides `v`: `n` (visible workspace count) and, only while `v`'s second is still
 // open, `h: 1` — see `signalExtras`.
 export async function GET() {
@@ -28,9 +28,9 @@ export async function GET() {
 
   let body: { v: number; n?: number; h?: 1 } = { v: 0 };
   try {
-    const ids = await visibleWorkspaceIds(userId, lockClaimsOf(session.user).workspaceLock ?? null);
-    const v = await computeChangeVersion(ids);
-    body = { v, ...signalExtras(v, ids.length) };
+    // One statement: membership, every branch's maximum and the workspace count.
+    const { version: v, count } = await changeSignalForUser(userId, lockClaimsOf(session.user).workspaceLock ?? null);
+    body = { v, ...signalExtras(v, count) };
   } catch {
     // Best-effort: a failed tick means "no refresh this time", never an error
     // the user sees. `v: 0` (and no `n`) can only ever compare as "no advance".

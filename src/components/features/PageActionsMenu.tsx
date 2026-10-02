@@ -12,6 +12,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { buttonVariants } from '@/components/ui/button';
+import { preloadDialogs } from './lazyDialogs';
 
 export type PageWidthMode = 'narrow' | 'wide' | 'full';
 
@@ -48,6 +49,9 @@ export default function PageActionsMenu({
         aria-label={t('pageOptions')}
         title={t('pageOptions')}
         className={buttonVariants({ variant: 'ghost', size: 'icon' })}
+        // Share, history and markdown open from this menu: fetch their code on approach.
+        onPointerEnter={preloadDialogs}
+        onFocus={preloadDialogs}
       >
         <MoreHorizontal />
       </DropdownMenuTrigger>

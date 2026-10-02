@@ -16,6 +16,10 @@ export const workspaces = sqliteTable('workspaces', {
   // services/dashboards.ts), so deleting it empties the button, and restoring it from the
   // trash (same id) brings the button back with no bookkeeping in the delete paths.
   homeDashboardItemId: text('home_dashboard_item_id'),
+  // Newest body / database / row edit in the workspace (epoch seconds), kept by SQLite
+  // triggers on every write path (migration 0056, src/db/contentClock.ts) so the
+  // live-refresh signal reads one row per workspace. Never written by app code.
+  contentUpdatedAt: integer('content_updated_at'),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`CURRENT_TIMESTAMP`),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().default(sql`CURRENT_TIMESTAMP`),
 });
@@ -35,7 +39,10 @@ export const workspaceItems = sqliteTable('workspace_items', {
   createdAt:   integer('created_at', { mode: 'timestamp' }).notNull().default(sql`CURRENT_TIMESTAMP`),
   updatedAt:   integer('updated_at', { mode: 'timestamp' }).notNull().default(sql`CURRENT_TIMESTAMP`),
 }, (table) => [
-  index('workspace_items_workspace_id_idx').on(table.workspaceId),
+  // Migration 0055 (V2 R9): (workspace_id, updated_at) replaced the workspace_id index —
+  // every workspace-scoped read still uses its leading column, and the change signal's
+  // max(updated_at) per workspace is one seek instead of a scan (services/changeVersion.ts).
+  index('workspace_items_workspace_updated_idx').on(table.workspaceId, table.updatedAt),
   index('workspace_items_parent_id_idx').on(table.parentId),
 ]);
 
@@ -46,7 +53,8 @@ export const standalonePages = sqliteTable('standalone_pages', {
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`CURRENT_TIMESTAMP`),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().default(sql`CURRENT_TIMESTAMP`),
 }, (table) => [
-  index('standalone_pages_item_id_idx').on(table.itemId),
+  // Migration 0055: replaced the item_id index; covers the change signal's per-item max.
+  index('standalone_pages_item_updated_idx').on(table.itemId, table.updatedAt),
 ]);
 
 /**
@@ -75,7 +83,8 @@ export const databases = sqliteTable('databases', {
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`CURRENT_TIMESTAMP`),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull().default(sql`CURRENT_TIMESTAMP`),
 }, (table) => [
-  index('databases_item_id_idx').on(table.itemId),
+  // Migration 0055: replaced the item_id index; covers the change signal's per-item max.
+  index('databases_item_updated_idx').on(table.itemId, table.updatedAt),
 ]);
 
 export const pages = sqliteTable('pages', {
@@ -117,7 +126,8 @@ export const pages = sqliteTable('pages', {
   // `.ai/RECURRENCE_DESIGN.md` §4.
   seriesDetached: integer('series_detached', { mode: 'boolean' }).notNull().default(false),
 }, (table) => [
-  index('pages_database_id_idx').on(table.databaseId),
+  // Migration 0055: replaced the database_id index — a database's newest row is one seek.
+  index('pages_database_updated_idx').on(table.databaseId, table.updatedAt),
   index('pages_series_id_idx').on(table.seriesId),
   // Makes materialization idempotent: a concurrent top-up (read-triggered and
   // cron at once) can't produce a duplicate card for the same occurrence.
@@ -596,6 +606,8 @@ export const pageComments = sqliteTable('page_comments', {
   updatedAt:    integer('updated_at', { mode: 'timestamp' }).notNull(),
 }, (table) => [
   index('page_comments_page_created_idx').on(table.pageId, table.createdAt),
+  // Migration 0055: the change signal reads comments by workspace (was a full scan).
+  index('page_comments_workspace_updated_idx').on(table.workspaceId, table.updatedAt),
 ]);
 
 // ── Trash / page snapshots (migration 0047) ────────────────────────────────────

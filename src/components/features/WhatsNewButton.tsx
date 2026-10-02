@@ -1,19 +1,14 @@
 'use client';
 
-import { useEffect, useMemo, useState } from 'react';
-import { useLocale, useTranslations } from 'next-intl';
-import { Plus, ArrowUp, Wrench } from 'lucide-react';
-import {
-  CHANGELOG,
-  CHANGELOG_SEEN_COOKIE,
-  countUnseenEntries,
-  localizedText,
-  newestEntryId,
-  type ChangelogCategory,
-  type ChangelogEntry,
-} from '@/lib/changelog';
-import { Dialog, DialogBody, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
-import { Badge } from '@/components/ui/badge';
+import { useState } from 'react';
+import { lazyComponent } from '@/lib/lazyComponent';
+import { CHANGELOG_SEEN_COOKIE } from '@/lib/constants/cookies';
+
+const WhatsNewModal = lazyComponent(() => import('./WhatsNewModal').then((m) => m.default));
+
+/** The changelog module, loaded once, when the list is first opened. */
+let changelogModule: Promise<typeof import('@/lib/changelog')> | null = null;
+const loadChangelog = () => (changelogModule ??= import('@/lib/changelog'));
 
 // "What's New": the unread count and the modal it opens, as a hook. The account menu
 // (and the mobile user sheet) supply their own row and call `open()`; the caller must
@@ -38,120 +33,33 @@ function writeSeenCookie(id: string) {
     `${CHANGELOG_SEEN_COOKIE}=${encodeURIComponent(id)}; path=/; max-age=${YEAR_SECONDS}; samesite=lax`;
 }
 
-// The category is a kind of change, not a state: told apart by its glyph, not a colour.
-const CATEGORY_ICON: Record<ChangelogCategory, typeof Plus> = {
-  new: Plus,
-  improved: ArrowUp,
-  fixed: Wrench,
-};
-
-export function useWhatsNew() {
-  const t = useTranslations('WhatsNew');
-  const locale = useLocale();
-
+/**
+ * `initialUnseen` is counted on the server (the `(app)` layout reads the seen cookie
+ * and the changelog there), so the badge costs the page no code: the changelog —
+ * ~200 KB, every entry in eight languages — loads only when the list is opened (V2 R9).
+ */
+export function useWhatsNew(initialUnseen = 0) {
   const [open, setOpen] = useState(false);
   // Frozen at open time: the highlight ring must not vanish out from under the
   // reader the moment the cookie is written.
   const [unseenIds, setUnseenIds] = useState<Set<string>>(new Set());
-  const [unseenCount, setUnseenCount] = useState(0);
-
-  useEffect(() => {
-    setUnseenCount(countUnseenEntries(readSeenCookie()));
-  }, []);
-
-  const dateFormatter = useMemo(
-    () => new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'long', year: 'numeric' }),
-    [locale],
-  );
-
-  // Entries grouped by ship date. CHANGELOG order is the "seen" order (everything
-  // above the last-seen id is new), so an entry that shipped from another branch
-  // can sit below newer-dated ones; grouping by date — not by adjacency — still
-  // shows it under its own day, and a date is never two groups (it is the key).
-  const groups = useMemo(() => {
-    const byDate = new Map<string, ChangelogEntry[]>();
-    for (const entry of CHANGELOG) {
-      const list = byDate.get(entry.date);
-      if (list) list.push(entry);
-      else byDate.set(entry.date, [entry]);
-    }
-    return [...byDate]
-      .map(([date, entries]) => ({ date, entries }))
-      .sort((a, b) => (a.date < b.date ? 1 : a.date > b.date ? -1 : 0));
-  }, []);
+  const [unseenCount, setUnseenCount] = useState(initialUnseen);
 
   const handleOpen = () => {
-    const count = countUnseenEntries(readSeenCookie());
-    setUnseenIds(new Set(CHANGELOG.slice(0, count).map((e) => e.id)));
-    setOpen(true);
-    // Reading the list is what marks it read — clearing on close would leave the
-    // badge up if the user navigates away from the modal instead of closing it.
-    writeSeenCookie(newestEntryId());
-    setUnseenCount(0);
+    loadChangelog()
+      .then((changelog) => {
+        const count = changelog.countUnseenEntries(readSeenCookie());
+        setUnseenIds(new Set(changelog.CHANGELOG.slice(0, count).map((e) => e.id)));
+        setOpen(true);
+        // Reading the list is what marks it read — clearing on close would leave the
+        // badge up if the user navigates away from the modal instead of closing it.
+        writeSeenCookie(changelog.newestEntryId());
+        setUnseenCount(0);
+      })
+      .catch(() => {});
   };
 
-  const formatDate = (date: string) => {
-    const d = new Date(`${date}T00:00:00`);
-    return Number.isNaN(d.getTime()) ? date : dateFormatter.format(d);
-  };
-
-  // Wide and a fixed height (`full`) rather than narrow and tall: the list grows forever,
-  // so a height that tracked the content produced a long thin column.
-  const modal = open ? (
-    <Dialog open onOpenChange={(next) => { if (!next) setOpen(false); }}>
-      <DialogContent size="full">
-        <DialogHeader>
-          <DialogTitle>{t('title')}</DialogTitle>
-          <DialogDescription>
-            {unseenIds.size > 0 ? t('unseenSubtitle', { count: unseenIds.size }) : t('subtitle')}
-          </DialogDescription>
-        </DialogHeader>
-
-        {/* Timeline */}
-        <DialogBody className="sm:px-6">
-          {groups.map((group) => (
-            <section key={group.date} className="relative pb-1 pl-5">
-              {/* Spine: one continuous rule behind every card of this date. */}
-              <span className="absolute top-2 bottom-0 left-[3px] w-px bg-line" aria-hidden />
-              <span className="absolute top-1.5 left-0 size-[7px] rounded-full bg-line-strong ring-4 ring-float" aria-hidden />
-
-              <h3 className="mb-2 text-xs font-medium text-fg-3">{formatDate(group.date)}</h3>
-
-              {/* Two columns once there is room for them: one would run ~90 characters a line. */}
-              <div className="grid gap-2 pb-4 md:grid-cols-2">
-                {group.entries.map((entry) => {
-                  const CategoryIcon = CATEGORY_ICON[entry.category];
-                  const isUnseen = unseenIds.has(entry.id);
-                  return (
-                    <article
-                      key={entry.id}
-                      className="rounded-control bg-raised px-3.5 py-3 shadow-[inset_0_0_0_1px_var(--color-line)]"
-                    >
-                      <div className="mb-1.5 flex items-center gap-1.5">
-                        <Badge variant="outline" size="sm">
-                          <CategoryIcon className="size-2.5" />
-                          {t(`category_${entry.category}` as 'category_new')}
-                        </Badge>
-                        {isUnseen && <Badge variant="signal" size="sm">{t('badgeNew')}</Badge>}
-                      </div>
-                      <h4 className="mb-1 text-ui leading-snug font-semibold text-fg">
-                        {localizedText(entry.title, locale)}
-                      </h4>
-                      <p className="text-xs leading-relaxed text-fg-2">
-                        {localizedText(entry.summary, locale)}
-                      </p>
-                    </article>
-                  );
-                })}
-              </div>
-            </section>
-          ))}
-
-          <p className="pt-1 pl-5 text-xs text-fg-3">{t('footerNote')}</p>
-        </DialogBody>
-      </DialogContent>
-    </Dialog>
-  ) : null;
+  const modal = open ? <WhatsNewModal unseenIds={unseenIds} onClose={() => setOpen(false)} /> : null;
 
   return { unseenCount, open: handleOpen, modal };
 }

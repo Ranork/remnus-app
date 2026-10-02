@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import Link from '@/components/ui/link';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { ArrowDownRight, ArrowRight, ArrowUpRight, BarChart3, Bot, ChevronRight, CircleAlert, Info, Minus, TriangleAlert, Unplug } from 'lucide-react';
 import PageIcon from '@/components/features/PageIcon';

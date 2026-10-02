@@ -2,7 +2,7 @@
 
 import { useState, useMemo, useRef, useCallback, useEffect, useTransition, useSyncExternalStore } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
-import Link from 'next/link';
+import Link from '@/components/ui/link';
 import { useTranslations } from 'next-intl';
 import { createPage, getPage, deletePage, duplicatePage, reorderPages, updatePageProperties } from '@/lib/actions/page';
 import { updateDatabaseViews } from '@/lib/actions/database';
@@ -20,19 +20,16 @@ import {
 import TableLayout from './TableLayout';
 import GroupedTableLayout from './GroupedTableLayout';
 import { ConfirmDialog } from './ConfirmDialog';
-import { BulkRowsDialog } from './BulkRowsDialog';
-import { PageMarkdownDialog } from './PageMarkdownDialog';
-import { PageHistoryModal } from './PageHistoryModal';
-import ShareModal from '@/components/share/ShareModal';
+import { BulkRowsDialog, IconPicker, PageHistoryModal, PageMarkdownDialog, ShareModal } from './lazyDialogs';
 import KanbanBoard from './KanbanBoard';
 import CalendarView from './CalendarView';
 import { useRecurrenceControls } from './recurrence/useRecurrenceControls';
 import ViewsBar from './ViewsBar';
 import DatabasePropertiesSidebar from './DatabasePropertiesSidebar';
-import PageEditor, { type PageEditorHandle } from './PageEditor';
+import type { PageEditorHandle } from './PageEditor';
+import { whenIdle } from '@/lib/whenIdle';
 import SaveStatus, { type SaveState } from './SaveStatus';
 import PageIcon from './PageIcon';
-import IconPicker from './IconPicker';
 import { MembersProvider, type WorkspaceMember } from './MembersContext';
 import { useTabNav } from '@/components/providers/TabsContext';
 import type {
@@ -47,6 +44,33 @@ import { isTableGroupableColumn } from '@/lib/tableGrouping';
 // Shared with the dashboard renderer (a server component), so a filter selects
 // the same rows in a view and in a dashboard block. See src/lib/tableFilters.ts.
 import { applyFilters, applySorts } from '@/lib/tableFilters';
+
+// The row editor (Tiptap + ProseMirror, the heaviest code in the app) only appears
+// when a row is opened in a peek, so it is not part of the view's first load (V2 R9);
+// its code is fetched soon after the view is up (or when the pointer comes over it), so
+// opening a row stays quick. Held in state once loaded rather than React.lazy: a lazy
+// component suspends, and a Suspense boundary that showed its fallback is held back
+// ~300 ms before it reveals (measured: +0.5 s on the first row opened).
+type PageEditorComponent = typeof import('./PageEditor').default;
+let pageEditorComponent: PageEditorComponent | null = null;
+let pageEditorLoad: Promise<PageEditorComponent> | null = null;
+function loadPageEditor(): Promise<PageEditorComponent> {
+  pageEditorLoad ??= import('./PageEditor')
+    .then((m) => (pageEditorComponent = m.default))
+    .catch((err) => { pageEditorLoad = null; throw err; });
+  return pageEditorLoad;
+}
+function preloadPageEditor() {
+  void loadPageEditor().catch(() => {});
+}
+
+function PeekEditorLoading() {
+  return (
+    <div className="flex items-center justify-center py-20 text-fg-3">
+      <Loader2 size={20} className="animate-spin" aria-hidden />
+    </div>
+  );
+}
 
 function uid() {
   return crypto.randomUUID().slice(0, 8);
@@ -306,6 +330,18 @@ export default function DatabaseView({
   const [showSharePeek, setShowSharePeek] = useState(false);
   const [showHistoryPeek, setShowHistoryPeek] = useState(false);
   const peekEditorRef = useRef<PageEditorHandle>(null);
+  // The row editor's code: fetched soon after the view is up, or as soon as the pointer
+  // is over it — whichever comes first — so the first row opened does not wait for it.
+  const [PageEditor, setPageEditor] = useState<PageEditorComponent | null>(() => pageEditorComponent);
+  useEffect(() => {
+    if (PageEditor) return;
+    let cancelled = false;
+    const loaded = () => loadPageEditor().then((C) => { if (!cancelled) setPageEditor(() => C); }).catch(() => {});
+    // A row opened before the idle fetch: load now.
+    if (peekPageId) void loaded();
+    const cancelIdle = whenIdle(() => { void loaded(); }, 800);
+    return () => { cancelled = true; cancelIdle(); };
+  }, [PageEditor, peekPageId]);
   const [showIconPicker, setShowIconPicker] = useState(false);
   const dbButtonRef = useRef<HTMLButtonElement>(null);
   const [dbName, setDbName] = useState<string>(database.name ?? '');
@@ -1036,7 +1072,7 @@ export default function DatabaseView({
 
   return (
     <MembersProvider members={members}>
-    <div className="relative flex-1 flex flex-col overflow-hidden min-w-0 h-full">
+    <div className="relative flex-1 flex flex-col overflow-hidden min-w-0 h-full" onPointerOver={preloadPageEditor}>
       <div className={`flex-1 flex flex-col w-full min-w-0 max-w-full overflow-hidden pt-6 sm:pt-8 ${widthMode === 'full' ? 'px-4 sm:px-8 lg:px-16' : 'px-4 sm:px-8'} ${widthMode === 'full' ? '' : widthMode === 'wide' ? 'max-w-screen-2xl mx-auto' : 'max-w-6xl mx-auto'}`}>
       {/* Back button for nested databases */}
       {database.parentId && (
@@ -1415,15 +1451,17 @@ export default function DatabaseView({
                     </div>
                   ) : (
                     peekPage && (
-                      <PageEditor
-                        ref={peekEditorRef}
-                        database={liveDatabase}
-                        onSchemaChange={handleSchemaChange}
-                        initialPage={peekPage}
-                        isPeek={true}
-                        onClose={() => setPeekPageId(null)}
-                        onPageUpdated={handlePageUpdated}
-                      />
+                      PageEditor ? (
+                        <PageEditor
+                          ref={peekEditorRef}
+                          database={liveDatabase}
+                          onSchemaChange={handleSchemaChange}
+                          initialPage={peekPage}
+                          isPeek={true}
+                          onClose={() => setPeekPageId(null)}
+                          onPageUpdated={handlePageUpdated}
+                        />
+                      ) : <PeekEditorLoading />
                     )
                   )}
                 </div>
@@ -1462,15 +1500,17 @@ export default function DatabaseView({
                   </div>
                 ) : (
                   peekPage && (
-                    <PageEditor
-                      ref={peekEditorRef}
-                      database={liveDatabase}
-                      onSchemaChange={handleSchemaChange}
-                      initialPage={peekPage}
-                      isPeek={true}
-                      onClose={() => setPeekPageId(null)}
-                      onPageUpdated={handlePageUpdated}
-                    />
+                    PageEditor ? (
+                      <PageEditor
+                        ref={peekEditorRef}
+                        database={liveDatabase}
+                        onSchemaChange={handleSchemaChange}
+                        initialPage={peekPage}
+                        isPeek={true}
+                        onClose={() => setPeekPageId(null)}
+                        onPageUpdated={handlePageUpdated}
+                      />
+                    ) : <PeekEditorLoading />
                   )
                 )}
               </div>

@@ -1,5 +1,5 @@
 import { getTranslations } from 'next-intl/server';
-import Link from 'next/link';
+import Link from '@/components/ui/link';
 import { auth } from '@/auth';
 import PricingCtaButton from './PricingCtaButton';
 import type { PlanTier } from '@/lib/billing/plans';

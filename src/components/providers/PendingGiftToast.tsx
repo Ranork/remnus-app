@@ -22,7 +22,7 @@
 
 import { useEffect, useState } from 'react';
 import { usePathname } from 'next/navigation';
-import Link from 'next/link';
+import Link from '@/components/ui/link';
 import { useTranslations } from 'next-intl';
 import { X, Gift } from 'lucide-react';
 import { readPendingGift, clearPendingGift, type PendingGift } from '@/lib/prospectInvite/pendingGift';

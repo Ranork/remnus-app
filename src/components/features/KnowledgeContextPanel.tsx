@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { BrainCircuit, Check, Loader2, ShieldCheck } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { getPageKnowledge, markPageKnowledgeReviewed, updatePageKnowledge } from '@/lib/actions/knowledge';
+import { loadPagePanel } from '@/lib/pagePanels';
 import type { KnowledgeCorpusItem, KnowledgeStatus } from '@/lib/services/knowledge';
 import { Button } from '@/components/ui/button';
 import { Input, Textarea } from '@/components/ui/input';
@@ -49,7 +50,9 @@ export default function KnowledgeContextPanel({
   useEffect(() => {
     let cancelled = false;
     setBusy('load');
-    getPageKnowledge(workspaceId, pageId)
+    // The first read is shared with the page's other panels (lib/pagePanels.ts); a
+    // refresh after a review asks on its own.
+    (refreshKey === 0 ? loadPagePanel(workspaceId, pageId, 'knowledge') : getPageKnowledge(workspaceId, pageId))
       .then(value => { if (!cancelled) applyKnowledge(value); })
       .catch(() => { if (!cancelled) setMessage(t('knowledgeLoadFailed')); })
       .finally(() => { if (!cancelled) setBusy(null); });

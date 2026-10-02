@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useRef } from 'react';
+import { useProgressiveLimit } from '@/lib/useProgressiveLimit';
 import { useRouter } from 'next/navigation';
 import { GripVertical, Trash2, Plus, Copy, ExternalLink, ArrowUpRight, Maximize2, Link2, ChevronDown, ChevronRight, ChevronsDownUp, ChevronsUpDown, KanbanSquare } from 'lucide-react';
 import { normalizeOption, formatDateValue } from '@/lib/types/properties';
@@ -12,7 +13,7 @@ import InlineCellEditor from './InlineCellEditor';
 import { useContextMenu, type MenuItem } from './ContextMenu';
 import { StatusChip, UserChip, UserTags, OptionChip, PropertyMark, GroupGlyph, isSelfDescribingType } from './PropertyTags';
 import PageIcon from './PageIcon';
-import IconPicker from './IconPicker';
+import { IconPicker } from './lazyDialogs';
 import AgentEditBadge from './AgentEditBadge';
 import RecurringBadge from './recurrence/RecurringBadge';
 import { updatePageIcon, updatePageCardCollapsed, updatePagesCardCollapsed } from '@/lib/actions/page';
@@ -163,6 +164,8 @@ export default function KanbanBoard({
       groupedPages['Uncategorized']?.push(page);
     }
   });
+  // The first cards of each column arrive with the page; the rest fill in right after (V2 R9.2).
+  const cardLimit = useProgressiveLimit(Math.max(0, ...Object.values(groupedPages).map((cards) => cards.length)), 20, 40);
 
   const [draggedGroup, setDraggedGroup] = useState<string | null>(null);
   const [dragOverGroup, setDragOverGroup] = useState<string | null>(null);
@@ -378,7 +381,7 @@ export default function KanbanBoard({
               {groupedPages[columnName].length === 0 ? (
                 <div className="px-1 py-4 text-xs text-fg-3">{t('noPages')}</div>
               ) : (
-                groupedPages[columnName].map((page) => {
+                groupedPages[columnName].slice(0, cardLimit).map((page) => {
                   const isCardEditing = editingCell?.pageId === page.id;
                   const markValue = showMark && markColumn ? page.properties[markColumn.id] : undefined;
                   const hasMark = markValue !== undefined && markValue !== null && markValue !== '' && !(Array.isArray(markValue) && markValue.length === 0);

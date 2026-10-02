@@ -25,7 +25,7 @@ import { registerPrompts } from './prompts';
 import { registerReadTools } from './tools/read';
 import { registerWriteTools } from './tools/write';
 import { mcpCallTiming, type TokenContext } from './context';
-import { getContextPolicy, type ContextPolicy } from '@/lib/services/knowledge';
+import { DEFAULT_CONTEXT_POLICY, type ContextPolicy } from '@/lib/services/knowledge';
 
 // ── Token verification ────────────────────────────────────────────────────────
 
@@ -123,7 +123,7 @@ export async function verifyBearerToken(authHeader: string | null): Promise<Toke
     }
 
     console.log('[mcp/auth] oauth_token_ok', { prefix: prefix8, scope });
-    return { tokenId: row.id, tokenKind: 'oauth', workspaceId: row.workspaceId, scope, agentName: row.agentName ?? null, ownerUserId: row.userId ?? null };
+    return { tokenId: row.id, tokenKind: 'oauth', workspaceId: row.workspaceId, scope, agentName: row.agentName ?? null, ownerUserId: row.userId ?? null, contextPolicy: found.policy, ownerAnalytics: found.analytics };
   }
 
   // Personal access token (rmns_ prefix)
@@ -147,7 +147,7 @@ export async function verifyBearerToken(authHeader: string | null): Promise<Toke
 
   touchLastUsed(row.id);
 
-  return { tokenId: row.id, tokenKind: 'pat', workspaceId: row.workspaceId, scope, agentName: row.agentName ?? null, ownerUserId: row.createdBy ?? null };
+  return { tokenId: row.id, tokenKind: 'pat', workspaceId: row.workspaceId, scope, agentName: row.agentName ?? null, ownerUserId: row.createdBy ?? null, contextPolicy: found.policy, ownerAnalytics: found.analytics };
 }
 
 // ── Rate limiting (60 req/min per token, in-memory token bucket) ──────────────
@@ -231,6 +231,11 @@ export function renderInstructions(ctx: TokenContext, policy: Pick<ContextPolicy
  *
  * `expectedWorkspaceId`, when set, must match the token's workspace.
  */
+/** The policy read with the token, or the default when the workspace has none stored. */
+function contextPolicyOf(ctx: TokenContext): ContextPolicy {
+  return ctx.contextPolicy ?? DEFAULT_CONTEXT_POLICY;
+}
+
 export interface McpEndpoint {
   mcpPath: string;
   expectedWorkspaceId?: string;
@@ -317,16 +322,6 @@ function carriesInitialize(body: unknown): boolean {
 
 async function runMcpRequest(req: Request, endpoint: McpEndpoint): Promise<Response> {
   const body = await readJsonBody(req);
-  // The context policy only feeds the instructions, and only an `initialize` reply carries
-  // them — so every other request (tool calls included) skips that query. On a
-  // workspace-pinned URL the workspace is known before auth, so the lookup runs alongside
-  // it instead of after; only when a credential was presented, so an anonymous probe costs
-  // no query. It is read only if auth then succeeds for that same workspace.
-  const initializing = carriesInitialize(body);
-  const earlyPolicy = initializing && endpoint.expectedWorkspaceId && req.headers.get('Authorization')
-    ? getContextPolicy(endpoint.expectedWorkspaceId)
-    : null;
-  earlyPolicy?.catch(() => {}); // awaited below when used; not an unhandled rejection when auth fails
 
   const authed = await authenticate(req, endpoint);
   if (authed instanceof Response) return authed;
@@ -334,8 +329,11 @@ async function runMcpRequest(req: Request, endpoint: McpEndpoint): Promise<Respo
 
   if (!checkRateLimit(ctx.tokenId)) return json({ error: 'Too many requests' }, 429);
 
-  const instructions = initializing
-    ? renderInstructions(ctx, await (earlyPolicy ?? getContextPolicy(ctx.workspaceId)))
+  // The context policy feeds the instructions (only an `initialize` reply carries them)
+  // and the Strict gate on writes. It is read with the token (`findPatForAuth` /
+  // `findOAuthTokenForAuth`, V2 R9), so neither costs a query of its own.
+  const instructions = carriesInitialize(body)
+    ? renderInstructions(ctx, contextPolicyOf(ctx))
     : undefined;
 
   // Build and register server capabilities

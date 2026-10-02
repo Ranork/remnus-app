@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState, useEffect, useSyncExternalStore } from 'react';
+import { memo, useMemo, useRef, useState, useEffect, useSyncExternalStore } from 'react';
 import { useRouter } from 'next/navigation';
 import { formatDateValue, normalizeOption, type SelectOption } from '@/lib/types/properties';
 import { useLocale, useTranslations } from 'next-intl';
@@ -11,7 +11,7 @@ import { StatusChip, UserChip, UserTags, OptionChip, MarkDot, PropertyTypeIcon }
 import { GripHorizontal, GripVertical, Trash2, Plus, Copy, EyeOff, ArrowUp, ArrowDown, Filter, X, RotateCcw, Check, ExternalLink, ArrowUpRight, Maximize2, Link2 } from 'lucide-react';
 import type { ViewFilter, ViewSort, FilterOperator } from '@/lib/types/views';
 import PageIcon from './PageIcon';
-import IconPicker from './IconPicker';
+import { IconPicker } from './lazyDialogs';
 import AgentEditBadge from './AgentEditBadge';
 import RecurringBadge from './recurrence/RecurringBadge';
 import { updatePageIcon } from '@/lib/actions/page';
@@ -23,6 +23,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Tooltip } from '@/components/ui/tooltip';
 import { MENU_SURFACE, MENU_ICON, MENU_LABEL, MENU_SEPARATOR, menuItem } from './editor/menuStyles';
 import { FilterValueField, useFilterOperators } from './database-sidebar/FiltersSection';
+import { PENDING_ROW_HEIGHT, useProgressiveLimit } from '@/lib/useProgressiveLimit';
+import { useStableActions } from '@/lib/useStableActions';
 
 // ── Coarse-pointer (touch) detection via useSyncExternalStore ───────────────────
 const COARSE_POINTER_QUERY = '(hover: none)';
@@ -120,8 +122,10 @@ export default function TableLayout({
   const locale = useLocale();
   const zoom = useZoom();
   const router = useRouter();
-  const schema: any[] = database.schema ?? [];
-  const visibleCols = getVisibleColumns(schema, columnOrder, hiddenColumns);
+  const schema: any[] = useMemo(() => database.schema ?? [], [database.schema]);
+  // Stable between hover/drag re-renders so memoized rows can skip them.
+  const visibleCols = useMemo(() => getVisibleColumns(schema, columnOrder, hiddenColumns), [schema, columnOrder, hiddenColumns]);
+  const renderLimit = useProgressiveLimit(pages.length);
 
   const [localWidths, setLocalWidths] = useState<Record<string, number>>(() => columnWidths ?? {});
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
@@ -217,7 +221,6 @@ export default function TableLayout({
 
   const [editingCell, setEditingCell] = useState<{ pageId: string; colId: string } | null>(null);
   const [activeIconPickerPageId, setActiveIconPickerPageId] = useState<string | null>(null);
-  const itemRefs = useRef<Record<string, HTMLButtonElement | null>>({});
 
   // On touch / no-hover devices a cell tap should open the row (peek modal)
   // instead of starting inline editing — editing happens inside the page there.
@@ -459,9 +462,31 @@ export default function TableLayout({
   const showActionBar = hoveredPageId !== null && actionPos !== null;
 
   // Only a select or status can mark a row (a dot needs an option colour).
-  const markColumn = rowColorCol
-    ? schema.find((c) => c.id === rowColorCol && ['select', 'multi_select', 'status'].includes(c.type))
-    : undefined;
+  const markColumn = useMemo(
+    () => (rowColorCol ? schema.find((c) => c.id === rowColorCol && ['select', 'multi_select', 'status'].includes(c.type)) : undefined),
+    [schema, rowColorCol],
+  );
+
+  const rowActions = useStableActions({
+    open: (pageId: string) => onRowClick(pageId),
+    contextMenu: (e: React.MouseEvent, pageId: string) => rowMenu.open(e, buildRowMenu(pageId)),
+    mouseEnter: handleRowMouseEnter,
+    mouseLeave: handleRowMouseLeave,
+    dragOver: handleRowDragOver,
+    dragLeave: handleRowDragLeave,
+    drop: handleRowDrop,
+    registerRow: (pageId: string, el: HTMLTableRowElement | null) => {
+      if (el) rowRefs.current.set(pageId, el);
+      else rowRefs.current.delete(pageId);
+    },
+    saveCell: handleCellSave,
+    editCell: (pageId: string, colId: string) => setEditingCell({ pageId, colId }),
+    closeEditor: () => setEditingCell(null),
+    createOption: handleCreateOption,
+    toggleIconPicker: (pageId: string) => setActiveIconPickerPageId((open) => (open === pageId ? null : pageId)),
+    closeIconPicker: () => setActiveIconPickerPageId(null),
+    selectIcon: handleTableIconSelect,
+  });
 
   // The hand-placed column menus close on Escape like every other menu.
   useEffect(() => {
@@ -574,186 +599,33 @@ export default function TableLayout({
                 </td>
               </tr>
             ) : (
-              pages.map((page) => {
-                const isRowEditing = editingCell?.pageId === page.id;
-                return (
-                <tr
-                  key={page.id}
-                  data-row-id={page.id}
-                  ref={(el) => {
-                    if (el) rowRefs.current.set(page.id, el);
-                    else rowRefs.current.delete(page.id);
-                  }}
-                  onClick={() => onRowClick(page.id)}
-                  onContextMenu={(e) => rowMenu.open(e, buildRowMenu(page.id))}
-                  onMouseEnter={(e) => handleRowMouseEnter(e, page.id)}
-                  onMouseLeave={handleRowMouseLeave}
-                  onDragOver={(e) => handleRowDragOver(e, page.id)}
-                  onDragLeave={() => handleRowDragLeave(page.id)}
-                  onDrop={(e) => handleRowDrop(e, page.id)}
-                  // A plain row: no status tint. The row's mark (if the view sets one)
-                  // is a dot or status ring before the title.
-                  className={[
-                    'hover:bg-hover/50 cursor-pointer transition-colors group',
-                    isRowEditing ? 'relative z-20' : '',
-                    draggedRowId === page.id ? 'opacity-25' : '',
-                    dragOverRowId === page.id && dropPosition === 'before'
-                      ? 'border-t-2 border-t-signal border-b border-line'
-                      : dragOverRowId === page.id && dropPosition === 'after'
-                      ? 'border-b-2 border-b-signal'
-                      : 'border-b border-line',
-                  ].join(' ')}
-                >
-                  {visibleCols.map((col, idx) => {
-                    const val = page.properties[col.id];
-                    const isLast = idx === visibleCols.length - 1;
-                    const isEditing = editingCell?.pageId === page.id && editingCell?.colId === col.id;
-                    const isChecked = val === true || val === 'true';
-                    const handleCellClick = (e: React.MouseEvent) => {
-                      // Touch: let the click bubble to the row → opens the peek modal.
-                      // `id` columns show the row's real (immutable) primary key — never editable.
-                      if (col.id === 'title' || col.type === 'id' || isCoarsePointer) return;
-                      e.stopPropagation();
-                      // A checkbox needs no editor: the cell is the toggle.
-                      if (col.type === 'checkbox') {
-                        handleCellSave(page.id, col.id, !isChecked);
-                        return;
-                      }
-                      setEditingCell({ pageId: page.id, colId: col.id });
-                    };
-                    return (
-                      <td
-                        key={col.id}
-                        onClick={handleCellClick}
-                        className={`py-1.5 px-2.5 whitespace-nowrap overflow-hidden relative text-ellipsis
-                          ${isEditing ? 'z-30 overflow-visible' : ''}
-                          ${!isLast ? 'border-r border-line/60' : ''}
-                        `}
-                      >
-                        {isEditing ? (
-                          <InlineCellEditor
-                            column={col}
-                            value={val}
-                            onSave={(newVal) => handleCellSave(page.id, col.id, newVal)}
-                            onClose={() => setEditingCell(null)}
-                            onCreateOption={
-                              col.type === 'select' || col.type === 'multi_select'
-                                ? (v) => handleCreateOption(col.id, v)
-                                : undefined
-                            }
-                          />
-                        ) : col.id === 'title' ? (
-                          <div className="flex items-center gap-2 overflow-hidden">
-                            {markColumn && <MarkDot column={markColumn} value={page.properties[markColumn.id]} />}
-                            <div className="relative shrink-0 select-none">
-                              <button
-                                type="button"
-                                ref={(el) => { itemRefs.current[page.id] = el; }}
-                                onClick={(e) => {
-                                  e.preventDefault();
-                                  e.stopPropagation();
-                                  setActiveIconPickerPageId(activeIconPickerPageId === page.id ? null : page.id);
-                                }}
-                                className="hover:bg-hover p-0.5 rounded transition-colors flex items-center justify-center cursor-pointer"
-                                title={t('changeIcon')}
-                                aria-label={t('changeIcon')}
-                              >
-                                <PageIcon
-                                  icon={page.icon || defaultPageIcon}
-                                  iconColor={page.iconColor || defaultPageIconColor}
-                                  size={16}
-                                  fallbackType="page"
-                                  className="shrink-0"
-                                />
-                              </button>
-                              {activeIconPickerPageId === page.id && (
-                                <IconPicker
-                                  currentIcon={page.icon}
-                                  currentIconColor={page.iconColor}
-                                  onSelect={(newIcon, newColor) => handleTableIconSelect(page.id, newIcon, newColor)}
-                                  onClose={() => setActiveIconPickerPageId(null)}
-                                  anchorRef={{ current: itemRefs.current[page.id] }}
-                                />
-                              )}
-                            </div>
-                            <span
-                              onClick={(e) => {
-                                // Touch: don't rename — let it bubble to the row → peek modal.
-                                if (isCoarsePointer) return;
-                                e.stopPropagation();
-                                setEditingCell({ pageId: page.id, colId: col.id });
-                              }}
-                              className="font-medium text-fg cursor-text hover:underline decoration-line-strong underline-offset-2 truncate"
-                            >
-                              {val || tPage('untitled')}
-                            </span>
-                            <RecurringBadge seriesId={page.seriesId} detached={page.seriesDetached} />
-                            {page.agentEditedAt && (
-                              <AgentEditBadge
-                                agentName={page.agentName ?? null}
-                                tokenName={page.agentTokenName ?? null}
-                                editedAt={page.agentEditedAt}
-                                className="shrink-0"
-                              />
-                            )}
-                          </div>
-                        ) : col.type === 'id' ? (
-                          <span className="text-2xs font-mono text-fg-3 truncate select-text" title={page.id}>{page.id}</span>
-                        ) : col.type === 'select' ? (
-                          val ? <OptionChip value={val} options={col.options} /> : null
-                        ) : col.type === 'multi_select' ? (
-                          Array.isArray(val) && val.length > 0 ? (
-                            <span className="flex flex-wrap gap-1">
-                              {val.map((optVal: string) => <OptionChip key={optVal} value={optVal} options={col.options} />)}
-                            </span>
-                          ) : null
-                        ) : col.type === 'status' ? (
-                          val ? <StatusChip value={val} options={col.options} /> : null
-                        ) : col.type === 'user' ? (
-                          val ? <UserChip userId={String(val)} /> : null
-                        ) : col.type === 'multi_user' ? (
-                          Array.isArray(val) && val.length > 0 ? <UserTags value={val} /> : null
-                        ) : (col.type === 'date' || col.type === 'datetime') ? (
-                          val ? <span className="text-fg-2">{formatDateValue(val, col.type, col.dateFormat, locale)}</span> : null
-                        ) : col.type === 'checkbox' ? (
-                          // The cell's own click toggles it; the box only shows the state
-                          // (so a touch tap still opens the row, like every other cell).
-                          <Checkbox checked={isChecked} aria-label={col.name} tabIndex={-1} className="pointer-events-none align-middle" />
-                        ) : col.type === 'url' ? (
-                          (() => {
-                            const safeHref = typeof val === 'string' && /^https?:\/\//i.test(val) ? val : null;
-                            return safeHref ? (
-                              <a
-                                href={safeHref}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                                onClick={(e) => e.stopPropagation()}
-                                className="text-link hover:underline underline-offset-2 flex items-center gap-1 truncate"
-                              >
-                                <span className="truncate">{val}</span>
-                                <ExternalLink size={12} className="shrink-0" />
-                              </a>
-                            ) : val ? <span className="text-fg-2 truncate">{val}</span> : null;
-                          })()
-                        ) : col.type === 'email' ? (
-                          val ? (
-                            <a
-                              href={`mailto:${val}`}
-                              onClick={(e) => e.stopPropagation()}
-                              className="text-link hover:underline underline-offset-2 truncate"
-                            >
-                              {val}
-                            </a>
-                          ) : null
-                        ) : (
-                          <span className="text-fg-2">{val || ''}</span>
-                        )}
-                      </td>
-                    );
-                  })}
-                </tr>
-                );
-              })
+              <>
+                {pages.slice(0, renderLimit).map((page) => (
+                  <TableRow
+                    key={page.id}
+                    page={page}
+                    cols={visibleCols}
+                    markColumn={markColumn}
+                    editingColId={editingCell?.pageId === page.id ? editingCell!.colId : null}
+                    dragged={draggedRowId === page.id}
+                    dropEdge={dragOverRowId === page.id ? dropPosition : null}
+                    iconPickerOpen={activeIconPickerPageId === page.id}
+                    isCoarsePointer={isCoarsePointer}
+                    locale={locale}
+                    defaultPageIcon={defaultPageIcon}
+                    defaultPageIconColor={defaultPageIconColor}
+                    t={t}
+                    tPage={tPage}
+                    actions={rowActions}
+                  />
+                ))}
+                {renderLimit < pages.length && (
+                  // Rows still being added (useProgressiveLimit): hold their space.
+                  <tr aria-hidden>
+                    <td colSpan={visibleCols.length} style={{ height: (pages.length - renderLimit) * PENDING_ROW_HEIGHT }} />
+                  </tr>
+                )}
+              </>
             )}
             {/* Only when the caller can actually create a row. The dashboard
                 embed passes no handler, and a "New" row that quietly did
@@ -961,3 +833,273 @@ export default function TableLayout({
     </>
   );
 }
+
+// ── One table row (V2 R9.2) ───────────────────────────────────────────────────
+// Memoized: hovering a row (the floating grip), dragging over one or editing a cell
+// re-renders the table, and with hundreds of rows re-rendering every row made each
+// hover a long task. A row re-renders only when its own props or content change.
+
+type RowActions = {
+  open: (pageId: string) => void;
+  contextMenu: (e: React.MouseEvent, pageId: string) => void;
+  mouseEnter: (e: React.MouseEvent, pageId: string) => void;
+  mouseLeave: () => void;
+  dragOver: (e: React.DragEvent, pageId: string) => void;
+  dragLeave: (pageId: string) => void;
+  drop: (e: React.DragEvent, pageId: string) => void;
+  registerRow: (pageId: string, el: HTMLTableRowElement | null) => void;
+  saveCell: (pageId: string, colId: string, value: any) => void;
+  editCell: (pageId: string, colId: string) => void;
+  closeEditor: () => void;
+  createOption: (colId: string, value: string) => void;
+  toggleIconPicker: (pageId: string) => void;
+  closeIconPicker: () => void;
+  selectIcon: (pageId: string, icon: string | null, iconColor: string | null) => void;
+};
+
+type TableRowProps = {
+  page: any;
+  cols: any[];
+  markColumn: any;
+  editingColId: string | null;
+  dragged: boolean;
+  dropEdge: 'before' | 'after' | null;
+  iconPickerOpen: boolean;
+  isCoarsePointer: boolean;
+  locale: string;
+  defaultPageIcon?: string;
+  defaultPageIconColor?: string;
+  t: ReturnType<typeof useTranslations<'Database'>>;
+  tPage: ReturnType<typeof useTranslations<'Page'>>;
+  actions: RowActions;
+};
+
+const ROW_FIELDS = ['id', 'icon', 'iconColor', 'seriesId', 'seriesDetached', 'agentName', 'agentTokenName'] as const;
+
+function sameValue(a: unknown, b: unknown): boolean {
+  if (a === b) return true;
+  if (Array.isArray(a) && Array.isArray(b)) return a.length === b.length && a.every((v, i) => v === b[i]);
+  if (a instanceof Date && b instanceof Date) return a.getTime() === b.getTime();
+  return false;
+}
+
+/** Same row content — a refresh hands every row over as a new object even when nothing changed. */
+function samePage(a: any, b: any): boolean {
+  if (a === b) return true;
+  if (ROW_FIELDS.some((f) => a[f] !== b[f]) || !sameValue(a.agentEditedAt, b.agentEditedAt)) return false;
+  const pa = a.properties ?? {};
+  const pb = b.properties ?? {};
+  const keys = Object.keys(pa);
+  return keys.length === Object.keys(pb).length && keys.every((k) => sameValue(pa[k], pb[k]));
+}
+
+function sameRowProps(a: TableRowProps, b: TableRowProps): boolean {
+  return (
+    a.cols === b.cols &&
+    a.markColumn === b.markColumn &&
+    a.editingColId === b.editingColId &&
+    a.dragged === b.dragged &&
+    a.dropEdge === b.dropEdge &&
+    a.iconPickerOpen === b.iconPickerOpen &&
+    a.isCoarsePointer === b.isCoarsePointer &&
+    a.locale === b.locale &&
+    a.defaultPageIcon === b.defaultPageIcon &&
+    a.defaultPageIconColor === b.defaultPageIconColor &&
+    a.t === b.t &&
+    a.tPage === b.tPage &&
+    a.actions === b.actions &&
+    samePage(a.page, b.page)
+  );
+}
+
+const TableRow = memo(function TableRow({
+  page,
+  cols,
+  markColumn,
+  editingColId,
+  dragged,
+  dropEdge,
+  iconPickerOpen,
+  isCoarsePointer,
+  locale,
+  defaultPageIcon,
+  defaultPageIconColor,
+  t,
+  tPage,
+  actions,
+}: TableRowProps) {
+  const iconButtonRef = useRef<HTMLButtonElement | null>(null);
+  return (
+    <tr
+      data-row-id={page.id}
+      ref={(el) => actions.registerRow(page.id, el)}
+      onClick={() => actions.open(page.id)}
+      onContextMenu={(e) => actions.contextMenu(e, page.id)}
+      onMouseEnter={(e) => actions.mouseEnter(e, page.id)}
+      onMouseLeave={actions.mouseLeave}
+      onDragOver={(e) => actions.dragOver(e, page.id)}
+      onDragLeave={() => actions.dragLeave(page.id)}
+      onDrop={(e) => actions.drop(e, page.id)}
+      // A plain row: no status tint. The row's mark (if the view sets one)
+      // is a dot or status ring before the title.
+      className={[
+        'hover:bg-hover/50 cursor-pointer transition-colors group',
+        editingColId !== null ? 'relative z-20' : '',
+        dragged ? 'opacity-25' : '',
+        dropEdge === 'before'
+          ? 'border-t-2 border-t-signal border-b border-line'
+          : dropEdge === 'after'
+          ? 'border-b-2 border-b-signal'
+          : 'border-b border-line',
+      ].join(' ')}
+    >
+      {cols.map((col, idx) => {
+        const val = page.properties[col.id];
+        const isLast = idx === cols.length - 1;
+        const isEditing = editingColId === col.id;
+        const isChecked = val === true || val === 'true';
+        const handleCellClick = (e: React.MouseEvent) => {
+          // Touch: let the click bubble to the row → opens the peek modal.
+          // `id` columns show the row's real (immutable) primary key — never editable.
+          if (col.id === 'title' || col.type === 'id' || isCoarsePointer) return;
+          e.stopPropagation();
+          // A checkbox needs no editor: the cell is the toggle.
+          if (col.type === 'checkbox') {
+            actions.saveCell(page.id, col.id, !isChecked);
+            return;
+          }
+          actions.editCell(page.id, col.id);
+        };
+        return (
+          <td
+            key={col.id}
+            onClick={handleCellClick}
+            className={`py-1.5 px-2.5 whitespace-nowrap overflow-hidden relative text-ellipsis
+              ${isEditing ? 'z-30 overflow-visible' : ''}
+              ${!isLast ? 'border-r border-line/60' : ''}
+            `}
+          >
+            {isEditing ? (
+              <InlineCellEditor
+                column={col}
+                value={val}
+                onSave={(newVal) => actions.saveCell(page.id, col.id, newVal)}
+                onClose={actions.closeEditor}
+                onCreateOption={
+                  col.type === 'select' || col.type === 'multi_select'
+                    ? (v) => actions.createOption(col.id, v)
+                    : undefined
+                }
+              />
+            ) : col.id === 'title' ? (
+              <div className="flex items-center gap-2 overflow-hidden">
+                {markColumn && <MarkDot column={markColumn} value={page.properties[markColumn.id]} />}
+                <div className="relative shrink-0 select-none">
+                  <button
+                    type="button"
+                    ref={iconButtonRef}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      actions.toggleIconPicker(page.id);
+                    }}
+                    className="hover:bg-hover p-0.5 rounded transition-colors flex items-center justify-center cursor-pointer"
+                    title={t('changeIcon')}
+                    aria-label={t('changeIcon')}
+                  >
+                    <PageIcon
+                      icon={page.icon || defaultPageIcon}
+                      iconColor={page.iconColor || defaultPageIconColor}
+                      size={16}
+                      fallbackType="page"
+                      className="shrink-0"
+                    />
+                  </button>
+                  {iconPickerOpen && (
+                    <IconPicker
+                      currentIcon={page.icon}
+                      currentIconColor={page.iconColor}
+                      onSelect={(newIcon, newColor) => actions.selectIcon(page.id, newIcon, newColor)}
+                      onClose={actions.closeIconPicker}
+                      anchorRef={iconButtonRef}
+                    />
+                  )}
+                </div>
+                <span
+                  onClick={(e) => {
+                    // Touch: don't rename — let it bubble to the row → peek modal.
+                    if (isCoarsePointer) return;
+                    e.stopPropagation();
+                    actions.editCell(page.id, col.id);
+                  }}
+                  className="font-medium text-fg cursor-text hover:underline decoration-line-strong underline-offset-2 truncate"
+                >
+                  {val || tPage('untitled')}
+                </span>
+                <RecurringBadge seriesId={page.seriesId} detached={page.seriesDetached} />
+                {page.agentEditedAt && (
+                  <AgentEditBadge
+                    agentName={page.agentName ?? null}
+                    tokenName={page.agentTokenName ?? null}
+                    editedAt={page.agentEditedAt}
+                    className="shrink-0"
+                  />
+                )}
+              </div>
+            ) : col.type === 'id' ? (
+              <span className="text-2xs font-mono text-fg-3 truncate select-text" title={page.id}>{page.id}</span>
+            ) : col.type === 'select' ? (
+              val ? <OptionChip value={val} options={col.options} /> : null
+            ) : col.type === 'multi_select' ? (
+              Array.isArray(val) && val.length > 0 ? (
+                <span className="flex flex-wrap gap-1">
+                  {val.map((optVal: string) => <OptionChip key={optVal} value={optVal} options={col.options} />)}
+                </span>
+              ) : null
+            ) : col.type === 'status' ? (
+              val ? <StatusChip value={val} options={col.options} /> : null
+            ) : col.type === 'user' ? (
+              val ? <UserChip userId={String(val)} /> : null
+            ) : col.type === 'multi_user' ? (
+              Array.isArray(val) && val.length > 0 ? <UserTags value={val} /> : null
+            ) : (col.type === 'date' || col.type === 'datetime') ? (
+              val ? <span className="text-fg-2">{formatDateValue(val, col.type, col.dateFormat, locale)}</span> : null
+            ) : col.type === 'checkbox' ? (
+              // The cell's own click toggles it; the box only shows the state
+              // (so a touch tap still opens the row, like every other cell).
+              <Checkbox checked={isChecked} aria-label={col.name} tabIndex={-1} className="pointer-events-none align-middle" />
+            ) : col.type === 'url' ? (
+              (() => {
+                const safeHref = typeof val === 'string' && /^https?:\/\//i.test(val) ? val : null;
+                return safeHref ? (
+                  <a
+                    href={safeHref}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(e) => e.stopPropagation()}
+                    className="text-link hover:underline underline-offset-2 flex items-center gap-1 truncate"
+                  >
+                    <span className="truncate">{val}</span>
+                    <ExternalLink size={12} className="shrink-0" />
+                  </a>
+                ) : val ? <span className="text-fg-2 truncate">{val}</span> : null;
+              })()
+            ) : col.type === 'email' ? (
+              val ? (
+                <a
+                  href={`mailto:${val}`}
+                  onClick={(e) => e.stopPropagation()}
+                  className="text-link hover:underline underline-offset-2 truncate"
+                >
+                  {val}
+                </a>
+              ) : null
+            ) : (
+              <span className="text-fg-2">{val || ''}</span>
+            )}
+          </td>
+        );
+      })}
+    </tr>
+  );
+}, sameRowProps);

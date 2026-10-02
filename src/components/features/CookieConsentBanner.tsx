@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import Link from 'next/link';
+import Link from '@/components/ui/link';
 import { useTranslations } from 'next-intl';
 import { useConsent } from '@/components/providers/ConsentContext';
 import { Button } from '@/components/ui/button';

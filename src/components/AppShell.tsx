@@ -19,7 +19,7 @@ import {
   writeSidebarVisible,
 } from '@/lib/sidebarVisibility';
 import { SidebarPeekContext } from '@/lib/sidebarPeekContext';
-import type { WorkspaceItemRow } from '@/lib/actions/workspace';
+import type { ShellItemRow } from '@/lib/actions/workspace';
 
 export default function AppShell({
   sidebar,
@@ -33,7 +33,7 @@ export default function AppShell({
   sidebar: ReactNode;
   mobileNav: ReactNode;
   demoBanner?: ReactNode;
-  items: WorkspaceItemRow[];
+  items: ShellItemRow[];
   activeWorkspaceId: string;
   isAdmin?: boolean;
   currentUserId?: string;

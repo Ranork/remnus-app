@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import Link from 'next/link';
+import Link from '@/components/ui/link';
 import { usePathname } from 'next/navigation';
 import { ChevronDown, List, X } from 'lucide-react';
 import type { WikiNavItem } from '@/lib/content';

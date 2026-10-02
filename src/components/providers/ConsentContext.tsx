@@ -8,6 +8,7 @@ import {
   type ConsentValue,
 } from '@/lib/consent';
 import { setAnalyticsConsent } from '@/lib/actions/consent';
+import { whenIdle } from '@/lib/whenIdle';
 
 interface ConsentContextValue {
   /** Whether this visitor's jurisdiction requires prior opt-in (EU/EEA/UK). */
@@ -19,6 +20,11 @@ interface ConsentContextValue {
 }
 
 const ConsentContext = createContext<ConsentContextValue | null>(null);
+
+/** This tab already stored this effective permission server-side (`<userId>:<1|0>`). */
+const CONSENT_SYNC_KEY = 'remnus_consent_synced';
+/** A page load's write waits until the page's own first reads are done (and for idle). */
+const CONSENT_SYNC_DELAY_MS = 5000;
 
 function writeConsentCookie(value: ConsentValue) {
   document.cookie = `${CONSENT_COOKIE}=${value}; path=/; max-age=${CONSENT_COOKIE_MAX_AGE}; samesite=lax`;
@@ -37,15 +43,20 @@ export function ConsentProvider({
   consentRequired,
   initialConsent,
   userRole,
+  userId,
 }: {
   children: React.ReactNode;
   consentRequired: boolean;
   initialConsent: ConsentValue | null;
   userRole?: string;
+  /** The signed-in user — the write marker is per user (a tab can change accounts). */
+  userId?: string;
 }) {
   const [consent, setConsent] = useState<ConsentValue | null>(initialConsent);
   // Avoid redundant server writes when the effective permission is unchanged.
   const persistedConsent = useRef<boolean | null>(null);
+  const pendingWrite = useRef<(() => void) | null>(null);
+  useEffect(() => () => pendingWrite.current?.(), []);
 
   useEffect(() => {
     const isAdmin = userRole === 'admin';
@@ -65,13 +76,32 @@ export function ConsentProvider({
     // Persist the effective permission for logged-in users so server-side funnel
     // events with no cookie context (MCP agent calls) can decide identified vs
     // anonymous capture. admin/demo are never captured, so skip the write.
+    //
+    // Not right away on a page load (V2 R9): server actions run one at a time, and this
+    // write sat in the queue ahead of the page's own reads (its comments, backlinks…).
+    // An unchanged value is written once per tab (sessionStorage), not on every reload;
+    // a choice the visitor just made is written at once.
     if (userRole && userRole !== 'admin' && userRole !== 'demo') {
       if (persistedConsent.current !== allowed) {
+        const firstInThisLoad = persistedConsent.current === null;
         persistedConsent.current = allowed;
-        setAnalyticsConsent(allowed).catch(() => {});
+        const marker = `${userId ?? ''}:${allowed ? 1 : 0}`;
+        let alreadyWritten = false;
+        try { alreadyWritten = firstInThisLoad && sessionStorage.getItem(CONSENT_SYNC_KEY) === marker; } catch { /* storage blocked */ }
+        if (!alreadyWritten) {
+          const write = () => {
+            setAnalyticsConsent(allowed)
+              .then(() => { try { sessionStorage.setItem(CONSENT_SYNC_KEY, marker); } catch { /* storage blocked */ } })
+              .catch(() => {});
+          };
+          pendingWrite.current?.();
+          pendingWrite.current = null;
+          if (firstInThisLoad) pendingWrite.current = whenIdle(write, CONSENT_SYNC_DELAY_MS);
+          else write();
+        }
       }
     }
-  }, [consent, consentRequired, userRole]);
+  }, [consent, consentRequired, userRole, userId]);
 
   const accept = useCallback(() => {
     writeConsentCookie('accepted');

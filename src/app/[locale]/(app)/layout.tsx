@@ -4,16 +4,18 @@ import { signOut } from '@/auth';
 import { getSessionAllowingWorkspaceLock } from '@/lib/auth/session';
 import { lockClaimsOf } from '@/lib/auth/workspaceLock';
 import { getTranslations } from 'next-intl/server';
-import { getAllWorkspaceItems, getWorkspaces } from '@/lib/actions/workspace';
+import { getAllWorkspaceItems, getWorkspaces, type ShellItemRow, type WorkspaceItemRow } from '@/lib/actions/workspace';
 import { loadAgentPresence } from '@/lib/services/agentPresence';
 import { EMPTY_PRESENCE } from '@/lib/agentPresence';
 import WorkspaceSidebar from '@/components/features/WorkspaceSidebar';
 import MobileNavWrapper from '@/components/features/MobileNavWrapper';
 import QueryProvider from '@/components/providers/QueryProvider';
 import AppShell from '@/components/AppShell';
+import ClientMessages from '@/i18n/ClientMessages';
 import ActivityTracker from '@/components/providers/ActivityTracker';
 import LastPathTracker from '@/components/providers/LastPathTracker';
 import { lastPathOwnerTag } from '@/lib/server/lastPath';
+import { CHANGELOG_SEEN_COOKIE, countUnseenEntries } from '@/lib/changelog';
 import BillingSuccessModal from '@/components/features/BillingSuccessModal';
 import UpdateBanner from '@/components/features/UpdateBanner';
 import DownloadToast from '@/components/features/DownloadToast';
@@ -22,6 +24,21 @@ import DemoFeedbackPrompt from '@/components/features/DemoFeedbackPrompt';
 import PwaInstallNudge from '@/components/features/PwaInstallNudge';
 import ProjectWindowBanner from '@/components/features/ProjectWindowBanner';
 import AccessibilityWidgetOff from '@/components/providers/AccessibilityWidgetOff';
+
+// The shell's copy of a sidebar row: everything but the timestamps (see `ShellItemRow`).
+function toShellItem(row: WorkspaceItemRow): ShellItemRow {
+  return {
+    id: row.id,
+    workspaceId: row.workspaceId,
+    type: row.type,
+    title: row.title,
+    parentId: row.parentId,
+    sortOrder: row.sortOrder,
+    icon: row.icon,
+    iconColor: row.iconColor,
+    databaseId: row.databaseId,
+  };
+}
 
 // Layout for the authenticated in-app routes (app / db / page / admin). Lives in the
 // (app) route group so it is NOT shared with public routes (share, marketing, auth) —
@@ -50,7 +67,7 @@ export default async function AppGroupLayout({
   const workspacesRead = getWorkspaces();
   const [workspacesList, items, cookieStore, presence] = await Promise.all([
     workspacesRead,
-    getAllWorkspaceItems(),
+    getAllWorkspaceItems().then((rows) => rows.map(toShellItem)),
     cookies(),
     // Agent presence (V2 R8.8) over the same workspaces the sidebar lists — a project
     // window's one, otherwise the memberships (never an admin's view of everything).
@@ -69,6 +86,12 @@ export default async function AppGroupLayout({
   const activeWorkspaceId = cookieStore.get('remnus_workspace_id')?.value;
   const activeWorkspace = workspacesList.find((w) => w.id === activeWorkspaceId) || workspacesList[0];
   const sidebarDensity = (cookieStore.get('remnus_sidebar_density')?.value ?? 'comfortable') as 'compact' | 'comfortable';
+  // The What's New badge, counted here so the client loads the changelog only when the
+  // list is opened (V2 R9). The cookie is written by the client when the list is read.
+  const seenCookie = cookieStore.get(CHANGELOG_SEEN_COOKIE)?.value;
+  let seenId: string | null = null;
+  try { seenId = seenCookie ? decodeURIComponent(seenCookie) : null; } catch { /* a malformed cookie counts as none */ }
+  const whatsNewUnseen = countUnseenEntries(seenId);
 
   const currentUser = {
     id: session.user.id,
@@ -109,7 +132,7 @@ export default async function AppGroupLayout({
   ) : undefined;
 
   return (
-    <>
+    <ClientMessages scope="app">
       <ActivityTracker isProjectWindow={isProjectWindow} renderedAt={renderedAt} />
       <LastPathTracker ownerTag={lastPathOwnerTag(session.user.id)} />
       <AccessibilityWidgetOff />
@@ -137,6 +160,7 @@ export default async function AppGroupLayout({
               isProjectWindow={isProjectWindow}
               renderedAt={renderedAt}
               presence={presence}
+              whatsNewUnseen={whatsNewUnseen}
             />
           }
           mobileNav={
@@ -148,6 +172,7 @@ export default async function AppGroupLayout({
               currentUser={currentUser}
               isProjectWindow={isProjectWindow}
               presence={presence}
+              whatsNewUnseen={whatsNewUnseen}
             />
           }
           demoBanner={demoBanner ?? projectWindowBanner}
@@ -155,6 +180,6 @@ export default async function AppGroupLayout({
           {children}
         </AppShell>
       </QueryProvider>
-    </>
+    </ClientMessages>
   );
 }

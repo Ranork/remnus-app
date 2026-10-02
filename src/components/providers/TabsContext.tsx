@@ -11,7 +11,7 @@ import {
 import { useRouter, usePathname } from "next/navigation";
 import { useQueryClient } from "@tanstack/react-query";
 import { useTranslations } from "next-intl";
-import type { WorkspaceItemRow } from "@/lib/actions/workspace";
+import type { ShellItemRow } from "@/lib/actions/workspace";
 import { invalidateTabHref } from "@/components/features/tabs/keys";
 
 export type TabMeta = {
@@ -243,7 +243,7 @@ export function TabsProvider({
   children,
   enabled = true,
 }: {
-  items: WorkspaceItemRow[];
+  items: ShellItemRow[];
   children: React.ReactNode;
   /**
    * When false (web build), the provider is inert: it renders a `null` context

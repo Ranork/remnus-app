@@ -1,7 +1,7 @@
 'use client';
 import { useState, useCallback, useRef } from 'react';
 import { Lock, PenLine, AlertCircle, Check, ChevronLeft, Loader2 } from 'lucide-react';
-import Link from 'next/link';
+import Link from '@/components/ui/link';
 import { useTranslations } from 'next-intl';
 import BlockEditor from '@/components/features/editor/BlockEditor';
 import SharedPageNav from '@/components/share/SharedPageNav';
@@ -56,7 +56,7 @@ export default function SharedPageView({
   saveErrorLabel,
   savingLabel,
 }: Props) {
-  const tLanding = useTranslations('Landing');
+  const tLanding = useTranslations('Landing'); // i18n-client: Landing.nav*
   const tPage = useTranslations('Page');
   const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);

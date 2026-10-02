@@ -31,7 +31,7 @@ const TIERS: TierDef[] = [
 
 export default function PlanPickerModal({ currentTier, isDemo = false, onClose }: { currentTier: PlanTier; isDemo?: boolean; onClose: () => void }) {
   const t = useTranslations('Billing');
-  const tl = useTranslations('Landing');
+  const tl = useTranslations('Landing'); // i18n-client: Landing.bridgePricing*
   const [busy, setBusy] = useState<PlanTier | null>(null);
   const [confirmFree, setConfirmFree] = useState(false);
   const [error, setError] = useState<string | null>(null);

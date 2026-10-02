@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import Link from '@/components/ui/link';
 import { EyeOff, GitFork, KeyRound, Lock, ScrollText, Split, Users, Briefcase, User } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
 import AIMark, { type AIMarkName } from '../AIMark';

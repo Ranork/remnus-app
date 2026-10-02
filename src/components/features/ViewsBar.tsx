@@ -14,7 +14,7 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Tabs, TabsList, TabsTab } from '@/components/ui/tabs';
 import { cn } from '@/lib/cn';
-import IconPicker from './IconPicker';
+import { IconPicker } from './lazyDialogs';
 import PageIcon from './PageIcon';
 
 interface ViewsBarProps {

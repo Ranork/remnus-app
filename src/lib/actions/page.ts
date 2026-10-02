@@ -104,6 +104,10 @@ export async function createPage(
   return id;
 }
 
+// The rows a database view draws. No `content`: the table, board and calendar show
+// properties only, and a row's body is read when it is opened (`getPage`). Shipping every
+// body made the view's payload — first load and every live refresh — grow with how much
+// agents wrote into the rows, not with what is on screen (V2 R9).
 export async function getPages(databaseId: string) {
   await assertDatabaseAccess(databaseId);
   return db
@@ -111,7 +115,6 @@ export async function getPages(databaseId: string) {
       id: pages.id,
       databaseId: pages.databaseId,
       title: pages.title,
-      content: pages.content,
       properties: pages.properties,
       sortOrder: pages.sortOrder,
       icon: pages.icon,

@@ -24,6 +24,8 @@ export type ContextActor = {
   tokenKind: 'pat' | 'oauth';
   workspaceId: string;
   ownerUserId: string | null;
+  /** The workspace policy as read with the token (null = none stored); absent = ask. */
+  contextPolicy?: Pick<ContextPolicy, 'mode' | 'autoMaxTokens' | 'trustPolicy'> | null;
 };
 
 export type KnowledgeItemType = 'page' | 'database' | 'database_row';
@@ -74,7 +76,7 @@ export interface ContextPolicy {
   trustPolicy: ContextTrustPolicy;
 }
 
-const DEFAULT_CONTEXT_POLICY: ContextPolicy = {
+export const DEFAULT_CONTEXT_POLICY: ContextPolicy = {
   mode: 'smart',
   autoMaxTokens: 2_000,
   trustPolicy: 'prefer-human-reviewed',
@@ -269,8 +271,13 @@ export async function recordGeneratedKnowledge(
   itemId: string,
   generatedBy: string,
   metadataInput?: KnowledgeMetadataInput,
+  /** What the caller just wrote, having already confirmed it is in this workspace
+   *  (`updatePageById` / `createPageInWorkspace` return it) — saves the lookup (V2 R9). */
+  knownType?: KnowledgeItemType | 'dashboard',
 ): Promise<void> {
-  const item = await resolveKnowledgeItem(workspaceId, itemId);
+  // Dashboards carry no knowledge metadata (see resolveKnowledgeItem).
+  if (knownType === 'dashboard') throw new Error('Not found');
+  const item = knownType ? { itemType: knownType } : await resolveKnowledgeItem(workspaceId, itemId);
   const now = new Date();
   await db.insert(knowledgeMetadata).values({
     workspaceId,
@@ -626,7 +633,10 @@ export async function validateContextRunForWrite(
   ctx: ContextActor,
   contextRunId: string | undefined,
 ): Promise<{ ok: true; mode: ContextMode } | { ok: false; mode: 'strict'; reason: string }> {
-  const policy = await getContextPolicy(ctx.workspaceId);
+  // An MCP request read the policy with its token, in the same query (V2 R9).
+  const policy = ctx.contextPolicy !== undefined
+    ? (ctx.contextPolicy ?? DEFAULT_CONTEXT_POLICY)
+    : await getContextPolicy(ctx.workspaceId);
   if (policy.mode !== 'strict') return { ok: true, mode: policy.mode };
   if (!contextRunId) return { ok: false, mode: 'strict', reason: 'Call prepare_context first and pass its contextRunId.' };
   const [run] = await db.select().from(contextRuns).where(and(eq(contextRuns.id, contextRunId), eq(contextRuns.workspaceId, ctx.workspaceId))).limit(1);

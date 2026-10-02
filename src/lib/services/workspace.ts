@@ -26,6 +26,7 @@ import {
 } from '@/db/schema';
 import { eq, ne, and, or, asc, desc, gte, lte, sql, inArray, isNull } from 'drizzle-orm';
 import type { SQLiteColumn } from 'drizzle-orm/sqlite-core';
+import type { BatchItem } from 'drizzle-orm/batch';
 import { syncPageLinks, syncPageLinksBulk, removeOutgoingPageLinks } from './pageLinks';
 import { snapshotBeforeDelete, maybeSnapshotContentUpdate, type SnapshotActor } from './snapshots';
 import { recordGeneratedKnowledgeBulk, type KnowledgeMetadataInput } from './knowledge';
@@ -495,101 +496,6 @@ async function searchWorkspaceScan(
   return [...items, ...rows].slice(0, limit);
 }
 
-export async function getPageById(workspaceId: string, itemId: string) {
-  await assertItemInWorkspace(itemId, workspaceId);
-
-  const [item] = await db
-    .select()
-    .from(workspaceItems)
-    .where(eq(workspaceItems.id, itemId))
-    .limit(1);
-
-  if (!item) throw new Error('Not found');
-
-  if (item.type === 'page') {
-    const [sp] = await db
-      .select()
-      .from(standalonePages)
-      .where(eq(standalonePages.itemId, itemId))
-      .limit(1);
-    return {
-      id: item.id,
-      type: 'page' as const,
-      title: item.title,
-      content: sp?.content ?? '',
-      icon: item.icon,
-      properties: undefined,
-    };
-  }
-
-  if (item.type === 'dashboard') {
-    // Reading a dashboard returns its spec as the body. Without this branch it
-    // fell through to the database case below and came back claiming to be a
-    // database with a null databaseId — a silent lie to every MCP reader.
-    const [dash] = await db
-      .select({ spec: dashboards.spec })
-      .from(dashboards)
-      .where(eq(dashboards.itemId, itemId))
-      .limit(1);
-    // Compact on purpose: this string is what an agent pays for, and
-    // indentation alone added about a third to it.
-    return {
-      id: item.id,
-      type: 'dashboard' as const,
-      title: item.title,
-      content: dash ? JSON.stringify(dash.spec) : '',
-      icon: item.icon,
-      properties: undefined,
-    };
-  }
-
-  // Database item — find the associated DB record via item
-  const [db_row] = await db
-    .select({ id: databases.id })
-    .from(databases)
-    .where(eq(databases.itemId, itemId))
-    .limit(1);
-
-  return {
-    id: item.id,
-    type: 'database' as const,
-    title: item.title,
-    content: '',
-    icon: item.icon,
-    properties: undefined,
-    databaseId: db_row?.id ?? null,
-  };
-}
-
-export async function getDatabasePageById(workspaceId: string, pageId: string) {
-  const [page] = await db
-    .select()
-    .from(pages)
-    .where(eq(pages.id, pageId))
-    .limit(1);
-
-  if (!page) throw new Error('Not found');
-
-  // Verify the database belongs to this workspace
-  await assertDatabaseInWorkspace(page.databaseId, workspaceId);
-
-  // Series membership travels with the row so an agent can tell it is editing
-  // one occurrence of many — and that changing the rhythm needs a scope —
-  // instead of treating it as a standalone task.
-  const recurrence = await getOccurrenceInfo(page).catch(() => undefined);
-
-  return {
-    id: page.id,
-    type: 'page' as const,
-    title: page.title,
-    content: page.content,
-    icon: page.icon,
-    properties: page.properties,
-    databaseId: page.databaseId,
-    ...(recurrence ? { recurrence } : {}),
-  };
-}
-
 export async function listWorkspaceItems(
   workspaceId: string,
   parentId?: string,
@@ -661,15 +567,17 @@ export async function queryDatabaseRows(
   cursor?: string,
   fields?: string[],
 ) {
-  const resolvedId = await assertDatabaseInWorkspace(databaseId, workspaceId);
-
+  // Scope check and schema in one read (V2 R9.5). The id may be databases.id or the
+  // database's workspace item id; databases.id wins, as in assertDatabaseInWorkspace.
   const [dbRecord] = await db
-    .select({ schema: databases.schema, name: databases.name })
+    .select({ id: databases.id, workspaceId: workspaceItems.workspaceId, schema: databases.schema, name: databases.name })
     .from(databases)
-    .where(eq(databases.id, resolvedId))
+    .innerJoin(workspaceItems, eq(databases.itemId, workspaceItems.id))
+    .where(or(eq(databases.id, databaseId), eq(workspaceItems.id, databaseId)))
+    .orderBy(sql`${databases.id} = ${databaseId} desc`)
     .limit(1);
-
-  if (!dbRecord) throw new Error('Database not found');
+  if (!dbRecord || dbRecord.workspaceId !== workspaceId) throw new Error('Database not found or access denied');
+  const resolvedId = dbRecord.id;
 
   // Optional field projection — trims each row's properties (and the returned
   // schema) to the requested columns. Entries match column ids OR names
@@ -730,7 +638,7 @@ export async function queryDatabaseRows(
     ...(cursorCondition ? [cursorCondition] : []),
   ];
 
-  const rows = await db
+  const rowsQuery = db
     .select({
       id: pages.id,
       title: pages.title,
@@ -748,25 +656,27 @@ export async function queryDatabaseRows(
     .where(and(...allConditions))
     .orderBy(asc(pages.sortOrder), asc(pages.id))
     .limit(limit + 1);
+  // Comment counts for exactly those rows, grouped, in the same round trip (V2 R9.5).
+  // A database with no commented rows pays for it with an empty result.
+  const rowIds = db
+    .select({ id: pages.id })
+    .from(pages)
+    .where(and(...allConditions))
+    .orderBy(asc(pages.sortOrder), asc(pages.id))
+    .limit(limit + 1);
+  const [rows, countRows] = await db.batch([
+    rowsQuery,
+    db
+      .select({ pageId: pageComments.pageId, n: sql<number>`count(*)` })
+      .from(pageComments)
+      .where(inArray(pageComments.pageId, rowIds))
+      .groupBy(pageComments.pageId),
+  ]);
+  const commentCounts = new Map(countRows.map((r) => [r.pageId, Number(r.n)]));
 
   const hasMore = rows.length > limit;
   const page = hasMore ? rows.slice(0, limit) : rows;
   const last = page[page.length - 1];
-
-  // One grouped query for the whole page of rows rather than N — costs
-  // ~nothing, and a database with no commented rows pays for it once with an
-  // empty result.
-  const commentCounts = page.length > 0
-    ? new Map(
-        (
-          await db
-            .select({ pageId: pageComments.pageId, n: sql<number>`count(*)` })
-            .from(pageComments)
-            .where(inArray(pageComments.pageId, page.map((r) => r.id)))
-            .groupBy(pageComments.pageId)
-        ).map((r) => [r.pageId, Number(r.n)]),
-      )
-    : new Map<string, number>();
 
   const shapeRows = (projected: boolean) => page.map(({ sortOrder: _so, content, seriesId, seriesDetached, ...r }) => {
     let properties = (r.properties ?? {}) as Record<string, unknown>;
@@ -1037,21 +947,44 @@ export async function getChangesSince(
   // Source 1: workspace items (pages + databases). Effective change time is
   // the max across the item row and its content/schema sub-row, since a
   // content-only or schema-only edit never touches workspace_items.updated_at.
-  const itemRows = await db
-    .select({
-      id: workspaceItems.id,
-      type: workspaceItems.type,
-      title: workspaceItems.title,
-      databaseId: databases.id,
-      createdAt: workspaceItems.createdAt,
-      itemUpdatedAt: workspaceItems.updatedAt,
-      pageUpdatedAt: standalonePages.updatedAt,
-      dbUpdatedAt: databases.updatedAt,
-    })
-    .from(workspaceItems)
-    .leftJoin(standalonePages, eq(standalonePages.itemId, workspaceItems.id))
-    .leftJoin(databases, eq(databases.itemId, workspaceItems.id))
-    .where(eq(workspaceItems.workspaceId, workspaceId));
+  // The three sources (items, database rows, tombstones) are independent: one round
+  // trip (V2 R9.5), not three.
+  const [itemRows, rowRows, tombstoneRows] = await db.batch([
+    db
+      .select({
+        id: workspaceItems.id,
+        type: workspaceItems.type,
+        title: workspaceItems.title,
+        databaseId: databases.id,
+        createdAt: workspaceItems.createdAt,
+        itemUpdatedAt: workspaceItems.updatedAt,
+        pageUpdatedAt: standalonePages.updatedAt,
+        dbUpdatedAt: databases.updatedAt,
+      })
+      .from(workspaceItems)
+      .leftJoin(standalonePages, eq(standalonePages.itemId, workspaceItems.id))
+      .leftJoin(databases, eq(databases.itemId, workspaceItems.id))
+      .where(eq(workspaceItems.workspaceId, workspaceId)),
+    // Database rows (each row is a page), scoped to this workspace via its databases.
+    db
+      .select({
+        id: pages.id,
+        title: pages.title,
+        databaseId: pages.databaseId,
+        createdAt: pages.createdAt,
+        updatedAt: pages.updatedAt,
+      })
+      .from(pages)
+      .innerJoin(databases, eq(pages.databaseId, databases.id))
+      .innerJoin(workspaceItems, eq(databases.itemId, workspaceItems.id))
+      .where(eq(workspaceItems.workspaceId, workspaceId)),
+    // Deletion tombstones. Always written with a real Date (we control every insert),
+    // so a SQL-level threshold is safe here.
+    db
+      .select({ id: deletedItems.itemId, type: deletedItems.itemType, title: deletedItems.title, deletedAt: deletedItems.deletedAt })
+      .from(deletedItems)
+      .where(and(eq(deletedItems.workspaceId, workspaceId), gte(deletedItems.deletedAt, new Date(thresholdTs)))),
+  ]);
 
   for (const r of itemRows) {
     const stamps = [r.itemUpdatedAt, r.pageUpdatedAt, r.dbUpdatedAt].filter(isValidDate);
@@ -1066,21 +999,7 @@ export async function getChangesSince(
     });
   }
 
-  // Source 2: database rows (each row is a page), scoped to this workspace via
-  // its databases — same in-memory guard as source 1.
-  const rowRows = await db
-    .select({
-      id: pages.id,
-      title: pages.title,
-      databaseId: pages.databaseId,
-      createdAt: pages.createdAt,
-      updatedAt: pages.updatedAt,
-    })
-    .from(pages)
-    .innerJoin(databases, eq(pages.databaseId, databases.id))
-    .innerJoin(workspaceItems, eq(databases.itemId, workspaceItems.id))
-    .where(eq(workspaceItems.workspaceId, workspaceId));
-
+  // Source 2: database rows — same in-memory guard as source 1.
   for (const r of rowRows) {
     candidates.push({
       id: r.id,
@@ -1106,13 +1025,7 @@ export async function getChangesSince(
       ...(c.databaseId ? { databaseId: c.databaseId } : {}),
     }));
 
-  // Source 3: deletion tombstones. Always written with a real Date (we control
-  // every insert), so a SQL-level threshold is safe here.
-  const tombstoneRows = await db
-    .select({ id: deletedItems.itemId, type: deletedItems.itemType, title: deletedItems.title, deletedAt: deletedItems.deletedAt })
-    .from(deletedItems)
-    .where(and(eq(deletedItems.workspaceId, workspaceId), gte(deletedItems.deletedAt, new Date(thresholdTs))));
-
+  // Source 3: deletion tombstones.
   for (const t of tombstoneRows) {
     const ts = t.deletedAt.getTime();
     if (ts === thresholdTs && t.id <= thresholdId) continue;
@@ -1140,20 +1053,79 @@ export async function getChangesSince(
 }
 
 export async function getAnyPageById(workspaceId: string, pageId: string) {
-  // Try as workspace item first
-  const [item] = await db
-    .select({ workspaceId: workspaceItems.workspaceId, type: workspaceItems.type })
-    .from(workspaceItems)
-    .where(eq(workspaceItems.id, pageId))
-    .limit(1);
+  // Every shape the id can name — a workspace item (page, dashboard, database) or a
+  // database row — in ONE round trip (V2 R9.5); it used to be up to five sequential
+  // reads. Reading before the access check is safe: nothing leaves this function
+  // until the owning workspace matches.
+  const [itemRows, contentRows, dashboardRows, databaseRows, rowRows] = await db.batch([
+    db.select().from(workspaceItems).where(eq(workspaceItems.id, pageId)).limit(1),
+    db.select({ content: standalonePages.content }).from(standalonePages).where(eq(standalonePages.itemId, pageId)).limit(1),
+    db.select({ spec: dashboards.spec }).from(dashboards).where(eq(dashboards.itemId, pageId)).limit(1),
+    db.select({ id: databases.id }).from(databases).where(eq(databases.itemId, pageId)).limit(1),
+    db
+      .select({ row: pages, workspaceId: workspaceItems.workspaceId })
+      .from(pages)
+      .innerJoin(databases, eq(databases.id, pages.databaseId))
+      .innerJoin(workspaceItems, eq(workspaceItems.id, databases.itemId))
+      .where(eq(pages.id, pageId))
+      .limit(1),
+  ]);
 
+  const item = itemRows[0];
   if (item) {
     if (item.workspaceId !== workspaceId) throw new Error('Access denied');
-    return getPageById(workspaceId, pageId);
+    if (item.type === 'page') {
+      return {
+        id: item.id,
+        type: 'page' as const,
+        title: item.title,
+        content: contentRows[0]?.content ?? '',
+        icon: item.icon,
+        properties: undefined,
+      };
+    }
+    if (item.type === 'dashboard') {
+      // Reading a dashboard returns its spec as the body (not a database with a null
+      // databaseId). Compact on purpose: this string is what an agent pays for.
+      const dash = dashboardRows[0];
+      return {
+        id: item.id,
+        type: 'dashboard' as const,
+        title: item.title,
+        content: dash ? JSON.stringify(dash.spec) : '',
+        icon: item.icon,
+        properties: undefined,
+      };
+    }
+    return {
+      id: item.id,
+      type: 'database' as const,
+      title: item.title,
+      content: '',
+      icon: item.icon,
+      properties: undefined,
+      databaseId: databaseRows[0]?.id ?? null,
+    };
   }
 
-  // Fall back to DB row (pages table)
-  return getDatabasePageById(workspaceId, pageId);
+  // A database row: its database must belong to this workspace.
+  const found = rowRows[0];
+  if (!found) throw new Error('Not found');
+  if (found.workspaceId !== workspaceId) throw new Error('Database not found or access denied');
+  const page = found.row;
+  // Series membership travels with the row so an agent can tell it is editing one
+  // occurrence of many — and that changing the rhythm needs a scope.
+  const recurrence = await getOccurrenceInfo(page).catch(() => undefined);
+  return {
+    id: page.id,
+    type: 'page' as const,
+    title: page.title,
+    content: page.content,
+    icon: page.icon,
+    properties: page.properties,
+    databaseId: page.databaseId,
+    ...(recurrence ? { recurrence } : {}),
+  };
 }
 
 // Batch counterpart to getAnyPageById, for a specific known list of IDs (e.g. from
@@ -2636,98 +2608,98 @@ export async function updatePageById(
    *  and isn't a meaningful edit worth versioning). */
   actor?: SnapshotActor,
 ) {
-  // Try as workspace item first
-  const [item] = await db
-    .select({ type: workspaceItems.type, workspaceId: workspaceItems.workspaceId, title: workspaceItems.title })
-    .from(workspaceItems)
-    .where(eq(workspaceItems.id, itemId))
-    .limit(1);
-
   const bodyEdit = !!(patch.tick?.length || patch.append?.trim());
   if (bodyEdit && patch.content !== undefined) {
     throw new BodyEditError('`content` replaces the whole body — send it alone, or use `tick` / `append` without it');
   }
+  // The current body is needed to tick/append, and as the version to keep before a new
+  // body replaces it. Read with the item, not after it.
+  const needsBody = bodyEdit || (patch.content !== undefined && !!actor);
+
+  // The id is a sidebar item or a database row. Both lookups go out together (V2 R9):
+  // asking for the row only after the item came back empty cost a round trip, and the
+  // row's workspace and schema come along in the same read (they were two more).
+  const [[item], [row]] = await Promise.all([
+    needsBody
+      ? db
+          .select({ type: workspaceItems.type, workspaceId: workspaceItems.workspaceId, title: workspaceItems.title, content: standalonePages.content })
+          .from(workspaceItems)
+          .leftJoin(standalonePages, eq(standalonePages.itemId, workspaceItems.id))
+          .where(eq(workspaceItems.id, itemId))
+          .limit(1)
+      : db
+          .select({ type: workspaceItems.type, workspaceId: workspaceItems.workspaceId, title: workspaceItems.title, content: sql<string | null>`null` })
+          .from(workspaceItems)
+          .where(eq(workspaceItems.id, itemId))
+          .limit(1),
+    db
+      .select({
+        databaseId: pages.databaseId,
+        properties: pages.properties,
+        title: pages.title,
+        content: pages.content,
+        databaseWorkspaceId: workspaceItems.workspaceId,
+        schema: databases.schema,
+      })
+      .from(pages)
+      .leftJoin(databases, eq(databases.id, pages.databaseId))
+      .leftJoin(workspaceItems, eq(workspaceItems.id, databases.itemId))
+      .where(eq(pages.id, itemId))
+      .limit(1),
+  ]);
 
   if (item) {
     if (item.workspaceId !== workspaceId) throw new Error('Access denied');
+    const priorContent = item.content ?? '';
     if (bodyEdit) {
       if (item.type !== 'page') throw new BodyEditError(`A ${item.type} has no body to tick or append to`);
-      const [current] = await db
-        .select({ content: standalonePages.content })
-        .from(standalonePages)
-        .where(eq(standalonePages.itemId, itemId))
-        .limit(1);
-      patch = { ...patch, content: applyBodyEdits(current?.content ?? '', patch).body };
+      patch = { ...patch, content: applyBodyEdits(priorContent, patch).body };
     }
 
-    if (patch.title !== undefined) {
-      await db
-        .update(workspaceItems)
-        .set({ title: patch.title, updatedAt: new Date() })
-        .where(eq(workspaceItems.id, itemId));
-      if (item.type === 'database') {
-        await db
-          .update(databases)
-          .set({ name: patch.title, updatedAt: new Date() })
-          .where(eq(databases.itemId, itemId));
-      }
+    // Every field of this write in one batch: one round trip, and all or nothing.
+    const now = new Date();
+    const itemFields = {
+      ...(patch.title !== undefined ? { title: patch.title } : {}),
+      // Pages and databases keep their icon on the sidebar item itself.
+      ...(patch.icon !== undefined ? { icon: patch.icon } : {}),
+      ...(patch.iconColor !== undefined ? { iconColor: patch.iconColor } : {}),
+    };
+    const writes: BatchItem<'sqlite'>[] = [];
+    if (Object.keys(itemFields).length > 0) {
+      writes.push(db.update(workspaceItems).set({ ...itemFields, updatedAt: now }).where(eq(workspaceItems.id, itemId)));
     }
-    // Pages and databases keep their icon on the sidebar item itself.
-    if (patch.icon !== undefined || patch.iconColor !== undefined) {
-      await db
-        .update(workspaceItems)
-        .set({
-          ...(patch.icon !== undefined ? { icon: patch.icon } : {}),
-          ...(patch.iconColor !== undefined ? { iconColor: patch.iconColor } : {}),
-          updatedAt: new Date(),
-        })
-        .where(eq(workspaceItems.id, itemId));
+    if (patch.title !== undefined && item.type === 'database') {
+      writes.push(db.update(databases).set({ name: patch.title, updatedAt: now }).where(eq(databases.itemId, itemId)));
     }
-    if (patch.content !== undefined && item.type === 'page') {
-      if (actor) {
-        const [current] = await db
-          .select({ content: standalonePages.content })
-          .from(standalonePages)
-          .where(eq(standalonePages.itemId, itemId))
-          .limit(1);
-        await maybeSnapshotContentUpdate({
-          workspaceId, originalId: itemId, itemType: 'page', title: item.title,
-          priorContent: current?.content ?? '', newContent: patch.content,
-          // Human callers here (the write-share editor, `sharing.ts`) still
-          // autosave continuously like the owner's own editor, so they get
-          // the same session+size gate. Agent callers (MCP) never debounce
-          // — every real content change is a discrete deliberate action.
-          changedBy: actor, debounced: actor.kind === 'human',
-        });
-      }
-      await db
-        .update(standalonePages)
-        .set({ content: patch.content, updatedAt: new Date() })
-        .where(eq(standalonePages.itemId, itemId));
-      await syncPageLinks(workspaceId, itemId, 'page', patch.content);
+    const writesBody = patch.content !== undefined && item.type === 'page';
+    if (writesBody) {
+      writes.push(db.update(standalonePages).set({ content: patch.content!, updatedAt: now }).where(eq(standalonePages.itemId, itemId)));
     }
+
+    await Promise.all([
+      // The version keeps the body as it was read above, so it need not be written
+      // before the new body: both go out at once.
+      writesBody && actor
+        ? maybeSnapshotContentUpdate({
+            workspaceId, originalId: itemId, itemType: 'page', title: item.title,
+            priorContent, newContent: patch.content!,
+            // Human callers here (the write-share editor, `sharing.ts`) still
+            // autosave continuously like the owner's own editor, so they get
+            // the same session+size gate. Agent callers (MCP) never debounce
+            // — every real content change is a discrete deliberate action.
+            changedBy: actor, debounced: actor.kind === 'human',
+          })
+        : null,
+      writes.length > 0 ? db.batch(writes as [BatchItem<'sqlite'>, ...BatchItem<'sqlite'>[]]) : null,
+    ]);
+    if (writesBody) await syncPageLinks(workspaceId, itemId, 'page', patch.content!);
     return { updated: true, itemType: item.type as 'page' | 'database' };
   }
 
-  // Try as DB row (pages table)
-  const [page] = await db
-    .select({ databaseId: pages.databaseId, properties: pages.properties, title: pages.title, content: pages.content })
-    .from(pages)
-    .where(eq(pages.id, itemId))
-    .limit(1);
-
-  if (!page) throw new Error('Page not found');
-  await assertDatabaseInWorkspace(page.databaseId, workspaceId);
-  if (bodyEdit) patch = { ...patch, content: applyBodyEdits(page.content ?? '', patch).body };
-
-  if (patch.content !== undefined && actor) {
-    await maybeSnapshotContentUpdate({
-      workspaceId, originalId: itemId, itemType: 'database_row', title: page.title,
-      priorContent: page.content ?? '', newContent: patch.content,
-      // Same human-vs-agent debounce split as the workspace-item branch above.
-      changedBy: actor, debounced: actor.kind === 'human',
-    });
-  }
+  // A database row (pages table) — in this workspace only through its database's item.
+  if (!row) throw new Error('Page not found');
+  if (row.databaseWorkspaceId !== workspaceId) throw new Error('Database not found or access denied');
+  if (bodyEdit) patch = { ...patch, content: applyBodyEdits(row.content ?? '', patch).body };
 
   const updateData: Record<string, any> = { updatedAt: new Date() };
   if (patch.title !== undefined) updateData.title = patch.title;
@@ -2740,10 +2712,10 @@ export async function updatePageById(
     // (as an MCP caller naturally would via `title:`) used to leave the visible
     // title unchanged. An explicit `properties.title` in the same patch still wins.
     const resolved = patch.properties !== undefined
-      ? await resolvePropertiesBySchema(page.databaseId, patch.properties)
+      ? resolvePropertiesWithSchema((row.schema ?? []) as any[], patch.properties)
       : {};
     updateData.properties = {
-      ...(page.properties ?? {}),
+      ...(row.properties ?? {}),
       ...(patch.title !== undefined ? { title: patch.title } : {}),
       ...resolved,
     };
@@ -2753,7 +2725,17 @@ export async function updatePageById(
     updateData.agentTokenId = agentCtx.tokenId;
   }
 
-  await db.update(pages).set(updateData).where(eq(pages.id, itemId));
+  await Promise.all([
+    // Same human-vs-agent debounce split as the workspace-item branch above.
+    patch.content !== undefined && actor
+      ? maybeSnapshotContentUpdate({
+          workspaceId, originalId: itemId, itemType: 'database_row', title: row.title,
+          priorContent: row.content ?? '', newContent: patch.content,
+          changedBy: actor, debounced: actor.kind === 'human',
+        })
+      : null,
+    db.update(pages).set(updateData).where(eq(pages.id, itemId)),
+  ]);
   if (patch.content !== undefined) await syncPageLinks(workspaceId, itemId, 'database_row', patch.content);
   return { updated: true, itemType: 'database_row' as const };
 }

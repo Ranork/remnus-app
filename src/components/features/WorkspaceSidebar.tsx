@@ -2,9 +2,8 @@
 import { useState, useTransition, useRef, useEffect, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { useRouter, usePathname } from 'next/navigation';
-import Link from 'next/link';
+import Link from '@/components/ui/link';
 import { useTranslations } from 'next-intl';
-import ShareModal from '@/components/share/ShareModal';
 import { reportClientError } from '@/lib/reportClientError';
 import { useTabNav } from '@/components/providers/TabsContext';
 import {
@@ -43,27 +42,35 @@ import {
   reparentWorkspaceItem,
 } from '@/lib/actions/workspace';
 import { logout } from '@/lib/actions/auth';
-import type { WorkspaceItemRow } from '@/lib/actions/workspace';
-import IconPicker from './IconPicker';
-import TemplatePickerModal from './TemplatePickerModal';
-import WorkspaceSettingsModal from './WorkspaceSettingsModal';
+import type { ShellItemRow } from '@/lib/actions/workspace';
 import { initDesktopZoom } from '@/lib/desktop/zoom';
-import AgentsModal from './AgentsModal';
 import AgentSavingsCard from './AgentSavingsCard';
 import { AgentPresenceRows, AgentTouchMark, useServerNow, useWorkingWorkspaces } from './AgentPresence';
 import { EMPTY_PRESENCE, type AgentPresence, type PresenceTouch } from '@/lib/agentPresence';
-import TrashModal from './TrashModal';
 import OnboardingGuide from './onboarding/OnboardingGuide';
 import AgentDetectGuide from './agent-detect/AgentDetectGuide';
 import AccountMenu from './AccountMenu';
 import WorkspaceQuickLinks from './WorkspaceQuickLinks';
 import { usePwaInstall } from './PwaInstallButton';
 import { useWhatsNew } from './WhatsNewButton';
-import BillingModal from './BillingModal';
-import UserSettingsModal from './UserSettingsModal';
+// Loaded on first open; their code is fetched once the page has settled (V2 R9).
+import {
+  AgentsModal,
+  BillingModal,
+  IconPicker,
+  ShareModal,
+  TemplatePickerModal,
+  TrashModal,
+  UserSettingsModal,
+  WorkspaceSettingsModal,
+  preloadDialogs,
+} from './lazyDialogs';
 import { getUserAgentTokenCount } from '@/lib/actions/agentToken';
 import { getUserTrashCount } from '@/lib/actions/trash';
 import { getMyTier } from '@/lib/actions/billing';
+import { getSidebarStatus } from '@/lib/actions/sidebarStatus';
+import type { AgentMetrics } from '@/lib/services/agentMetrics';
+import type { OnboardingProgress } from '@/lib/actions/onboarding';
 import type { PlanTier } from '@/lib/billing/plans';
 import { getSidebarOverlayContainer, writeSidebarVisible } from '@/lib/sidebarVisibility';
 import { useSidebarPeek } from '@/lib/sidebarPeekContext';
@@ -82,7 +89,7 @@ const TIER_BADGE: Record<PlanTier, 'neutral' | 'outline' | 'signal' | 'solid'> =
 };
 import { useWorkspaceEvents } from '@/hooks/useWorkspaceEvents';
 
-function isDescendant(items: WorkspaceItemRow[], targetId: string, ancestorId: string): boolean {
+function isDescendant(items: ShellItemRow[], targetId: string, ancestorId: string): boolean {
   const target = items.find(i => i.id === targetId);
   if (!target?.parentId) return false;
   if (target.parentId === ancestorId) return true;
@@ -120,8 +127,9 @@ export default function WorkspaceSidebar({
   isProjectWindow = false,
   renderedAt = 0,
   presence = EMPTY_PRESENCE,
+  whatsNewUnseen = 0,
 }: {
-  items: WorkspaceItemRow[];
+  items: ShellItemRow[];
   workspaces: WorkspaceType[];
   activeWorkspace: WorkspaceType;
   currentUser: CurrentUser;
@@ -144,6 +152,8 @@ export default function WorkspaceSidebar({
   /** Agent presence read with this render (`services/agentPresence.ts`): who worked here
    *  lately for the agents card, and which items an agent changed for the tree marks. */
   presence?: AgentPresence;
+  /** Unread What's New entries, counted by the layout from the seen cookie. */
+  whatsNewUnseen?: number;
 }) {
   const t = useTranslations('Workspace');
   const tLayout = useTranslations('Layout');
@@ -241,12 +251,16 @@ export default function WorkspaceSidebar({
   const [trashModalOpen, setTrashModalOpen] = useState(false);
   const [billingModalOpen, setBillingModalOpen] = useState(false);
   const [userSettingsOpen, setUserSettingsOpen] = useState(false);
-  const whatsNew = useWhatsNew();
+  const whatsNew = useWhatsNew(whatsNewUnseen);
   const pwa = usePwaInstall();
   // null = not yet loaded (avoids a false "no agents" warning flash on first render)
   const [agentTokenCount, setAgentTokenCount] = useState<number | null>(null);
   const [trashCount, setTrashCount] = useState<number | null>(null);
   const [planTier, setPlanTier] = useState<PlanTier | null>(null);
+  const [savingsMetrics, setSavingsMetrics] = useState<AgentMetrics | null>(null);
+  // undefined until the status arrives: the onboarding guide waits for it instead of
+  // asking on its own (null = ask on its own — demo, project window or a failed read).
+  const [onboarding, setOnboarding] = useState<OnboardingProgress | null | undefined>(undefined);
   const [settingsInitialTab, setSettingsInitialTab] = useState<'general' | 'members' | 'tokens' | 'sharing'>('general');
   const [shareModalItemId, setShareModalItemId] = useState<string | null>(null);
 
@@ -312,7 +326,7 @@ export default function WorkspaceSidebar({
 
   // Local state for optimistic UI during drag and drop
   const [localWorkspaces, setLocalWorkspaces] = useState<WorkspaceType[]>(workspaces);
-  const [localItems, setLocalItems] = useState<WorkspaceItemRow[]>(items);
+  const [localItems, setLocalItems] = useState<ShellItemRow[]>(items);
 
   // Keep a ref so the sync effect can read latest localItems without depending on it
   const localItemsRef = useRef(localItems);
@@ -364,14 +378,27 @@ export default function WorkspaceSidebar({
   // Subscribe to real-time events from other users / MCP agents
   useWorkspaceEvents(currentUser.id, isAnyModalOrPickerOpen, renderedAt);
 
-  // Load agent token count + current plan tier for the sidebar badges. Trash is the
-  // only one a project window asks for — the other two are account-level and their
-  // buttons aren't rendered there.
+  // The dialogs' code is fetched when the pointer first comes to the sidebar — where
+  // they are opened from — not with the page (lazyDialogs). A blanket preload a few
+  // seconds after load was measured competing with the user's first clicks.
+
+  // Everything shown next to the rows — trash, agents, plan, savings, onboarding — in
+  // ONE server action (V2 R9): Next runs actions one at a time, so five separate reads
+  // here queued in front of the page's own panels. In a project window only the trash
+  // count and the window's savings come back; the rest is account-level.
   useEffect(() => {
-    getUserTrashCount().then(setTrashCount).catch(() => {});
-    if (isProjectWindow) return;
-    getUserAgentTokenCount().then(setAgentTokenCount).catch(() => {});
-    getMyTier().then(setPlanTier).catch(() => {});
+    let cancelled = false;
+    getSidebarStatus()
+      .then((status) => {
+        if (cancelled) return;
+        setTrashCount(status.trashCount);
+        setAgentTokenCount(status.agentTokenCount);
+        setPlanTier(status.tier);
+        setSavingsMetrics(status.metrics);
+        setOnboarding(status.onboarding);
+      })
+      .catch(() => { if (!cancelled) setOnboarding(null); });
+    return () => { cancelled = true; };
   }, [isProjectWindow]);
 
   // Remnus logo → first root-level item of the active workspace
@@ -786,7 +813,7 @@ export default function WorkspaceSidebar({
   const itemsByWorkspace = localWorkspaces.reduce((acc, w) => {
     acc[w.id] = localItems.filter(item => item.workspaceId === w.id);
     return acc;
-  }, {} as Record<string, WorkspaceItemRow[]>);
+  }, {} as Record<string, ShellItemRow[]>);
 
   // Switch Workspace Handler
   const handleSwitchWorkspace = (id: string) => {
@@ -826,7 +853,7 @@ export default function WorkspaceSidebar({
 
 
 
-  const handleRenameItem = (item: WorkspaceItemRow) => {
+  const handleRenameItem = (item: ShellItemRow) => {
     const title = renamingTitle.trim();
     if (!title || title === item.title) {
       setRenamingItemId(null);
@@ -841,7 +868,7 @@ export default function WorkspaceSidebar({
     });
   };
 
-  const handleDuplicateItem = (item: WorkspaceItemRow) => {
+  const handleDuplicateItem = (item: ShellItemRow) => {
     setOpenMenuItemId(null);
     setLoadingItem({ id: item.id, action: 'duplicate' });
     startTransition(async () => {
@@ -852,17 +879,17 @@ export default function WorkspaceSidebar({
     });
   };
 
-  const handleDeleteItem = (item: WorkspaceItemRow) => {
+  const handleDeleteItem = (item: ShellItemRow) => {
     setOpenMenuItemId(null);
     setConfirmDeleteItemId(item.id);
   };
 
-  const confirmDelete = (item: WorkspaceItemRow) => {
+  const confirmDelete = (item: ShellItemRow) => {
     setConfirmDeleteItemId(null);
     setLoadingItem({ id: item.id, action: 'delete' });
 
     // Optimistic: remove item (and all descendants) from local state immediately
-    const collectDescendantIds = (id: string, allItems: WorkspaceItemRow[]): string[] => {
+    const collectDescendantIds = (id: string, allItems: ShellItemRow[]): string[] => {
       const children = allItems.filter(i => i.parentId === id);
       return [id, ...children.flatMap(c => collectDescendantIds(c.id, allItems))];
     };
@@ -903,7 +930,7 @@ export default function WorkspaceSidebar({
   // the bottom-sheet (openMenuItemId) since coarse pointers have no right-click.
   const itemMenu = useContextMenu(() => setOpenMenuItemId(null));
 
-  const buildItemMenu = (item: WorkspaceItemRow, workspaceId: string): MenuItem[] => [
+  const buildItemMenu = (item: ShellItemRow, workspaceId: string): MenuItem[] => [
     { id: 'open', label: t('open'), icon: ArrowUpRight, onSelect: () => router.push(hrefFor(item)) },
     { id: 'rename', label: t('rename'), icon: Edit3, onSelect: () => { setRenamingItemId(item.id); setRenamingTitle(item.title); } },
     { id: 'duplicate', label: t('duplicate'), icon: Copy, onSelect: () => handleDuplicateItem(item) },
@@ -930,7 +957,7 @@ export default function WorkspaceSidebar({
     { id: 'delete', label: t('delete'), icon: Trash, danger: true, onSelect: () => handleDeleteItem(item) },
   ];
 
-  const openMenuFor = (e: React.MouseEvent, item: WorkspaceItemRow, workspaceId: string) => {
+  const openMenuFor = (e: React.MouseEvent, item: ShellItemRow, workspaceId: string) => {
     e.preventDefault();
     e.stopPropagation();
     const isDesktop = typeof window !== 'undefined' && window.matchMedia('(min-width: 640px)').matches;
@@ -942,7 +969,7 @@ export default function WorkspaceSidebar({
     }
   };
 
-  const isActive = (item: WorkspaceItemRow) => {
+  const isActive = (item: ShellItemRow) => {
     if (item.type === 'database' && item.databaseId) {
       return pathname.startsWith(`/db/${item.databaseId}`);
     }
@@ -950,7 +977,7 @@ export default function WorkspaceSidebar({
     return pathname === `/page/${item.id}`;
   };
 
-  const hrefFor = (item: WorkspaceItemRow) => {
+  const hrefFor = (item: ShellItemRow) => {
     if (item.type === 'database' && item.databaseId) return `/db/${item.databaseId}`;
     if (item.type === 'dashboard') return `/dashboard/${item.id}`;
     return `/page/${item.id}`;
@@ -960,7 +987,7 @@ export default function WorkspaceSidebar({
   const sidebarOverlayContainer = getSidebarOverlayContainer();
 
   return (
-    <div className="flex flex-col flex-1 overflow-hidden h-full">
+    <div className="flex flex-col flex-1 overflow-hidden h-full" onPointerEnter={preloadDialogs} onFocusCapture={preloadDialogs}>
       {/* Brand Header — hidden in mobile sheet */}
       <div className={`pl-3 pr-2 h-12 flex items-center justify-between shrink-0 ${hideBrandHeader ? 'hidden' : ''}`} {...(isTauri ? { 'data-tauri-drag-region': '' } : {})}>
         <div className="flex items-center group/brand">
@@ -1193,7 +1220,7 @@ export default function WorkspaceSidebar({
                   {(() => {
                     const topLevelChildren = workspaceChildren.filter(item => !item.parentId);
 
-                    const renderItem = (item: WorkspaceItemRow, depth: number = 0) => {
+                    const renderItem = (item: ShellItemRow, depth: number = 0) => {
                       const isLoading = loadingItem?.id === item.id;
                       const isDeleting = isLoading && loadingItem?.action === 'delete';
                       const isItemDragged = draggedItemId === item.id;
@@ -1212,7 +1239,7 @@ export default function WorkspaceSidebar({
                       // Smart expanded logic:
                       // Explicit expand/collapse takes priority.
                       // If undefined, expand if active or if any descendant is active.
-                      const hasActiveDescendant = (node: WorkspaceItemRow): boolean => {
+                      const hasActiveDescendant = (node: ShellItemRow): boolean => {
                         const children = workspaceChildren.filter(c => c.parentId === node.id);
                         return children.some(c => isActive(c) || hasActiveDescendant(c));
                       };
@@ -1543,7 +1570,7 @@ export default function WorkspaceSidebar({
           }}
           onOptimisticCreate={(type, tempId, title, icon, iconColor) => {
             // Add temp item to sidebar instantly
-            const newItem: WorkspaceItemRow = {
+            const newItem: ShellItemRow = {
               id: tempId,
               workspaceId: templatePickerWorkspaceId,
               type,
@@ -1552,8 +1579,6 @@ export default function WorkspaceSidebar({
               sortOrder: 0,
               icon,
               iconColor,
-              createdAt: new Date(),
-              updatedAt: new Date(),
               databaseId: null,
             };
             setLocalItems(prev => [newItem, ...prev]);
@@ -1672,9 +1697,9 @@ export default function WorkspaceSidebar({
           so it never doubles up with the mobile drawer's sidebar instance. Not in a
           project window: it is account-level, and getOnboardingProgress calls
           getCurrentUser(), which throws for a locked session (a 500 per page load). */}
-      {showOnboarding && !isProjectWindow && (
+      {showOnboarding && !isProjectWindow && onboarding !== undefined && (
         <div className="shrink-0">
-          <OnboardingGuide userRole={currentUser.role} />
+          <OnboardingGuide userRole={currentUser.role} initialProgress={onboarding} />
           <AgentDetectGuide userRole={currentUser.role} />
         </div>
       )}
@@ -1693,7 +1718,7 @@ export default function WorkspaceSidebar({
       {isProjectWindow ? (
         <div className="shrink-0 mx-2 mb-1 rounded-surface bg-sheet/70 p-1 shadow-lift empty:hidden">
           <AgentPresenceRows presence={presence} />
-          <AgentSavingsCard variant="sidebar" workspaceId={activeWorkspace.id} />
+          <AgentSavingsCard variant="sidebar" workspaceId={activeWorkspace.id} metrics={savingsMetrics} />
         </div>
       ) : (
         <button
@@ -1709,7 +1734,7 @@ export default function WorkspaceSidebar({
           className="group/agents shrink-0 mx-2 mb-1 block cursor-pointer rounded-surface bg-sheet/70 p-1 text-left shadow-lift transition-colors hover:bg-sheet"
         >
           <AgentPresenceRows presence={presence} hiddenWorkspaceIds={hiddenWorkspaceIds} />
-          <AgentSavingsCard variant="sidebar" />
+          <AgentSavingsCard variant="sidebar" metrics={savingsMetrics} />
           <span className="flex h-8 min-w-0 items-center gap-2 rounded-control px-2 text-sm text-fg-2 transition-colors group-hover/agents:text-fg">
             <span className="relative shrink-0">
               <Bot size={16} className="text-fg-3" />

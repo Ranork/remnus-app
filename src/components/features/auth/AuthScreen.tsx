@@ -1,4 +1,4 @@
-import Link from 'next/link';
+import Link from '@/components/ui/link';
 import { Card } from '@/components/ui/card';
 import { RemnusMark } from '@/components/ui/remnus-mark';
 import { cn } from '@/lib/cn';

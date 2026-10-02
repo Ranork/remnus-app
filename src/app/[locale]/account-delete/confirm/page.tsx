@@ -6,7 +6,7 @@
 // here afterward), since confirming deletion requires the SAME live session
 // that requested it — the emailed link alone isn't sufficient.
 
-import Link from 'next/link';
+import Link from '@/components/ui/link';
 import { redirect } from 'next/navigation';
 import { getTranslations } from 'next-intl/server';
 import { AlertCircle, AlertTriangle, ShieldAlert } from 'lucide-react';

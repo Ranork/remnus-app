@@ -185,15 +185,23 @@ export async function resolveDashboard(workspaceId: string, rawSpec: unknown): P
 
   const goodBlocks = parsed.blocks.filter((b): b is { ok: true; block: DashboardBlock } => b.ok).map((b) => b.block);
 
-  // 1. Every database any block points at — scoped to THIS workspace, which is
-  //    what makes a cross-workspace source impossible rather than merely checked.
+  // Every read below depends only on the spec, so they run side by side (V2 R9): they
+  // used to run one after another, ~10 database round trips deep on a home dashboard.
   const wantedDbIds = Array.from(
     new Set(goodBlocks.map(sourceDatabaseId).filter((id): id is string => !!id)),
   );
+  const wantedItemIds = Array.from(
+    new Set(goodBlocks.flatMap((b) => (b.type === 'links' ? b.items.map((i) => i.itemId) : []))),
+  );
+  const activityLimit = goodBlocks.reduce((max, b) => (b.type === 'activity' ? Math.max(max, b.limit) : max), 0);
+  const wantsProject = goodBlocks.some((b) => b.type === 'project');
+  const wantsSavings = goodBlocks.some((b) => b.type === 'savings');
 
-  const dbRecords: DashboardDatabase[] = wantedDbIds.length
-    ? (
-        await db
+  const [dbRows, rows, found, activitySessions, projectInfo, savings] = await Promise.all([
+    // 1. Every database any block points at — scoped to THIS workspace, which is
+    //    what makes a cross-workspace source impossible rather than merely checked.
+    wantedDbIds.length
+      ? db
           .select({
             id: databases.id,
             name: databases.name,
@@ -207,115 +215,80 @@ export async function resolveDashboard(workspaceId: string, rawSpec: unknown): P
           .from(databases)
           .innerJoin(workspaceItems, eq(databases.itemId, workspaceItems.id))
           .where(and(inArray(databases.id, wantedDbIds), eq(workspaceItems.workspaceId, workspaceId)))
-      ).map((r) => ({
-        ...r,
-        schema: (r.schema ?? []) as Record<string, unknown>[],
-        views: (r.views ?? null) as DatabaseView[] | null,
-      }))
-    : [];
-
-  const dbById = new Map(dbRecords.map((d) => [d.id, d]));
-  const reachableDbIds = dbRecords.map((d) => d.id);
-
-  // 2. One row read for the whole dashboard. `content` is deliberately not
-  //    selected — no block renders row bodies, and it is by far the largest
-  //    column.
-  const rowsByDb = new Map<string, DashboardRowLike[]>();
-  if (reachableDbIds.length) {
-    const rows = await db
-      .select({
-        id: pages.id,
-        databaseId: pages.databaseId,
-        title: pages.title,
-        properties: pages.properties,
-        sortOrder: pages.sortOrder,
-        icon: pages.icon,
-        iconColor: pages.iconColor,
-        cardCollapsed: pages.cardCollapsed,
-        seriesId: pages.seriesId,
-        occurrenceDate: pages.occurrenceDate,
-        seriesDetached: pages.seriesDetached,
-        createdAt: pages.createdAt,
-        updatedAt: pages.updatedAt,
-        agentEditedAt: pages.agentEditedAt,
-      })
-      .from(pages)
-      .where(inArray(pages.databaseId, reachableDbIds))
-      .orderBy(asc(pages.sortOrder), asc(pages.createdAt));
-
-    for (const row of rows) {
-      const shaped: DashboardRowLike = { ...row, properties: (row.properties ?? {}) as Record<string, unknown> };
-      const bucket = rowsByDb.get(row.databaseId);
-      if (bucket) bucket.push(shaped);
-      else rowsByDb.set(row.databaseId, [shaped]);
-    }
-  }
-
-  // 3. Link targets, resolved in one query (and only inside this workspace).
-  const wantedItemIds = Array.from(
-    new Set(goodBlocks.flatMap((b) => (b.type === 'links' ? b.items.map((i) => i.itemId) : []))),
-  );
-  const linkTargets = new Map<
-    string,
-    { title: string; type: 'page' | 'database' | 'dashboard'; icon: string | null; iconColor: string | null; databaseId: string | null }
-  >();
-  if (wantedItemIds.length) {
-    const found = await db
-      .select({
-        id: workspaceItems.id,
-        title: workspaceItems.title,
-        type: workspaceItems.type,
-        icon: workspaceItems.icon,
-        iconColor: workspaceItems.iconColor,
-        databaseId: databases.id,
-      })
-      .from(workspaceItems)
-      .leftJoin(databases, eq(databases.itemId, workspaceItems.id))
-      .where(and(inArray(workspaceItems.id, wantedItemIds), eq(workspaceItems.workspaceId, workspaceId)));
-    for (const item of found) {
-      linkTargets.set(item.id, {
-        title: item.title,
-        type: item.type,
-        icon: item.icon,
-        iconColor: item.iconColor,
-        databaseId: item.databaseId ?? null,
-      });
-    }
-  }
-
-  // 4. Agent activity, once: the latest ACTIVITY_WINDOW calls, grouped into sessions,
-  //    with the titles of the calls a block will list resolved in one batch.
-  const activityLimit = goodBlocks.reduce((max, b) => (b.type === 'activity' ? Math.max(max, b.limit) : max), 0);
-  let activitySessions: ActivitySession[] = [];
-  if (activityLimit > 0) {
-    const rows = await db
-      .select({
-        id: agentActivity.id,
-        tool: agentActivity.tool,
-        status: agentActivity.status,
-        targetType: agentActivity.targetType,
-        targetId: agentActivity.targetId,
-        sessionKey: sql<string | null>`coalesce(${agentActivity.tokenId}, ${agentActivity.oauthTokenId})`,
-        actor: sql<string | null>`coalesce(${agentTokens.name}, ${oauthAccessTokens.agentName})`,
-        agentName: sql<string | null>`coalesce(${agentTokens.agentName}, ${oauthAccessTokens.agentName})`,
-        createdAt: agentActivity.createdAt,
-      })
-      .from(agentActivity)
-      .leftJoin(agentTokens, eq(agentActivity.tokenId, agentTokens.id))
-      .leftJoin(oauthAccessTokens, eq(agentActivity.oauthTokenId, oauthAccessTokens.id))
-      // Same audit window as the audit log itself (services/auditRetention.ts).
-      .where(and(eq(agentActivity.workspaceId, workspaceId), activityAtOrAfter(await auditVisibleSince(workspaceId))))
-      .orderBy(desc(agentActivity.createdAt))
-      .limit(ACTIVITY_WINDOW);
-    activitySessions = groupSessions(rows, rows.length === ACTIVITY_WINDOW, activityLimit);
-    await resolveCallTargets(workspaceId, activitySessions, rows);
-  }
-
-  // 5. The home-dashboard blocks: the workspace's own name, when an agent last
-  //    worked here, and the measured savings — each read only if a block asks.
-  const wantsProject = goodBlocks.some((b) => b.type === 'project');
-  const wantsSavings = goodBlocks.some((b) => b.type === 'savings');
-  const [projectInfo, savings] = await Promise.all([
+      : Promise.resolve([]),
+    // 2. One row read for the whole dashboard, under the same workspace scope (the
+    //    join), so it need not wait for step 1. `content` is deliberately not
+    //    selected — no block renders row bodies, and it is by far the largest column.
+    wantedDbIds.length
+      ? db
+          .select({
+            id: pages.id,
+            databaseId: pages.databaseId,
+            title: pages.title,
+            properties: pages.properties,
+            sortOrder: pages.sortOrder,
+            icon: pages.icon,
+            iconColor: pages.iconColor,
+            cardCollapsed: pages.cardCollapsed,
+            seriesId: pages.seriesId,
+            occurrenceDate: pages.occurrenceDate,
+            seriesDetached: pages.seriesDetached,
+            createdAt: pages.createdAt,
+            updatedAt: pages.updatedAt,
+            agentEditedAt: pages.agentEditedAt,
+          })
+          .from(pages)
+          .innerJoin(databases, eq(pages.databaseId, databases.id))
+          .innerJoin(workspaceItems, eq(databases.itemId, workspaceItems.id))
+          .where(and(inArray(pages.databaseId, wantedDbIds), eq(workspaceItems.workspaceId, workspaceId)))
+          .orderBy(asc(pages.sortOrder), asc(pages.createdAt))
+      : Promise.resolve([]),
+    // 3. Link targets, resolved in one query (and only inside this workspace).
+    wantedItemIds.length
+      ? db
+          .select({
+            id: workspaceItems.id,
+            title: workspaceItems.title,
+            type: workspaceItems.type,
+            icon: workspaceItems.icon,
+            iconColor: workspaceItems.iconColor,
+            databaseId: databases.id,
+          })
+          .from(workspaceItems)
+          .leftJoin(databases, eq(databases.itemId, workspaceItems.id))
+          .where(and(inArray(workspaceItems.id, wantedItemIds), eq(workspaceItems.workspaceId, workspaceId)))
+      : Promise.resolve([]),
+    // 4. Agent activity, once: the latest ACTIVITY_WINDOW calls, grouped into sessions,
+    //    with the titles of the calls a block will list resolved in one batch.
+    activityLimit > 0
+      ? (async () => {
+          const since = await auditVisibleSince(workspaceId);
+          const calls = await db
+            .select({
+              id: agentActivity.id,
+              tool: agentActivity.tool,
+              status: agentActivity.status,
+              targetType: agentActivity.targetType,
+              targetId: agentActivity.targetId,
+              sessionKey: sql<string | null>`coalesce(${agentActivity.tokenId}, ${agentActivity.oauthTokenId})`,
+              actor: sql<string | null>`coalesce(${agentTokens.name}, ${oauthAccessTokens.agentName})`,
+              agentName: sql<string | null>`coalesce(${agentTokens.agentName}, ${oauthAccessTokens.agentName})`,
+              createdAt: agentActivity.createdAt,
+            })
+            .from(agentActivity)
+            .leftJoin(agentTokens, eq(agentActivity.tokenId, agentTokens.id))
+            .leftJoin(oauthAccessTokens, eq(agentActivity.oauthTokenId, oauthAccessTokens.id))
+            // Same audit window as the audit log itself (services/auditRetention.ts).
+            .where(and(eq(agentActivity.workspaceId, workspaceId), activityAtOrAfter(since)))
+            .orderBy(desc(agentActivity.createdAt))
+            .limit(ACTIVITY_WINDOW);
+          const sessions = groupSessions(calls, calls.length === ACTIVITY_WINDOW, activityLimit);
+          await resolveCallTargets(workspaceId, sessions, calls);
+          return sessions;
+        })()
+      : Promise.resolve([] as ActivitySession[]),
+    // 5. The home-dashboard blocks: the workspace's own name, when an agent last
+    //    worked here, and the measured savings — each read only if a block asks.
     wantsProject
       ? Promise.all([
           db.select({ name: workspaces.name }).from(workspaces).where(eq(workspaces.id, workspaceId)).limit(1),
@@ -326,9 +299,38 @@ export async function resolveDashboard(workspaceId: string, rawSpec: unknown): P
             .orderBy(desc(agentActivity.createdAt))
             .limit(1),
         ]).then(([[ws], [last]]) => ({ name: ws?.name ?? '', lastAgentAt: last?.at ?? null }))
-      : null,
-    wantsSavings ? getAgentMetrics({ workspaceId }) : null,
+      : Promise.resolve(null),
+    wantsSavings ? getAgentMetrics({ workspaceId }) : Promise.resolve(null),
   ]);
+
+  const dbRecords: DashboardDatabase[] = dbRows.map((r) => ({
+    ...r,
+    schema: (r.schema ?? []) as Record<string, unknown>[],
+    views: (r.views ?? null) as DatabaseView[] | null,
+  }));
+  const dbById = new Map(dbRecords.map((d) => [d.id, d]));
+
+  const rowsByDb = new Map<string, DashboardRowLike[]>();
+  for (const row of rows) {
+    const shaped: DashboardRowLike = { ...row, properties: (row.properties ?? {}) as Record<string, unknown> };
+    const bucket = rowsByDb.get(row.databaseId);
+    if (bucket) bucket.push(shaped);
+    else rowsByDb.set(row.databaseId, [shaped]);
+  }
+
+  const linkTargets = new Map<
+    string,
+    { title: string; type: 'page' | 'database' | 'dashboard'; icon: string | null; iconColor: string | null; databaseId: string | null }
+  >();
+  for (const item of found) {
+    linkTargets.set(item.id, {
+      title: item.title,
+      type: item.type,
+      icon: item.icon,
+      iconColor: item.iconColor,
+      databaseId: item.databaseId ?? null,
+    });
+  }
 
   // 6. Per-block computation over the already-loaded data.
   const blocks: ResolvedBlock[] = parsed.blocks.map((entry) => {

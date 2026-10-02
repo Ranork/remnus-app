@@ -211,8 +211,10 @@ export async function captureAgentCall(
   tool: string,
   workspaceId: string,
   extra?: Record<string, number | boolean>,
+  /** Consent + role already read with the token (MCP); otherwise read here. */
+  known?: { allowed: boolean; role: string | null },
 ): Promise<void> {
-  const { allowed, role } = await isCaptureAllowedForUser(ownerUserId);
+  const { allowed, role } = known ?? await isCaptureAllowedForUser(ownerUserId);
   await captureServer({
     event: 'agent_call',
     userId: ownerUserId,
