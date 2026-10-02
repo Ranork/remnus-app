@@ -38,6 +38,32 @@ const nextConfig: NextConfig = {
       { source: '/wiki/:slug*\\.md', destination: '/api/wiki-md/:slug*' },
     ];
   },
+  // Baseline security headers (R10). Deliberately conservative — only headers that
+  // cannot break the app:
+  //  - nosniff: stop MIME sniffing (defence for user-uploaded/proxied content).
+  //  - Referrer-Policy: don't leak full URLs (which can carry ids) cross-origin.
+  //  - X-Frame-Options + CSP frame-ancestors 'self': block cross-origin framing
+  //    (clickjacking). Safe for Tauri (it loads remnus.com as a TOP-LEVEL document,
+  //    not in a frame) and for our own YouTube embeds (we are the parent there, so
+  //    our header doesn't apply). Cross-origin embedding of /share and marketing is
+  //    blocked too — if that's ever wanted, relax per-path.
+  // NOT added here on purpose: a full Content-Security-Policy (script-src/… would
+  // need to enumerate inline scripts + PostHog/Cloudinary/Stripe and be tested in
+  // dev) and HSTS (verify it's served at the domain/Vercel level, and only with
+  // includeSubDomains once every subdomain is HTTPS). Both tracked in the R10 report.
+  async headers() {
+    return [
+      {
+        source: '/:path*',
+        headers: [
+          { key: 'X-Content-Type-Options', value: 'nosniff' },
+          { key: 'Referrer-Policy', value: 'strict-origin-when-cross-origin' },
+          { key: 'X-Frame-Options', value: 'SAMEORIGIN' },
+          { key: 'Content-Security-Policy', value: "frame-ancestors 'self'" },
+        ],
+      },
+    ];
+  },
 };
 
 const intlConfig = withNextIntl(nextConfig);
