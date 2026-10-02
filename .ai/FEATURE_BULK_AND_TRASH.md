@@ -1,15 +1,10 @@
 # Feature: Toplu silme/taşıma + Geri alma (çöp kutusu)
 
-**Kaynak:** Remnus'un en aktif kullanıcısı (Mitch, ~3.700 MCP çağrısı) 2026-08-31 mailinde:
-
-> "Another suggestion for you is **bulk actions in the API** - like bulk updating a property
-> e.g 'review' to 'done', and **bulk deletions**.
->
-> For long running projects, the task boards end up with a lot of finished tasks marked 'done',
-> which can clog up context when working with active tasks. My solution has been creating a clone
-> of the main task board called 'Archive', and periodically migrating cards into Archive, then
-> deleting from the main task board. **This has to be done one by one at the moment**, so I've
-> written a script and a skill to automate it."
+**Kaynak:** En aktif MCP kullanıcılarımızdan birinin geri bildirimi (2026-08-31), özetle: API'de
+**toplu işlemler** (bir özelliği toplu güncellemek, ör. 'review' → 'done') ve **toplu silme**. Uzun
+projelerde görev panoları 'done' kartlarla dolup aktif işlerin bağlamını kirletiyor; kullanıcı
+ana panonun 'Archive' adlı bir kopyasını açıp kartları oraya taşıyor, sonra ana panodan siliyor —
+**şu an tek tek yapılmak zorunda**, bu yüzden bunu bir script ve skill ile otomatikleştirmiş.
 
 **Üç ayrı görev.** Sırayla sevk edilmeli:
 
@@ -65,7 +60,7 @@ mevcut çağıranları bozabilir. Kapsam dışı bırakıldı, ayrı görev olar
 
 Burada tek gerçek tasarım sorusu var ve cevabı spec'in yazarına bırakılmıyor:
 
-Mitch'in kullanımı **database satırlarını bir board'dan diğerine taşımak.** Mevcut `move_item`
+Kullanıcının ihtiyacı **database satırlarını bir board'dan diğerine taşımak.** Mevcut `move_item`
 sidebar hiyerarşisinde taşıma yapıyor; satırı başka bir database'e taşımak farklı bir iş, çünkü
 hedef database'in **şeması farklı olabilir.**
 

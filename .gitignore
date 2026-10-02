@@ -24,6 +24,8 @@
 # misc
 .DS_Store
 *.pem
+# Windows folder settings (icon/view state, a local path inside)
+desktop.ini
 
 # debug
 npm-debug.log*
