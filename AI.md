@@ -1,6 +1,6 @@
 # AI Project Guide
 
-Last verified: 2026-07-29
+Last verified: 2026-10-02
 
 ## Language
 
@@ -141,7 +141,8 @@ Repository monorepo değildir. Ana npm uygulamasına ek olarak dağıtım için 
 ## Critical conventions
 
 - Kullanıcıya görünen tüm uygulama metni next-intl üzerinden gelir. Yeni key'i 8 dosyaya (`en`, `tr`, `hi`, `es`, `fr`, `de`, `zh`, `ru`) ekle; 41 namespace vardır (arşivlenen `/landing-next` taslağının `LandingNext`'i yalnız `en`/`tr`de — diğer diller İngilizceye düşer; sitenin metni `Site`, 8 dilde). Kullanıcı adına yazılan içerik de (şablonlar, stok veritabanı, örnek çalışma alanı, "Başlıksız" adlar) isteğin dilinde doğar: kelimeler `src/lib/starterContent/<templates|sample>/<locale>.ts`, dil `getRequestLocale()` (`/api/*` ve Auth.js olaylarında `getLocale()` hep `en` döner); MCP varsayılanları İngilizce kalır. Ayrıntı: `AGENTS.md` → i18n.
-- Client'ta `useTranslations`, server component/action'da `getTranslations`; tarih locale'ini hardcode etme.
+- Client'ta `useTranslations`, server component/action'da `getTranslations`; tarih locale'ini hardcode etme. İstemciye tüm katalog gitmez: kök layout yalnız `root` namespace'lerini, rota kapsamları `<ClientMessages scope>` ile kendilerininkini gönderir (V2 R9.1). Yeni bir client namespace'i ya da public rota ekledikten sonra `npm run test:i18n-client -- --write`; kontrol eksik kapsamı yakalar. Ayrıntı: `AGENTS.md` → i18n.
+- Bağlantılar `@/components/ui/link` ile (niyetle prefetch; `next/link` ESLint'te yasak, V2 R9.4).
 - Server action/component'ta doğrudan `auth()` çağırma; `src/lib/auth/session.ts` içindeki `getCurrentUser()` kullan.
 - Proje pencereleri workspace'e kilitli oturum kullanır ve kilit **varsayılan-ret**tir: `auth()` kilitli oturumu çıkış yapmış sayar, `getCurrentUser()` hata fırlatır. Bir action yalnızca workspace içeriğiyse `getCurrentUserAllowingWorkspaceLock()` kullanıp çözdüğü workspace için `assertWorkspaceLockAllows()` çağırmalıdır (admin kısayolundan önce). Ayrıntı: `AGENTS.md` → **Project Install** §4.
 - Workspace/database erişiminde sırasıyla `assertWorkspaceAccess` veya `assertDatabaseAccess` uygula.
@@ -155,8 +156,9 @@ Repository monorepo değildir. Ana npm uygulamasına ek olarak dağıtım için 
 - Tekrarlayan takvim kartlarında iki değişmez korunmalı: geçmiş occurrence'lar asla yeniden yazılmaz (kural değişimi seriyi böler, mutasyon yapmaz) ve içi doldurulmuş occurrence silinmez, seriden koparılıp yerinde bırakılır. Ayrıntı: `AGENTS.md` → **Recurring Calendar Cards**.
 - MCP write tool'ları write scope doğrulaması yapmalı; audit logging ana cevabı bozmayan best-effort kalmalıdır.
 - Ajan token'ı sahibinin üyeliğini aşamaz: MCP her istekte token sahibinin üyeliğini ve rolünü yeniden okur (`src/lib/services/agentAccess.ts`). Üye değilse 401 döner, viewer'a `read` verilir. Üye çıkaran ya da rolü viewer yapan yeni bir yol `revokeAgentAccess` / `restrictAgentAccessToRead` çağırmalıdır; hesap silen bir yol da `created_by`'ı boşaltmadan önce `revokeAllAgentAccessOf` çağırmalıdır. Ayrıntı: `AGENTS.md` → **Project Install** §1.
-- `search_docs`/`search_fts` (arama indeksi, migration `0052`) yalnızca `search_*` trigger'larıyla yazılır; uygulama kodu bu tablolara yazmaz. `workspace_items`, `standalone_pages`, `pages`, `databases` veya `workspaces` tablosunu yeniden kuran bir migration trigger'larını düşürür: sonrasında `apply-0052-search-index.ts` yeniden çalıştırılmalı (`npm run db:drift` eksik trigger'ı raporlar).
+- `search_docs`/`search_fts` (arama indeksi, migration `0052`) yalnızca `search_*` trigger'larıyla yazılır; uygulama kodu bu tablolara yazmaz. `workspace_items`, `standalone_pages`, `pages`, `databases` veya `workspaces` tablosunu yeniden kuran bir migration trigger'larını düşürür: sonrasında `apply-0052-search-index.ts` yeniden çalıştırılmalı (`npm run db:drift` eksik trigger'ı raporlar). Aynısı canlılık sinyalinin içerik saati için geçerli: `standalone_pages`, `databases`, `pages` veya `workspaces`'ı yeniden kuran migration `content_clock_*` trigger'larını düşürür → `apply-0056-content-clock.ts` (V2 R9.8). `workspaces.content_updated_at`'i uygulama kodu yazmaz.
 - Public/cookie-less asset ve API istisnaları `proxy.ts` ile `auth.config.ts` içinde birlikte korunmalıdır.
+- Temel güvenlik başlıkları `next.config.ts` → `headers()` içinde tüm rotalara uygulanır (R10): `X-Content-Type-Options: nosniff`, `Referrer-Policy: strict-origin-when-cross-origin`, `X-Frame-Options: SAMEORIGIN`, `Content-Security-Policy: frame-ancestors 'self'`. Bunları kaldırma. frame-ancestors/XFO yalnız frame'lenen sayfaya uygulanır (Tauri top-level yükler → etkilenmez); cross-origin iframe gömme gereken bir yüzey çıkarsa o yola özel gevşet. Tam CSP (`script-src`…) ve HSTS bilinçli eklenmedi (dev'de test + domain teyidi gerekir) — gitignored `SECURITY_AUDIT_2026-10-02.md` + prompts R10.5.
 - Proje kurulumu workspace-pinned MCP adresine (`/api/mcp/w/<workspaceId>`) dayanır: paylaşılan `/api/mcp` davranışı dondurulmuştur, workspace uyuşmazlığı 401 değil **403** döner ve RFC 9728 metadata hem bare hem path-scoped adresten servis edilmelidir. Ayrıntı: `AGENTS.md` → **Project Install**.
 
 ## Critical commands
@@ -188,6 +190,7 @@ npm run mcpb:build
 - Vercel fonksiyonları `dub1`'de (`vercel.json` → `regions`), prod Turso `aws-eu-west-1` ile aynı yerde. Biri taşınırsa diğeri de taşınmalı; aksi halde her DB sorgusu okyanus aşırı round-trip öder.
 - `AGENTS.md` çok büyüktür ve Codex project-doc byte limitine takılabilir; dosyanın başındaki adapter her oturumda `AI.md` okumayı zorunlu kılar.
 - OneDrive/Google Drive ve Windows file lock/encoding davranışları nedeniyle edit sonrası dosyayı yeniden doğrula.
+- (V2 R9) Server action'lar sayfa başına sırayla çalışır: mount'ta yeni okuma action'ı ekleme, `getSidebarStatus` / `getPagePanels`'i genişlet. Tıkla-aç UI'yı uygulama kabuğunun ilk yüküne statik import etme; `next/dynamic`/`React.lazy` yerine `src/lib/lazyComponent.tsx` (Suspense ~300 ms gösterim gecikmesi). Ayrıntı: `AGENTS.md` → Performance Rules → **App load and the client**.
 
 ## Detailed project knowledge
 

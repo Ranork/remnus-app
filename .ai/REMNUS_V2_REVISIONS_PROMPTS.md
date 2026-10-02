@@ -1,6 +1,6 @@
 # Remnus V2 Revizeleri — Chat Promptları
 
-> **Durum (2026-10-02): R1–R4 tamamlandı ve canlıda; R5–R8 + R8.1–R8.6 tamamlandı (commit'siz); R8.7 tamamlandı (yeni site `/`'de; eski landing `/landing-old`, `/landing-next` arşivde); R8.8 tamamlandı (commit'siz, migration yok); R8.9 tamamlandı (commit'siz, migration yok; şablon tarih açığı 2026-10-02'de kapatıldı); R9–R11 sırada.** Her prompt bitince
+> **Durum (2026-10-02): R1–R4 tamamlandı ve canlıda; R5–R8 + R8.1–R8.6 tamamlandı (commit'siz); R8.7 tamamlandı (yeni site `/`'de; eski landing `/landing-old`, `/landing-next` arşivde); R8.8 tamamlandı (commit'siz, migration yok); R8.9 tamamlandı (şablon tarih açığı 2026-10-02'de kapatıldı, `80ca02a`); R9 tamamlandı (2026-10-02, commit'siz; migration 0055 prod'da); R9.x kapandı (2026-10-02, commit'siz: R9.1, R9.2, R9.4, R9.5, R9.8 yapıldı, R9.7 ölçüldü — değişiklik gerekmedi, R9.3 ölçümde değmez; migration 0056 prod'da; R9.6 R11'e taşındı); R10 tamamlandı (2026-10-02, 3 oturum, commit'siz; 1 Medium düzeltildi = güvenlik başlıkları `next.config.ts`; 5 Low → R10.1–R10.5 promptları; ayrıntı gitignored `SECURITY_AUDIT_2026-10-02.md`; bağımlılık yükseltmeleri Hakan'a); R11 sırada (son madde).** Her prompt bitince
 > kendi bölümünün sonuna "Tamamlandı" notu düşer; bu satırı da güncelle.
 
 Hazırlanma tarihi: 2026-09-26. Kaynak: Hakan'ın "RemnusV2 Revizeler" listesi (18 madde +
@@ -65,6 +65,7 @@ notu ve gerçekte ne yaptığının özetini ekle.
 | R7  | Bilgi haritası düzeltmeleri                                         | R3'ün Select'ini kullanır; R4 giriş noktasını taşımış olur. |
 | R8  | UI polish: tasarım dili + temel + uygulama promptları (R8.x)        | Yapı R1–R7 ile oturduktan sonra görsel dil üzerine kurulur. Hakan'ın yön seçimi gerekir. |
 | R9  | Tüm Remnus + MCP hızlandırma                                        | Hakan'ın isteği: her şey bittikten sonra. Ölçüm son kod üzerinde yapılmalı. |
+| R9.x | R9'un ölçüp bıraktığı 8 kalem (R9.1–R9.8)                          | R9'dan sonra, R10'dan bağımsız; R9.6 deploy sonrasını bekler. |
 | R10 | Güvenlik testi                                                      | R1'in yeni deep-link'i dahil son hali denetlesin. |
 | R11 | Yayın: CLI npm publish + masaüstü (Tauri) release                   | **Son madde.** Hakan'ın kararı: her şey bitince tek seferde; R10'un denetlediği son hal yayınlanır. |
 
@@ -283,7 +284,7 @@ https://remnus.com/tauri-app yüklüyor — web tarafındaki kısım web deploy'
 
 src/components/features/ProjectWindowBanner.tsx (layout'tan `demoBanner` slotuyla
 geliyor). Hakan'ın ekran görüntüsü: tek satırda "Proje penceresi · yalnızca
-Ford-Netsis-UI — hesabınız, diğer çalışma alanlarınız ve …" (kesiliyor) + "Tam
+<proje> — hesabınız, diğer çalışma alanlarınız ve …" (kesiliyor) + "Tam
 uygulamayı edinin ↗" + "Bağlantıyı kopyala" + "Bu oturumu kapat". Kalabalık, okunmuyor.
 
 Hedef: tek bakışta anlaşılır, sakin bir gösterge. Öneri: kısa bir "Proje penceresi ·
@@ -506,7 +507,7 @@ sunucularının kullandığı tanınmış kalıp → korundu. CLI'a dokunulmadı
 **Doğrulama:** eslint, tsc, `test:agent-access` 34/34, köprü üzerinden scope (write 27/16, read 11/0),
 fixture token'lar local.db'den silindi, dev durduruldu (port 3000 boş).
 
-**Prod ölçümü (Hakan, Ford-Netsis-UI, `remnus@0.1.9`, `bench:mcp-handshake`, 5 çalıştırma):**
+**Prod ölçümü (Hakan, gerçek bir proje, `remnus@0.1.9`, `bench:mcp-handshake`, 5 çalıştırma):**
 
 | | Önce (iad1, 70b00f7 öncesi) | Sonra (dub1, 70b00f7) |
 |---|---|---|
@@ -992,7 +993,7 @@ F) Tasarım: DashboardView/DashboardBlocks görsel kalitesi — ızgara, hiyerar
 G) Kalibre edilmemiş workspace: R4'teki "pano oluştur" yolu boş pano yerine mevcut
    database'lerden sunucu tarafında otomatik bileşim üretsin (status kolonu → donut +
    açık iş metriği, tarih kolonu → yaklaşan liste, aktivite, tasarruf).
-H) Mevcut kalibre edilmiş workspace'ler (ör. Ford-Netsis-UI): ana pano yoksa
+H) Mevcut kalibre edilmiş workspace'ler: ana pano yoksa
    calibrate'in yeniden çalıştırılması onu kursun; kullanıcıya bunun nasıl
    tetikleneceğini söyleyen tek cümle (R1'deki devam promptu ile tutarlı).
 
@@ -2410,6 +2411,263 @@ R9.x promptları olarak yaz.
 - update-handoff; commit yok; "Tamamlandı" notu.
 ```
 
+### ✅ R9 — Tamamlandı (2026-10-02, Claude; commit/push yok, paket eklenmedi; migration 0055 yerelde ve prod'da)
+
+**Yöntem (Faz 1).** Sayılar tahmin değil ölçüm; hepsi aynı makinede, R9 öncesi kod (HEAD `80ca02a`, ayrı worktree
+`../remnus-app-r9-before`, yalnız ölçüm kancası eklendi) ile R9 sonrası kod **yan yana, sırayla** çalıştırılarak alındı
+(makine yükü değişkendi; tek tek "önce/sonra" ölçmek yanıltıyordu). Ortam: `npx next build` + `next start`, `local.db`,
+her DB gidiş-dönüşüne 10 ms gecikme (`BENCH_DB_RTT_MS`, dub1→Turso yakınlığını modeller; Windows'ta efektif ~10–16 ms),
+`npm run bench:web` fixture'ı (371 öğe, 600 satırlık Tasks + 3 küçük DB, 60 yorum, 3.000 audit satırı, 3 workspace).
+Tarayıcı: headless sistem Chrome (playwright-core, Hakan onayı), 40 ms / 20 Mbit/s, 3 koşu medyanı × 2 tur. MCP:
+`BENCH_TOOLS=1 bench:mcp-request` (süreç içi). Değişiklik sinyali: Turso **dev** DB'sinde `rows_read`
+(`bench:change-signal`). Prod: `agent_activity` yalnız toplu süre istatistiği (Hakan onayı). **PostHog/Vercel MCP bu
+oturumda yetkisizdi** → prod web vitals, fonksiyon süreleri ve Fast Origin Transfer yok (R9.6).
+
+**Prod başlangıç (agent_activity.duration_ms, son 60 gün; satırların çoğunda süre yok — 0049 geç geldi):**
+dub1 sonrası (2026-09-29+, örnek az): update_page p50 201 / p95 943 ms, create_page 359/621, bulk_update_pages
+1158/1162, bulk_create_pages 642/879, query_database 509, digest 230/504, prepare_context 219/582, get_page 154/287,
+search_workspace 98/225, get_changes_since 64. (iad1 dönemi: update_page 1611/2545 — R2'nin bölge taşıması etkisi.)
+
+**Önceliklendirme (Faz 2) — etki × efor; yapılan 8 kalem:**
+
+| # | Kalem | Ölçülen sorun | Sonuç (önce → sonra) |
+| - | ----- | ------------- | -------------------- |
+| 1 | Sayfa açılışında sıralı server action zinciri | `/page` yüklemesinde **14 action arka arkaya** (Next action kuyruğu): kenar çubuğu 4 okuması ×2 (gizli mobil çekmece kopyası), onboarding, consent yazımı her yüklemede, sonra yorum/bilgi/geri bağlantı/çöp hedefleri — paneller editörden ~1,5 sn sonra | **3–4 action**: `getSidebarStatus` (tek action, paralel), `getPagePanels` + `lib/pagePanels.ts`, mobil çekmece kenar çubuğu ilk açılışta, consent yazımı boşta ve sekme başına bir kez |
+| 2 | Uygulama kabuğunun JS'i | Her `(app)` rotası **2,81 MB** ham (~878 KB gzip) ilk yük: editör, tüm diyaloglar, JSZip, changelog (8 dil), DB görünümleri — `/graph` ve `/dashboard` dahil | `/page` 2,02 MB (650 KB gz), `/db` 1,55 (501), `/db/<row>` 2,11 (682), `/dashboard` 1,47 (477), `/graph` 1,28 (416). `lazyDialogs.tsx` + `lib/lazyComponent.tsx` (niyetle önyükleme), Tauri `TabPane` talep anında, peek editörü state'e yüklenir, Yenilikler rozetini layout sayar |
+| 3 | `/app` ve `/w/<id>` yönlendirmeleri | Sayfa oldukları için yönlendirmeden önce **tüm kabuğu** çiziyorlardı (315 KB, 6–9 DB turu); `/w` iki atlama. **Hata:** `/w/<id>` çerezi hiç ayarlayamıyordu (sayfa render'ında çerez salt-okunur, hata yutuluyordu) → proje linki/masaüstü deep-link'i son açık workspace'e düşüyordu | Route handler (`lib/server/appEntry.ts`): `/app` 119 → 68 ms, `/w` 151 → 85 ms, 0 KB, 3 tur; `/w` artık workspace'i değiştirip doğrudan öğeye gider; giriş TTFB 0,92–1,02 → 0,46 sn |
+| 4 | Yük boyutu (ilk yük + her refresh) | Kenar çubuğu satırlarında 2 tarih (~%11 RSC); `getPages` her satırın gövdesini gönderiyordu | `ShellItemRow`, gövdesiz `getPages`: RSC `/page` 290 → 257 KB, `/db` 745 → 634 KB, `/db/<row>` 295 → 262 KB; HTML `/page` 519 → 398 KB |
+| 5 | Canlılık sinyali (R5/R6'dan devreden) | Poll başına 2 tur; `max(case typeof…)` indeks kullanamıyor; `page_comments` tüm tabloyu tarıyor. Turso: **7.100 satır/poll** (proje penceresi 6.115) | Tek ifade (üyelik CTE içinde, `n` dahil), `max(col) where col < EPOCH_CEILING` (aynı anlam), migration **0055** indeksleri: **1.866 satır/poll** (pencere 1.531), 1 tur, sürüm birebir aynı (yerelde tüm kullanıcılar + Turso dev'de doğrulandı). Ping 4 → 3 tur, sinyal ∥ oturum yazımı: 104 → 63 ms |
+| 6 | MCP yazma yolu | update_page 11 sıralı tur (policy sorgusu, öğe, içerik ×2, snapshot oku/yaz/say, güncelle, link sil/ekle, knowledge çöz/yaz) | Policy token okumasıyla (`TokenContext.contextPolicy`; `initialize` 2 → 1 tur), `updatePageById` paralel okuma + tek batch, snapshot ekle+tavan tek batch (ajan için debounce okuması yok), `syncPageLinks` tek batch, knowledge türü biliniyor: **update_page gövde 187 → 96 ms, satır 171 → 77, bulk_update ×5 141 → 78, create_page 144 → 96** (10 ms/tur) |
+| 7 | Pano | ~10 sıralı tur | Kaynak okumaları paralel, öğe+spec tek okuma: RSC 268 → 181 ms |
+| 8 | Ölçüm altyapısı | — | `bench:web`, `bench:change-signal`, `bench:mcp-request` `BENCH_TOOLS`, `src/db/index.ts` `BENCH_DB_TRACE`/`BENCH_DB_RTT_MS` (yalnız file DB) |
+
+**Tarayıcı A/B (1× CPU, 2 tur):** `/page` hazır 3,02–3,34 → 1,90–1,93 sn (LCP 2,76–3,00 → 1,65–1,92); `/db/<row>` 3,17–3,23 →
+1,91–2,00; `/graph` 3,79–3,98 → 2,24–2,26 (LCP 3,17–3,47 → 1,47–1,63); `/dashboard` 1,70–1,78 → 1,43–1,49; `/db` 3,08–3,50 →
+2,85–2,97; `/w` girişi 3,87–4,06 → 3,01. Etkileşim: kenar çubuğu gezintisi ~0,44 sn (değişmedi), satır açma 1,04–1,15 → 1,10–1,16
+(değişmedi), yazarken en kötü olay 128–136 → 96–104 ms. **4× CPU (orta/zayıf cihaz):** `/db` 10,5 → 4,6 sn, `/db/<row>` 8,4 → 4,4,
+`/graph` 8,4 → 3,5, `/w` girişi 13,1 → 4,9, `/dashboard` 2,9 → 2,6, `/page` 7,5 → 6,9 (TBT ~2,7 sn kaldı → R9.3); satır açma
+7,6 → 3,5 sn, kenar çubuğu gezintisi 0,89 → 0,61, yazarken en kötü olay 680 → 328 ms.
+
+**Bulunan gotcha:** `next/dynamic` / `React.lazy` ilk render'da kod önbellekte olsa bile askıya alır ve React, son fallback'ten
+~300 ms geçmeden Suspense yeniden denemesini göstermez (`FALLBACK_THROTTLE_MS`) — ilk satır açma +0,5 sn ölçüldü. Tıkla-aç UI için
+`lib/lazyComponent.tsx` (yüklüyse hemen, değilse düz state güncellemesiyle). Ayrıca arka plan önyüklemesi (dialog'lar, changelog)
+ilk saniyelerde kullanıcının ilk tıklamasıyla çakışıyordu → niyetle (pointer) önyükleme ve sunucuda sayım.
+
+**Dokunulan dosyalar:** `src/app/[locale]/(app)/{layout.tsx, app/route.ts, app/empty/page.tsx, w/[id]/route.ts}` (eski
+`app/page.tsx` ve `w/[id]/page.tsx` kaldırıldı), `[locale]/layout.tsx`, `api/activity/{changes,ping}`, `api/mcp/{handler,context}.ts`,
+`api/mcp/tools/write.ts`; bileşenler: `AppShell`, `WorkspaceSidebar`, `MobileNavWrapper`, `DatabaseView`, `StandalonePageEditor`,
+`PageEditor`, `PageActionsMenu`, `WhatsNewButton` (+ yeni `WhatsNewModal`), yeni `lazyDialogs.tsx`, `TableLayout`, `KanbanBoard`,
+`CalendarView`, `ViewsBar`, `DatabasePropertiesSidebar`, `dashboard/DashboardHeader`, `onboarding/OnboardingGuide`,
+`agent-detect/AgentDetectGuide`, `PageCommentsPanel`, `KnowledgeContextPanel`, `PageBacklinksPanel`, `providers/{TabHost,
+TabsContext,ConsentContext}`; lib: yeni `lazyComponent.tsx`, `whenIdle.ts`, `pagePanels.ts`, `server/appEntry.ts`,
+`actions/{sidebarStatus,pagePanels}.ts`; `actions/{workspace,page,dashboard}.ts`, `dashboard/data.ts`, `constants/cookies.ts`,
+`changelog.ts`, `services/{changeVersion,agentAccess,knowledge,workspace,snapshots,pageLinks}.ts`; `db/{index,schema}.ts`, yeni
+`db/apply-0055-change-signal-indexes.ts`; script'ler yeni `bench-web.ts`, `bench-change-signal.ts`, `bench-mcp-request.ts`
+genişletildi; `package.json` (2 script). Dokümantasyon: AGENTS.md (Live refresh §1, Performance Rules → "App load and the client"
++ "MCP write path", Migration 0055, `/app` girişi, Common Commands), Serena `core`, `conventions`, `suggested_commands`.
+CLI ve `src-tauri`'ye dokunulmadı (R11 Birikenler'e satır yok).
+
+**Yenilikler:** `2026-10-02-faster-app` (improved) ve `2026-10-02-project-links-open-their-workspace` (fixed — `/w` hatası).
+
+**Doğrulama:** tsc temiz; eslint `src/` 0 hata (yalnız eski 4 uyarı; `npm run lint`'in 82 hatası git-ignored
+`.playwright-mcp/` scratch script'lerinde); test:access 28, test:agent-access 34, test:trash-links 32,
+test:workspace-deletion 13, test:recurrence 26, test:code-paths 44, test:okf, test:body-edits 8, test:starter geçti;
+`db:drift` (local) OK; değişiklik sinyali eşdeğerlik kontrolü (yerelde her kullanıcı, eski/yeni sürüm birebir); `updatePageById`
+için scratch kontrol (20 sürüm tavanı, link senkronu, tick/append, satır özellik adları, yetki reddi, knowledge türü — 17/17);
+tarayıcı duman testi: `/app` ve `/w` yönlendirmeleri (yabancı id çerezi değiştirmez), Yenilikler/Ayarlar/Çöp/AI Ajanlarım/şablon
+seçici/sayfa geçmişi açılıyor, peek editörü, sinyal `{v,n}`, sayfa hatası yok. Bench verisi silindi; sunucular durduruldu.
+
+**Sonradan (aynı gün, Hakan'ın isteğiyle):** migration **0055 prod'a uygulandı** (Claude, PowerShell, 4,9 sn; önce `db:drift`
+yalnız 0055'in 5 indeksini eksik gösterdi, sonra OK; canlı `/api/health` 200) — kod deploy'undan önce, eski kod bu indekslerle
+sorunsuz çalışır. Scratch worktree `../remnus-app-r9-before` ve `.next/*stale*` kopyaları silindi (Hakan onayı).
+**Hakan'ın adımları:** push/deploy (R11 öncesi). R9.6 için vercel + posthog MCP'yi yetkilendir (`/mcp`) ya da export ver.
+
+**Kalanlar → R9.1–R9.8** (aşağıda): mesaj kataloğu her RSC'de (~128 KB), büyük DB görünümleri (3,4 MB HTML / 22k düğüm), editör
+ilk yükü, prefetch fırtınası, MCP okuma araçları, canlıda ölçüm, masaüstü/mobil açılış, sinyalin kalan O(öğe) maliyeti.
+
+---
+
+# R9.x — R9'un ölçüp bu oturumda yapmadığı kalemler
+
+R9'un ölçüm altyapısı hazır: `npm run bench:web` (fixture + rota başına süre/boyut/DB gidiş-dönüşü),
+`src/db/index.ts` `BENCH_DB_TRACE` / `BENCH_DB_RTT_MS`, `npm run bench:change-signal` (Turso dev, rows read),
+`BENCH_TOOLS=1 npm run bench:mcp-request`, ve A/B için `.playwright-mcp/r9/` altındaki script'ler (git-ignored;
+`ab.ps1` önceki build'i ayrı bir worktree'de `turbopack.root` ile kurar, iki sunucuyu aynı ortamda açar,
+`vitals.cjs` tarayıcı ölçümü). Her R9.x aynı yöntemle önce/sonra ölçer, Playwright'tan önce Hakan'a sorar,
+`npm run build` çalıştırmaz (prod migration), yalnız `npx next build`. Sıra önerisi: R9.1 → R9.2 → R9.3 → R9.4,
+R9.5–R9.8 bağımsız.
+
+## R9.1 — next-intl mesaj kataloğu her RSC yanıtında
+
+```text
+Remnus projesinde çalışıyorsun. AI.md kuralları geçerli. `git status --short` ile başla. Serena varsa core,
+conventions (i18n). AGENTS.md → Performance Rules → "App load and the client" (V2 R9) oku.
+
+## Bağlam (2026-10-02 R9'da ölçüldü; yeniden doğrula)
+- `src/app/[locale]/layout.tsx` `getMessages()` ile TÜM kataloğu `NextIntlClientProvider`'a veriyor: en.json ≈ 128 KB
+  (Landing 17.4, WorkspaceSettings 17.3, LandingNext 10.7, Database 6.6, Admin 6, Site 5.7 KB …). Her uygulama
+  sayfasının RSC yükünde ve her `router.refresh()`'te (ajan yazdıkça) yeniden geliyor: `/page` RSC'nin ~%45'i
+  (257 KB'ın ~128'i). HTML'e de gömülü. Diğer dillerde (tr/ru/hi) daha büyük.
+- Yönlendirmede (client navigation) layout yeniden çizilmez; maliyet ilk yükte ve her refresh'te.
+
+## Görev
+1. Hangi namespace'lerin istemcide kullanıldığını çıkar ('use client' dosyalarda `useTranslations('X')`,
+   `useTranslations()` + `t('X.y')`, `t.rich`, `useFormatter` vb.). Uygulama (`(app)`) ve herkese açık sayfalar
+   için ayrı kümeler; sunucu-yalnız namespace'ler (getTranslations) istemciye gitmesin.
+2. Tasarım: `[locale]/layout.tsx` yalnız ortak küme; `(app)` layout'u uygulama kümesiyle iç içe provider; marketing
+   sayfaları kendi kümesiyle. next-intl v4'te iç içe provider'ın mesajları birleştirip birleştirmediğini
+   node_modules'taki kaynaktan doğrula. Alternatif: refresh'te mesajları göndermemek (istemci tarafında dil başına
+   statik chunk) — senkron hidrasyonu bozmadan mümkün mü, ölç.
+3. Eksik anahtar = ekranda ham anahtar riski: `npm run test:i18n-client` gibi bir script her istemci kullanımının
+   seçilen kümede olduğunu doğrulasın (yoksa CI'da yakala).
+4. Ölç: `/page`, `/db`, `/dashboard` RSC KB ve tarayıcıda refresh süresi önce/sonra, 2 dilde (en, tr).
+## Bitirirken
+changelog (kullanıcı fark ederse tek `improved`), AGENTS.md i18n + Performance, Serena conventions, handoff, commit yok.
+```
+
+> **✅ R9.1 Tamamlandı (2026-10-02, Claude; commit yok).** Kök layout artık yalnız `root` namespace'lerini (~9 KB) gönderiyor; rota kapsamları `<ClientMessages scope>` ile kendilerininkini ekliyor (`app`, `admin`, 9 public dizin layout'u). next-intl v4'te iç içe provider mesajları **birleştirmiyor** (use-intl `IntlProvider`: `messages ?? prev`) → birleştirme istemcide (`MergeClientMessages`), her namespace bir kez gidiyor. Listeler üretiliyor (`src/i18n/clientNamespaces.ts`); `npm run test:i18n-client` import grafiğinden yeniden kurup sapmayı, sarılmamış kapsamı ve okunamayan namespace'i yakalıyor. Ölçüm (`bench:web`, KB): `/page` RSC en 257 → 207, tr 268 → 214; `/db/<row>` 263 → 213; `/dashboard` 294 → 243; `/page` HTML 405 → 351; sunucu logunda MISSING_MESSAGE yok. Refresh'te mesaj göndermeme alternatifi yapılmadı (istemci önbelleği olmayan bir gezinmede ham anahtar riski). Changelog ayrı kayıt yok (R9.x ortak kaydı).
+
+## R9.2 — Büyük veritabanı görünümleri (600 satır = 3,4 MB HTML, 22k DOM düğümü)
+
+```text
+Remnus projesinde çalışıyorsun. AI.md kuralları geçerli. `git status --short`. Serena core + conventions
+(Database views R8.2). Next.js davranışına dokunacaksan node_modules/next/dist/docs/ rehberini oku.
+
+## Bağlam (R9 ölçümü, `bench:web` fixture: 600 satırlık Tasks)
+- `/db/<id>` HTML 3,36 MB, RSC 634 KB (satır gövdeleri R9'da çıkarıldı; kalan `properties` + meta), 21.8k DOM düğümü,
+  TBT ~0,6–1,0 sn (1× CPU), 4× CPU'da ready ~4,6 sn (R9 öncesi 10,5). TableLayout/KanbanBoard/CalendarView
+  sanallaştırma yapmıyor; sunucu tüm satırları SSR ediyor ve her refresh tüm satırları yeniden gönderiyor.
+## Görev
+1. Ölç: satır sayısına göre (100/600/2.000) HTML/RSC/DOM/TBT ve kaydırma akıcılığı.
+2. Seçenekler: tablo/kanban için pencereli çizim (bağımlılık eklemeden; gerekirse Hakan'a sor), ilk N satırı SSR
+   + kalanı istemcide, ya da `getPages` sayfalama. Filtre/sıralama (`tableFilters.ts`), grup başlıkları, sürükle-bırak,
+   satır yüksekliği değişkenliği, Ctrl+F (tarayıcı araması sanallaştırmada kaybolur — kararı Hakan'a sor) korunmalı.
+3. Refresh'te tüm satırların yeniden gelmesi: değişen satırları istemci sorgusuyla tazelemek (TanStack Query) R5
+   canlılık kurallarıyla tutarlı mı, değerlendir.
+## Bitirirken
+changelog `improved`, AGENTS.md Database + Performance, Serena, handoff, commit yok.
+```
+
+> **✅ R9.2 Tamamlandı (2026-10-02; karar Hakan'dan Claude'a bırakıldı → Ctrl+F korunur, sanallaştırma yok).** `<table>` otomatik sütun genişliği, sürükle-bırak ve tarayıcı araması pencereli çizimle bozulacaktı; onun yerine kademeli çizim (`useProgressiveLimit`: ilk 60 satır sayfayla, kalanı 100'er kesilebilir transition'la; kanban sütun başına 20 + 40) ve memo'lu `TableRow` (`useStableActions`, içerik karşılaştırması). Ölçüm (600 satır, 3 koşu medyanı, 1× / 4× CPU): HTML 3.363 → 994 KB; hazır 3,39 → 1,75 sn / 3,86 → 3,07; LCP 3,02 → 1,38 / 3,54 → 2,32; 30 satır üzerinde gezinirken bloklama 916 → 113 ms / 2.166 → 385 (uzun görev 22 → 11 / 30 → 15); tüm satırlar DOM'da 3,8 → 3,2 sn (1×). Madde 3 (yalnız değişen satırları TanStack ile tazelemek) yapılmadı: değişiklik sinyali tek sayı, satır farkı yok; istemci satır önbelleği R5'in RSC refresh'i yanında ikinci doğruluk kaynağı olurdu — memo'lu satırlar artık değişmeyen satırları refresh'te yeniden çizmiyor.
+
+## R9.3 — Editör rotasının ilk yükü (`/page` 4× CPU'da TBT ~2,8 sn)
+
+```text
+Remnus projesinde çalışıyorsun. AI.md kuralları geçerli. `git status --short`. Serena core + conventions (Editor R8.1).
+
+## Bağlam (R9)
+- R9 sonrası `/page` ilk yük JS'i 2,02 MB ham / ~650 KB gzip; `/db/<row>` 2,11 MB. Ağırlık Tiptap/ProseMirror +
+  eklentiler (tablo, YouTube, medya blokları, emoji verisi, slash menüsü, sürükleme tutamacı, tippy/popper, linkify,
+  @tiptap/markdown). 1× CPU'da ready 1,9 sn (önce 3,0); 4× CPU'da ready ~6,9 sn (önce 7,5), TBT ~2,8 sn.
+- Analiz aracı: `npx next experimental-analyze --output` → `.next/diagnostics/analyze/data/<route>/analyze.data`
+  (R9'da `.playwright-mcp/r9/analyze.cjs` ile modül bazında toplandı).
+## Görev
+1. Editör ilk çiziminde gerekmeyen eklentileri (emoji listesi, tablo düzenleme, YouTube/dosya/bookmark görünümleri,
+   slash menüsü içeriği, blok menüsü) talep anında yükle; içeriği bozmadan (markdown round-trip testleri:
+   ChildBlock, pageLink, medya bloklarının serileştirmesi aynı kalmalı).
+2. `next/dynamic`/`React.lazy` KULLANMA (Suspense 300 ms tutma — R9 bulgusu); `lib/lazyComponent.tsx` desenini kullan.
+3. Ölç: 1× ve 4× CPU ready/TBT/LCP, yazma gecikmesi (en kötü olay), ilk yazışta gecikme.
+## Bitirirken
+changelog `improved`, AGENTS.md Editor + Performance, Serena, handoff, commit yok.
+```
+
+> **⛔ R9.3 Yapılmadı — ölçümde değmez (2026-10-02).** `/page` CPU profili (1×, sıcak önbellek): editör chunk'ı (Tiptap/ProseMirror/markdown, 653 KB ham) toplam ~2–2,5 sn ana iş parçacığı işinin yalnız **50–72 ms**'i; talep anına alınabilecek her şey (emoji verisi 20, tippy/popper 34, slash listesi 7, bubble 10, seçim çubuğu 6, tablo kontrolleri 4, sürükleme tutamacı 18, medya görünümleri ~16 KB ham) ≈ 110 KB ham / ~35 KB gzip = 2.016 KB ilk yükün ~%5'i; düğüm tanımları markdown round-trip için şemada kalmak zorunda. Asıl maliyet React hidrasyonu/commit'leri (0,15–0,9 sn, makine yüküne göre), `(program)` ve GC. Yan bulgu: yükleme sırasında hiçbir bileşen yeniden çizilmeden 90–15.000 boş React commit'i (scheduler kaynaklı, streaming ve CPU çekişmesiyle büyüyor, `/pricing`'te de var) — kökü bu oturumda bulunamadı, R9 notunda kayıtlı. /page ilk yükü R9.1 (−50 KB RSC) ve R9.4 (prefetch fırtınası yok) ile hafifledi.
+
+## R9.4 — Kenar çubuğu prefetch fırtınası
+
+```text
+Remnus projesinde çalışıyorsun. AI.md kuralları geçerli. `git status --short`. Serena core + conventions.
+Next.js 16 prefetch davranışı için node_modules/next/dist/docs/ altındaki Link/prefetch rehberini oku.
+
+## Bağlam (R9 tarayıcı izi)
+- Her uygulama sayfası yüklenince görünür kenar çubuğu bağlantıları için ~20–25 `?_rsc=` prefetch isteği gidiyor
+  (sayfa, db, harita, pano), bazıları ikinci kez farklı `_rsc` ile. Her biri Vercel'de bir fonksiyon çağrısı ve
+  ilk saniyelerde bant genişliği/sunucu yükü.
+## Görev
+1. Ölç: yükleme başına prefetch sayısı, sunucu süresi toplamı, tıklama→içerik süresi (prefetch'li/prefetch'siz).
+2. Seçenekler: ağaç bağlantılarında `prefetch={false}` + hover/intent prefetch (`router.prefetch`), ya da yalnız aktif
+   workspace'in ilk N öğesi. Gezinme hızını düşürmeden fonksiyon çağrısını azalt.
+## Bitirirken
+changelog yalnız kullanıcı fark ederse, AGENTS.md Performance, Serena, handoff, commit yok.
+```
+
+> **✅ R9.4 Tamamlandı (2026-10-02).** `src/components/ui/link.tsx`: görünür olunca değil, niyette (pointer, focus, touch) prefetch; 52 `next/link` importu değişti, ESLint `no-restricted-imports` ile `next/link` yasak. Ölçüm: `/page` yüklemesinde prefetch isteği 36 (ilk 3 sn) / 72 (tamamı) → **0** (+ yaklaşılan bağlantı başına 1); `/pricing` 14–28 → 0. Kenar çubuğu tıklama → içerik yavaşlamadı (5 koşu medyanı, 1×): 150 ms hover + tıklama 667 → 485 ms, hover'sız 500 → 320 ms (gürültülü). Sunucu fonksiyon çağrısı yükleme başına 36–72 → 0.
+
+## R9.5 — MCP okuma araçlarının gidiş-dönüşleri
+
+```text
+Remnus projesinde çalışıyorsun. AI.md kuralları geçerli. `git status --short`. Serena core + conventions (MCP).
+
+## Bağlam (R9, `BENCH_TOOLS=1 BENCH_DB_RTT_MS=10 npm run bench:mcp-request <ws>`)
+- Yazma yolu R9'da yarıya indi (update_page 187→96 ms). Okumalar dokunulmadı: get_page 7, query_database 7,
+  get_changes_since 6, resources/read digest 7, resources/list 4, prepare_context 10 DB gidiş-dönüşü (bazıları sıralı).
+- Prod (dub1, 2026-09-29 sonrası, az örnek): get_page p50 154 ms, query_database 509, digest 230, prepare_context 219.
+## Görev
+1. `BENCH_DB_TRACE=1` ile her aracın sıralı derinliğini çıkar; bağımsız okumaları paralelleştir/birleştir
+   (token okuması zaten policy'yi getiriyor). Güvenlik kontrolleri (üyelik/rol her istekte, workspace kapsamı) aynı kalır.
+2. `logActivity` + `captureAgentCall`'ın tüketici rıza okuması (`user.analytics_consent`) her çağrıda bir sorgu:
+   token okumasına katılabilir mi, değerlendir.
+3. Önce/sonra tablo; `test:agent-access` geçer.
+## Bitirirken
+changelog yok (ajan tarafı) ya da ajan hızı görünürse `improved`; AGENTS.md MCP + Performance; Serena; handoff.
+```
+
+> **✅ R9.5 Tamamlandı (2026-10-02).** `getAnyPageById` tek `db.batch` (öğe, gövde, pano spec'i, database id, satır + workspace join; erişim kontrolünden önce okuma, eşleşmeden hiçbir şey dönmez), `queryDatabaseRows` kapsam + şema tek join (`databases.id` eşleşmesi önce) ve satırlar + yorum sayıları tek batch, `getChangesSince` 3 kaynak tek batch; sahibin `analytics_consent` + rolü token okumasıyla (`TokenContext.ownerAnalytics` → `captureAgentCall(…, known)`) — her çağrıda bir sorgu az. Güvenlik kontrolleri aynı (üyelik/rol her istekte). Ölçüm (`BENCH_TOOLS=1 BENCH_DB_RTT_MS=10`, ms / DB turu): get_page outline 100/7 → 58/3, full 93/7 → 56/3, query_database 92/7 → 64/4, get_changes_since 94/6 → 64/3, search_workspace 63/4 → 59/3, digest 7 → 6 tur; yazma araçları birer tur az; yanıt baytları birebir aynı. prepare_context CPU (BM25) ağırlıklı, dokunulmadı. Doğrulama: test:agent-access 34, scratch eşdeğerlik 13/13.
+
+## R9.6 — Canlıda ölçüm (deploy sonrası)
+
+> **R11'e taşındı (2026-10-02, Hakan: ayrı oturum açılmasın).** R11 "Yayın sonrası test" adımında yapılır;
+> R9.x oturumu bunu atlar. Aşağıdaki metin R11 için referanstır.
+
+```text
+Remnus projesinde çalışıyorsun. AI.md kuralları geçerli. R9 deploy edildikten (ve migration 0055 prod'a
+uygulandıktan) en az birkaç gün sonra.
+## Görev
+1. Prod `agent_activity.duration_ms` tool başına p50/p95 (Hakan onayıyla, yalnız toplu, salt okuma; R9 notundaki
+   tabloyla karşılaştır: update_page p50 201 / p95 943 ms, bulk_update_pages p50 1158 ms …).
+2. Vercel: fonksiyon süresi ve Fast Origin Transfer (R9'da MCP oturumu yetkisizdi — Hakan `claude mcp`/`/mcp` ile
+   vercel'i yetkilendirmeli ya da export vermeli); PostHog web vitals (aynı).
+3. Turso faturası: rows read günlük eğrisi 0055 öncesi/sonrası.
+4. Bulguları R9 notuna ekle; beklenmeyen bir gerileme varsa yeni R9.x prompt'u yaz.
+```
+
+## R9.7 — Masaüstü ve mobil açılış süresi
+
+```text
+Remnus projesinde çalışıyorsun. AI.md kuralları geçerli. `git status --short`. Serena core (Tauri, Capacitor).
+## Bağlam
+- R9 bu kabukları ölçemedi. Masaüstü açılışı `/tauri-app` → `/app` (R9'da route handler oldu, artık kabuk çizmiyor)
+  → öğe; Tauri'de içerik `TabHost` ile istemcide (R9'da `TabPane` talep anında yükleniyor).
+## Görev
+1. Ölç: soğuk açılış → ilk içerik, sekme açma, sekme değiştirme (Tauri dev/release; Android cihaz/emülatör).
+2. `TabPane` talep anında yükleme ilk sekmeyi yavaşlattıysa (önce/sonra), çözümü öner (ör. Tauri'de boşta önceden yükle).
+3. CLI/src-tauri'ye dokunursan yayınlama; R11 Birikenler'e satır ekle.
+```
+
+> **✅ R9.7 Tamamlandı — ölçüldü, kod değişikliği gerekmedi (2026-10-02).** Debug Tauri derlemesi (cargo 1.96, `tauri build --debug --no-bundle --config` ile identifier `com.remnus.bench` → kendi WebView2 profili, kurulu uygulamaya dokunmadı), WebView2 CDP + :3000 proxy ile bench sunucularına; ilk içerik = son yol (600 satırlı /db), 2 tur × 5 koşu. Soğuk açılış → içerik: R9 öncesi 2,78–3,35 sn, R9 2,97–3,01, **R9.x 2,64–2,78**. Yeni sekme (ctrl+tık → içerik): 0,74–1,02 / 1,26–1,40 / **0,87–0,91**. Sekmeye geri dönüş 1,00–1,09 / 0,88–1,15 / 0,77–0,83; tekrar geçiş 0,56–0,98 / 0,64 / **0,23–0,37**. R9'un yavaşlattığı yeni sekme `TabPane` chunk'ı değildi (ilk panoyla yükleniyor, DatabaseView/PageEditor'ı statik içeriyor); R9.x ile R9 öncesi seviyeye döndü → boşta önyükleme eklenmedi. **Android ölçülmedi:** makinede adb/emulator/SDK yok; yerine mobil görünüm (390×844, 4× CPU) tarayıcı ölçümü son A/B'de. `src-tauri` ve `cli`'a dokunulmadı (yalnız `src-tauri/target/debug` derleme çıktısı) → R11 Birikenler'e satır yok.
+
+## R9.8 — Canlılık sinyalinin kalan O(öğe) maliyeti
+
+```text
+Remnus projesinde çalışıyorsun. AI.md kuralları geçerli. `git status --short`. Serena core + conventions (Live refresh).
+AGENTS.md → Live refresh §1.
+## Bağlam (R9)
+- Tek ifade + 0055 indeksleriyle poll başına Turso okuması 7.100 → 1.866 satır (500 öğelik workspace). Kalan maliyet
+  öğe geçişi: `standalone_pages`/`databases` workspace_id taşımadığı için her öğe için bir seek.
+- Ping hâlâ 3 gidiş-dönüş (oturum satırı oku + güncelle; sinyal paralel).
+## Görev
+1. Seçenekleri ölç: (a) `standalone_pages`/`pages`'e `workspace_id` (ADD COLUMN + backfill + her yazma yolu),
+   (b) workspace başına içerik saati (her içerik yazımında `touchWorkspaces`), (c) mevcut hâl. Her yazma yolunun
+   denetimi (web, MCP, bulk, share, recurrence, seed) şart; atlanan yol = bayat ekran. `npm run bench:change-signal`.
+2. Ping: `UPDATE … RETURNING` ile tek gidiş-dönüş.
+3. Migration gerekirse `apply-00xx` deseni, ADD COLUMN, prod deploy günü Hakan'da.
+```
+
+> **✅ R9.8 Tamamlandı (2026-10-02; migration 0056 yerelde ve prod'da).** Seçenekler: (a) `workspace_id` kolonları ve (b) koddaki `touchWorkspaces` her yazma yolunun denetimini gerektiriyordu (atlanan yol = bayat ekran) → yerine **(c) SQLite trigger'larıyla workspace içerik saati**: `workspaces.content_updated_at` + 6 trigger (`standalone_pages`/`databases`/`pages` insert ve `updated_at` güncellemesi; yalnız ileri, aynı saniyede tek yazım) + idempotent ileri-yönlü backfill (`src/db/contentClock.ts`, `apply-0056-content-clock.ts`), sinyalin O(öğe) dalı tek satıra indi. Turso dev (`bench:change-signal`, 63 tenant, 500 öğe/2.000 satır): **1.866 → 39 satır/poll**, pencere 1.531 → 13, 4,9 → 2,8 ms; sürüm R9 ifadesi ve R9 öncesi çiftle birebir aynı; trigger üzerinden satır düzenlemesi takip edildi. Yerel: 5 kullanıcıda eşit; satır/gövde/şema güncellemesi + yeni satır sürümü ilerletiyor, eski tarihli yazım geri almıyor. Ping: oturum oku+güncelle → tek `UPDATE … RETURNING` (yeni oturumda +1 insert). **Prod:** `db:drift` önce yalnız kolon + 6 trigger eksik → uygulandı (4,4 sn, 182 workspace backfill) → `db:drift` OK, `remnus.com/api/health` 200; eski kod kolonu yok sayar. `db:drift` artık trigger'ları da denetliyor.
+
+> **R9.x son tarayıcı A/B (2026-10-02, R9 hali ↔ R9.x hali, yan yana, 3 koşu medyanı × 2 tur, 40 ms / 20 Mbit/s).** 1× CPU masaüstü: `/db` (600 satır) hazır 2,85–3,29 → 1,85 sn, LCP 2,75–2,76 → 1,72–1,76, TBT 656–727 → 237–259 ms, belge 3.359 → 989 KB; `/w` girişi (→ /db) 2,90–3,02 → 1,88–1,91; `/page` hazır 1,94–2,01 → 1,84–1,92, belge 398 → 344 KB; `/db/<row>`, `/dashboard`, `/graph` gürültü içinde aynı. Etkileşim: satır açma 852–920 → 328–362 ms, kenar çubuğu gezintisi 410–426 → 230–239 ms (tıklama hover'sız, yani prefetch'siz), yazarken en kötü olay 80 → 80. **4× CPU + mobil görünüm (390×844, Android yerine):** `/db` hazır 5,77 → 3,06 sn (LCP 5,04 → 2,99), `/w` 6,09 → 3,32, `/page` 4,55 → 4,21, satır açma 4,77 → 1,39 sn, kenar çubuğu 660 → 508 ms. Not: emülasyonlu ağda `/db` tarayıcı TTFB'si 0,27–0,34 → 0,81–0,88 sn görünüyor, sunucu başlık süresi aynı (`bench:web` 127 → 119 ms, toplam 350 → 178 ms) — Chrome'un ağ kısma modelinin ilk parçayı ölçüşü; kullanıcıya görünen hazır/LCP düştü. Ping 3 → 2 tur, 58 → 42 ms. Temizlik: iki worktree, bench fixture'ı, Tauri bench profili silindi; sunucular durdu.
+
+
 ---
 
 # R10 — Güvenlik testi
@@ -2490,12 +2748,146 @@ test:trash-links) genişletmek serbest.
   `update_page`/`bulk_update_pages` `tick`/`append` (başka workspace'in sayfası).
 - `openOrCreateHomeDashboard` → `composeHomeDashboardBlocks` (kilitli pencere, üye olmayan).
 
+## R9'dan eklenen yüzeyler (2026-10-02) — mutlaka test et
+
+- `/app` ve `/w/[id]` artık route handler (`src/lib/server/appEntry.ts`): oturumsuz → `/login`; `/w/<başkasının id'si>`
+  çerezi değiştirmemeli ve varlık bilgisi sızdırmamalı (yanıt, id hiç yokmuş gibi aynı); yönlendirme hedefi yalnız
+  DB'deki öğelerden kurulur (open redirect olmamalı); kilitli proje penceresi kendi workspace'inden çıkamamalı.
+- Yeni birleşik server action'lar: `getSidebarStatus` (kilitli pencerede yalnız çöp sayısı + o workspace'in tasarrufu;
+  hesap düzeyi alanlar null) ve `getPagePanels` (yorum/bilgi/geri bağlantı — her biri kendi erişim kontrolüyle;
+  başka workspace'in sayfa id'si ile IDOR).
+- MCP: workspace bağlam politikası artık token okumasıyla geliyor (`findPatForAuth`/`findOAuthTokenForAuth` LEFT JOIN
+  `workspace_context_policies` → `TokenContext.contextPolicy`). Strict modda `contextRunId`'siz yazma hâlâ reddedilmeli;
+  bir token başka workspace'in politikasını görememeli.
+- `updatePageById` yeniden yazıldı (paralel öğe/satır okuması + tek batch): başka workspace'in sayfası/satırı reddi,
+  `recordGeneratedKnowledge(..., knownType)` yolu (pano için reddedilmeli).
+- Değişiklik sinyali SQL'i (`services/changeVersion.ts`): kullanıcı id'si ve `json_each` id listesi parametre olarak
+  bağlı mı; `n` yalnız çağıranın görünür workspace sayısı.
+- `src/db/index.ts` bench kancası (`BENCH_DB_TRACE`, `BENCH_DB_RTT_MS`): yalnız `file:` veritabanında çalışmalı,
+  prod'da etkisiz olmalı.
+- `ConsentProvider`: rıza yazımı artık boşta ve sekme başına bir kez — analitik toplama kapısı (`opt_in`/`opt_out`)
+  değişmemeli, reddeden kullanıcı yakalanmamalı.
+
+## R9.x'ten eklenen yüzeyler (2026-10-02) — mutlaka test et
+
+- MCP okuma: `getAnyPageById` artık her şekli (öğe, gövde, pano, database, satır) erişim kontrolünden ÖNCE tek batch'te
+  okuyor — başka workspace'in id'siyle içerik dönmemeli; hata metni "var ama erişemezsin" ile "yok"u ayırt ettiriyor mu
+  (varlık oracle'ı; R9.x öncesinden de olabilir, not et). `queryDatabaseRows` id'yi `databases.id` VEYA workspace öğe
+  id'si olarak eşliyor — başka workspace'in database'i/öğe id'si reddedilmeli; yorum sayısı alt sorgusu kapsam dışına
+  çıkmamalı. `getChangesSince` üç kaynağı tek batch'te okuyor — yalnız token'ın workspace'i.
+- `TokenContext.ownerAnalytics`: sahibin `analytics_consent` + rolü token okumasıyla geliyor → reddeden kullanıcı
+  PostHog'da tanımlanmamalı (`captureAgentCall(…, known)`), admin/demo hiç yakalanmamalı.
+- Ping `UPDATE … RETURNING` (`api/activity/ping`): yalnız çağıranın kendi `user_sessions` satırı uzatılmalı.
+- Migration 0056 içerik saati (`workspaces.content_updated_at`, `content_clock_*` trigger'ları): sinyal yalnız
+  çağıranın görünür workspace'lerini okumalı; trigger'lar başka workspace'i ilerletmemeli.
+- Kapsamlı client mesajları (`<ClientMessages scope>`, yeni public `layout.tsx`'ler): yeni layout'lar `proxy.ts` /
+  `auth.config.ts` istisnalarını değiştirmemeli (login, share, install, oauth hâlâ oturumsuz açılıyor); `admin`
+  namespace'i yalnız `(app)/admin` altında.
+- `@/components/ui/link` (niyetle prefetch): davranış yalnız prefetch zamanlaması; dış/`javascript:` href'ler eskisi gibi.
+
 ## Bitirirken
 
 - changelog.ts: müşterinin gördüğü bir davranış değişmediyse güvenlik düzeltmeleri
   changelog'a girmez (AI.md); değiştiyse kayıt davranışı anlatsın, açığı değil.
 - AGENTS.md + AI.md "Critical conventions" (yeni kurallar varsa), Serena conventions.
 - update-handoff; commit yok; "Tamamlandı" notu.
+```
+
+## ✅ R10 — Tamamlandı (2026-10-02, 3 oturum, commit'siz, prod'a dokunulmadı)
+
+Ayrıntı + yeniden-üretim: `.ai/status-reports/SECURITY_AUDIT_2026-10-02.md` (gitignored).
+
+**Önce:** uygulama hiçbir güvenlik başlığı göndermiyordu; yetki/MCP/OAuth/kurulum/XSS/SSRF/CSRF/
+silme yüzeyleri test edilmemişti.
+**Sonra:** Faz 1 tehdit modeli + Faz 2 madde 1–12 + eklenen yüzeyler (R5/R6, R9, R9.x) tarandı.
+**Critical/High kod bulgusu yok.** Düzeltilen: **1 Medium** — temel güvenlik başlıkları
+`next.config.ts`'e eklendi (`X-Content-Type-Options: nosniff`, `Referrer-Policy:
+strict-origin-when-cross-origin`, `X-Frame-Options: SAMEORIGIN`, `CSP: frame-ancestors 'self'`;
+Tauri top-level yükleme/PostHog/YouTube embed'i bozulmaz — doğrulandı). Geniş PASS alanları
+raporda. Doğrulama: tsc 0, eslint 0, 10 test script'i, başlık curl'leri, fixture teardown.
+changelog: müşteri-görünür davranış değişmedi → kayıt yok.
+
+Kalan Medium/Low bulgular aşağıda R10.1–R10.5 olarak (sömürü ayrıntısı yok; ayrıntı gitignored
+raporda). Bağımlılık yükseltmeleri (özellikle `next@16.3.8`, `@tiptap/*`, `@auth/core`) Hakan'ın
+kararına bırakıldı — ayrı görevde, test ederek.
+
+---
+
+# R10.1 — CLI: sunucudan gelen workspace adını AGENTS.md'ye yazmadan önce temizle
+
+> Low. Kaynak: R10 Oturum C (bkz. gitignored rapor → "Bulgu R10-4"). CLI'a dokunur → yayınlama,
+> R11 Birikenler'e satır ekle.
+
+```text
+`npx remnus init`, sunucudan dönen workspace adını (ve scope/mcpUrl) `cli/templates/
+agents-section.md` şablonuna koyup `cli/src/lib/files.js writeAgentSection` ile commit'lenen
+bir ajan talimat dosyasına (AGENTS.md/CLAUDE.md) yazıyor. Ad kaçışsız ve sınırsız geçiyor; adı
+başkasının belirlediği paylaşılan bir workspace'e bağlanan üyede bu bir prompt-injection yüzeyi
+(ayrıca ad içindeki `<!-- remnus:end -->` yönetilen blok sınırını bozabilir).
+Yap: `cli/src/commands/init.js` içinde `renderTemplate`'e vermeden önce server-kaynaklı metin
+alanlarını (en azından WORKSPACE_NAME, SCOPE) tek satıra indir, kontrol karakterlerini ve
+`<!-- … -->` dizilerini temizle, makul uzunlukta kes (~80). `.mcp.json` (JSON.stringify) ve
+hook (sabit komut) zaten güvenli — onlara dokunma. Test: `.playwright-mcp/r10/cli-inject.mjs`
+desenini kalıcı bir CLI testine çevir. Sürüm pin'ini koru. R11 Birikenler.
+```
+
+# R10.2 — Masaüstü: `remnus://auth` token'ını başlatan cihaza/nonce'a bağla
+
+> Low. Kaynak: R10 Oturum C (rapor → "Bulgu R10-5"). `src-tauri/`'ye dokunur → yayınlama,
+> R11 Birikenler.
+
+```text
+`remnus://auth?token=<jwt>` deep-link'i (src-tauri/src/lib.rs handle_deep_link_url) kurban
+uygulamada açılırsa, saldırganın kendi geçerli client-token'ıyla kurbanı saldırganın hesabına
+sokabilir (oturum sabitleme). Token imzalı+tek-kullanım+5dk ve taban URL sabit (iyi), ama token
+onu talep eden cihaza bağlı değil.
+Yap: desktop login akışında bir nonce üret (cihazda sakla), `client-bridge`/`client-activate`
+token'ına bağla; deep-link redemption'da nonce eşleşmezse reddet. Ya da en azından redemption'dan
+önce kullanıcıya hangi hesaba girileceğini onaylat. Sunucu tarafı küçük şema/akış değişikliği
+gerekebilir — küçükse yap, büyükse Hakan'a sor. R11 Birikenler (src-tauri dokunulursa).
+```
+
+# R10.3 — Android: oturum taşıyan kabukta `allowBackup` kapat
+
+> Low. Kaynak: R10 Oturum C (rapor → "Bulgu R10-6"). `android/`'a dokunur → yayınlama.
+
+```text
+`android/app/src/main/AndroidManifest.xml` → `android:allowBackup="true"` (Capacitor varsayılanı).
+Uygulama remnus.com'u yüklüyor; WebView oturum verisi yedekle çıkarılabilir.
+Yap: `android:allowBackup="false"` (gerekiyorsa `dataExtractionRules`/`fullBackupContent` ile
+ince ayar). Kabuk yeniden derleme/yayın gerektirir — yalnız bir sonraki mobil sürümle.
+```
+
+# R10.4 — MCP: "yok" ile "erişemezsin"i tek hata metnine indir (varlık oracle'ı)
+
+> Low. Kaynak: R10 Oturum A (rapor → "Bulgu R10-1").
+
+```text
+`get_page`/`get_related_pages`/`update_page` başka workspace'in VAR OLAN id'sine "Access denied",
+hiç OLMAYAN id'ye "Not found" dönüyor → bir token elindeki id'nin sistemde gerçek bir Remnus
+sayfası olup olmadığını doğrulayabiliyor (id'ler UUID → sayımlanamaz, o yüzden Low). Database yolu
+(`get_database_schema`/`query_database`) zaten "Database not found or access denied" ile birleşik —
+hedef biçim bu.
+Yap: `src/lib/services/workspace.ts` (`getAnyPageById`, `getRelatedPages`) ve `updatePageById`'ın
+"yok" vs "erişim yok" dallarını tek metne indir; MCP sarmalayıcıları (tools/read.ts, tools/write.ts)
+aynı birleşik metni yüzeye çıkarsın. Test: `.playwright-mcp/r10/oracle.mjs` (şu an 3 FAIL →
+düzeltmeden sonra PASS beklenir).
+```
+
+# R10.5 — Rate limiting + sertleştirme kalemleri
+
+> Low + öneriler. Kaynak: R10 Oturum B (rapor → "Bulgu R10-3" + başlık notları).
+
+```text
+Rate limiting şu an yalnız MCP'de (60/dk/token). En somut açık yüzey `/api/oauth/register`
+(RFC 7591, tam anonim → sınırsız client kaydı DB şişirebilir). Login OAuth-only, deviceId UUID,
+mutasyonlar auth/seat-capped olduğundan gerisi düşük.
+Yap: `/api/oauth/register` ve login/install-poll için hafif IP-bazlı rate limit (MCP'deki
+token-bucket deseni yeniden kullanılabilir) ya da Vercel WAF. Ayrıca sertleştirme (ayrı/opsiyonel):
+(a) tam CSP taslağı — `script-src`/`connect-src` için inline script'ler + PostHog/Cloudinary/Stripe/
+OAuth/Tauri origin'lerini sayıp dev'de test ederek, `'unsafe-inline'`siz; (b) HSTS'in domain/Vercel
+düzeyinde servis edildiğini teyit (includeSubDomains ancak tüm subdomain HTTPS iken); (c) login için
+açık same-origin `redirect` callback (savunma derinliği).
 ```
 
 ---
@@ -2513,6 +2905,7 @@ test:trash-links) genişletmek serbest.
 | R1 | `cli/package.json` → **0.1.11** (link etiketi, "For the agent" bloğu, `open --hook`, `open --prefer`, masaüstü tespiti, proje başına tek pencere, `issued` damgası) | `remnus://open?workspace=<id>` rotası (lib.rs `handle_open_link`, cold start, tekrar engeli) — **0.1.19** gerektirir; CLI eşiği `DESKTOP_OPEN_MIN_VERSION = '0.1.19'` (`cli/src/lib/desktop.js`) |
 | R6 | `cli/templates/agents-section.md`: iki satır — "kalibrasyonu yenile" isteği → rehberin "Running it again" bölümü; izlenmeye değer yeni database/alan → ana panoya blok. Sürüm artırılmadı (0.1.11'de birleşir). Yalnız yeni `init`/`sync` ile yazılan AGENTS.md'ye girer | — |
 | R6+ | — | `skills/remnus/SKILL.md` değişti (`tick`/`append`, `move_item` `position`); masaüstü `install_remnus_skill` bunu `include_str!` ile gömüyor → sonraki masaüstü sürümüne girer |
+| R9 | Kod değişmedi, sürüm artmaz. Ama `npx remnus open`'ın yazdırdığı `/w/<id>` linki (`cli/src/commands/open.js`) R9 öncesi workspace'i hiç değiştirmiyordu; R9'un **web** düzeltmesi (`/w/[id]` route handler) canlıya çıkmadan R11'in `open` testleri yanlış workspace'i açar → R9 web deploy'u yayın sonrası testten ÖNCE canlıda olmalı | Kod değişmedi. Masaüstü `remnus://open` → `DesktopOpenListener` → `/w/<id>` aynı web düzeltmesine dayanır (aynı koşul). Tauri `TabPane` artık talep anında yükleniyor (web'den gelir, binary değil) — R11 testinde ilk sekmenin açılış süresine bak |
 
 ```text
 Remnus projesinde çalışıyorsun. AI.md kuralları geçerli. Bu, V2 revizyonlarının son adımı:
@@ -2552,6 +2945,11 @@ Hakan'dan açık onay al; token/OTP değerini asla yazdırma.
   → giriş sonrası açılıyor.
 - Masaüstü kaldırılmış/eski: `open` iki kez → tek proje penceresi.
 - `npx remnus doctor` → "yeni sürüm var" dürtüsü eski pin'li projede görünüyor.
+- **Canlı hız ölçümü (R9.6'dan taşındı):** prod `agent_activity.duration_ms` tool başına p50/p95 (yalnız toplu,
+  salt okuma) → R9 notundaki tabloyla karşılaştır; Vercel fonksiyon süreleri / Fast Origin Transfer ve PostHog web
+  vitals (vercel + posthog MCP yetkili değilse Hakan'dan export iste, bekleme); Turso rows-read eğrisi 0055 öncesi/
+  sonrası. Deploy aynı gün olduğu için veri ince olabilir — ne kadar varsa raporla, beklenmeyen gerileme varsa
+  düzelt ya da R9 notuna yaz.
 
 ## Bitirirken
 

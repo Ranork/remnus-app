@@ -38,6 +38,14 @@ npm run bench:mcp-request   # Server cost of the session-opening MCP requests (i
 #                           real handler with a minted local PAT (deleted after): median ms + DB round trips per
 #                           method, per scope. BENCH_DB_RTT_MS=80 models a far DB. Local only. Redirects
 #                           `server-only` to Next's stub itself. DATABASE_URL="file:local.db" npm run bench:mcp-request
+#                           BENCH_TOOLS=1 (V2 R9) adds tool calls: reads + writes to scratch items it deletes again.
+npm run bench:web -- setup|run|ids|cleanup   # (V2 R9) web routes on a local `next start`: fixture account, per-route
+#                           time / HTML+RSC size / DB round trips. Server: BENCH_DB_TRACE=1 BENCH_DB_RTT_MS=10
+#                           AUTH_SECRET=<throwaway>; bench: BENCH_AUTH_SECRET=<same> ... run --base <url> --log <server log>.
+#                           Local file DB only. Build with `npx next build` (never `npm run build`: migrates prod).
+npm run test:i18n-client     # (V2 R9.1) client message scopes match the code; `-- --write` regenerates src/i18n/clientNamespaces.ts
+npm run bench:change-signal # (V2 R9/R9.8) Turso rows read per live-refresh poll, before/after migrations 0055 + 0056, on the
+#                           Turso DEV db (.env.turso-dev). Run from PowerShell (Turso DNS fails in Git Bash).
 npm run bench:mcp-handshake -- --project <dir> [--runs 5] [--bridge mcpjson|local]
 #                           Spawns the project's .mcp.json server like Claude Code and times initialize + lists.
 #                           Read-only; the bridge reads the token, the script never does. Rate limit: 60 req/min
