@@ -3023,6 +3023,9 @@ proje penceresi (kilitli oturum, sade kenar çubuğu), pencerede bilgi haritası
   Google/GitHub OAuth). Hesap A projeyi `init` eder; hesap B repo klonunda `npx remnus join`
   → üye değilse istek → A `MembersTab`'da onaylar → B tekrar `join` → bağlanır. Ret ve 7 günlük
   bekleme; `viewer` rolünün yazma isteyince net hata alması.
+  **✅ Kapandı (2026-10-05, Hakan):** 7 günlük bekleme sonrası yeniden-istek kontrolü
+  (`Ford-Netsis-UI-B`) ve test temizliği **yapılmayacak**; kullanıcılardan ilgili bir bildirim
+  gelirse o zaman bakılır. Tekrar hatırlatma.
 - **P1 canlı yenileme, prod'da** — yerelde P7/P12/P13'te görüldü; canlıda bir ajan yazarken
   proje penceresinin 2–3 sn içinde güncellendiğini gözle doğrula.
 - **Masaüstü uygulama** — `v0.1.18` yayınlandıktan sonra kurulu uygulamanın güncellemeyi
@@ -3034,9 +3037,11 @@ proje penceresi (kilitli oturum, sade kenar çubuğu), pencerede bilgi haritası
 
 - **Emir'in `LandingNext` çevirileri** yalnız `en`/`tr`'de; diğer 6 dilde 224 anahtar
   İngilizceye düşer. `/landing-next` taslak sayfa olduğu için bloklamaz; Emir'e not.
+  **✅ Karar (2026-10-05, Hakan): çeviri yapılmayacak** (site artık `/`'de, 8 dilde; `/landing-next` arşiv).
 - **P2:** ajan kotası kişi değil token başına (fatura kararı); iki ajanın aynı sayfayı eşzamanlı
   yazması (sürüm/ETag yok, sonra yazan kazanır); aynı projeye katılan iki kişinin ajan rozeti
   aynı etiketi gösteriyor.
+  **✅ Kota kararı (2026-10-05, Hakan): "kişi başına" kalsın**, değişiklik yok.
 - **P10 opsiyonelleri** (aşağıdaki "Opsiyonel" bölümü): arama breadcrumb okuması,
   context-run kaydının tek tura inmesi, web'de global arama kutusu (ürün kararı).
 - **P11:** embedding tasarımı hazır ama kapalı; açma ölçütü PostHog verisi (P11 notu).
@@ -3281,6 +3286,9 @@ doğrulanır, **sonra** kod deploy edilir. Tersi değil.
    yok; FTS indeksi artık bunu mümkün kılıyor. Açık soru: her tuşa basışta sorgu için
    yeterince hızlı mı? **Ne zaman:** deploy sonrası ölçümden sonra, Hakan karar
    verirse.
+   **✅ Karar (2026-10-05, Hakan): şimdilik yapılmıyor.** İnsan kullanıcılardan "sayfa
+   bulamıyorum" geri bildirimi gelirse FTS ile `Ctrl+K` kutusu eklenir (~yarım gün).
+   Embedding kararı ayrı kalır; bu madde onu beklemez.
 4. **`prepare_context`'te FTS birinci aşaması (P10-D.5).** P11'e devredildi; P11
    bölümünün sonundaki "P10'dan devreden" notunda.
 
