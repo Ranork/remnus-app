@@ -315,6 +315,12 @@
     "savingsSpeed": "{ms, number} 毫秒",
     "savingsSpeedLabel": "典型响应时间",
     "savingsSpeedHint": "过去 30 天的中位响应时间，在我们这一端测得 — 不包含智能体自身的网络往返。",
+    "savingsCompact": "缩小为一行",
+    "savingsExpand": "显示完整卡片",
+    "savingsHide": "从侧边栏隐藏",
+    "savingsHiddenToast": "已隐藏节省卡片",
+    "savingsHiddenToastHint": "可在「{agents}」中重新显示。",
+    "savingsShowInSidebar": "在侧边栏显示",
     "myTrash": "回收站",
     "settings": "设置",
     "earlyAccess": "抢先体验",
@@ -638,6 +644,7 @@
     "agentsUsageLabel": "用量（近 30 天）",
     "agentsUsageValue": "约 {tokens} Token · {calls} 次调用",
     "agentsWorkspaceEmpty": "暂无令牌",
+    "agentsEmptyWorkspaces": "没有智能体的工作区",
     "trashWorkspaceEmpty": "回收站为空",
     "agentsAddToken": "添加令牌",
     "storageTitle": "已用存储",
@@ -849,6 +856,15 @@
     "cardMark": "卡片标记依据",
     "cardMarkHint": "其值以徽章形式显示在每张卡片顶部。",
     "cardMarkCalendarHint": "其值以彩色圆点显示在每个事件标题之前。",
+    "cardMarkStyle": "标记显示为",
+    "cardMarkStyleBadge": "徽章",
+    "cardMarkStyleDot": "圆点",
+    "cardMarkAccentHint": "其颜色显示为每张卡片一侧的线条。",
+    "accentLeft": "左",
+    "accentTop": "上",
+    "accentRight": "右",
+    "accentBottom": "下",
+    "cardBackgroundHint": "每张卡片都会以其值的颜色浅浅着色。",
     "groupByHint": "在设置中选择一个用于分组看板的属性。",
     "optionColor": "选项颜色",
     "columnOptions": "排序、筛选或隐藏",
@@ -1191,6 +1207,8 @@
     "savingError": "保存出错",
     "backlinksTitle": "反向链接 ({count})",
     "knowledgeTitle": "Knowledge context", "knowledgeHint": "Describe what this page means so agents can retrieve the right context without reading the whole workspace.", "knowledgeType": "Concept type", "knowledgeStatus": "Lifecycle", "knowledgeStatusDraft": "Draft", "knowledgeStatusStable": "Stable", "knowledgeStatusDeprecated": "Deprecated", "knowledgeDescription": "Retrieval description", "knowledgeTags": "Tags", "knowledgeTagsHint": "architecture, billing, onboarding", "knowledgeStaleAfter": "Review after", "knowledgeSources": "Sources", "knowledgeSourcesHint": "One URL or source identifier per line", "knowledgeSave": "Save metadata", "knowledgeReview": "Review this revision", "knowledgeReviewHint": "A review is bound to the current title and body. The review expires automatically when either changes.", "knowledgeSaved": "Metadata saved", "knowledgeReviewed": "Exact revision reviewed", "knowledgeLoadFailed": "Knowledge metadata could not be loaded.", "knowledgeSaveFailed": "Knowledge metadata could not be saved.", "knowledgeReviewFailed": "This revision could not be reviewed.", "knowledgeTrust": { "human-reviewed": "Human reviewed", "external-human-asserted": "External human assertion", "machine-confirmed": "Agent generated", "unverified": "Unverified" },
+    "floatGroupLabel": "页面面板",
+    "floatRepeat": "重复",
     "markdown": {
       "button": "以 Markdown 编辑",
       "title": "以 Markdown 编辑",
@@ -2467,7 +2485,8 @@
   },
   "UI": {
     "close": "关闭",
-    "actionFailed": "操作未完成，请重试。"
+    "actionFailed": "操作未完成，请重试。",
+    "undo": "撤销"
   },
   "Site": {
     "meta": {

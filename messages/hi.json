@@ -315,6 +315,12 @@
     "savingsSpeed": "{ms, number} मिलीसेकंड",
     "savingsSpeedLabel": "सामान्य उत्तर समय",
     "savingsSpeedHint": "पिछले 30 दिनों का मध्य उत्तर समय, हमारी ओर से मापा गया — आपके एजेंट की अपनी नेटवर्क यात्रा इसमें शामिल नहीं है।",
+    "savingsCompact": "एक पंक्ति में छोटा करें",
+    "savingsExpand": "पूरा कार्ड दिखाएँ",
+    "savingsHide": "साइडबार से छिपाएँ",
+    "savingsHiddenToast": "बचत कार्ड छिपा दिया गया",
+    "savingsHiddenToastHint": "आप इसे {agents} से फिर दिखा सकते हैं।",
+    "savingsShowInSidebar": "साइडबार में दिखाएँ",
     "myTrash": "ट्रैश",
     "settings": "सेटिंग्स",
     "earlyAccess": "अर्ली एक्सेस",
@@ -638,6 +644,7 @@
     "agentsUsageLabel": "उपयोग (पिछले 30 दिन)",
     "agentsUsageValue": "~{tokens} टोकन · {calls} कॉल",
     "agentsWorkspaceEmpty": "अभी कोई टोकन नहीं",
+    "agentsEmptyWorkspaces": "बिना एजेंट वाले वर्कस्पेस",
     "trashWorkspaceEmpty": "ट्रैश में कुछ नहीं",
     "agentsAddToken": "टोकन जोड़ें",
     "storageTitle": "उपयोग किया गया भंडारण",
@@ -849,6 +856,15 @@
     "cardMark": "कार्ड को चिह्नित करें",
     "cardMarkHint": "इसका मान हर कार्ड के ऊपर बैज के रूप में दिखता है।",
     "cardMarkCalendarHint": "इसका मान हर इवेंट के शीर्षक से पहले रंगीन बिंदु के रूप में दिखता है।",
+    "cardMarkStyle": "निशान ऐसे दिखाएँ",
+    "cardMarkStyleBadge": "बैज",
+    "cardMarkStyleDot": "बिंदु",
+    "cardMarkAccentHint": "इसका रंग हर कार्ड के एक किनारे पर रेखा के रूप में दिखता है।",
+    "accentLeft": "बाएँ",
+    "accentTop": "ऊपर",
+    "accentRight": "दाएँ",
+    "accentBottom": "नीचे",
+    "cardBackgroundHint": "हर कार्ड उसके मान के रंग से हल्का रंगा जाता है।",
     "groupByHint": "बोर्ड को समूहित करने के लिए सेटिंग्स में एक प्रॉपर्टी चुनें।",
     "optionColor": "विकल्प का रंग",
     "columnOptions": "सॉर्ट, फ़िल्टर या छुपाएं",
@@ -1191,6 +1207,8 @@
     "savingError": "सहेजने में त्रुटि",
     "backlinksTitle": "बैकलिंक्स ({count})",
     "knowledgeTitle": "Knowledge context", "knowledgeHint": "Describe what this page means so agents can retrieve the right context without reading the whole workspace.", "knowledgeType": "Concept type", "knowledgeStatus": "Lifecycle", "knowledgeStatusDraft": "Draft", "knowledgeStatusStable": "Stable", "knowledgeStatusDeprecated": "Deprecated", "knowledgeDescription": "Retrieval description", "knowledgeTags": "Tags", "knowledgeTagsHint": "architecture, billing, onboarding", "knowledgeStaleAfter": "Review after", "knowledgeSources": "Sources", "knowledgeSourcesHint": "One URL or source identifier per line", "knowledgeSave": "Save metadata", "knowledgeReview": "Review this revision", "knowledgeReviewHint": "A review is bound to the current title and body. The review expires automatically when either changes.", "knowledgeSaved": "Metadata saved", "knowledgeReviewed": "Exact revision reviewed", "knowledgeLoadFailed": "Knowledge metadata could not be loaded.", "knowledgeSaveFailed": "Knowledge metadata could not be saved.", "knowledgeReviewFailed": "This revision could not be reviewed.", "knowledgeTrust": { "human-reviewed": "Human reviewed", "external-human-asserted": "External human assertion", "machine-confirmed": "Agent generated", "unverified": "Unverified" },
+    "floatGroupLabel": "पेज पैनल",
+    "floatRepeat": "दोहराव",
     "markdown": {
       "button": "मार्कडाउन के रूप में संपादित करें",
       "title": "मार्कडाउन के रूप में संपादित करें",
@@ -2467,7 +2485,8 @@
   },
   "UI": {
     "close": "बंद करें",
-    "actionFailed": "यह नहीं हो सका। कृपया फिर से कोशिश करें।"
+    "actionFailed": "यह नहीं हो सका। कृपया फिर से कोशिश करें।",
+    "undo": "पूर्ववत करें"
   },
   "Site": {
     "meta": {

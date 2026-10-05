@@ -78,6 +78,67 @@ export function getOptionColorByValue(
   return found ? getOptionColor(found) : SELECT_COLORS.default;
 }
 
+/** The option values a select / multi-select / status cell holds, in order; [] for any other type. */
+function colorValues(
+  colSchema: { type: string } | null | undefined,
+  value: unknown,
+): string[] {
+  if (!colSchema) return [];
+  if (colSchema.type === 'select' || colSchema.type === 'status') {
+    return typeof value === 'string' && value ? [value] : [];
+  }
+  if (colSchema.type === 'multi_select' && Array.isArray(value)) {
+    return (value as unknown[]).filter((v): v is string => typeof v === 'string' && v !== '');
+  }
+  return [];
+}
+
+/**
+ * A card's accent line (the mark drawn as an edge stripe): one colour per selected
+ * option — one segment for a select/status, one per value for a multi-select.
+ */
+export function getCardAccentColors(
+  colSchema: { type: string; options?: (string | SelectOption)[] } | null | undefined,
+  value: unknown,
+): string[] {
+  return colorValues(colSchema, value).map((v) => getOptionColorByValue(colSchema?.options ?? [], v).dot);
+}
+
+/**
+ * The colour a card takes when a view tints it by an option ("Card background", U3):
+ * a `wash` for the surface and an `edge` for its hairline, hand-picked per colour.
+ * Not the chip's dot thinned out — a thinned mustard or red-600 reads as a stain
+ * (khaki, brown) on both light and dark surfaces. The light theme defines clean
+ * pastels (`--card-<colour>-wash/-edge` in globals.css); the dark themes fall back to
+ * the bright 300/400 hue at a low alpha, which stays a hint of colour on any dark sheet.
+ */
+const CARD_TINTS: Record<SelectOptionColor, { wash: string; edge: string }> = {
+  default: { wash: 'var(--card-default-wash, rgba(161,161,170,0.08))', edge: 'var(--card-default-edge, rgba(161,161,170,0.24))' },
+  red:     { wash: 'var(--card-red-wash, rgba(248,113,113,0.09))',     edge: 'var(--card-red-edge, rgba(248,113,113,0.28))'     },
+  orange:  { wash: 'var(--card-orange-wash, rgba(251,146,60,0.085))',   edge: 'var(--card-orange-edge, rgba(251,146,60,0.28))'   },
+  yellow:  { wash: 'var(--card-yellow-wash, rgba(250,204,21,0.055))',  edge: 'var(--card-yellow-edge, rgba(250,204,21,0.26))'   },
+  green:   { wash: 'var(--card-green-wash, rgba(74,222,128,0.07))',    edge: 'var(--card-green-edge, rgba(74,222,128,0.24))'    },
+  teal:    { wash: 'var(--card-teal-wash, rgba(45,212,191,0.07))',     edge: 'var(--card-teal-edge, rgba(45,212,191,0.24))'     },
+  blue:    { wash: 'var(--card-blue-wash, rgba(129,140,248,0.10))',    edge: 'var(--card-blue-edge, rgba(129,140,248,0.30))'    },
+  purple:  { wash: 'var(--card-purple-wash, rgba(192,132,252,0.09))',  edge: 'var(--card-purple-edge, rgba(192,132,252,0.28))'  },
+  pink:    { wash: 'var(--card-pink-wash, rgba(244,114,182,0.09))',    edge: 'var(--card-pink-edge, rgba(244,114,182,0.28))'    },
+};
+
+/**
+ * A card's tint from its first selected option (see `CARD_TINTS`), plus the option's
+ * dot colour for the hover edge. Null when there is nothing to paint.
+ */
+export function getCardTint(
+  colSchema: { type: string; options?: (string | SelectOption)[] } | null | undefined,
+  value: unknown,
+): { wash: string; edge: string; dot: string } | null {
+  const first = colorValues(colSchema, value)[0];
+  if (!first) return null;
+  const found = (colSchema?.options ?? []).map(normalizeOption).find((o) => o.value === first);
+  const tint = CARD_TINTS[found?.color ?? 'default'] ?? CARD_TINTS.default;
+  return { ...tint, dot: getOptionColorByValue(colSchema?.options ?? [], first).dot };
+}
+
 /** "in 3 days" → "In 3 days": a value standing alone in a cell starts with a capital. */
 function capitalize(text: string, locale: string): string {
   return text.charAt(0).toLocaleUpperCase(locale) + text.slice(1);

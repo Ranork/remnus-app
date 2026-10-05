@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useRef, useState, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslations } from 'next-intl';
 import { AlignLeft, Calendar, CheckSquare, CircleDashed, Clock, Hash, Link2, List, Mail, Phone, Tags, Type, User, Users, Fingerprint } from 'lucide-react';
@@ -10,7 +10,10 @@ import {
   normalizeOption,
   getStatusGroup,
   getOptionColorByValue,
+  getCardAccentColors,
+  getCardTint,
 } from '@/lib/types/properties';
+import type { CardAccentSide } from '@/lib/types/views';
 import { useMember, type WorkspaceMember } from './MembersContext';
 import PageIcon from './PageIcon';
 
@@ -151,18 +154,9 @@ export function OptionChip({
 }
 
 /**
- * Values that say what they are on their own — a status, an option chip, a person, a
- * link — carry no "Label:" on a card; plain text, numbers, dates and checkboxes do
- * (R8.2: "labels only where the value alone is ambiguous").
- */
-export function isSelfDescribingType(type: string): boolean {
-  return ['select', 'multi_select', 'status', 'user', 'multi_user', 'url', 'email'].includes(type);
-}
-
-/**
  * The value that marks a card (the view's "Mark cards by" property), drawn as a badge:
- * a status chip with its ring glyph, or option chips. Replaces the tinted card
- * backgrounds and accent stripes (a Notion pattern Remnus does not follow).
+ * a status chip with its ring glyph, or option chips. The default mark style; the
+ * alternative is `CardAccent`.
  */
 export function PropertyMark({ column, value }: { column: { type: string; options?: (string | SelectOption)[] }; value: unknown }) {
   if (value === undefined || value === null || value === '') return null;
@@ -202,6 +196,70 @@ export function MarkDot({
       style={{ width: size, height: size, backgroundColor: c.dot }}
     />
   );
+}
+
+// The accent is a rounded bar set just inside the card's edge (not a stripe glued to
+// it and cut by the corners): `md` for kanban cards (12px padding), `sm` for the
+// tighter calendar events.
+const ACCENT_EDGE: Record<'sm' | 'md', Record<CardAccentSide, string>> = {
+  md: {
+    left: 'left-1 inset-y-2.5 w-[3px] flex-col',
+    right: 'right-1 inset-y-2.5 w-[3px] flex-col',
+    top: 'top-1 inset-x-3 h-[3px] flex-row',
+    bottom: 'bottom-1 inset-x-3 h-[3px] flex-row',
+  },
+  sm: {
+    left: 'left-[3px] inset-y-1.5 w-[2.5px] flex-col',
+    right: 'right-[3px] inset-y-1.5 w-[2.5px] flex-col',
+    top: 'top-[3px] inset-x-2 h-[2.5px] flex-row',
+    bottom: 'bottom-[3px] inset-x-2 h-[2.5px] flex-row',
+  },
+};
+
+/**
+ * The mark drawn as an accent bar along one edge of a card (the "Accent line" mark
+ * style): one rounded segment per selected option. Place it inside the card (which
+ * must be `relative`).
+ */
+export function CardAccent({
+  column,
+  value,
+  side,
+  size = 'md',
+}: {
+  column: { type: string; options?: (string | SelectOption)[] };
+  value: unknown;
+  side: CardAccentSide;
+  size?: 'sm' | 'md';
+}) {
+  const colors = getCardAccentColors(column, value);
+  if (colors.length === 0) return null;
+  return (
+    <span aria-hidden className={`pointer-events-none absolute flex gap-0.5 ${ACCENT_EDGE[size][side]}`}>
+      {colors.map((color, i) => <span key={i} className="flex-1 rounded-full" style={{ backgroundColor: color }} />)}
+    </span>
+  );
+}
+
+/**
+ * The style that tints a card with its "Card background" option colour: a soft wash
+ * laid over the card's own surface (`bg-raised`, a touch stronger at the top) and the
+ * same hue for its hairline — read by the card through `--card-edge` /
+ * `--card-edge-strong`, which fall back to the neutral lines on an untinted card.
+ */
+export function cardTintStyle(
+  column: { type: string; options?: (string | SelectOption)[] } | null | undefined,
+  value: unknown,
+): CSSProperties | undefined {
+  const tint = getCardTint(column, value);
+  if (!tint) return undefined;
+  return {
+    // Dark themes let the wash fade out like light falling from the top (a flat dark
+    // tint turns yellow olive and red brown); the light theme keeps more of its pastel.
+    backgroundImage: `linear-gradient(to bottom, ${tint.wash}, color-mix(in srgb, ${tint.wash} var(--card-wash-fade, 30%), transparent))`,
+    '--card-edge': tint.edge,
+    '--card-edge-strong': `color-mix(in srgb, ${tint.edge}, ${tint.dot} 35%)`,
+  } as CSSProperties;
 }
 
 /**

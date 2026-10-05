@@ -5,6 +5,8 @@ import { GripVertical } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { getPropertyIcon, CollapsibleSection, ToggleRow } from './shared';
 import { SimpleSelect } from '@/components/ui/select';
+import CardAppearanceControls from './CardAppearanceControls';
+import { DEFAULT_CARD_APPEARANCE, type CardAppearance } from '@/lib/types/views';
 
 interface CalendarLayoutSectionProps {
   schema: any[];
@@ -14,9 +16,9 @@ interface CalendarLayoutSectionProps {
   onViewModeChange?: (mode: 'month' | 'week') => void;
   firstDayOfWeek?: 'sunday' | 'monday';
   onFirstDayOfWeekChange?: (day: 'sunday' | 'monday') => void;
-  /** The property whose colour marks every event (a dot before its title). */
-  cardMarkCol?: string;
-  onCardMarkColChange?: (colId: string) => void;
+  /** How events are coloured: the mark (dot or accent line) and the background tint. */
+  cardAppearance?: CardAppearance;
+  onCardAppearanceChange?: (patch: Partial<CardAppearance>) => void;
   cardProperties?: string[];
   onCardPropertiesChange?: (props: string[]) => void;
   showPropertyLabels?: boolean;
@@ -33,8 +35,8 @@ export default function CalendarLayoutSection({
   onViewModeChange,
   firstDayOfWeek,
   onFirstDayOfWeekChange,
-  cardMarkCol,
-  onCardMarkColChange,
+  cardAppearance = DEFAULT_CARD_APPEARANCE,
+  onCardAppearanceChange,
   cardProperties,
   onCardPropertiesChange,
   showPropertyLabels = true,
@@ -45,7 +47,6 @@ export default function CalendarLayoutSection({
   const t = useTranslations('Database');
 
   const dateColumns = schema.filter((c: any) => c.type === 'date' || c.type === 'datetime');
-  const colorColumns = schema.filter((c: any) => c.type === 'select' || c.type === 'multi_select' || c.type === 'status');
   const calAvailableCardProps = schema.filter((c: any) => c.id !== 'title' && c.id !== dateCol);
   const effectiveCalVisible: string[] =
     cardProperties !== undefined
@@ -166,21 +167,7 @@ export default function CalendarLayoutSection({
               className="w-28"
             />
           </div>
-          {colorColumns.length > 0 && (
-            <div className="flex flex-col gap-1.5 px-4 pt-1">
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-xs text-fg-2 shrink-0">{t('cardMark')}</span>
-                <SimpleSelect
-                  value={cardMarkCol ?? ''}
-                  onValueChange={(v) => onCardMarkColChange?.(v)}
-                  options={[{ value: '', label: t('none') }, ...colorColumns.map((col: any) => ({ value: col.id, label: col.name }))]}
-                  size="sm"
-                  className="w-32"
-                />
-              </div>
-              <p className="text-xs leading-relaxed text-fg-3">{t('cardMarkCalendarHint')}</p>
-            </div>
-          )}
+          <CardAppearanceControls schema={schema} appearance={cardAppearance} onChange={onCardAppearanceChange} view="calendar" />
         </div>
       </CollapsibleSection>
     </>

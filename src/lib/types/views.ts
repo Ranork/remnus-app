@@ -49,9 +49,10 @@ export interface KanbanViewConfig {
   cardProperties?: string[];              // visible property IDs in display order; undefined = first 2
   showPropertyLabels?: boolean;           // show property name before value; default true
   propertyTextClamp?: 'truncate' | 'wrap'; // single-line truncate or multi-line wrap; default truncate
-  cardColorCol?: string;                  // property ID that marks each card ("Mark cards by": a status chip or option chips on the card)
-  cardBorderSide?: 'left' | 'top' | 'right' | 'bottom'; // legacy: accent-line edge, ignored since V2 R8.2
-  cardBgCol?: string;                     // legacy: card tint; read as the mark when cardColorCol is unset
+  cardColorCol?: string;                  // property ID that marks each card ("Mark cards by"), drawn as `cardMarkStyle` says
+  cardMarkStyle?: CardMarkStyle;          // how the mark is drawn: a badge (default) or an accent line on `cardBorderSide`
+  cardBorderSide?: CardAccentSide;        // the accent line's edge when `cardMarkStyle` is 'accent'; default 'left'
+  cardBgCol?: string;                     // property ID whose option colour tints the whole card ("Card background")
   groupColBg?: boolean;                   // legacy: column tint, ignored since V2 R8.2 (the group's colour is its heading glyph)
   defaultPageIcon?: string;
   defaultPageIconColor?: string;
@@ -66,14 +67,53 @@ export interface CalendarViewConfig {
   filters: ViewFilter[];
   sorts: ViewSort[];
   openBehavior?: OpenBehavior;
-  cardColorCol?: string;                  // property ID that marks each event (a dot or status ring before the title)
-  cardBorderSide?: 'left' | 'top' | 'right' | 'bottom'; // legacy: accent-line edge, ignored since V2 R8.2
-  cardBgCol?: string;                     // legacy: card tint; read as the mark when cardColorCol is unset
+  cardColorCol?: string;                  // property ID that marks each event, drawn as `cardMarkStyle` says
+  cardMarkStyle?: CardMarkStyle;          // how the mark is drawn: a dot / status ring before the title (default) or an accent line
+  cardBorderSide?: CardAccentSide;        // the accent line's edge when `cardMarkStyle` is 'accent'; default 'left'
+  cardBgCol?: string;                     // property ID whose option colour tints the whole event card ("Card background")
   cardProperties?: string[];              // visible property IDs in display order; undefined = first 1
   showPropertyLabels?: boolean;           // show property name before value; default true
   propertyTextClamp?: 'truncate' | 'wrap'; // single-line truncate or multi-line wrap; default truncate
   defaultPageIcon?: string;
   defaultPageIconColor?: string;
+}
+
+export type CardMarkStyle = 'mark' | 'accent';
+export type CardAccentSide = 'left' | 'top' | 'right' | 'bottom';
+
+/**
+ * How a kanban or calendar view colours its cards (U3, after V2 R8.2): one property
+ * marks each card — as a badge/dot or, alternatively, as an accent line along one
+ * edge — and an optional property tints the whole card. Read from and written back
+ * to the stored config fields with `getCardAppearance` / `applyCardAppearance`.
+ */
+export interface CardAppearance {
+  markCol?: string;
+  markStyle: CardMarkStyle;
+  accentSide: CardAccentSide;
+  tintCol?: string;
+}
+
+export const DEFAULT_CARD_APPEARANCE: CardAppearance = { markStyle: 'mark', accentSide: 'left' };
+
+type CardAppearanceFields =Pick<KanbanViewConfig, 'cardColorCol' | 'cardMarkStyle' | 'cardBorderSide' | 'cardBgCol'>;
+
+export function getCardAppearance(cfg: CardAppearanceFields): CardAppearance {
+  return {
+    markCol: cfg.cardColorCol,
+    markStyle: cfg.cardMarkStyle ?? 'mark',
+    accentSide: cfg.cardBorderSide ?? 'left',
+    tintCol: cfg.cardBgCol,
+  };
+}
+
+export function applyCardAppearance<T extends CardAppearanceFields>(cfg: T, patch: Partial<CardAppearance>): T {
+  const next = { ...cfg };
+  if ('markCol' in patch) next.cardColorCol = patch.markCol || undefined;
+  if ('markStyle' in patch) next.cardMarkStyle = patch.markStyle;
+  if ('accentSide' in patch) next.cardBorderSide = patch.accentSide;
+  if ('tintCol' in patch) next.cardBgCol = patch.tintCol || undefined;
+  return next;
 }
 
 export interface DatabaseView {

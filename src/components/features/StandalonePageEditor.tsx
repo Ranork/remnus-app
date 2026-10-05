@@ -12,12 +12,9 @@ import SaveStatus, { type SaveState } from './SaveStatus';
 import PageActionsMenu from './PageActionsMenu';
 import { Button } from '@/components/ui/button';
 import { IconPicker, PageHistoryModal, PageMarkdownDialog, ShareModal } from './lazyDialogs';
-import PageBacklinksPanel from './PageBacklinksPanel';
-import LocalGraphPanel from './graph/LocalGraphPanel';
-import KnowledgeContextPanel from './KnowledgeContextPanel';
-import PageCommentsPanel, { CommentsJumpLink } from './PageCommentsPanel';
+import PageFloat, { CommentsJumpLink, type PageFloatPanel } from './PageFloat';
 import PageProvenanceLine from './PageProvenance';
-import { pageContainerClass, scrollToSection } from './pageLayout';
+import { pageContainerClass } from './pageLayout';
 import { useTabNav } from '@/components/providers/TabsContext';
 import { tabKeys } from './tabs/keys';
 import type { WorkspaceItemRow } from '@/lib/actions/workspace';
@@ -65,7 +62,13 @@ export default function StandalonePageEditor({
   const [markdownDraft, setMarkdownDraft] = useState<string | null>(null);
   const [showHistory, setShowHistory] = useState(false);
   const [commentCount, setCommentCount] = useState(0);
-  const commentsRef = useRef<HTMLElement>(null);
+  // The floating group's open panel (U4); another page starts with none open.
+  const [floatPanel, setFloatPanel] = useState<PageFloatPanel | null>(null);
+  const [floatFor, setFloatFor] = useState(item.id);
+  if (floatFor !== item.id) {
+    setFloatFor(item.id);
+    setFloatPanel(null);
+  }
   const editorRef = useRef<BlockEditorHandle>(null);
   // Bumped by a review in either place (provenance line, knowledge panel) so the other follows.
   const [reviewSignal, setReviewSignal] = useState(0);
@@ -291,10 +294,10 @@ export default function StandalonePageEditor({
         />
       )}
 
-      {/* The thread lives under the body (R8.1); up here only its count, as a way down. */}
+      {/* The thread lives in the floating group (U4); up here only its count, as a way to it. */}
       {commentCount > 0 && (
         <div className="-mt-3 mb-5">
-          <CommentsJumpLink count={commentCount} onJump={() => scrollToSection(commentsRef.current)} />
+          <CommentsJumpLink count={commentCount} onJump={() => setFloatPanel('comments')} />
         </div>
       )}
 
@@ -310,15 +313,16 @@ export default function StandalonePageEditor({
         onImmediateSave={saveContent}
       />
 
-      <PageCommentsPanel
+      {/* Comments, knowledge, backlinks and the local map: a floating group in the page's corner (U4). */}
+      <PageFloat
         workspaceId={item.workspaceId}
         pageId={item.id}
-        onCountChange={setCommentCount}
-        sectionRef={commentsRef}
+        open={floatPanel}
+        onOpenChange={setFloatPanel}
+        onCommentCount={setCommentCount}
+        reviewSignal={reviewSignal}
+        onReviewed={bumpReview}
       />
-      <KnowledgeContextPanel workspaceId={item.workspaceId} pageId={item.id} refreshKey={reviewSignal} onReviewed={bumpReview} />
-      <PageBacklinksPanel workspaceId={item.workspaceId} pageId={item.id} />
-      <LocalGraphPanel workspaceId={item.workspaceId} pageId={item.id} />
     </div>
   );
 }

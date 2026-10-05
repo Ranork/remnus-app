@@ -28,6 +28,8 @@ interface SeriesPanelProps {
   dateColId: string | null;
   /** Compact spacing for the peek drawer. */
   isPeek?: boolean;
+  /** No outer spacing: inside the page's floating "Repeat" panel (U4). */
+  bare?: boolean;
   onChanged?: () => void;
 }
 
@@ -36,6 +38,7 @@ export default function SeriesPanel({
   databaseId,
   dateColId,
   isPeek = false,
+  bare = false,
   onChanged,
 }: SeriesPanelProps) {
   const t = useTranslations('Recurrence');
@@ -80,7 +83,7 @@ export default function SeriesPanel({
   if (!inSeries && !wasInSeries && !hasDate) return null;
 
   return (
-    <div className={isPeek ? 'mb-5' : 'mb-10'}>
+    <div className={bare ? undefined : isPeek ? 'mb-5' : 'mb-10'}>
       {inSeries ? (
         <div className="flex items-start gap-3 rounded-control bg-raised px-3.5 py-3 shadow-[inset_0_0_0_1px_var(--color-line)]">
           <Repeat size={16} className="text-fg-3 shrink-0 mt-0.5" aria-hidden />

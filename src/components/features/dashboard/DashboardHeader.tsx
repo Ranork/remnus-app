@@ -9,6 +9,7 @@ import { IconPicker } from '@/components/features/lazyDialogs';
 import { updateWorkspaceItemIcon, updateWorkspaceItemTitle, deleteWorkspaceItem } from '@/lib/actions/workspace';
 import { ConfirmDialog } from '@/components/features/ConfirmDialog';
 import { Button } from '@/components/ui/button';
+import { DashboardWidthButton } from './DashboardWidth';
 
 /**
  * Icon + editable title for a dashboard, mirroring `StandalonePageEditor`'s
@@ -117,6 +118,8 @@ export default function DashboardHeader({
         />
         {!compact && <p className="text-xs text-fg-4">{t('blockCount', { count: blockCount })}</p>}
       </div>
+
+      <DashboardWidthButton compact={compact} />
 
       {isHome && (
         <Button

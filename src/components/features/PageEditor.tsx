@@ -15,12 +15,8 @@ import SaveStatus, { type SaveState } from './SaveStatus';
 import PageActionsMenu from './PageActionsMenu';
 import { ConfirmDialog } from './ConfirmDialog';
 import { IconPicker, PageHistoryModal, PageMarkdownDialog, ShareModal } from './lazyDialogs';
-import PageBacklinksPanel from './PageBacklinksPanel';
-import LocalGraphPanel from './graph/LocalGraphPanel';
-import KnowledgeContextPanel from './KnowledgeContextPanel';
-import PageCommentsPanel, { CommentsJumpLink } from './PageCommentsPanel';
-import { pageContainerClass, scrollToSection } from './pageLayout';
-import SeriesPanel from './recurrence/SeriesPanel';
+import PageFloat, { CommentsJumpLink, type PageFloatPanel } from './PageFloat';
+import { pageContainerClass } from './pageLayout';
 import type { WorkspaceItemRow } from '@/lib/actions/workspace';
 import { type SelectOption, normalizeOption, formatDateValue } from '@/lib/types/properties';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -111,6 +107,10 @@ type PageEditorProps = {
   onPageUpdated?: (updatedPage: any) => void;
   subItems?: WorkspaceItemRow[];
   isAdmin?: boolean;
+  /** In a peek: where the floating panel group renders, outside the peek's box (DatabaseView). */
+  floatSlot?: HTMLElement | null;
+  /** In a peek: the row's repeat rule changed — the peek re-reads the row. */
+  onSeriesChanged?: () => void;
 };
 
 const PageEditor = forwardRef<PageEditorHandle, PageEditorProps>(function PageEditor({
@@ -122,6 +122,8 @@ const PageEditor = forwardRef<PageEditorHandle, PageEditorProps>(function PageEd
   onPageUpdated,
   subItems,
   isAdmin = false,
+  floatSlot = null,
+  onSeriesChanged,
 }, ref) {
   const t = useTranslations('Page');
   const tDb = useTranslations('Database');
@@ -151,7 +153,13 @@ const PageEditor = forwardRef<PageEditorHandle, PageEditorProps>(function PageEd
   const router = useRouter();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [commentCount, setCommentCount] = useState(0);
-  const commentsRef = useRef<HTMLElement>(null);
+  // The floating group's open panel (U4); a different row starts with none open.
+  const [floatPanel, setFloatPanel] = useState<PageFloatPanel | null>(null);
+  const [floatFor, setFloatFor] = useState(initialPage.id);
+  if (floatFor !== initialPage.id) {
+    setFloatFor(initialPage.id);
+    setFloatPanel(null);
+  }
   // Bumped by a review in either place (provenance line, knowledge panel) so the other follows.
   const [reviewSignal, setReviewSignal] = useState(0);
   const bumpReview = useCallback(() => setReviewSignal((n) => n + 1), []);
@@ -580,30 +588,14 @@ const PageEditor = forwardRef<PageEditorHandle, PageEditorProps>(function PageEd
         })}
       </div>
 
-      {/* The comment thread lives under the body (R8.1). Right under the attributes
-          only its count stays, as a way down — in peek too, since a peeked card is
-          often exactly where an agent's running comments need to be found. */}
+      {/* The thread lives in the floating group (U4). Right under the attributes only
+          its count stays, as a way to it — in peek too, since a peeked card is often
+          exactly where an agent's running comments need to be found. */}
       {commentCount > 0 && (
         <div className={isPeek ? '-mt-2 mb-5' : '-mt-8 mb-8'}>
-          <CommentsJumpLink count={commentCount} onJump={() => scrollToSection(commentsRef.current)} />
+          <CommentsJumpLink count={commentCount} onJump={() => setFloatPanel('comments')} />
         </div>
       )}
-
-      {/* Recurrence — sits between the properties and the body because that is
-          the order the question gets asked: what is this card, then is it one
-          of many, then what am I writing in it. */}
-      <SeriesPanel
-        page={{
-          id: initialPage.id,
-          properties,
-          seriesId: (initialPage as any).seriesId,
-          seriesDetached: (initialPage as any).seriesDetached,
-        }}
-        databaseId={database.id}
-        dateColId={recurrenceDateColId}
-        isPeek={isPeek}
-        onChanged={() => router.refresh()}
-      />
 
       {/* Content Editor */}
       <BlockEditor
@@ -618,16 +610,32 @@ const PageEditor = forwardRef<PageEditorHandle, PageEditorProps>(function PageEd
         onImmediateSave={saveContent}
       />
 
-      <PageCommentsPanel
+      {/* Comments, knowledge, backlinks, the local map and the repeat rhythm: a floating
+          group in the page's corner — in a peek, outside the peek's box (U4). */}
+      <PageFloat
         workspaceId={database.workspaceId}
         pageId={initialPage.id}
-        isPeek={isPeek}
-        onCountChange={setCommentCount}
-        sectionRef={commentsRef}
+        open={floatPanel}
+        onOpenChange={setFloatPanel}
+        onCommentCount={setCommentCount}
+        reviewSignal={reviewSignal}
+        onReviewed={bumpReview}
+        repeat={{
+          page: {
+            id: initialPage.id,
+            properties,
+            seriesId: (initialPage as any).seriesId,
+            seriesDetached: (initialPage as any).seriesDetached,
+          },
+          databaseId: database.id,
+          dateColId: recurrenceDateColId,
+          onChanged: () => {
+            router.refresh();
+            onSeriesChanged?.();
+          },
+        }}
+        slot={isPeek ? floatSlot : undefined}
       />
-      {!isPeek && <KnowledgeContextPanel workspaceId={database.workspaceId} pageId={initialPage.id} refreshKey={reviewSignal} onReviewed={bumpReview} />}
-      {!isPeek && <PageBacklinksPanel workspaceId={database.workspaceId} pageId={initialPage.id} />}
-      {!isPeek && <LocalGraphPanel workspaceId={database.workspaceId} pageId={initialPage.id} />}
 
       {showShareModal && (
         <ShareModal

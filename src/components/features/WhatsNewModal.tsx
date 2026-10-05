@@ -6,16 +6,25 @@ import { Plus, ArrowUp, Wrench } from 'lucide-react';
 import { CHANGELOG, localizedText, type ChangelogCategory, type ChangelogEntry } from '@/lib/changelog';
 import { Dialog, DialogBody, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
+import { SELECT_COLORS, type SelectOptionColor } from '@/lib/types/properties';
 
 // The "What's New" list. Its own module so the changelog — every entry in eight
 // languages — loads when the list is opened, not with every app page (V2 R9). The
 // unread badge and the seen cookie live in `useWhatsNew` (WhatsNewButton.tsx).
 
-// The category is a kind of change, not a state: told apart by its glyph, not a colour.
+// The category is a kind of change, told apart by its glyph and (U4, Hakan) its colour.
+// The colours are the data palette's option chips — never the signal yellow, which
+// stays the "unread" badge beside it, and never a semantic state colour (red, amber).
 const CATEGORY_ICON: Record<ChangelogCategory, typeof Plus> = {
   new: Plus,
   improved: ArrowUp,
   fixed: Wrench,
+};
+
+const CATEGORY_COLOR: Record<ChangelogCategory, SelectOptionColor> = {
+  new: 'purple',
+  improved: 'teal',
+  fixed: 'orange',
 };
 
 export default function WhatsNewModal({ unseenIds, onClose }: { unseenIds: Set<string>; onClose: () => void }) {
@@ -74,6 +83,7 @@ export default function WhatsNewModal({ unseenIds, onClose }: { unseenIds: Set<s
               <div className="grid gap-2 pb-4 md:grid-cols-2">
                 {group.entries.map((entry) => {
                   const CategoryIcon = CATEGORY_ICON[entry.category];
+                  const categoryColor = SELECT_COLORS[CATEGORY_COLOR[entry.category]];
                   const isUnseen = unseenIds.has(entry.id);
                   return (
                     <article
@@ -81,8 +91,12 @@ export default function WhatsNewModal({ unseenIds, onClose }: { unseenIds: Set<s
                       className="rounded-control bg-raised px-3.5 py-3 shadow-[inset_0_0_0_1px_var(--color-line)]"
                     >
                       <div className="mb-1.5 flex items-center gap-1.5">
-                        <Badge variant="outline" size="sm">
-                          <CategoryIcon className="size-2.5" />
+                        <Badge
+                          size="sm"
+                          className="shadow-none"
+                          style={{ backgroundColor: categoryColor.bg, color: categoryColor.text }}
+                        >
+                          <CategoryIcon className="size-2.5" strokeWidth={2.5} />
                           {t(`category_${entry.category}` as 'category_new')}
                         </Badge>
                         {isUnseen && <Badge variant="signal" size="sm">{t('badgeNew')}</Badge>}

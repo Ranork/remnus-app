@@ -6,6 +6,7 @@ import type { DashboardItem } from '@/lib/actions/dashboard';
 import type { ResolvedBlock, ResolvedDashboard } from '@/lib/dashboard/data';
 import { blockWidth } from '@/lib/dashboard/schema';
 import DashboardHeader from './DashboardHeader';
+import { DashboardWidthFrame } from './DashboardWidth';
 import DashboardBlockActions from './DashboardBlockActions';
 import DashboardAddBlock from './DashboardAddBlock';
 import DashboardDatabaseEmbed from './DashboardDatabaseEmbed';
@@ -70,7 +71,7 @@ export default async function DashboardView({
   const hasProjectHead = blocks.some((b) => b.kind === 'project');
 
   return (
-    <div className="mx-auto w-full max-w-6xl px-5 py-8 sm:px-10 sm:py-10">
+    <DashboardWidthFrame itemId={item.id}>
       <DashboardHeader
         itemId={item.id}
         workspaceId={item.workspaceId}
@@ -153,7 +154,7 @@ export default async function DashboardView({
           <DashboardAddBlock itemId={item.id} />
         </div>
       )}
-    </div>
+    </DashboardWidthFrame>
   );
 }
 

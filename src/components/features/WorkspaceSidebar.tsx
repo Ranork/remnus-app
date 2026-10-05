@@ -44,7 +44,7 @@ import {
 import { logout } from '@/lib/actions/auth';
 import type { ShellItemRow } from '@/lib/actions/workspace';
 import { initDesktopZoom } from '@/lib/desktop/zoom';
-import AgentSavingsCard from './AgentSavingsCard';
+import { SidebarSavings } from './AgentSavingsCard';
 import { AgentPresenceRows, AgentTouchMark, useServerNow, useWorkingWorkspaces } from './AgentPresence';
 import { EMPTY_PRESENCE, type AgentPresence, type PresenceTouch } from '@/lib/agentPresence';
 import OnboardingGuide from './onboarding/OnboardingGuide';
@@ -248,6 +248,14 @@ export default function WorkspaceSidebar({
   const [workspaceCreateError, setWorkspaceCreateError] = useState<string | null>(null);
   const [settingsModalWorkspace, setSettingsModalWorkspace] = useState<{ id: string; name: string; icon?: string | null; iconColor?: string | null } | null>(null);
   const [agentsModalOpen, setAgentsModalOpen] = useState(false);
+  // The agents card's click targets. A mouse click must not leave the card focused: the
+  // agents modal closes on Escape, and a key press on a focused element turns on its
+  // :focus-visible ring — a gold outline nobody asked for. A keyboard activation
+  // (detail 0) keeps focus, so Tab users keep their place.
+  const openAgentsModal = (e: React.MouseEvent<HTMLButtonElement>) => {
+    if (e.detail > 0) e.currentTarget.blur();
+    setAgentsModalOpen(true);
+  };
   const [trashModalOpen, setTrashModalOpen] = useState(false);
   const [billingModalOpen, setBillingModalOpen] = useState(false);
   const [userSettingsOpen, setUserSettingsOpen] = useState(false);
@@ -1707,35 +1715,33 @@ export default function WorkspaceSidebar({
       {/* The agents card: a small sheet on the desk holding what the agents saved (the
           number that says what Remnus is for should not be a footnote) and the AI Agents
           entry — the one account-level row kept outside the account menu, because it is
-          what the product is for. Both led to the same modal, so they are ONE button now
-          (Hakan, 2026-09-30): one hover, one click target. Savings are workspace-scoped in
-          a project window (content data the lock allows); the AI Agents row is
-          account-level (tokens span every workspace) and not rendered there, so the card is
-          just the figure, not clickable. `empty:hidden` drops it when a project window has
-          nothing measured yet. */}
+          what the product is for. Everything on it opens the same modal with one hover
+          (Hakan, 2026-09-30). Since U4 the savings panel carries its own controls (shrink
+          to a row, hide), and a button cannot hold buttons, so the card is a frame of
+          three click targets: presence, savings and the AI Agents row — the last is the
+          card's one keyboard stop, the other two stay out of the tab order. Savings are
+          workspace-scoped in a project window (content data the lock allows); the AI
+          Agents row is account-level (tokens span every workspace) and not rendered there,
+          so the card is just the figure, not clickable. `empty:hidden` drops it when a
+          project window has nothing to show. */}
       {/* Presence rides at the top of the same card (V2 R8.8): who is working, their
-          last call, who worked here lately — spans only, so the card stays one button. */}
+          last call, who worked here lately. */}
       {isProjectWindow ? (
         <div className="shrink-0 mx-2 mb-1 rounded-surface bg-sheet/70 p-1 shadow-lift empty:hidden">
           <AgentPresenceRows presence={presence} />
-          <AgentSavingsCard variant="sidebar" workspaceId={activeWorkspace.id} metrics={savingsMetrics} />
+          <SidebarSavings workspaceId={activeWorkspace.id} metrics={savingsMetrics} canHide={false} />
         </div>
       ) : (
-        <button
-          type="button"
-          onClick={(e) => {
-            // A mouse click must not leave the card focused: the agents modal closes
-            // on Escape, and a key press on a focused element turns on its
-            // :focus-visible ring — a gold outline round the card nobody asked for.
-            // A keyboard activation (detail 0) keeps focus, so Tab users keep their place.
-            if (e.detail > 0) e.currentTarget.blur();
-            setAgentsModalOpen(true);
-          }}
-          className="group/agents shrink-0 mx-2 mb-1 block cursor-pointer rounded-surface bg-sheet/70 p-1 text-left shadow-lift transition-colors hover:bg-sheet"
-        >
-          <AgentPresenceRows presence={presence} hiddenWorkspaceIds={hiddenWorkspaceIds} />
-          <AgentSavingsCard variant="sidebar" metrics={savingsMetrics} />
-          <span className="flex h-8 min-w-0 items-center gap-2 rounded-control px-2 text-sm text-fg-2 transition-colors group-hover/agents:text-fg">
+        <div className="group/agents shrink-0 mx-2 mb-1 rounded-surface bg-sheet/70 p-1 shadow-lift transition-colors hover:bg-sheet">
+          <button type="button" tabIndex={-1} onClick={openAgentsModal} className="block w-full cursor-pointer text-left empty:hidden">
+            <AgentPresenceRows presence={presence} hiddenWorkspaceIds={hiddenWorkspaceIds} />
+          </button>
+          <SidebarSavings metrics={savingsMetrics} onOpenDetail={openAgentsModal} />
+          <button
+            type="button"
+            onClick={openAgentsModal}
+            className="flex h-8 w-full min-w-0 cursor-pointer items-center gap-2 rounded-control px-2 text-left text-sm text-fg-2 transition-colors group-hover/agents:text-fg"
+          >
             <span className="relative shrink-0">
               <Bot size={16} className="text-fg-3" />
               {agentTokenCount === 0 && (
@@ -1748,8 +1754,8 @@ export default function WorkspaceSidebar({
             ) : agentTokenCount === 0 ? (
               <Badge variant="solid" size="sm" className="ml-auto">{t('agentsConnectNudge')}</Badge>
             ) : null}
-          </span>
-        </button>
+          </button>
+        </div>
       )}
 
       {/* Everything else lives behind the account row: settings, plan, trash, app install,

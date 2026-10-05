@@ -12,12 +12,3 @@ export function pageContainerClass(mode: PageWidthMode): string {
   if (mode === 'wide') return 'max-w-7xl mx-auto px-4 sm:px-8 lg:px-12 py-6 sm:py-10';
   return 'max-w-[43rem] mx-auto px-4 sm:px-8 lg:px-16 py-6 sm:py-10';
 }
-
-/** Scrolls a section of the page into view — at once under reduced motion. A folded
- *  PageSection is opened first, so the jump lands on its content, not a bare heading. */
-export function scrollToSection(el: HTMLElement | null) {
-  if (!el) return;
-  el.querySelector<HTMLButtonElement>(':scope > button[aria-expanded="false"]')?.click();
-  const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-  el.scrollIntoView({ behavior: reduce ? 'auto' : 'smooth', block: 'start' });
-}

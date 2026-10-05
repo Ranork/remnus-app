@@ -485,6 +485,19 @@
   --chip-blue-bg:       #dbeafe; --chip-blue-text:    #1e3a8a; --chip-blue-dot:    #2563eb; --chip-blue-group:    rgba(37,99,235,0.08);
   --chip-purple-bg:     #ede9fe; --chip-purple-text:  #4c1d95; --chip-purple-dot:  #7c3aed; --chip-purple-group:  rgba(124,58,237,0.08);
   --chip-pink-bg:       #fce7f3; --chip-pink-text:    #831843; --chip-pink-dot:    #db2777; --chip-pink-group:    rgba(219,39,119,0.08);
+
+  /* card tints ("Card background" in board/calendar views) — clean pastels with a
+     matching hairline; dark themes use the rgba fallbacks in lib/types/properties.ts */
+  --card-wash-fade: 72%;
+  --card-default-wash: #f3f4f6; --card-default-edge: #e1e4e9;
+  --card-red-wash:     #fdefef; --card-red-edge:     #f5d4d4;
+  --card-orange-wash:  #fdf2e7; --card-orange-edge:  #f3dcc5;
+  --card-yellow-wash:  #fdf8e1; --card-yellow-edge:  #eee2ac;
+  --card-green-wash:   #ecf7f0; --card-green-edge:   #cce7d5;
+  --card-teal-wash:    #e8f6f4; --card-teal-edge:    #c4e5df;
+  --card-blue-wash:    #edf2fd; --card-blue-edge:    #cfdcf6;
+  --card-purple-wash:  #f3eefd; --card-purple-edge:  #dcd0f5;
+  --card-pink-wash:    #fceef5; --card-pink-edge:    #f1d1e2;
 }
 
 /* .marketing-site = the two landings kept for reference after R8.7 (/landing-old, the

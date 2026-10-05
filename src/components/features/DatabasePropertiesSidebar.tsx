@@ -10,7 +10,7 @@ import { Tabs, TabsList, TabsTab } from '@/components/ui/tabs';
 import PageIcon from './PageIcon';
 import { IconPicker } from './lazyDialogs';
 import { updateDatabaseSchema } from '@/lib/actions/database';
-import type { DatabaseView, ViewFilter, ViewSort } from '@/lib/types/views';
+import type { CardAppearance, DatabaseView, ViewFilter, ViewSort } from '@/lib/types/views';
 import PropertiesPanel from './database-sidebar/PropertiesPanel';
 import FiltersSection from './database-sidebar/FiltersSection';
 import SortsSection from './database-sidebar/SortsSection';
@@ -50,8 +50,8 @@ interface DatabasePropertiesSidebarProps {
   onViewModeChange?: (mode: 'month' | 'week') => void;
   firstDayOfWeek?: 'sunday' | 'monday';
   onFirstDayOfWeekChange?: (day: 'sunday' | 'monday') => void;
-  cardMarkCol?: string;
-  onCardMarkColChange?: (colId: string) => void;
+  cardAppearance?: CardAppearance;
+  onCardAppearanceChange?: (patch: Partial<CardAppearance>) => void;
   rowColorCol?: string;
   onRowColorColChange?: (colId: string) => void;
   defaultPageIcon?: string;
@@ -91,8 +91,8 @@ export default function DatabasePropertiesSidebar({
   onViewModeChange,
   firstDayOfWeek,
   onFirstDayOfWeekChange,
-  cardMarkCol,
-  onCardMarkColChange,
+  cardAppearance,
+  onCardAppearanceChange,
   rowColorCol,
   onRowColorColChange,
   defaultPageIcon,
@@ -298,8 +298,8 @@ export default function DatabasePropertiesSidebar({
                 onShowPropertyLabelsChange={onShowPropertyLabelsChange}
                 propertyTextClamp={propertyTextClamp}
                 onPropertyTextClampChange={onPropertyTextClampChange}
-                cardMarkCol={cardMarkCol}
-                onCardMarkColChange={onCardMarkColChange}
+                cardAppearance={cardAppearance}
+                onCardAppearanceChange={onCardAppearanceChange}
                 hiddenGroups={hiddenGroups}
                 onHiddenGroupsChange={onHiddenGroupsChange}
               />
@@ -315,8 +315,8 @@ export default function DatabasePropertiesSidebar({
                 onViewModeChange={onViewModeChange}
                 firstDayOfWeek={firstDayOfWeek}
                 onFirstDayOfWeekChange={onFirstDayOfWeekChange}
-                cardMarkCol={cardMarkCol}
-                onCardMarkColChange={onCardMarkColChange}
+                cardAppearance={cardAppearance}
+                onCardAppearanceChange={onCardAppearanceChange}
                 cardProperties={cardProperties}
                 onCardPropertiesChange={onCardPropertiesChange}
                 showPropertyLabels={showPropertyLabels}

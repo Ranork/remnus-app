@@ -1,11 +1,8 @@
 'use client';
-import { useEffect, useState } from 'react';
 import Link from '@/components/ui/link';
-import { Link2, FileText, Database as DatabaseIcon, LayoutDashboard } from 'lucide-react';
+import { FileText, Database as DatabaseIcon, LayoutDashboard } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import type { RelatedPageRef } from '@/lib/actions/workspace';
-import { loadPagePanel } from '@/lib/pagePanels';
-import PageSection from './PageSection';
 
 const TYPE_ICON: Record<RelatedPageRef['type'], typeof FileText> = {
   page: FileText,
@@ -23,50 +20,31 @@ function hrefFor(ref: RelatedPageRef): string {
   return `/page/${ref.id}`;
 }
 
-// Notion-style "Linked mentions" panel — shown at the bottom of a page only
-// when other pages actually reference it. Self-fetches via the page_links
-// graph (get_related_pages' web-facing wrapper) so it never blocks the
-// editor's own load.
-export default function PageBacklinksPanel({ workspaceId, pageId }: { workspaceId: string; pageId: string }) {
+/**
+ * The pages that link here ("linked mentions") — since U4 the body of the floating
+ * group's backlinks panel, whose button shows only when there are any. The group read
+ * them with the page's other panels (the page_links graph, get_related_pages' web-facing
+ * wrapper), so nothing here waits on a request.
+ */
+export default function BacklinksList({ backlinks }: { backlinks: RelatedPageRef[] }) {
   const t = useTranslations('Page');
-  const [backlinks, setBacklinks] = useState<RelatedPageRef[] | null>(null);
-  const [collapsed, setCollapsed] = useState(false);
-
-  useEffect(() => {
-    let cancelled = false;
-    setBacklinks(null);
-    loadPagePanel(workspaceId, pageId, 'relations')
-      .then((rel) => { if (!cancelled) setBacklinks(rel.backlinks); })
-      .catch(() => { if (!cancelled) setBacklinks([]); });
-    return () => { cancelled = true; };
-  }, [workspaceId, pageId]);
-
-  if (!backlinks || backlinks.length === 0) return null;
-
   return (
-    <PageSection
-      icon={<Link2 />}
-      title={t('backlinksTitle', { count: backlinks.length })}
-      open={!collapsed}
-      onToggle={() => setCollapsed((c) => !c)}
-    >
-      {/* Rows, not cards: an icon and a title, lifted on hover. */}
-      <ul className="mt-2 grid grid-cols-1 gap-x-4 sm:grid-cols-2">
-        {backlinks.map((ref) => {
-          const Icon = TYPE_ICON[ref.type];
-          return (
-            <li key={ref.id} className="min-w-0">
-              <Link
-                href={hrefFor(ref)}
-                className="-mx-2 flex items-center gap-2 rounded-control px-2 py-1.5 text-sm text-fg-2 transition-colors hover:bg-hover hover:text-fg"
-              >
-                <Icon size={14} className="shrink-0 text-fg-3" aria-hidden />
-                <span className="truncate">{ref.title || t('untitled')}</span>
-              </Link>
-            </li>
-          );
-        })}
-      </ul>
-    </PageSection>
+    // Rows, not cards: an icon and a title, lifted on hover.
+    <ul className="-mx-2 flex flex-col">
+      {backlinks.map((ref) => {
+        const Icon = TYPE_ICON[ref.type];
+        return (
+          <li key={ref.id} className="min-w-0">
+            <Link
+              href={hrefFor(ref)}
+              className="flex items-center gap-2 rounded-control px-2 py-1.5 text-sm text-fg-2 transition-colors hover:bg-hover hover:text-fg"
+            >
+              <Icon size={14} className="shrink-0 text-fg-3" aria-hidden />
+              <span className="truncate">{ref.title || t('untitled')}</span>
+            </Link>
+          </li>
+        );
+      })}
+    </ul>
   );
 }

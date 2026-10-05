@@ -13,11 +13,11 @@ const settled = <T,>(result: PromiseSettledResult<T>): T | null =>
   result.status === 'fulfilled' ? result.value : null;
 
 /**
- * The three sections under a page body — comments, knowledge, backlinks — in ONE server
- * action (V2 R9). Next runs server actions one at a time, so three separate reads
- * arrived one after another; here they run side by side, each through its own action
- * (same access checks), and a failing one costs only its own section. The panels share
- * the call through `lib/pagePanels.ts`.
+ * A page's comments, knowledge and backlinks — the floating panels' data (U4; they were
+ * the sections under the body) — in ONE server action (V2 R9). Next runs server actions
+ * one at a time, so three separate reads arrived one after another; here they run side
+ * by side, each through its own action (same access checks), and a failing one costs
+ * only its own panel. Called through `lib/pagePanels.ts`.
  */
 export async function getPagePanels(workspaceId: string, pageId: string): Promise<PagePanels> {
   const [comments, knowledge, relations] = await Promise.allSettled([

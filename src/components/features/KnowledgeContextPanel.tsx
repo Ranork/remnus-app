@@ -1,62 +1,77 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { BrainCircuit, Check, Loader2, ShieldCheck } from 'lucide-react';
+import { Check, Loader2, ShieldCheck } from 'lucide-react';
 import { useTranslations } from 'next-intl';
 import { getPageKnowledge, markPageKnowledgeReviewed, updatePageKnowledge } from '@/lib/actions/knowledge';
-import { loadPagePanel } from '@/lib/pagePanels';
 import type { KnowledgeCorpusItem, KnowledgeStatus } from '@/lib/services/knowledge';
 import { Button } from '@/components/ui/button';
 import { Input, Textarea } from '@/components/ui/input';
 import { SimpleSelect } from '@/components/ui/select';
-import PageSection from './PageSection';
 
 const EMPTY_FORM = { conceptType: '', description: '', tags: '', sources: '', status: 'draft' as KnowledgeStatus, staleAfter: '' };
 
 const labelCls = 'flex flex-col gap-1.5 text-xs text-fg-3';
 
-export default function KnowledgeContextPanel({
+function formFor(value: KnowledgeCorpusItem) {
+  return {
+    conceptType: value.metadata.conceptType ?? '',
+    description: value.metadata.description ?? '',
+    tags: value.metadata.tags.join(', '),
+    sources: value.metadata.sources.map(source => source.resource).join('\n'),
+    status: value.metadata.status ?? 'draft',
+    staleAfter: value.metadata.staleAfter?.slice(0, 10) ?? '',
+  };
+}
+
+/**
+ * The page's knowledge metadata (type, status, tags, sources, review) — since U4 the
+ * body of the floating group's "Knowledge context" panel, which already read it with the
+ * page's other panels and hands it over as `initial`.
+ */
+export default function KnowledgeForm({
   workspaceId,
   pageId,
+  initial,
   refreshKey = 0,
   onReviewed,
+  onChange,
 }: {
   workspaceId: string;
   pageId: string;
+  /** As the floating group read it; read here only when it could not be. */
+  initial?: KnowledgeCorpusItem | null;
   /** Bumped when the page was reviewed elsewhere (the provenance line) — reloads the panel. */
   refreshKey?: number;
   /** After a review here, so the provenance line under the title shows it too. */
   onReviewed?: () => void;
+  /** After a save or review, so a reopened panel starts from it. */
+  onChange?: (value: KnowledgeCorpusItem) => void;
 }) {
   const t = useTranslations('Page');
-  const [collapsed, setCollapsed] = useState(true);
-  const [knowledge, setKnowledge] = useState<KnowledgeCorpusItem | null>(null);
-  const [form, setForm] = useState(EMPTY_FORM);
-  const [busy, setBusy] = useState<'load' | 'save' | 'review' | null>('load');
+  const [knowledge, setKnowledge] = useState<KnowledgeCorpusItem | null>(() => initial ?? null);
+  const [form, setForm] = useState(() => (initial ? formFor(initial) : EMPTY_FORM));
+  const [busy, setBusy] = useState<'load' | 'save' | 'review' | null>(() => (initial && refreshKey === 0 ? null : 'load'));
   const [message, setMessage] = useState('');
 
   function applyKnowledge(value: KnowledgeCorpusItem) {
     setKnowledge(value);
-    setForm({
-      conceptType: value.metadata.conceptType ?? '',
-      description: value.metadata.description ?? '',
-      tags: value.metadata.tags.join(', '),
-      sources: value.metadata.sources.map(source => source.resource).join('\n'),
-      status: value.metadata.status ?? 'draft',
-      staleAfter: value.metadata.staleAfter?.slice(0, 10) ?? '',
-    });
+    setForm(formFor(value));
+    onChange?.(value);
   }
 
   useEffect(() => {
+    // The first read came with the page's other panels; a review elsewhere asks again.
+    if (initial && refreshKey === 0) return;
     let cancelled = false;
     setBusy('load');
-    // The first read is shared with the page's other panels (lib/pagePanels.ts); a
-    // refresh after a review asks on its own.
-    (refreshKey === 0 ? loadPagePanel(workspaceId, pageId, 'knowledge') : getPageKnowledge(workspaceId, pageId))
+    getPageKnowledge(workspaceId, pageId)
       .then(value => { if (!cancelled) applyKnowledge(value); })
       .catch(() => { if (!cancelled) setMessage(t('knowledgeLoadFailed')); })
       .finally(() => { if (!cancelled) setBusy(null); });
     return () => { cancelled = true; };
+    // applyKnowledge only sets state and reports up; re-running on its identity would loop.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [workspaceId, pageId, t, refreshKey]);
 
   async function save() {
@@ -97,14 +112,7 @@ export default function KnowledgeContextPanel({
   const trustLabel = knowledge ? t(`knowledgeTrust.${knowledge.metadata.trust}`) : t('knowledgeTrust.unverified');
 
   return (
-    <PageSection
-      icon={<BrainCircuit />}
-      title={t('knowledgeTitle')}
-      meta={knowledge ? trustLabel : undefined}
-      open={!collapsed}
-      onToggle={() => setCollapsed(value => !value)}
-    >
-      <div className="mt-3 space-y-4">
+    <div className="space-y-4">
         <p className="text-xs leading-relaxed text-fg-3">{t('knowledgeHint')}</p>
         {busy === 'load' ? <Loader2 size={14} className="animate-spin text-fg-4" aria-hidden /> : (
           <>
@@ -159,7 +167,6 @@ export default function KnowledgeContextPanel({
             <p className="text-xs leading-relaxed text-fg-3">{t('knowledgeReviewHint')}</p>
           </>
         )}
-      </div>
-    </PageSection>
+    </div>
   );
 }

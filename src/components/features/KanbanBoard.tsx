@@ -11,7 +11,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { EmptyState } from '@/components/ui/empty-state';
 import InlineCellEditor from './InlineCellEditor';
 import { useContextMenu, type MenuItem } from './ContextMenu';
-import { StatusChip, UserChip, UserTags, OptionChip, PropertyMark, GroupGlyph, isSelfDescribingType } from './PropertyTags';
+import { StatusChip, UserChip, UserTags, OptionChip, PropertyMark, GroupGlyph, CardAccent, cardTintStyle } from './PropertyTags';
+import type { CardAppearance } from '@/lib/types/views';
 import PageIcon from './PageIcon';
 import { IconPicker } from './lazyDialogs';
 import AgentEditBadge from './AgentEditBadge';
@@ -44,7 +45,7 @@ export default function KanbanBoard({
   cardProperties,
   showPropertyLabels = true,
   propertyTextClamp = 'truncate',
-  cardMarkCol,
+  cardAppearance,
   onUpdatePageProperties,
   onCreatePage,
   defaultPageIcon,
@@ -70,8 +71,8 @@ export default function KanbanBoard({
   cardProperties?: string[];
   showPropertyLabels?: boolean;
   propertyTextClamp?: 'truncate' | 'wrap';
-  /** Property whose value marks every card as a badge (the view's "Mark cards by"). */
-  cardMarkCol?: string;
+  /** The view's card colouring: the mark (badge or accent line) and the background tint. */
+  cardAppearance?: CardAppearance;
   onUpdatePageProperties: (pageId: string, properties: Record<string, any>) => void;
   onCreatePage?: (initialProperties?: Record<string, any>) => void;
   defaultPageIcon?: string;
@@ -304,9 +305,12 @@ export default function KanbanBoard({
     return <EmptyState icon={<KanbanSquare />} title={t('groupByHint')} className="h-full justify-center" />;
   }
 
-  const markColumn = cardMarkCol ? schema.find((c) => c.id === cardMarkCol) : null;
-  // A mark already listed among the card's properties is not repeated as a badge.
-  const showMark = !!markColumn && !propsToShow.some((c) => c.id === markColumn.id);
+  const markColumn = cardAppearance?.markCol ? schema.find((c) => c.id === cardAppearance.markCol) : null;
+  const markAsAccent = cardAppearance?.markStyle === 'accent';
+  // A badge mark already listed among the card's properties is not repeated; an accent
+  // line is a different signal, so it always shows.
+  const showMark = !!markColumn && (markAsAccent || !propsToShow.some((c) => c.id === markColumn.id));
+  const tintColumn = cardAppearance?.tintCol ? schema.find((c) => c.id === cardAppearance.tintCol) : null;
 
   return (
     <div className="flex items-start gap-3 overflow-x-auto pb-4">
@@ -398,15 +402,20 @@ export default function KanbanBoard({
                     onDragOver={(e) => handleCardDragOver(e, page.id, columnName)}
                     onDrop={(e) => handleCardDrop(e, page.id, columnName)}
                     onDragEnd={handleCardDragEnd}
-                    // A card is a small raised surface with a hairline — no tint, no
-                    // stripe; the drop line (signal) shows where a dragged card lands.
-                    className={`group relative mb-2 cursor-pointer rounded-control bg-raised shadow-[inset_0_0_0_1px_var(--color-line)] transition-shadow hover:shadow-[inset_0_0_0_1px_var(--color-line-strong)]
+                    // A card is a small raised surface with a hairline, tinted only when
+                    // the view sets a "Card background"; the drop line (signal) shows
+                    // where a dragged card lands.
+                    className={`group relative mb-2 cursor-pointer rounded-control bg-raised shadow-[inset_0_0_0_1px_var(--card-edge,var(--color-line))] transition-shadow hover:shadow-[inset_0_0_0_1px_var(--card-edge-strong,var(--color-line-strong))]
                       ${isCardEditing ? 'z-30 overflow-visible' : 'overflow-hidden'}
                       ${draggedCardId === page.id ? 'opacity-25' : ''}
                       ${dragOverCardId === page.id && dragOverPosition === 'before' ? 'before:absolute before:inset-x-0 before:-top-1.5 before:h-0.5 before:rounded-full before:bg-signal' : ''}
                       ${dragOverCardId === page.id && dragOverPosition === 'after' ? 'after:absolute after:inset-x-0 after:-bottom-1.5 after:h-0.5 after:rounded-full after:bg-signal' : ''}
                     `}
+                    style={tintColumn ? cardTintStyle(tintColumn, page.properties[tintColumn.id]) : undefined}
                   >
+                    {hasMark && markColumn && markAsAccent && (
+                      <CardAccent column={markColumn} value={markValue} side={cardAppearance!.accentSide} />
+                    )}
                     {/* Hover card actions */}
                     <div className="absolute right-1.5 top-1.5 z-10 flex items-center opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100" onClick={(e) => e.stopPropagation()}>
                       {/* Collapse/expand — hides the property list, keeping just the title */}
@@ -440,7 +449,7 @@ export default function KanbanBoard({
                     </div>
 
                     <div className="p-3">
-                      {hasMark && markColumn && (
+                      {hasMark && markColumn && !markAsAccent && (
                         <div className="mb-2 flex flex-wrap gap-1 pr-12">
                           <PropertyMark column={markColumn} value={markValue} />
                         </div>
@@ -582,9 +591,7 @@ export default function KanbanBoard({
                                 key={c.id}
                                 className={`relative flex gap-1.5 overflow-visible text-xs leading-relaxed ${propertyTextClamp === 'wrap' ? 'items-start' : 'items-center'}`}
                               >
-                                {/* A value that says what it is (a chip, a person, a
-                                    link) needs no "Label:" — only ambiguous ones do. */}
-                                {showPropertyLabels && !isSelfDescribingType(c.type) && (
+                                {showPropertyLabels && (
                                   <span className="shrink-0 text-fg-3 select-none">{c.name}</span>
                                 )}
                                 {isEditing ? (

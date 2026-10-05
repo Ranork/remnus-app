@@ -315,6 +315,12 @@
     "savingsSpeed": "{ms, number} ms",
     "savingsSpeedLabel": "tiempo de respuesta habitual",
     "savingsSpeedHint": "El tiempo de respuesta intermedio de los últimos 30 días, medido de nuestro lado — no incluye el viaje de red de tu agente.",
+    "savingsCompact": "Reducir a una fila",
+    "savingsExpand": "Mostrar la tarjeta completa",
+    "savingsHide": "Ocultar de la barra lateral",
+    "savingsHiddenToast": "Tarjeta de ahorro oculta",
+    "savingsHiddenToastHint": "Puedes volver a mostrarla desde {agents}.",
+    "savingsShowInSidebar": "Mostrar en la barra lateral",
     "myTrash": "Papelera",
     "settings": "Configuración",
     "earlyAccess": "Acceso anticipado",
@@ -638,6 +644,7 @@
     "agentsUsageLabel": "Uso (últimos 30 días)",
     "agentsUsageValue": "~{tokens} tokens · {calls} llamadas",
     "agentsWorkspaceEmpty": "Sin tokens aún",
+    "agentsEmptyWorkspaces": "Espacios de trabajo sin agentes",
     "trashWorkspaceEmpty": "Nada en la papelera",
     "agentsAddToken": "Agregar token",
     "storageTitle": "Almacenamiento usado",
@@ -849,6 +856,15 @@
     "cardMark": "Marcar tarjetas por",
     "cardMarkHint": "Su valor aparece como una etiqueta en la parte superior de cada tarjeta.",
     "cardMarkCalendarHint": "Su valor aparece como un punto de color antes del título de cada evento.",
+    "cardMarkStyle": "Mostrar la marca como",
+    "cardMarkStyleBadge": "Insignia",
+    "cardMarkStyleDot": "Punto",
+    "cardMarkAccentHint": "Su color aparece como una línea en un borde de cada tarjeta.",
+    "accentLeft": "Izquierda",
+    "accentTop": "Arriba",
+    "accentRight": "Derecha",
+    "accentBottom": "Abajo",
+    "cardBackgroundHint": "Cada tarjeta se tiñe con el color de su valor.",
     "groupByHint": "Elige en Configuración una propiedad para agrupar el tablero.",
     "optionColor": "Color de la opción",
     "columnOptions": "Ordenar, filtrar u ocultar",
@@ -1191,6 +1207,8 @@
     "savingError": "Error al guardar",
     "backlinksTitle": "Backlinks ({count})",
     "knowledgeTitle": "Knowledge context", "knowledgeHint": "Describe what this page means so agents can retrieve the right context without reading the whole workspace.", "knowledgeType": "Concept type", "knowledgeStatus": "Lifecycle", "knowledgeStatusDraft": "Draft", "knowledgeStatusStable": "Stable", "knowledgeStatusDeprecated": "Deprecated", "knowledgeDescription": "Retrieval description", "knowledgeTags": "Tags", "knowledgeTagsHint": "architecture, billing, onboarding", "knowledgeStaleAfter": "Review after", "knowledgeSources": "Sources", "knowledgeSourcesHint": "One URL or source identifier per line", "knowledgeSave": "Save metadata", "knowledgeReview": "Review this revision", "knowledgeReviewHint": "A review is bound to the current title and body. The review expires automatically when either changes.", "knowledgeSaved": "Metadata saved", "knowledgeReviewed": "Exact revision reviewed", "knowledgeLoadFailed": "Knowledge metadata could not be loaded.", "knowledgeSaveFailed": "Knowledge metadata could not be saved.", "knowledgeReviewFailed": "This revision could not be reviewed.", "knowledgeTrust": { "human-reviewed": "Human reviewed", "external-human-asserted": "External human assertion", "machine-confirmed": "Agent generated", "unverified": "Unverified" },
+    "floatGroupLabel": "Paneles de la página",
+    "floatRepeat": "Repetición",
     "markdown": {
       "button": "Editar como Markdown",
       "title": "Editar como Markdown",
@@ -2467,7 +2485,8 @@
   },
   "UI": {
     "close": "Cerrar",
-    "actionFailed": "No se pudo completar. Inténtalo de nuevo."
+    "actionFailed": "No se pudo completar. Inténtalo de nuevo.",
+    "undo": "Deshacer"
   },
   "Site": {
     "meta": {

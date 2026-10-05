@@ -13,7 +13,8 @@ import { useContextMenu, type MenuItem } from './ContextMenu';
 import PageIcon from './PageIcon';
 import { IconPicker } from './lazyDialogs';
 import AgentEditBadge from './AgentEditBadge';
-import { StatusChip, UserAvatarStack, OptionChip, MarkDot, isSelfDescribingType } from './PropertyTags';
+import { StatusChip, UserAvatarStack, OptionChip, MarkDot, CardAccent, cardTintStyle } from './PropertyTags';
+import type { CardAccentSide, CardAppearance } from '@/lib/types/views';
 import { updatePageIcon, updatePageCardCollapsed, updatePagesCardCollapsed } from '@/lib/actions/page';
 import { ConfirmDialog } from './ConfirmDialog';
 import { useRecurrenceControls } from './recurrence/useRecurrenceControls';
@@ -33,9 +34,9 @@ interface CalendarViewProps {
   onCardDateChange: (pageId: string, newDateStr: string, targetPageId?: string, position?: 'before' | 'after') => void;
   onDeletePage: (pageId: string) => void;
   onDuplicatePage: (pageId: string) => void;
-  /** The property whose value marks each event (a dot in the option's colour before
-   *  the title) — replaces the old tinted backgrounds and accent stripes. */
-  cardMarkCol?: string;
+  /** The view's card colouring: the mark (a dot before the title, or an accent line)
+   *  and the background tint. */
+  cardAppearance?: CardAppearance;
   cardProperties?: string[];
   showPropertyLabels?: boolean;
   propertyTextClamp?: 'truncate' | 'wrap';
@@ -50,6 +51,15 @@ interface CalendarViewProps {
    *  once, so the parent re-fetches rather than trying to patch local state. */
   onSeriesChanged?: () => void;
 }
+
+// Extra padding on the side an accent bar sits on, so the bar never touches the title.
+const ACCENT_ROOM: Record<CardAccentSide, string> = {
+  left: 'pl-2.5 lg:pl-3',
+  right: 'pr-2.5 lg:pr-3',
+  top: 'pt-2 lg:pt-2.5',
+  bottom: 'pb-2 lg:pb-2.5',
+};
+const hasAccentValue = (v: unknown) => (Array.isArray(v) ? v.length > 0 : v !== undefined && v !== null && v !== '');
 
 const formatYYYYMMDD = (d: Date) => {
   const year = d.getFullYear();
@@ -135,7 +145,7 @@ export default function CalendarView({
   onCardDateChange,
   onDeletePage,
   onDuplicatePage,
-  cardMarkCol,
+  cardAppearance,
   cardProperties,
   showPropertyLabels = true,
   propertyTextClamp = 'truncate',
@@ -258,8 +268,13 @@ export default function CalendarView({
     : availableProps.slice(0, 1);
   const textClass = propertyTextClamp === 'wrap' ? 'break-words whitespace-pre-wrap' : 'truncate';
   // The "Mark events by" property — only a select/status can mark (a dot needs a colour).
-  const markColumn = cardMarkCol
-    ? schema.find((c) => c.id === cardMarkCol && ['select', 'multi_select', 'status'].includes(c.type))
+  const isColorColumn = (c: any) => ['select', 'multi_select', 'status'].includes(c.type);
+  const markColumn = cardAppearance?.markCol
+    ? schema.find((c) => c.id === cardAppearance.markCol && isColorColumn(c))
+    : undefined;
+  const markAsAccent = cardAppearance?.markStyle === 'accent';
+  const tintColumn = cardAppearance?.tintCol
+    ? schema.find((c) => c.id === cardAppearance.tintCol && isColorColumn(c))
     : undefined;
 
   const days = useMemo(() => {
@@ -513,27 +528,44 @@ export default function CalendarView({
                 className={`relative border-r border-b border-line p-1 lg:p-1.5 min-h-24 flex flex-col transition-colors overflow-visible group/day ${
                   isDragOver
                     ? 'bg-hover/50'
+                    : isToday
+                    ? 'bg-signal-soft/60'
                     : isOutside
                     ? 'bg-desk/40'
                     : ''
                 }`}
               >
+                {/* Today's frame: a signal ring drawn over the grid lines, so the
+                    whole day reads at a glance, not just its number. */}
+                {isToday && (
+                  <span aria-hidden className="pointer-events-none absolute -inset-px z-10 shadow-[inset_0_0_0_2px_var(--color-signal)]" />
+                )}
                 {/* Day Number / Indicator */}
                 <div className="flex items-center justify-between gap-1 mb-1 shrink-0 select-none">
-                  {/* Today is the one filled number (signal); weekend and
-                      other-month days step back to the faintest ink. */}
-                  <span
-                    aria-current={isToday ? 'date' : undefined}
-                    aria-label={isToday ? `${t('today')}, ${date.getDate()}` : undefined}
-                    className={`inline-flex h-6 min-w-6 shrink-0 items-center justify-center rounded-full px-1 text-xs tabular-nums ${
-                      isToday
-                        ? 'bg-signal font-semibold text-signal-fg'
-                        : isOutside || isWeekend
-                        ? 'font-medium text-fg-4'
-                        : 'font-medium text-fg-2'
-                    }`}
-                  >
-                    {date.getDate()}
+                  {/* Today is the one filled number (signal) with a "Today" badge;
+                      weekend and other-month days step back to the faintest ink. */}
+                  <span className="flex min-w-0 items-center gap-1.5">
+                    <span
+                      aria-current={isToday ? 'date' : undefined}
+                      aria-label={isToday ? `${t('today')}, ${date.getDate()}` : undefined}
+                      className={`inline-flex h-6 min-w-6 shrink-0 items-center justify-center rounded-full px-1 text-xs tabular-nums ${
+                        isToday
+                          ? 'bg-signal font-semibold text-signal-fg'
+                          : isOutside || isWeekend
+                          ? 'font-medium text-fg-4'
+                          : 'font-medium text-fg-2'
+                      }`}
+                    >
+                      {date.getDate()}
+                    </span>
+                    {/* Only on wide screens, where a day cell has room for it; a narrower
+                        cell keeps the frame and the filled number. (Not a container query:
+                        containment would re-anchor the fixed-position IconPicker to the cell.) */}
+                    {isToday && (
+                      <span aria-hidden className="hidden truncate rounded-full bg-signal-soft px-1.5 py-px text-2xs font-semibold text-signal-text xl:inline">
+                        {t('today')}
+                      </span>
+                    )}
                   </span>
                   {/* The day's card count sits at the right edge; on hover (or when
                       a button inside has focus) the day's actions take its place. */}
@@ -608,15 +640,20 @@ export default function CalendarView({
                         resetDragState();
                       }}
                       onDragEnd={resetDragState}
-                      // The board's card language: a raised surface with a hairline —
-                      // no tint, no stripe. The mark is a dot before the title, and the
-                      // drop line (signal) shows where a dragged card lands.
-                      className={`group relative flex cursor-pointer flex-col rounded-control bg-raised shadow-[inset_0_0_0_1px_var(--color-line)] transition-shadow select-none hover:shadow-[inset_0_0_0_1px_var(--color-line-strong)] ${
+                      // The board's card language: a raised surface with a hairline,
+                      // tinted only when the view sets a "Card background". The mark is
+                      // a dot before the title (or an accent line), and the drop line
+                      // (signal) shows where a dragged card lands.
+                      className={`group relative flex cursor-pointer flex-col rounded-control bg-raised shadow-[inset_0_0_0_1px_var(--card-edge,var(--color-line))] transition-shadow select-none hover:shadow-[inset_0_0_0_1px_var(--card-edge-strong,var(--color-line-strong))] ${
                         draggedCardId === page.id ? 'opacity-25' : ''
                       } ${dragOverCardId === page.id && dragOverPosition === 'before' ? 'before:absolute before:inset-x-0 before:-top-1 before:h-0.5 before:rounded-full before:bg-signal' : ''} ${
                         dragOverCardId === page.id && dragOverPosition === 'after' ? 'after:absolute after:inset-x-0 after:-bottom-1 after:h-0.5 after:rounded-full after:bg-signal' : ''
                       }`}
+                      style={tintColumn ? cardTintStyle(tintColumn, page.properties[tintColumn.id]) : undefined}
                     >
+                      {markColumn && markAsAccent && (
+                        <CardAccent column={markColumn} value={markValue} side={cardAppearance!.accentSide} size="sm" />
+                      )}
                       {/* Hover Actions — desktop only (drag-reschedule uses HTML5
                           DnD which doesn't fire on touch; the invisible grip also
                           stole taps meant to open the card on mobile). */}
@@ -658,14 +695,14 @@ export default function CalendarView({
                         </button>
                       </div>
 
-                      <div className="flex min-w-0 flex-1 flex-col px-1.5 py-1 lg:px-2 lg:py-1.5">
+                      <div className={`flex min-w-0 flex-1 flex-col px-1.5 py-1 lg:px-2 lg:py-1.5 ${markColumn && markAsAccent && hasAccentValue(markValue) ? ACCENT_ROOM[cardAppearance!.accentSide] : ''}`}>
                       {/* Page Title. lg:pr-12 (room for the collapse/grip buttons,
                           `hidden lg:flex` themselves) only reserved on hover —
                           those buttons are `opacity-0` until then, so holding the
                           space permanently truncated titles that had the room to
                           show more. */}
                       <h4 className={`flex items-center gap-1.5 pr-1 text-2xs font-medium leading-snug text-fg transition-[padding-right] duration-200 ease-out lg:text-ui lg:group-hover:pr-12 ${propertyTextClamp === 'truncate' ? 'overflow-hidden' : 'wrap-break-word whitespace-normal overflow-visible'}`}>
-                        {markColumn && <MarkDot column={markColumn} value={markValue} />}
+                        {markColumn && !markAsAccent && <MarkDot column={markColumn} value={markValue} />}
                         {/* Room is short in a day cell: only a chosen icon is shown,
                             not the generic page glyph every untouched row has. */}
                         {(page.icon || defaultPageIcon) && (
@@ -774,9 +811,7 @@ export default function CalendarView({
                                 key={c.id}
                                 className={`flex min-w-0 gap-1.5 text-2xs leading-relaxed ${propertyTextClamp === 'wrap' ? 'items-start' : 'items-center'}`}
                               >
-                                {/* A value that says what it is (a chip, a person, a
-                                    link) needs no "Label:" — only ambiguous ones do. */}
-                                {showPropertyLabels && !isSelfDescribingType(c.type) && (
+                                {showPropertyLabels && (
                                   <span className="shrink-0 text-fg-3">{c.name}</span>
                                 )}
                                 {display}

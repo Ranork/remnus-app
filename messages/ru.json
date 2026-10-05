@@ -315,6 +315,12 @@
     "savingsSpeed": "{ms, number} мс",
     "savingsSpeedLabel": "обычное время ответа",
     "savingsSpeedHint": "Медианное время ответа за последние 30 дней, измеренное на нашей стороне — сетевой путь самого агента сюда не входит.",
+    "savingsCompact": "Свернуть в одну строку",
+    "savingsExpand": "Показать карточку целиком",
+    "savingsHide": "Скрыть из боковой панели",
+    "savingsHiddenToast": "Карточка экономии скрыта",
+    "savingsHiddenToastHint": "Её можно снова показать в разделе «{agents}».",
+    "savingsShowInSidebar": "Показать в боковой панели",
     "myTrash": "Корзина",
     "settings": "Настройки",
     "earlyAccess": "Ранний доступ",
@@ -638,6 +644,7 @@
     "agentsUsageLabel": "Использование (за 30 дней)",
     "agentsUsageValue": "~{tokens} токенов · {calls} вызовов",
     "agentsWorkspaceEmpty": "Токенов пока нет",
+    "agentsEmptyWorkspaces": "Рабочие пространства без агентов",
     "trashWorkspaceEmpty": "В корзине пусто",
     "agentsAddToken": "Добавить токен",
     "storageTitle": "Использовано хранилища",
@@ -849,6 +856,15 @@
     "cardMark": "Отмечать карточки по",
     "cardMarkHint": "Значение показывается значком в верхней части каждой карточки.",
     "cardMarkCalendarHint": "Значение показывается цветной точкой перед названием каждого события.",
+    "cardMarkStyle": "Показывать метку как",
+    "cardMarkStyleBadge": "Значок",
+    "cardMarkStyleDot": "Точка",
+    "cardMarkAccentHint": "Её цвет показан линией вдоль одного края каждой карточки.",
+    "accentLeft": "Слева",
+    "accentTop": "Сверху",
+    "accentRight": "Справа",
+    "accentBottom": "Снизу",
+    "cardBackgroundHint": "Каждая карточка слегка окрашивается в цвет своего значения.",
     "groupByHint": "Выберите в настройках свойство для группировки доски.",
     "optionColor": "Цвет варианта",
     "columnOptions": "Сортировать, фильтровать или скрыть",
@@ -1191,6 +1207,8 @@
     "savingError": "Ошибка сохранения",
     "backlinksTitle": "Обратные ссылки ({count})",
     "knowledgeTitle": "Knowledge context", "knowledgeHint": "Describe what this page means so agents can retrieve the right context without reading the whole workspace.", "knowledgeType": "Concept type", "knowledgeStatus": "Lifecycle", "knowledgeStatusDraft": "Draft", "knowledgeStatusStable": "Stable", "knowledgeStatusDeprecated": "Deprecated", "knowledgeDescription": "Retrieval description", "knowledgeTags": "Tags", "knowledgeTagsHint": "architecture, billing, onboarding", "knowledgeStaleAfter": "Review after", "knowledgeSources": "Sources", "knowledgeSourcesHint": "One URL or source identifier per line", "knowledgeSave": "Save metadata", "knowledgeReview": "Review this revision", "knowledgeReviewHint": "A review is bound to the current title and body. The review expires automatically when either changes.", "knowledgeSaved": "Metadata saved", "knowledgeReviewed": "Exact revision reviewed", "knowledgeLoadFailed": "Knowledge metadata could not be loaded.", "knowledgeSaveFailed": "Knowledge metadata could not be saved.", "knowledgeReviewFailed": "This revision could not be reviewed.", "knowledgeTrust": { "human-reviewed": "Human reviewed", "external-human-asserted": "External human assertion", "machine-confirmed": "Agent generated", "unverified": "Unverified" },
+    "floatGroupLabel": "Панели страницы",
+    "floatRepeat": "Повтор",
     "markdown": {
       "button": "Редактировать как Markdown",
       "title": "Редактировать как Markdown",
@@ -2467,7 +2485,8 @@
   },
   "UI": {
     "close": "Закрыть",
-    "actionFailed": "Не получилось. Попробуйте ещё раз."
+    "actionFailed": "Не получилось. Попробуйте ещё раз.",
+    "undo": "Отменить"
   },
   "Site": {
     "meta": {

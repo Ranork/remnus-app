@@ -6,6 +6,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { getPropertyIcon, CollapsibleSection, ToggleRow } from './shared';
 import { SimpleSelect } from '@/components/ui/select';
 import GroupingLayoutSection from './GroupingLayoutSection';
+import CardAppearanceControls from './CardAppearanceControls';
+import { DEFAULT_CARD_APPEARANCE, type CardAppearance } from '@/lib/types/views';
 
 interface KanbanLayoutSectionProps {
   schema: any[];
@@ -17,9 +19,9 @@ interface KanbanLayoutSectionProps {
   onShowPropertyLabelsChange?: (show: boolean) => void;
   propertyTextClamp?: 'truncate' | 'wrap';
   onPropertyTextClampChange?: (clamp: 'truncate' | 'wrap') => void;
-  /** The property whose value marks every card (a badge at the card's top). */
-  cardMarkCol?: string;
-  onCardMarkColChange?: (colId: string) => void;
+  /** How cards are coloured: the mark (badge or accent line) and the background tint. */
+  cardAppearance?: CardAppearance;
+  onCardAppearanceChange?: (patch: Partial<CardAppearance>) => void;
   hiddenGroups?: string[];
   onHiddenGroupsChange?: (hidden: string[]) => void;
 }
@@ -34,14 +36,13 @@ export default function KanbanLayoutSection({
   onShowPropertyLabelsChange,
   propertyTextClamp = 'truncate',
   onPropertyTextClampChange,
-  cardMarkCol,
-  onCardMarkColChange,
+  cardAppearance = DEFAULT_CARD_APPEARANCE,
+  onCardAppearanceChange,
   hiddenGroups = [],
   onHiddenGroupsChange,
 }: KanbanLayoutSectionProps) {
   const t = useTranslations('Database');
 
-  const colorColumns = schema.filter((c: any) => c.type === 'select' || c.type === 'multi_select' || c.type === 'status');
   const availableCardProps = schema.filter((c: any) => c.id !== 'title' && c.id !== groupByCol);
   const effectiveVisible: string[] =
     cardProperties !== undefined
@@ -131,21 +132,7 @@ export default function KanbanLayoutSection({
               className="w-28"
             />
           </div>
-          {colorColumns.length > 0 && (
-            <div className="flex flex-col gap-1.5 px-4 pt-1">
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-xs text-fg-2 shrink-0">{t('cardMark')}</span>
-                <SimpleSelect
-                  value={cardMarkCol ?? ''}
-                  onValueChange={(v) => onCardMarkColChange?.(v)}
-                  options={[{ value: '', label: t('none') }, ...colorColumns.map((col: any) => ({ value: col.id, label: col.name }))]}
-                  size="sm"
-                  className="w-32"
-                />
-              </div>
-              <p className="text-xs leading-relaxed text-fg-3">{t('cardMarkHint')}</p>
-            </div>
-          )}
+          <CardAppearanceControls schema={schema} appearance={cardAppearance} onChange={onCardAppearanceChange} view="kanban" />
         </div>
       </CollapsibleSection>
     </>

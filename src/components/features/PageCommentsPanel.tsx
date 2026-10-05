@@ -1,9 +1,9 @@
 'use client';
 import { useState, useEffect, useRef, useCallback, useTransition } from 'react';
-import { MessageSquare, Loader2, Trash2 } from 'lucide-react';
+import { Loader2, Trash2 } from 'lucide-react';
 import { useTranslations, useLocale } from 'next-intl';
 import { addComment, deleteComment, getComments } from '@/lib/actions/comments';
-import { loadPagePanel } from '@/lib/pagePanels';
+import type { PagePanels } from '@/lib/actions/pagePanels';
 import type { CommentRow } from '@/lib/services/comments';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -12,7 +12,8 @@ import { cn } from '@/lib/cn';
 import { ConfirmDialog } from './ConfirmDialog';
 import { UserAvatar } from './PropertyTags';
 import AgentMark from './agents/AgentMark';
-import PageSection from './PageSection';
+
+type CommentsData = NonNullable<PagePanels['comments']>;
 
 const MAX_COMMENT_LENGTH = 4_000;
 
@@ -102,63 +103,44 @@ function AuthorAvatar({ comment, size }: { comment: Pick<CommentRow, 'authorKind
   );
 }
 
-/** "3 comments" under the page title — only when there are any; jumps to the thread
- *  under the body (V2 R8.1: the thread lives there, the title stays next to the text). */
-export function CommentsJumpLink({ count, onJump, className }: { count: number; onJump: () => void; className?: string }) {
-  const t = useTranslations('Comments');
-  if (count <= 0) return null;
-  return (
-    <button
-      type="button"
-      onClick={onJump}
-      className={cn(
-        '-ml-1.5 inline-flex cursor-pointer items-center gap-1.5 rounded px-1.5 py-0.5 text-xs text-fg-3 transition-colors hover:bg-hover hover:text-fg',
-        className,
-      )}
-    >
-      <MessageSquare size={13} aria-hidden />
-      {t('count', { count })}
-    </button>
-  );
-}
-
-// Comment thread attached to a page or database row, separate from its
-// markdown body. It sits under the body, open (Hakan, R8.1). Agent comments (via
-// the MCP add_comment tool) are append-only — there is no edit/delete affordance
-// for them here, only for the viewer's own comments or, for any comment, the
-// workspace owner.
-export default function PageCommentsPanel({
+// A page's or database row's comment thread, separate from its markdown body. Since U4
+// it lives in the page's floating panel group (`PageFloat`), which already read the
+// thread with the page's other panels and hands it over as `initial`. Agent comments
+// (via the MCP add_comment tool) are append-only — there is no edit/delete affordance
+// for them here, only for the viewer's own comments or, for any comment, the workspace
+// owner.
+export default function CommentsThread({
   workspaceId,
   pageId,
-  isPeek = false,
+  initial,
   onCountChange,
-  sectionRef,
+  onCommentsChange,
 }: {
   workspaceId: string;
   pageId: string;
-  isPeek?: boolean;
-  /** Reports the number of comments once loaded and after every change (drives CommentsJumpLink). */
+  /** The thread as the floating group read it; read here only when it could not be. */
+  initial?: CommentsData | null;
+  /** Reports the number of comments once loaded and after every change. */
   onCountChange?: (count: number) => void;
-  /** The section element, so the page can scroll to it. */
-  sectionRef?: React.Ref<HTMLElement>;
+  /** The thread after a post or a delete, so a reopened panel starts from it. */
+  onCommentsChange?: (comments: CommentRow[]) => void;
 }) {
   const t = useTranslations('Comments');
   const locale = useLocale();
-  const [comments, setComments] = useState<CommentRow[] | null>(null);
-  const [viewer, setViewer] = useState<{ id: string; name: string | null; image: string | null; isOwner: boolean } | null>(null);
+  const [comments, setComments] = useState<CommentRow[] | null>(() => initial?.comments ?? null);
+  const [viewer, setViewer] = useState<{ id: string; name: string | null; image: string | null; isOwner: boolean } | null>(
+    () => (initial ? { id: initial.viewerUserId, name: initial.viewerName, image: initial.viewerImage, isOwner: initial.isOwner } : null),
+  );
   const [draft, setDraft] = useState('');
   const [composeFocused, setComposeFocused] = useState(false);
   const [error, setError] = useState('');
   const [pending, startTransition] = useTransition();
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
-  // Open by default (Hakan, R8.1); the chevron is there so the sections under the
-  // body share one heading shape, and a long thread can be folded away.
-  const [open, setOpen] = useState(true);
 
   useEffect(() => {
+    if (initial) return;
     let cancelled = false;
-    // Not in a peek: the body's three panels share one first read (lib/pagePanels.ts).
-    (isPeek ? getComments(workspaceId, pageId) : loadPagePanel(workspaceId, pageId, 'comments'))
+    getComments(workspaceId, pageId)
       .then((res) => {
         if (cancelled) return;
         setComments(res.comments);
@@ -166,12 +148,14 @@ export default function PageCommentsPanel({
       })
       .catch(() => { if (!cancelled) setComments([]); });
     return () => { cancelled = true; };
-  }, [workspaceId, pageId, isPeek]);
+  }, [workspaceId, pageId, initial]);
 
   const count = comments?.length ?? 0;
   useEffect(() => {
-    if (comments !== null) onCountChange?.(count);
-  }, [comments, count, onCountChange]);
+    if (comments === null) return;
+    onCountChange?.(count);
+    onCommentsChange?.(comments);
+  }, [comments, count, onCountChange, onCommentsChange]);
 
   function submit() {
     const body = draft.trim();
@@ -216,25 +200,18 @@ export default function PageCommentsPanel({
   // textarea + submit affordance once the viewer actually starts typing, so a
   // page with zero comments doesn't pay for the compose box's full height.
   const composeExpanded = composeFocused || draft.length > 0;
-  const avatarSize = isPeek ? 22 : 24;
+  const avatarSize = 22;
 
   return (
-    <PageSection
-      ref={sectionRef}
-      icon={<MessageSquare />}
-      title={t('title')}
-      meta={count > 0 ? `(${count})` : undefined}
-      open={open}
-      onToggle={() => setOpen((v) => !v)}
-      className={cn('scroll-mt-6', isPeek ? 'mt-8' : 'mt-12')}
-      aria-busy={comments === null || undefined}
-    >
+    <div aria-busy={comments === null || undefined}>
       {comments === null ? (
-        <Loader2 size={14} className="mt-3 animate-spin text-fg-4" aria-hidden />
+        <Loader2 size={14} className="animate-spin text-fg-4" aria-hidden />
       ) : (
         <>
-          {comments.length > 0 && (
-            <ol className="mt-3 space-y-4">
+          {comments.length === 0 ? (
+            <p className="text-xs text-fg-3">{t('empty')}</p>
+          ) : (
+            <ol className="space-y-4">
               {comments.map((c) => {
                 const canDelete = c.authorUserId === viewer?.id || viewer?.isOwner;
                 const isAgent = c.authorKind === 'agent';
@@ -337,6 +314,6 @@ export default function PageCommentsPanel({
           onCancel={() => setConfirmDeleteId(null)}
         />
       )}
-    </PageSection>
+    </div>
   );
 }

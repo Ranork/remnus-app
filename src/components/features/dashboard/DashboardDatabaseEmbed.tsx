@@ -9,7 +9,7 @@ import { MembersProvider, type WorkspaceMember } from '@/components/features/Mem
 import { EmptyState } from '@/components/ui/empty-state';
 import { Rows3 } from 'lucide-react';
 import { deletePage, duplicatePage, updatePageProperties } from '@/lib/actions/page';
-import type { DatabaseView, ViewFilter, ViewSort } from '@/lib/types/views';
+import { getCardAppearance, type CardAccentSide, type CardMarkStyle, type DatabaseView, type ViewFilter, type ViewSort } from '@/lib/types/views';
 
 /**
  * The `database_embed` block — the real `TableLayout` / `KanbanBoard`, not a
@@ -54,8 +54,10 @@ export default function DashboardDatabaseEmbed({
     groupByCol?: string;
     groupOrder?: string[];
     cardProperties?: string[];
+    showPropertyLabels?: boolean;
     cardColorCol?: string;
-    /** Legacy "card background" setting — read as the card mark when no mark is set. */
+    cardMarkStyle?: CardMarkStyle;
+    cardBorderSide?: CardAccentSide;
     cardBgCol?: string;
     filters?: ViewFilter[];
     sorts?: ViewSort[];
@@ -117,7 +119,8 @@ export default function DashboardDatabaseEmbed({
           onDuplicatePage={copyRow}
           hasSorts={sorts.length > 0}
           cardProperties={config.cardProperties}
-          cardMarkCol={config.cardColorCol ?? config.cardBgCol}
+          showPropertyLabels={config.showPropertyLabels ?? true}
+          cardAppearance={getCardAppearance(config)}
           onUpdatePageProperties={patchProperties}
         />
       );

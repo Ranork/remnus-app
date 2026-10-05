@@ -32,13 +32,16 @@ import SaveStatus, { type SaveState } from './SaveStatus';
 import PageIcon from './PageIcon';
 import { MembersProvider, type WorkspaceMember } from './MembersContext';
 import { useTabNav } from '@/components/providers/TabsContext';
-import type {
-  DatabaseView,
-  TableViewConfig,
-  KanbanViewConfig,
-  CalendarViewConfig,
-  ViewFilter,
-  ViewSort,
+import {
+  type CardAppearance,
+  type DatabaseView,
+  type TableViewConfig,
+  type KanbanViewConfig,
+  type CalendarViewConfig,
+  type ViewFilter,
+  type ViewSort,
+  applyCardAppearance,
+  getCardAppearance,
 } from '@/lib/types/views';
 import { isTableGroupableColumn } from '@/lib/tableGrouping';
 // Shared with the dashboard renderer (a server component), so a filter selects
@@ -330,6 +333,32 @@ export default function DatabaseView({
   const [showSharePeek, setShowSharePeek] = useState(false);
   const [showHistoryPeek, setShowHistoryPeek] = useState(false);
   const peekEditorRef = useRef<PageEditorHandle>(null);
+  // The row's floating panel group (U4) renders into this slot, which sits outside the
+  // peek's box on its edge: right of a centre peek when the view has room there (else
+  // inside its bottom-right corner), left of a side peek; on a phone over the sheet's corner.
+  const [peekFloatSlot, setPeekFloatSlot] = useState<HTMLDivElement | null>(null);
+  const [centerPeekFrame, setCenterPeekFrame] = useState<HTMLDivElement | null>(null);
+  const [centerPeekBox, setCenterPeekBox] = useState<HTMLDivElement | null>(null);
+  const [centerFloatStyle, setCenterFloatStyle] = useState<React.CSSProperties | null>(null);
+  useEffect(() => {
+    if (!centerPeekFrame || !centerPeekBox) return;
+    const measure = () => {
+      const frame = centerPeekFrame.getBoundingClientRect();
+      const box = centerPeekBox.getBoundingClientRect();
+      const bottom = frame.bottom - box.bottom;
+      // Room for the 44px group and its gaps beside the box: outside; otherwise its corner.
+      setCenterFloatStyle(
+        frame.right - box.right >= 64
+          ? { left: box.right - frame.left + 12, bottom }
+          : { right: frame.right - box.right + 12, bottom: bottom + 12 },
+      );
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(centerPeekFrame);
+    observer.observe(centerPeekBox);
+    return () => observer.disconnect();
+  }, [centerPeekFrame, centerPeekBox]);
   // The row editor's code: fetched soon after the view is up, or as soon as the pointer
   // is over it — whichever comes first — so the first row opened does not wait for it.
   const [PageEditor, setPageEditor] = useState<PageEditorComponent | null>(() => pageEditorComponent);
@@ -550,6 +579,16 @@ export default function DatabaseView({
       active = false;
     };
   }, [peekPageId]);
+
+  // A repeat rule set or changed from the peek: the row is now (or no longer) in a series,
+  // so re-read it quietly — the editor, its Repeat panel and button follow (U4).
+  const reloadPeekPage = () => {
+    const id = peekPageId;
+    if (!id) return;
+    getPage(id)
+      .then((page) => { if (page) setPeekPage((current: any) => (current?.id === id ? page : current)); })
+      .catch(() => {});
+  };
 
   const handlePageUpdated = (updatedPage: any) => {
     // Update local state instantly so Table and Kanban update in the background.
@@ -960,13 +999,10 @@ export default function DatabaseView({
   const handleFirstDayOfWeekChange = (firstDayOfWeek: 'sunday' | 'monday') =>
     mutateConfig((cfg) => ({ ...cfg, firstDayOfWeek }));
 
-  // One "mark cards by" setting (V2 R8.2): a card shows that property's value as a badge
-  // (kanban) or its colour as a dot (calendar) — no tinted backgrounds, no accent
-  // stripes. The older split into an accent-line property and a background property is
-  // folded into it (`cardMarkCol` reads `cardColorCol ?? cardBgCol`); choosing a mark
-  // clears the legacy background field so a card is never marked by two properties.
-  const handleCardMarkColChange = (col: string) =>
-    mutateConfig((cfg) => ({ ...cfg, cardColorCol: col || undefined, cardBgCol: undefined }));
+  // Card colouring of a kanban / calendar view: the "Mark cards by" property drawn as a
+  // badge/dot (V2 R8.2) or an accent line, plus an optional background tint (U3).
+  const handleCardAppearanceChange = (patch: Partial<CardAppearance>) =>
+    mutateConfig((cfg) => applyCardAppearance(cfg as KanbanViewConfig | CalendarViewConfig, patch));
 
   const handleRowColorColChange = (rowColorCol: string) =>
     mutateConfig((cfg) => ({ ...cfg, rowColorCol: rowColorCol || undefined }));
@@ -1299,7 +1335,7 @@ export default function DatabaseView({
               cardProperties={kanbanConfig.cardProperties}
               showPropertyLabels={kanbanConfig.showPropertyLabels ?? true}
               propertyTextClamp={kanbanConfig.propertyTextClamp ?? 'truncate'}
-              cardMarkCol={kanbanConfig.cardColorCol ?? kanbanConfig.cardBgCol}
+              cardAppearance={getCardAppearance(kanbanConfig)}
               onUpdatePageProperties={handleUpdatePageProperties}
               onCreatePage={(initialProperties) => handleAddRow(initialProperties, { openAfterCreate: true })}
               defaultPageIcon={config.defaultPageIcon}
@@ -1325,7 +1361,7 @@ export default function DatabaseView({
               onSeriesChanged={() => tabNav.refresh()}
               onDeletePage={handleDeletePage}
               onDuplicatePage={handleDuplicatePage}
-              cardMarkCol={calendarConfig.cardColorCol ?? calendarConfig.cardBgCol}
+              cardAppearance={getCardAppearance(calendarConfig)}
               cardProperties={calendarConfig.cardProperties}
               showPropertyLabels={calendarConfig.showPropertyLabels ?? true}
               propertyTextClamp={calendarConfig.propertyTextClamp ?? 'truncate'}
@@ -1388,12 +1424,12 @@ export default function DatabaseView({
               onViewModeChange={handleViewModeChange}
               firstDayOfWeek={calendarConfig?.firstDayOfWeek}
               onFirstDayOfWeekChange={handleFirstDayOfWeekChange}
-              cardMarkCol={
-                kanbanConfig ? (kanbanConfig.cardColorCol ?? kanbanConfig.cardBgCol)
-                : calendarConfig ? (calendarConfig.cardColorCol ?? calendarConfig.cardBgCol)
+              cardAppearance={
+                kanbanConfig ? getCardAppearance(kanbanConfig)
+                : calendarConfig ? getCardAppearance(calendarConfig)
                 : undefined
               }
-              onCardMarkColChange={handleCardMarkColChange}
+              onCardAppearanceChange={handleCardAppearanceChange}
               rowColorCol={(config as TableViewConfig).rowColorCol}
               onRowColorColChange={handleRowColorColChange}
               defaultPageIcon={config.defaultPageIcon}
@@ -1432,8 +1468,8 @@ export default function DatabaseView({
           {(config.openBehavior ?? 'center') === 'center' && (
             // Sized to the view's own box, not the viewport: a vh height ran past the
             // top of the view on phones, under whatever sits above it (the demo bar).
-            <div className="absolute z-50 inset-0 flex items-end pt-3 pointer-events-none sm:items-center sm:justify-center sm:p-4 md:p-10">
-              <div className="w-full sm:max-w-4xl max-h-full bg-sheet flex flex-col shadow-modal overflow-hidden rounded-t-surface sm:rounded-surface pointer-events-auto animate-in slide-in-from-bottom sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-200">
+            <div ref={setCenterPeekFrame} className="absolute z-50 inset-0 flex items-end pt-3 pointer-events-none sm:items-center sm:justify-center sm:p-4 md:p-10">
+              <div ref={setCenterPeekBox} className="w-full sm:max-w-4xl max-h-full bg-sheet flex flex-col shadow-modal overflow-hidden rounded-t-surface sm:rounded-surface pointer-events-auto animate-in slide-in-from-bottom sm:slide-in-from-bottom-0 sm:zoom-in-95 duration-200">
                 <PeekHeader
                   title={peekScrolled && peekPage ? (peekPage.properties?.title || tPage('untitled')) : null}
                   {...peekHeaderActions}
@@ -1460,12 +1496,19 @@ export default function DatabaseView({
                           isPeek={true}
                           onClose={() => setPeekPageId(null)}
                           onPageUpdated={handlePageUpdated}
+                          floatSlot={peekFloatSlot}
+                          onSeriesChanged={reloadPeekPage}
                         />
                       ) : <PeekEditorLoading />
                     )
                   )}
                 </div>
               </div>
+              <div
+                ref={setPeekFloatSlot}
+                className="pointer-events-auto absolute z-10"
+                style={centerFloatStyle ?? { display: 'none' }}
+              />
             </div>
           )}
 
@@ -1509,12 +1552,26 @@ export default function DatabaseView({
                         isPeek={true}
                         onClose={() => setPeekPageId(null)}
                         onPageUpdated={handlePageUpdated}
+                        floatSlot={peekFloatSlot}
+                        onSeriesChanged={reloadPeekPage}
                       />
                     ) : <PeekEditorLoading />
                   )
                 )}
               </div>
             </div>
+          )}
+          {(config.openBehavior ?? 'center') === 'side' && (
+            // Left of the drawer, on its edge; on a phone (the drawer is a bottom sheet)
+            // over its bottom-right corner.
+            <div
+              ref={setPeekFloatSlot}
+              // Left of the drawer there is only the dimmed board, too narrow for a panel:
+              // the group's panels open to the right, over the drawer.
+              data-card-side={isDesktopViewport ? 'right' : undefined}
+              className="absolute z-50"
+              style={isDesktopViewport ? { right: sidePeekWidth + 12, bottom: 16 } : { right: 12, bottom: 12 }}
+            />
           )}
         </>
       )}

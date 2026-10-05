@@ -284,12 +284,7 @@ function WorkspaceSection({
   return (
     <section className="flex flex-col gap-2">
       <h3 className="flex items-center gap-2 px-1 text-xs font-medium text-fg-3">
-        {ws.icon
-          ? <PageIcon icon={ws.icon} iconColor={ws.iconColor} size={14} />
-          : <span className="flex size-3.5 items-center justify-center rounded-sm bg-hover text-2xs leading-none font-semibold text-fg-3">
-              {ws.name.charAt(0).toUpperCase()}
-            </span>
-        }
+        <WorkspaceGlyph ws={ws} />
         <span className="truncate">{ws.name}</span>
       </h3>
 
@@ -301,6 +296,50 @@ function WorkspaceSection({
         <ul className={LIST}>
           {rows.map(row => (
             <TokenRow key={`${row.kind}-${row.data.id}`} row={row} t={t} onRevoked={onRevoked} />
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+// ── EmptyWorkspaces ───────────────────────────────────────────────────────────
+
+function WorkspaceGlyph({ ws }: { ws: WsWithTokens }) {
+  return ws.icon
+    ? <PageIcon icon={ws.icon} iconColor={ws.iconColor} size={14} />
+    : <span className="flex size-3.5 items-center justify-center rounded-sm bg-hover text-2xs leading-none font-semibold text-fg-3">
+        {ws.name.charAt(0).toUpperCase()}
+      </span>;
+}
+
+/** The workspaces no agent is connected to: one folded row with their count, closed by default. */
+function EmptyWorkspaces({ workspaces, t }: { workspaces: WsWithTokens[]; t: ReturnType<typeof useTranslations> }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <section className="flex flex-col gap-2">
+      <button
+        type="button"
+        onClick={() => setOpen(v => !v)}
+        aria-expanded={open}
+        className="group flex w-full cursor-pointer items-center justify-between rounded-control px-1 py-1"
+      >
+        <span className="flex items-center gap-2 text-xs font-medium text-fg-3 transition-colors group-hover:text-fg-2">
+          {t('agentsEmptyWorkspaces')}
+          <Badge size="sm">{workspaces.length}</Badge>
+        </span>
+        <ChevronDown
+          size={16}
+          className={cn('text-fg-4 transition-transform duration-150 group-hover:text-fg-3', open && 'rotate-180')}
+        />
+      </button>
+      {open && (
+        <ul className={LIST}>
+          {workspaces.map(ws => (
+            <li key={ws.id} className="flex min-w-0 items-center gap-2 px-3 py-2.5 text-ui text-fg-2">
+              <WorkspaceGlyph ws={ws} />
+              <span className="truncate">{ws.name}</span>
+            </li>
           ))}
         </ul>
       )}
@@ -341,6 +380,12 @@ export default function AgentsModal({ onClose }: Props) {
     (acc[tok.workspaceId] ??= []).push(tok);
     return acc;
   }, {});
+
+  // Workspaces with an agent lead, in their usual order; the ones without fold away at
+  // the bottom (U4) — a long list of "no tokens yet" rows buried the connections.
+  const hasAgents = (ws: WsWithTokens) => ws.tokens.length > 0 || (oauthByWorkspace[ws.id]?.length ?? 0) > 0;
+  const workspacesWithAgents = workspaces.filter(hasAgents);
+  const workspacesWithoutAgents = workspaces.filter((ws) => !hasAgents(ws));
 
   const load = () => {
     setLoading(true);
@@ -384,15 +429,20 @@ export default function AgentsModal({ onClose }: Props) {
               </Button>
             </EmptyState>
           ) : (
-            workspaces.map(ws => (
-              <WorkspaceSection
-                key={ws.id}
-                ws={ws}
-                oauthTokens={oauthByWorkspace[ws.id] ?? []}
-                t={t}
-                onRevoked={load}
-              />
-            ))
+            <>
+              {workspacesWithAgents.map(ws => (
+                <WorkspaceSection
+                  key={ws.id}
+                  ws={ws}
+                  oauthTokens={oauthByWorkspace[ws.id] ?? []}
+                  t={t}
+                  onRevoked={load}
+                />
+              ))}
+              {workspacesWithoutAgents.length > 0 && (
+                <EmptyWorkspaces workspaces={workspacesWithoutAgents} t={t} />
+              )}
+            </>
           )}
 
           {/* Usage summary — last 30 days, by token owner (response payload → ~tokens) */}

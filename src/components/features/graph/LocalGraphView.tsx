@@ -13,8 +13,16 @@ import GraphCanvas, { type GraphLayers } from './GraphCanvas';
 
 const ALL_LAYERS: GraphLayers = { hierarchy: true, membership: true, link: true, mention: true, tag: true, code: true };
 
-/** The opened half of `LocalGraphPanel` — loaded on demand, never with the page. */
-export default function LocalGraphView({ workspaceId, pageId }: { workspaceId: string; pageId: string }) {
+/** The local map itself (`LocalGraphPanel`) — loaded on demand, never with the page. */
+export default function LocalGraphView({
+  workspaceId,
+  pageId,
+  className = 'mt-3',
+}: {
+  workspaceId: string;
+  pageId: string;
+  className?: string;
+}) {
   const t = useTranslations('Graph');
   const router = useRouter();
   const [depth, setDepth] = useState<1 | 2>(1);
@@ -41,7 +49,7 @@ export default function LocalGraphView({ workspaceId, pageId }: { workspaceId: s
   };
 
   return (
-    <div className="mt-3">
+    <div className={className}>
       <div className="mb-2 flex flex-wrap items-center gap-2 text-xs">
         {/* Segmented switch, drawn like the segmented Tabs (it sets a view option,
             it does not switch panels, so it stays a pair of pressed buttons). */}
