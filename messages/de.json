@@ -1748,10 +1748,10 @@
     "eyebrow": "DESKTOP & MOBIL",
     "title": "Remnus herunterladen",
     "subtitle": "Die native Desktop-App für Windows, macOS und Linux — plus eine installierbare Web-App für Handy und Tablet.",
-    "detecting": "Dein System wird erkannt…",
+    "detecting": "Ihr System wird erkannt…",
     "downloadFor": "Für {os} herunterladen",
-    "yourSystemBadge": "Das haben wir für dein System ausgewählt",
-    "chooseBelow": "Wähle unten deine Plattform",
+    "yourSystemBadge": "Das haben wir für Ihr System ausgewählt",
+    "chooseBelow": "Wählen Sie unten Ihre Plattform",
     "allPlatforms": "Alle Plattformen",
     "osWindows": "Windows",
     "osMac": "macOS",
@@ -1768,7 +1768,7 @@
     "viewAllReleases": "Alle Releases auf GitHub ansehen",
     "latestNote": "Diese Links führen immer zur neuesten Version.",
     "aboutHeading": "Was ist Remnus Desktop?",
-    "aboutBody": "Remnus Desktop ist die native App-Version deines Remnus-Cloud-Arbeitsbereichs, entwickelt mit Tauri. Sie läuft in einem eigenen Fenster und nutzt ein leichtgewichtiges System-WebView statt eines schweren gebündelten Browsers, bleibt dadurch schnell und schlank. Zusätzlich zum vollständigen Web-Erlebnis bietet sie Desktop-Komfort wie System-Tray, globale Tastenkürzel, native Benachrichtigungen und Schließen in den Tray. Alles bleibt mit den Web- und Mobil-Apps synchron, sodass deine Seiten, Datenbanken und Arbeitsbereiche auf allen Geräten stets aktuell sind.",
+    "aboutBody": "Remnus Desktop ist die native App-Version Ihres Remnus-Cloud-Arbeitsbereichs, entwickelt mit Tauri. Sie läuft in einem eigenen Fenster und nutzt ein leichtgewichtiges System-WebView statt eines schweren gebündelten Browsers, bleibt dadurch schnell und schlank. Zusätzlich zum vollständigen Web-Erlebnis bietet sie Desktop-Komfort wie System-Tray, globale Tastenkürzel, native Benachrichtigungen und Schließen in den Tray. Alles bleibt mit den Web- und Mobil-Apps synchron, sodass Ihre Seiten, Datenbanken und Arbeitsbereiche auf allen Geräten stets aktuell sind.",
     "requirementsHeading": "Systemanforderungen",
     "reqWindowsTitle": "Windows",
     "reqWindowsBody": "Windows 10 oder neuer (64-Bit). Nutzt die integrierte WebView2-Laufzeit, die mit aktuellen Windows-Versionen ausgeliefert wird.",
@@ -1778,19 +1778,19 @@
     "reqLinuxBody": "Eine moderne 64-Bit-Distribution mit WebKitGTK 4.1. Das AppImage läuft fast überall; das .deb ist für Debian und Ubuntu gedacht.",
     "installHeading": "Installationshinweise",
     "installWindowsTitle": "Windows (.exe)",
-    "installWindowsBody": "Führe das Installationsprogramm aus und folge den Anweisungen. Falls Windows SmartScreen erscheint, wähle „Weitere Informationen“ und dann „Trotzdem ausführen“ – der Build ist noch nicht codesigniert.",
+    "installWindowsBody": "Führen Sie das Installationsprogramm aus und folgen Sie den Anweisungen. Falls Windows SmartScreen erscheint, wählen Sie „Weitere Informationen“ und dann „Trotzdem ausführen“ – der Build ist noch nicht codesigniert.",
     "installMacTitle": "macOS (.dmg)",
-    "installMacBody": "Öffne die .dmg und ziehe Remnus in deinen Programme-Ordner. Klicke beim ersten Start mit der rechten Maustaste auf die App und wähle „Öffnen“, um die Gatekeeper-Warnung für unsignierte Apps zu umgehen.",
+    "installMacBody": "Öffnen Sie die .dmg und ziehen Sie Remnus in Ihren Programme-Ordner. Klicken Sie beim ersten Start mit der rechten Maustaste auf die App und wählen Sie „Öffnen“, um die Gatekeeper-Warnung für unsignierte Apps zu umgehen.",
     "installLinuxTitle": "Linux (.AppImage / .deb)",
-    "installLinuxBody": "Mache das AppImage ausführbar (chmod +x Remnus-*.AppImage) und starte es direkt. Installiere das Paket unter Debian oder Ubuntu mit sudo apt install ./Remnus-linux-amd64.deb.",
+    "installLinuxBody": "Machen Sie das AppImage ausführbar (chmod +x Remnus-*.AppImage) und starten Sie es direkt. Installieren Sie das Paket unter Debian oder Ubuntu mit sudo apt install ./Remnus-linux-amd64.deb.",
     "pwaHeading": "Handy & Tablet — Web-App",
     "pwaIntro": "Remnus wird direkt aus dem Browser als Web-App (PWA) installiert — ganz ohne App Store oder Play Store. Sie bekommt ein eigenes Symbol auf dem Startbildschirm, öffnet im Vollbild und aktualisiert sich automatisch.",
     "pwaInstallCta": "Remnus installieren",
     "pwaInstalledBadge": "Öffne Remnus über deinen Startbildschirm — bereits installiert.",
     "pwaIosTitle": "iPhone & iPad (Safari)",
-    "pwaIosBody": "Öffne remnus.com in Safari, tippe auf Teilen und wähle „Zum Home-Bildschirm“.",
+    "pwaIosBody": "Öffnen Sie remnus.com in Safari, tippen Sie auf Teilen und wählen Sie „Zum Home-Bildschirm“.",
     "pwaAndroidTitle": "Android (Chrome)",
-    "pwaAndroidBody": "Öffne remnus.com in Chrome, tippe auf das ⋮-Menü und wähle „App installieren“ (oder „Zum Startbildschirm hinzufügen“).",
+    "pwaAndroidBody": "Öffnen Sie remnus.com in Chrome, tippen Sie auf das ⋮-Menü und wählen Sie „App installieren“ (oder „Zum Startbildschirm hinzufügen“).",
     "pwaShortLabel": "App installieren",
     "pwaModalTagline": "Dein Workspace auf dem Startbildschirm — Vollbild, schnell und immer aktuell.",
     "pwaBenefit1": "Eigenes Symbol & Fenster",
@@ -1807,7 +1807,13 @@
     "pwaAndroidStep3": "Wähle „App installieren“",
     "pwaModalDesktopLink": "Lieber die native Desktop-App? Für Windows, macOS und Linux verfügbar",
     "pwaNudgeText": "Füge Remnus deinem Startbildschirm hinzu — Vollbild und immer aktuell.",
-    "pwaNudgeLater": "Nicht jetzt"
+    "pwaNudgeLater": "Nicht jetzt",
+    "stageDesktopAlt": "Die Remnus-Desktop-App mit einem Sprint-Board",
+    "stagePhoneAlt": "Remnus auf einem Handy mit einem Board",
+    "pwaAndroidAdd": "Zum Startbildschirm hinzufügen",
+    "pwaQrTitle": "Mit dem Handy scannen",
+    "pwaQrBody": "Halten Sie die Handykamera auf den Code: Diese Seite öffnet sich auf Ihrem Handy, und Sie können Remnus mit einem Tippen auf den Startbildschirm legen.",
+    "pwaQrAlt": "QR-Code, der remnus.com/download auf dem Handy öffnet"
   },
   "Privacy": {
     "title": "Datenschutzerklärung",
@@ -2490,8 +2496,8 @@
   },
   "Site": {
     "meta": {
-      "title": "Remnus | Ein Arbeitsbereich für dich und deine KI-Agenten",
-      "description": "Claude Code, Cursor und Codex verbinden sich per MCP mit Remnus, schreiben Pläne, verschieben Aufgaben und halten dein Projekt-Dashboard aktuell. Du siehst jede Änderung."
+      "title": "Remnus | Ihr Projekt, wieder im Griff",
+      "description": "Ihre Agenten bauen es. Remnus macht aus ihrer Arbeit Seiten und Dashboards, die Sie wirklich lesen können: Claude Code, Codex und Cursor verbinden sich per MCP, und Sie sehen jede Änderung."
     },
     "nav": {
       "product": "Produkt",
@@ -2505,16 +2511,23 @@
       "menu": "Menü"
     },
     "hero": {
-      "title": "Ein Arbeitsbereich für dich und deine KI-Agenten.",
-      "lede": "Claude Code, Cursor und Codex verbinden sich per MCP, schreiben Pläne, verschieben Aufgaben und halten dein Projekt-Dashboard aktuell. Du siehst jede Änderung und behältst das letzte Wort.",
+      "title": "Ihr Projekt, <em>wieder im Griff.</em>",
+      "lede": "Ihre Agenten bauen es. Remnus macht aus ihrer Arbeit Seiten und Dashboards, die Sie wirklich lesen können, und Sie behalten das Sagen.",
       "demo": "Demo ausprobieren",
       "demoLoading": "Demo wird geöffnet…",
       "start": "Kostenlos starten",
       "note": "Kostenlos starten, keine Karte nötig. Open Source.",
-      "worksWith": "Funktioniert mit"
+      "worksWith": "Funktioniert mit",
+      "quickTitle": "Direkt in Ihrem Agenten starten",
+      "quickBody": "Fügen Sie das in Claude Code, Codex oder Cursor ein.",
+      "quickCopy": "Kopieren",
+      "quickCopied": "Kopiert",
+      "quickStep1": "Ihr Agent installiert es",
+      "quickStep2": "Sie melden sich einmal an",
+      "quickStep3": "Ihr Projekt wird kartiert"
     },
     "stage": {
-      "label": "Animation: Claude Code plant ein Feature im Terminal, und Plan und Aufgaben erscheinen in Remnus, während es arbeitet.",
+      "label": "Animation: {agent} plant ein Feature im Terminal, und Plan und Aufgaben erscheinen in Remnus, während der Agent arbeitet.",
       "prompt": "Plane den Rückgängig-Verlauf und verfolge ihn in Remnus",
       "newPage": "Plan für den Rückgängig-Verlauf",
       "task1": "Befehlsprotokoll führen",
@@ -2523,8 +2536,8 @@
       "tasksCreated": "{count} Aufgaben",
       "moved": "{task} nach {column} verschoben",
       "done": "Fertig. Plan und 3 Aufgaben sind in Remnus.",
-      "editing": "Claude bearbeitet",
-      "edited": "Claude hat gerade bearbeitet",
+      "editing": "{agent} bearbeitet",
+      "edited": "{agent} hat gerade bearbeitet",
       "backlog": "Backlog",
       "inProgress": "In Arbeit",
       "doneColumn": "Erledigt",
@@ -2542,16 +2555,33 @@
       "high": "Hoch",
       "medium": "Mittel"
     },
+    "problem": {
+      "title": "400 Commits später: Können Sie noch erklären, <em>wie Ihr Projekt funktioniert?</em>",
+      "lede": "Agenten schreiben Code inzwischen schneller, als ihn jemand lesen kann. Die Lücke zwischen dem Code, der existiert, und dem Code, den ein Mensch wirklich versteht, hat einen Namen: Comprehension Debt, also Verständnisschuld. Jede Woche Agentenarbeit macht sie größer.",
+      "stat": "52 %",
+      "statLabel": "des neuen Codes schreibt inzwischen KI",
+      "statSource": "DX, State of AI Impact, Q2 2026",
+      "sourceLabel": "Zum Lesen: Comprehension debt, von Addy Osmani",
+      "diffsTitle": "Diffs lesen",
+      "diffsBody": "Zeigt jede geänderte Zeile. Zeigt nie, was aus dem Projekt geworden ist.",
+      "diffsVerdict": "Zeilen, kein Bild",
+      "chatTitle": "Chats und handgeschriebene Doku",
+      "chatBody": "Der Agent erklärt sich, dann schließt die Sitzung. Doku veraltet in der Woche, in der sie entsteht.",
+      "chatVerdict": "Am Freitag vergessen",
+      "remnusTitle": "Remnus",
+      "remnusBody": "Die Agenten, die die Arbeit machen, halten ein lesbares Bild des Projekts aktuell. Sie lesen es, korrigieren es und geben es frei.",
+      "remnusVerdict": "Aktuell und Ihres"
+    },
     "steps": {
-      "title": "Mit einem Befehl startklar.",
-      "lede": "Keine neuen Gewohnheiten. Dein Agent richtet alles ein, du liest das Ergebnis.",
-      "s1Title": "Projekt verbinden",
-      "s1Body": "Führe einen Befehl in deinem Repo aus. Dein Agent meldet sich per OAuth an, es gibt keine API-Schlüssel zu kopieren.",
-      "s1Alt": "Nutzt du einen anderen MCP-Client? <link>Verbinde ihn in der App.</link>",
-      "s2Title": "Dein Agent kartiert es",
-      "s2Body": "Er legt ein Dashboard, ein Backlog und Seiten für seine Entscheidungen an und hält sie aktuell.",
-      "s3Title": "Du behältst das letzte Wort",
-      "s3Body": "Jede Änderung eines Agenten wird markiert und protokolliert. Lies sie, korrigiere sie oder mach sie rückgängig.",
+      "title": "<em>Zwei Minuten</em>, bis Sie Ihr Projekt klar sehen.",
+      "lede": "Keine neuen Gewohnheiten. Ihr Agent übernimmt die Einrichtung, Sie lesen das Ergebnis.",
+      "s1Title": "Geben Sie es Ihrem Agenten",
+      "s1Body": "Fügen Sie den Prompt oben in Ihren Agenten ein. Er führt diesen Befehl in Ihrem Repo aus, und Sie melden sich einmal im Browser an. Kein Token zum Kopieren, nichts von Ihnen wird überschrieben.",
+      "s1Alt": "Sie nutzen einen anderen MCP-Client? <link>Verbinden Sie ihn in der App.</link>",
+      "s2Title": "Ihr Agent erklärt es Ihnen",
+      "s2Body": "Er liest die Codebasis und baut die erste Karte: Überblick, Entscheidungen, Architektur, Backlog und Risiken. Ab dann hält jede Aufgabe sie aktuell.",
+      "s3Title": "Das letzte Wort haben Sie",
+      "s3Body": "Agenten schlagen vor, Sie entscheiden. Jede Änderung eines Agenten wird markiert und protokolliert, damit Sie sie freigeben, korrigieren oder zurücknehmen können.",
       "copy": "Befehl kopieren",
       "copied": "Kopiert",
       "miniOpen": "Offen",
@@ -2564,25 +2594,25 @@
       "miniRestore": "Wiederherstellen"
     },
     "product": {
-      "title": "Alles, was deine Agenten schreiben, in lesbarer Form.",
-      "lede": "Echte Ansichten aus einem Projekt, das ein Agent aktuell hält.",
+      "title": "Eine Karte Ihres Projekts, <em>geschrieben von den Agenten, die es bauen.</em>",
+      "lede": "Echte Bildschirme aus einem Projekt, das ein Agent aktuell hält. Jede Seite zeigt, welcher Agent was wann geschrieben hat.",
       "tabDashboard": "Dashboard",
       "tabBoard": "Board",
       "tabPages": "Seiten",
       "tabMap": "Karte",
-      "dashboardBody": "Ein Live-Statusbild, das dein Agent mit einem Aufruf baut und aktuell hält.",
-      "boardBody": "Aufgaben als Board, Tabelle oder Kalender. Dieselben Zeilen, die dein Agent liest und schreibt.",
-      "pagesBody": "Pläne, Entscheidungen und Notizen als einfache Seiten, die das ganze Team bearbeiten kann.",
-      "mapBody": "Sieh, wie Seiten, Aufgaben und Entscheidungen zusammenhängen und was noch niemand geprüft hat.",
+      "dashboardBody": "Die ganze Woche in zwei Minuten am Montagmorgen: Ihr Agent baut mit einem Aufruf ein Live-Dashboard und hält es aktuell.",
+      "boardBody": "Aufgaben als Board, Tabelle oder Kalender: dieselben Zeilen, die Ihr Agent liest und schreibt.",
+      "pagesBody": "Entscheidungen, Architektur und Notizen als einfache Seiten, die Ihr ganzes Team lesen und korrigieren kann.",
+      "mapBody": "Sehen Sie, wie Seiten, Aufgaben und Entscheidungen zusammenhängen und was noch niemand geprüft hat.",
       "dashboardAlt": "Remnus-Dashboard eines Mal-App-Projekts mit offenen und erledigten Aufgaben, Statusverteilung und nächsten Schritten",
       "boardAlt": "Sprint-Board in Remnus mit Aufgaben, die ein Agent zwischen Spalten verschoben hat",
       "pagesAlt": "Eine Architekturseite in Remnus, die auf die beschriebenen Seiten verlinkt",
       "mapAlt": "Wissenskarte in Remnus, die zeigt, wie Seiten, Aufgaben und Entscheidungen zusammenhängen"
     },
     "savings": {
-      "title": "Gleiche Arbeit, {percent} % weniger Tokens.",
-      "lede": "Agenten bekommen eine Karte, Gliederungen und nur die Felder, nach denen sie fragen, nicht deinen ganzen Arbeitsbereich. Gemessen an einer echten Arbeitssitzung.",
-      "usual": "Alles lesen",
+      "title": "Dieselbe Arbeit, <em>{percent} % weniger Tokens</em> als ein Agent, der alles liest.",
+      "lede": "Wir haben eine echte Arbeitssitzung zweimal gemessen: einmal liest der Agent jede Seite, jede Board-Spalte und ganze Seiten, einmal geht er den Remnus-Weg, mit einer Karte, Gliederungen und nur den Feldern, die er anfragt.",
+      "usual": "Alles vollständig lesen",
       "remnus": "Mit Remnus",
       "rowOrient": "Sich zurechtfinden",
       "rowQuery": "Das Board prüfen",
@@ -2591,30 +2621,30 @@
       "tokens": "{count} Tokens",
       "room": "Das ist {factor}-mal mehr Platz im Kontextfenster für die eigentliche Arbeit.",
       "method": "So haben wir gemessen",
-      "calcTitle": "Was es dir spart",
+      "calcTitle": "Was es Ihnen spart",
       "calcSessions": "Agenten-Sitzungen pro Tag",
       "calcPrice": "Eingabepreis pro Million Tokens",
       "calcTokens": "{amount} Millionen Tokens gespart pro Monat",
       "calcMoney": "jeden Monat gespart",
-      "calcNote": "Die oben gemessene Sitzung mal deine Sitzungen und der gewählte Preis. In deinem Arbeitsbereich sieht es anders aus."
+      "calcNote": "Die oben gemessene Sitzung mal Ihre Sitzungen und der gewählte Preis. In Ihrem Arbeitsbereich sieht es anders aus."
     },
     "agents": {
-      "title": "Von Anfang an für Agenten gebaut.",
-      "lede": "Remnus spricht MCP nativ, also kann jeder Agent, der es unterstützt, hier lesen und schreiben.",
+      "title": "Nutzen Sie die Agenten, die Sie mögen. <em>Das Bild bleibt eins.</em>",
+      "lede": "Claude Code, Codex, Cursor und alles, was MCP spricht, schreiben in dieselbe Karte, und Sie sehen, wer was getan hat.",
       "f1Title": "{count} MCP-Tools",
-      "f1Body": "Alles, was du in der App tun kannst, kann auch dein Agent, mit denselben Berechtigungen.",
+      "f1Body": "Alles, was Sie in der App tun können, kann auch Ihr Agent, mit denselben Berechtigungen.",
       "f2Title": "Der richtige Kontext",
       "f2Body": "Agenten erhalten die Seiten, die für die Aufgabe zählen, innerhalb eines Token-Budgets, nicht den ganzen Arbeitsbereich.",
-      "f3Title": "Nichts passiert unbemerkt",
-      "f3Body": "Jeder Aufruf landet im Audit-Log. Tokens sind Lesen oder Schreiben und jederzeit widerrufbar.",
+      "f3Title": "Alles wird festgehalten",
+      "f3Body": "Jedes Lesen und Schreiben eines Agenten wird mit wer, was und wann protokolliert. Tokens sind Lese- oder Schreib-Tokens, und Sie können sie jederzeit widerrufen.",
       "f4Title": "Open Source",
-      "f4Body": "AGPL-3.0. Nutze unsere Cloud oder betreibe es auf deinem eigenen Server.",
+      "f4Body": "AGPL-3.0. Sehen Sie genau, was mit Ihren Inhalten passiert, oder betreiben Sie es auf Ihrem eigenen Server.",
       "listedOn": "Gelistet bei",
       "docsLink": "MCP-Doku lesen"
     },
     "pricing": {
-      "title": "Kostenlos starten. Ein Festpreis, wenn du wächst.",
-      "lede": "Team-Pläne zählen keine Plätze. Selbst hosten ist kostenlos.",
+      "title": "Kostenlos starten. Feste Preise für Teams.",
+      "lede": "Preis pro Team, nicht pro Agent oder Platz. Selbst hosten ist kostenlos.",
       "popular": "Am beliebtesten",
       "perMonth": "pro Monat",
       "compare": "Pläne vergleichen",
@@ -2623,22 +2653,51 @@
       "notIncluded": "Nicht enthalten"
     },
     "apps": {
-      "title": "Auf deinem Desktop und deinem Handy.",
+      "title": "Auf Ihrem Desktop und Ihrem Handy.",
       "desktopTitle": "Desktop-App",
       "desktopBody": "Windows, macOS und Linux, in einem eigenen Fenster.",
       "desktopCta": "Herunterladen",
       "phoneTitle": "Handy und Tablet",
       "phoneBody": "Direkt aus dem Browser installieren. Kein App Store nötig.",
-      "phoneCta": "So installierst du es",
+      "phoneCta": "So installieren Sie es",
       "desktopAlt": "Remnus-Desktop-App mit einem Sprint-Board",
       "phoneAlt": "Remnus auf einem Handy mit einem Board"
     },
+    "faq": {
+      "title": "Häufige Fragen.",
+      "items": [
+        {
+          "q": "Liest Remnus meinen Code?",
+          "a": "Ihr eigener Agent liest Ihren Code weiterhin auf Ihrem eigenen Rechner, wie bisher. Remnus erhält nur, was der Agent in den Arbeitsbereich schreibt: Entscheidungen, Notizen und Status. Ihr Repository verlässt Ihren Rechner nie."
+        },
+        {
+          "q": "Woher weiß ich, dass die Agenten die Karte aktuell halten?",
+          "a": "Jedes verbundene Projekt weist seine Agenten an, vor wichtiger Arbeit Kontext vorzubereiten und Entscheidungen, Stolperfallen und Statusänderungen festzuhalten, sobald sie entstehen. Jede Aktualisierung erscheint im Audit-Log, also fällt auch eine stille Woche auf."
+        },
+        {
+          "q": "Was ändert npx remnus init in meinem Repo?",
+          "a": "Es fügt .mcp.json hinzu, einen .remnus-Ordner, dessen Token-Datei nicht in Git landet, einen kurzen markierten Abschnitt in AGENTS.md oder CLAUDE.md und einen Sitzungs-Hook für Claude Code. Vorhandene Dateien werden an Ort und Stelle bearbeitet, nie überschrieben."
+        },
+        {
+          "q": "Mit welchen Agenten funktioniert es?",
+          "a": "Claude Code, Codex, Cursor, Windsurf, Antigravity und jeder Client, der Remote-MCP unterstützt."
+        },
+        {
+          "q": "Können mein Team oder mein Kunde es sehen?",
+          "a": "Laden Sie Teammitglieder in den Arbeitsbereich des Projekts ein oder veröffentlichen Sie eine beliebige Seite als schreibgeschützten Link."
+        },
+        {
+          "q": "Kann ich Remnus selbst hosten?",
+          "a": "Ja. Remnus ist Open Source unter AGPL-3.0. Richten Sie die CLI mit --server auf Ihren eigenen Server."
+        }
+      ]
+    },
     "closing": {
-      "title": "Gib deinen Agenten einen Ort zum Arbeiten.",
-      "body": "Starte kostenlos oder sieh dir zuerst die Demo an."
+      "title": "Lassen Sie Ihre Agenten weiterbauen. <em>Sie behalten das Sagen.</em>",
+      "body": "Einen Prompt einfügen, einmal anmelden, und Ihr Projekt ist wieder lesbar. Starten Sie kostenlos oder sehen Sie sich zuerst die Demo an."
     },
     "footer": {
-      "tagline": "Der Arbeitsbereich, den du mit deinen KI-Agenten teilst.",
+      "tagline": "Der Arbeitsbereich, der die Arbeit Ihrer Agenten lesbar hält.",
       "product": "Produkt",
       "docs": "Doku",
       "blog": "Blog",

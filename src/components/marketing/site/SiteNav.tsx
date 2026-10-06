@@ -27,10 +27,12 @@ export default async function SiteNav({ home }: { home: string }) {
 
   return (
     <header className="sticky top-0 z-50 border-b border-line bg-desk/85 backdrop-blur-md">
-      <div className="mx-auto flex h-16 max-w-[1200px] items-center gap-2 px-4 sm:px-8">
-        <Link href={home} className="mr-4 flex items-center gap-2 text-[15px] font-semibold tracking-[-0.01em] text-fg">
+      <div className="mx-auto flex h-16 max-w-[1200px] items-center gap-1 px-4 sm:gap-2 sm:px-8">
+        {/* On phones the wordmark folds into the mark and the gaps tighten, so a long
+            "Start free" (fr, de, ru) still fits at 360 px. */}
+        <Link href={home} className="mr-2 flex items-center gap-2 text-[15px] font-semibold tracking-[-0.01em] text-fg sm:mr-4">
           <RemnusMark className="size-[18px]" />
-          Remnus
+          <span className="max-sm:sr-only">Remnus</span>
         </Link>
 
         <nav className="hidden items-center gap-1 lg:flex">
@@ -62,7 +64,7 @@ export default async function SiteNav({ home }: { home: string }) {
             <Link href="/login" className={cn(buttonVariants({ variant: 'ghost' }), 'hidden text-fg-2 sm:inline-flex')}>
               {t('signIn')}
             </Link>
-            <Link href="/login" className={cn(buttonVariants({ variant: 'primary' }), 'ml-1')}>
+            <Link href="/login" className={cn(buttonVariants({ variant: 'primary' }), 'ml-1 max-sm:px-2.5')}>
               {t('start')}
             </Link>
           </>

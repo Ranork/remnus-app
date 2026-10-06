@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { Check, FileText, Flag, KanbanSquare, Layers, LayoutGrid, Loader2, Table2, Waypoints } from 'lucide-react';
-import AIMark from '../AIMark';
+import AIMark, { type AIMarkName } from '../AIMark';
 import { RemnusMark } from '@/components/ui/remnus-mark';
 import { cn } from '@/lib/cn';
 
@@ -37,13 +37,19 @@ export type StageCopy = {
 };
 
 /**
- * The landing hero: Claude Code works in a terminal and the Remnus workspace beside it
+ * The landing hero: an agent works in a terminal and the Remnus workspace beside it
  * changes as it goes — a page appears in the tree, three tasks land on the board, one
  * moves to In progress. Yellow marks exactly what the agent is touching, then settles.
+ * Each loop hands the terminal to the next agent (Claude Code → Codex → Cursor); the
+ * terminal title, every mark and the "X is editing" chip follow it.
  *
  * One timeline drives everything (`phase`); the board is plain markup in the app's own
  * tokens, so it follows the theme. Off screen the loop stops; with reduced motion the
- * finished state is shown still.
+ * finished state is shown still, with the first agent.
+ *
+ * From md up the terminal hangs off the stage's bottom-right corner like a window of its
+ * own: it is positioned against the figure, and neither the clipped stage nor the sheet
+ * is positioned, so the stage's `overflow-hidden` does not clip it.
  */
 const EVENTS: [at: number, phase: number][] = [
   [2300, 1], // create_page running
@@ -57,6 +63,14 @@ const EVENTS: [at: number, phase: number][] = [
 ];
 const LOOP_MS = 12500;
 const FINAL = 7;
+
+/** Agent names are product names, never translated; `short` fills the stage's {agent} chips. */
+type StageAgent = { id: AIMarkName; name: string; short: string };
+const AGENTS: StageAgent[] = [
+  { id: 'claude', name: 'Claude Code', short: 'Claude' },
+  { id: 'codex', name: 'Codex', short: 'Codex' },
+  { id: 'cursor', name: 'Cursor', short: 'Cursor' },
+];
 
 function subscribeReducedMotion(onChange: () => void) {
   const mq = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -74,6 +88,7 @@ export default function HeroStage({ copy }: { copy: StageCopy }) {
   const [inView, setInView] = useState(false);
   const [phase, setPhase] = useState(0);
   const [typed, setTyped] = useState(0);
+  const [agentIndex, setAgentIndex] = useState(0);
 
   useEffect(() => {
     const el = rootRef.current;
@@ -86,10 +101,12 @@ export default function HeroStage({ copy }: { copy: StageCopy }) {
   useEffect(() => {
     if (reduced || !inView) return;
     let timers: number[] = [];
+    let round = 0;
     const chars = copy.prompt.length;
     const per = Math.min(45, 1700 / Math.max(chars, 1));
     const loop = () => {
       timers = [];
+      setAgentIndex(round++ % AGENTS.length);
       setPhase(0);
       setTyped(0);
       for (let i = 1; i <= chars; i++) timers.push(window.setTimeout(() => setTyped(i), 350 + i * per));
@@ -104,6 +121,7 @@ export default function HeroStage({ copy }: { copy: StageCopy }) {
   }, [reduced, inView, copy.prompt.length]);
 
   const p = reduced ? FINAL : phase;
+  const agent = AGENTS[reduced ? 0 : agentIndex];
   const shownPrompt = reduced || p >= 1 ? copy.prompt : copy.prompt.slice(0, typed);
   const live = p >= 1 && p < FINAL; // the agent is at work
   const fading = p >= 8;
@@ -128,11 +146,8 @@ export default function HeroStage({ copy }: { copy: StageCopy }) {
   const ringed = new Set(live && p >= 4 ? (moved ? ['t1'] : ['t1', 't2', 't3']) : []);
 
   return (
-    <figure ref={rootRef} aria-label={copy.label} className="m-0">
-      <div
-        aria-hidden
-        className="relative overflow-hidden rounded-[14px] bg-desk shadow-modal ring-1 ring-line-strong md:h-[540px]"
-      >
+    <figure ref={rootRef} aria-label={copy.label.replace('{agent}', agent.name)} className="site-marks relative m-0">
+      <div aria-hidden className="overflow-hidden rounded-[14px] bg-desk shadow-modal ring-1 ring-line-strong md:h-[540px]">
         <div className="flex h-full flex-col md:flex-row">
           {/* Sidebar on the desk */}
           <div className="hidden w-[208px] shrink-0 flex-col gap-0.5 p-3 text-ui text-fg-2 lg:flex">
@@ -170,20 +185,20 @@ export default function HeroStage({ copy }: { copy: StageCopy }) {
           </div>
 
           {/* The sheet */}
-          <div className="relative m-2 flex min-h-0 flex-1 flex-col rounded-surface bg-sheet p-4 shadow-sheet sm:p-5 lg:ml-0 lg:p-6">
+          <div className="m-2 flex min-h-0 flex-1 flex-col rounded-surface bg-sheet p-4 shadow-sheet sm:p-5 lg:ml-0 lg:p-6">
             <div className="flex items-center gap-3">
               <KanbanSquare className="size-5 shrink-0 text-fg-3" />
               <span className="truncate text-lg font-semibold tracking-[-0.02em] text-fg sm:text-xl">{copy.board}</span>
               <span className="ml-auto">
                 {p >= 1 && !fading && (
                   <span
-                    key={live ? 'editing' : 'edited'}
+                    key={`${agent.id}-${live ? 'editing' : 'edited'}`}
                     className="site-arrive inline-flex items-center gap-2 rounded-full bg-raised py-1 pr-2.5 pl-1 text-xs text-fg-2 shadow-[inset_0_0_0_1px_var(--color-line)]"
                   >
                     <span className="flex size-5 items-center justify-center rounded-full bg-hover">
-                      <AIMark name="claude" size={11} />
+                      <AIMark name={agent.id} size={11} />
                     </span>
-                    <span className="hidden sm:inline">{live ? copy.editing : copy.edited}</span>
+                    <span className="hidden sm:inline">{(live ? copy.editing : copy.edited).replace('{agent}', agent.short)}</span>
                     {live && <span className="size-1.5 rounded-full bg-signal" />}
                   </span>
                 )}
@@ -204,24 +219,24 @@ export default function HeroStage({ copy }: { copy: StageCopy }) {
             <div className="mt-4 grid min-h-0 flex-1 grid-cols-2 gap-3 sm:grid-cols-3">
               <Column name={copy.backlog} dot="bg-fg-4" count={backlog.length}>
                 {backlog.map((c) => (
-                  <Card key={c.id} {...c} agent={agentMade.has(c.id)} ring={ringed.has(c.id)} fading={fading && c.id.startsWith('t')} delay={newTasks.findIndex((t) => t.id === c.id)} />
+                  <Card key={c.id} {...c} by={agentMade.has(c.id) ? agent.id : null} ring={ringed.has(c.id)} fading={fading && c.id.startsWith('t')} delay={newTasks.findIndex((t) => t.id === c.id)} />
                 ))}
               </Column>
               <Column name={copy.inProgress} dot="bg-amber-400" count={inProgress.length}>
                 {inProgress.map((c) => (
-                  <Card key={c.id} {...c} agent={agentMade.has(c.id)} ring={ringed.has(c.id)} fading={fading && c.id.startsWith('t')} delay={0} />
+                  <Card key={c.id} {...c} by={agentMade.has(c.id) ? agent.id : null} ring={ringed.has(c.id)} fading={fading && c.id.startsWith('t')} delay={0} />
                 ))}
               </Column>
               <Column name={copy.doneColumn} dot="bg-green-400" count={done.length} className="hidden sm:flex">
                 {done.map((c) => (
-                  <Card key={c.id} {...c} agent={false} ring={false} fading={false} delay={0} />
+                  <Card key={c.id} {...c} by={null} ring={false} fading={false} delay={0} />
                 ))}
               </Column>
             </div>
 
-            {/* The agent's terminal, floating over the sheet from md up */}
-            <div className="mt-4 md:absolute md:right-5 md:bottom-5 md:mt-0 md:w-[380px] lg:w-[400px]">
-              <Terminal copy={copy} p={p} prompt={shownPrompt} typing={!reduced && p === 0} fading={fading} />
+            {/* The agent's terminal: in the sheet's flow on phones, its own window from md up */}
+            <div className="mt-4 md:absolute md:-right-4 md:-bottom-8 md:z-10 md:mt-0 md:w-[380px] lg:-right-8 lg:-bottom-10 lg:w-[400px]">
+              <Terminal copy={copy} agent={agent} p={p} prompt={shownPrompt} typing={!reduced && p === 0} fading={fading} />
             </div>
           </div>
         </div>
@@ -287,7 +302,7 @@ function Card({
   title,
   tag,
   tone,
-  agent,
+  by,
   ring,
   fading,
   delay,
@@ -295,7 +310,8 @@ function Card({
   title: string;
   tag: string;
   tone: 'high' | 'medium';
-  agent: boolean;
+  /** The agent that just wrote this card, if any. */
+  by: AIMarkName | null;
   ring: boolean;
   fading: boolean;
   delay: number;
@@ -305,10 +321,10 @@ function Card({
       className={cn(
         'relative rounded-control bg-raised p-2.5 transition-[box-shadow,opacity] duration-700',
         ring ? 'shadow-[0_0_0_1.5px_var(--color-signal)]' : 'shadow-[inset_0_0_0_1px_var(--color-line)]',
-        agent && 'site-arrive',
+        by && 'site-arrive',
         fading && 'opacity-0',
       )}
-      style={agent && delay > 0 ? { animationDelay: `${delay * 140}ms` } : undefined}
+      style={by && delay > 0 ? { animationDelay: `${delay * 140}ms` } : undefined}
     >
       <div className="pr-5 text-xs leading-snug font-medium text-fg sm:text-ui">{title}</div>
       <span
@@ -319,9 +335,9 @@ function Card({
       >
         {tag}
       </span>
-      {agent && (
-        <span className="absolute right-2 bottom-2 flex size-5 items-center justify-center rounded-full bg-hover">
-          <AIMark name="claude" size={11} />
+      {by && (
+        <span className="absolute right-2 bottom-2 flex size-5 items-center justify-center rounded-full bg-hover text-fg-2">
+          <AIMark name={by} size={11} />
         </span>
       )}
     </div>
@@ -330,12 +346,14 @@ function Card({
 
 function Terminal({
   copy,
+  agent,
   p,
   prompt,
   typing,
   fading,
 }: {
   copy: StageCopy;
+  agent: StageAgent;
   p: number;
   prompt: string;
   typing: boolean;
@@ -344,8 +362,10 @@ function Terminal({
   return (
     <div className="overflow-hidden rounded-surface bg-[#16181c] text-[#e6e8eb] shadow-modal ring-1 ring-white/10">
       <div className="flex h-9 items-center gap-2 border-b border-white/[0.07] px-3.5 text-xs text-[#9aa0a8]">
-        <AIMark name="claude" size={13} />
-        <span className="font-medium text-[#d6d9de]">Claude Code</span>
+        <AIMark name={agent.id} size={13} />
+        <span key={agent.id} className="site-arrive font-medium text-[#d6d9de]">
+          {agent.name}
+        </span>
         <span className="ml-auto font-mono text-2xs">~/paint-clone</span>
       </div>
       <div className={cn('min-h-[172px] space-y-2 px-3.5 py-3 font-mono text-xs leading-relaxed transition-opacity duration-700', fading && 'opacity-0')}>

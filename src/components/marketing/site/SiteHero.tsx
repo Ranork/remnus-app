@@ -3,6 +3,8 @@ import { getTranslations } from 'next-intl/server';
 import { buttonVariants } from '@/components/ui/button';
 import { cn } from '@/lib/cn';
 import AIMark, { type AIMarkName } from '../AIMark';
+import { em } from './emphasis';
+import HeroPrompt from './HeroPrompt';
 import HeroStage, { type StageCopy } from './HeroStage';
 import SiteDemoButton from './SiteDemoButton';
 
@@ -33,7 +35,7 @@ export default async function SiteHero() {
       <div className="mx-auto max-w-[1200px]">
         <div className="grid items-end gap-8 lg:grid-cols-12 lg:gap-10">
           <h1 className="m-0 text-[40px] leading-[1.02] font-semibold tracking-[-0.04em] text-balance text-fg sm:text-[56px] lg:col-span-7 lg:text-[68px]">
-            {t('title')}
+            {t.rich('title', { em })}
           </h1>
           <div className="lg:col-span-5 lg:pb-2">
             <p className="m-0 max-w-[34rem] text-base leading-[1.6] text-fg-2 sm:text-[17px]">{t('lede')}</p>
@@ -47,11 +49,24 @@ export default async function SiteHero() {
           </div>
         </div>
 
-        <div className="mt-12 lg:mt-16">
+        <div className="mt-10 lg:mt-12">
+          <HeroPrompt
+            copy={{
+              title: t('quickTitle'),
+              body: t('quickBody'),
+              copy: t('quickCopy'),
+              copied: t('quickCopied'),
+              steps: [t('quickStep1'), t('quickStep2'), t('quickStep3')],
+            }}
+          />
+        </div>
+
+        <div className="site-stage-glow mt-6 lg:mt-8">
           <HeroStage copy={stage} />
         </div>
 
-        <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-8">
+        {/* From md up the agent's terminal hangs off the stage's bottom-right corner. */}
+        <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:gap-8 md:mt-16 lg:mt-20">
           <span className="shrink-0 text-ui text-fg-3">{t('worksWith')}</span>
           <ul className="site-marks m-0 flex list-none flex-wrap items-center gap-x-6 gap-y-3 p-0 text-fg-2">
             {CLIENTS.map((c) => (

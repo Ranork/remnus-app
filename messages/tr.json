@@ -1769,10 +1769,10 @@
     "eyebrow": "MASAÜSTÜ VE MOBİL",
     "title": "Remnus'u İndir",
     "subtitle": "Windows, macOS ve Linux için yerel masaüstü uygulaması — artı telefon ve tablet için kurulabilir web uygulaması.",
-    "detecting": "Sistemin algılanıyor…",
+    "detecting": "Sisteminiz algılanıyor…",
     "downloadFor": "{os} için indir",
-    "yourSystemBadge": "Sistemine göre bunu seçtik",
-    "chooseBelow": "Aşağıdan platformunu seç",
+    "yourSystemBadge": "Sisteminize göre bunu seçtik",
+    "chooseBelow": "Aşağıdan platformunuzu seçin",
     "allPlatforms": "Tüm platformlar",
     "osWindows": "Windows",
     "osMac": "macOS",
@@ -1828,7 +1828,13 @@
     "pwaAndroidStep3": "“Uygulamayı yükle”yi seç",
     "pwaModalDesktopLink": "Yerel masaüstü uygulaması mı istiyorsun? Windows, macOS ve Linux için indir",
     "pwaNudgeText": "Remnus'u ana ekranına ekle — tam ekran ve her zaman güncel.",
-    "pwaNudgeLater": "Şimdi değil"
+    "pwaNudgeLater": "Şimdi değil",
+    "stageDesktopAlt": "Bir sprint panosunu gösteren Remnus masaüstü uygulaması",
+    "stagePhoneAlt": "Telefonda bir panoyu gösteren Remnus",
+    "pwaAndroidAdd": "Ana ekrana ekle",
+    "pwaQrTitle": "Telefonunuzla tarayın",
+    "pwaQrBody": "Telefonunuzun kamerasıyla okutun: bu sayfa telefonunuzda açılır ve Remnus'u tek dokunuşla ana ekranınıza ekleyebilirsiniz.",
+    "pwaQrAlt": "Telefonda remnus.com/download sayfasını açan QR kod"
   },
   "Privacy": {
     "title": "Gizlilik Politikası",
@@ -2815,8 +2821,8 @@
   },
   "Site": {
     "meta": {
-      "title": "Remnus | Sen ve yapay zekâ ajanların için tek çalışma alanı",
-      "description": "Claude Code, Cursor ve Codex, Remnus'a MCP ile bağlanıp plan yazar, görevleri taşır ve proje panonu güncel tutar. Her değişikliği görürsün."
+      "title": "Remnus | Projenize yeniden hakim olun",
+      "description": "Ajanlar geliştirir. Remnus onların işini gerçekten okuyabileceğiniz sayfalara ve panolara çevirir: Claude Code, Codex ve Cursor MCP ile bağlanır, siz her değişikliği görürsünüz."
     },
     "nav": {
       "product": "Ürün",
@@ -2830,16 +2836,23 @@
       "menu": "Menü"
     },
     "hero": {
-      "title": "Sen ve yapay zekâ ajanların için tek çalışma alanı.",
-      "lede": "Claude Code, Cursor ve Codex MCP ile bağlanır; plan yazar, görevleri taşır, proje panonu güncel tutar. Her değişikliği görürsün, son söz sende kalır.",
+      "title": "Projenize <em>yeniden hakim olun.</em>",
+      "lede": "Ajanlar geliştirir. Remnus onların işini gerçekten okuyabileceğiniz sayfalara ve panolara çevirir, hakimiyet de sizde kalır.",
       "demo": "Demoyu dene",
       "demoLoading": "Demo açılıyor…",
       "start": "Ücretsiz başla",
       "note": "Başlamak ücretsiz, kart gerekmez. Açık kaynak.",
-      "worksWith": "Şunlarla çalışır"
+      "worksWith": "Şunlarla çalışır",
+      "quickTitle": "Ajanınızla hemen başlayın",
+      "quickBody": "Bunu Claude Code, Codex ya da Cursor'a yapıştırın.",
+      "quickCopy": "Kopyala",
+      "quickCopied": "Kopyalandı",
+      "quickStep1": "Kurulumu ajanınız yapar",
+      "quickStep2": "Bir kez giriş yaparsınız",
+      "quickStep3": "Projeniz haritalanır"
     },
     "stage": {
-      "label": "Animasyon: Claude Code terminalde bir özelliği planlıyor; plan ve görevleri o çalışırken Remnus'ta beliriyor.",
+      "label": "Animasyon: {agent} terminalde bir özelliği planlıyor; plan ve görevleri o çalışırken Remnus'ta beliriyor.",
       "prompt": "Geri alma geçmişini planla ve Remnus'ta takip et",
       "newPage": "Geri alma geçmişi planı",
       "task1": "Komut günlüğü tut",
@@ -2848,8 +2861,8 @@
       "tasksCreated": "{count} görev",
       "moved": "{task}, {column} sütununa taşındı",
       "done": "Tamam. Plan ve 3 görev Remnus'ta.",
-      "editing": "Claude düzenliyor",
-      "edited": "Claude az önce düzenledi",
+      "editing": "{agent} düzenliyor",
+      "edited": "{agent} az önce düzenledi",
       "backlog": "Bekleyenler",
       "inProgress": "Sürüyor",
       "doneColumn": "Bitti",
@@ -2867,16 +2880,33 @@
       "high": "Yüksek",
       "medium": "Orta"
     },
+    "problem": {
+      "title": "400 commit sonra, projenizin <em>nasıl çalıştığını</em> hâlâ anlatabiliyor musunuz?",
+      "lede": "Ajanlar artık kodu herkesin okuyabileceğinden hızlı yazıyor. Var olan kod ile bir insanın gerçekten anladığı kod arasındaki açığın bir adı var: anlama borcu (comprehension debt). Ajanlarla geçen her hafta bu borcu büyütüyor.",
+      "stat": "%52",
+      "statLabel": "yeni kodun artık yapay zekâ tarafından yazılan payı",
+      "statSource": "DX, State of AI Impact, 2026 2. çeyrek",
+      "sourceLabel": "Okuyun: Comprehension debt, Addy Osmani",
+      "diffsTitle": "Diff okumak",
+      "diffsBody": "Değişen her satırı gösterir. Projenin neye dönüştüğünü asla göstermez.",
+      "diffsVerdict": "Satırlar var, resim yok",
+      "chatTitle": "Sohbetler ve elle yazılan dokümanlar",
+      "chatBody": "Ajan ne yaptığını anlatır, sonra oturum kapanır. Doküman yazıldığı hafta eskir.",
+      "chatVerdict": "Cumaya kaybolmuş",
+      "remnusTitle": "Remnus",
+      "remnusBody": "İşi yapan ajanlar projenin okunabilir resmini güncel tutar. Siz okur, düzeltir, onaylarsınız.",
+      "remnusVerdict": "Güncel ve sizin"
+    },
     "steps": {
-      "title": "Tek komutla başla.",
-      "lede": "Yeni alışkanlık yok. Kurulumu ajanın yapar, sen sonucu okursun.",
-      "s1Title": "Projeni bağla",
-      "s1Body": "Reponda tek bir komut çalıştır. Ajanın OAuth ile giriş yapar; kopyalanacak API anahtarı yok.",
-      "s1Alt": "Başka bir MCP istemcisi mi kullanıyorsun? <link>Uygulamadan bağla.</link>",
-      "s2Title": "Ajanın projeyi haritalar",
-      "s2Body": "Bir pano, bir iş listesi ve aldığı kararlar için sayfalar kurar, sonra bunları güncel tutar.",
-      "s3Title": "Son söz sende",
-      "s3Body": "Ajanın her düzenlemesi işaretlenir ve kayda geçer. Oku, düzelt ya da geri al.",
+      "title": "Projenizi net görmeye <em>iki dakika.</em>",
+      "lede": "Yeni bir alışkanlık yok. Kurulumu ajanınız yapar, siz sonucu okursunuz.",
+      "s1Title": "Ajanınıza verin",
+      "s1Body": "Yukarıdaki prompt'u ajanınıza yapıştırın. Bu komutu reponuzda o çalıştırır, siz tarayıcıda bir kez giriş yaparsınız. Kopyalanacak token yok, hiçbir dosyanızın üzerine yazılmaz.",
+      "s1Alt": "Başka bir MCP istemcisi mi kullanıyorsunuz? <link>Uygulamadan bağlayın.</link>",
+      "s2Title": "Ajanınız size anlatsın",
+      "s2Body": "Kod tabanını okur ve ilk haritayı kurar: genel bakış, kararlar, mimari, iş listesi ve riskler. O andan itibaren her iş haritayı güncel tutar.",
+      "s3Title": "Son söz sizde",
+      "s3Body": "Ajan önerir, siz karar verirsiniz. Ajanın her düzenlemesi işaretlenir ve kayda geçer; onaylayın, düzeltin ya da geri alın.",
       "copy": "Komutu kopyala",
       "copied": "Kopyalandı",
       "miniOpen": "Açık",
@@ -2889,71 +2919,100 @@
       "miniRestore": "Geri yükle"
     },
     "product": {
-      "title": "Ajanlarının yazdığı her şey, okunabilir hâlde.",
-      "lede": "Bir ajanın güncel tuttuğu bir projeden gerçek ekranlar.",
+      "title": "Projenizin haritası, <em>onu geliştiren ajanların kaleminden.</em>",
+      "lede": "Bir ajanın güncel tuttuğu gerçek bir projeden ekranlar. Hangi ajanın neyi ne zaman yazdığı her sayfada görünür.",
       "tabDashboard": "Pano",
       "tabBoard": "Kanban",
       "tabPages": "Sayfalar",
       "tabMap": "Harita",
-      "dashboardBody": "Ajanının tek çağrıda kurduğu ve güncel tuttuğu canlı bir durum ekranı.",
-      "boardBody": "Görevler kanban, tablo ya da takvim olarak. Ajanının okuyup yazdığı satırların aynısı.",
-      "pagesBody": "Planlar, kararlar ve notlar; tüm ekibin düzenleyebildiği düz sayfalar.",
-      "mapBody": "Sayfaların, görevlerin ve kararların nasıl bağlandığını ve henüz kimsenin gözden geçirmediklerini gör.",
+      "dashboardBody": "Pazartesi sabahı iki dakikada bütün hafta: ajanınız canlı panoyu tek çağrıda kurar ve her işte güncel tutar.",
+      "boardBody": "Görevler kanban, tablo ya da takvim olarak; ajanınızın okuyup yazdığı satırların aynısı.",
+      "pagesBody": "Kararlar, mimari ve notlar; tüm ekibin okuyup düzeltebildiği düz sayfalar.",
+      "mapBody": "Sayfaların, görevlerin ve kararların nasıl bağlandığını ve henüz kimsenin gözden geçirmediklerini görün.",
       "dashboardAlt": "Bir çizim uygulaması projesinin Remnus panosu: açık ve biten görevler, durum dağılımı ve sıradaki işler",
       "boardAlt": "Bir ajanın sütunlar arasında taşıdığı görevlerle Remnus'taki sprint panosu",
       "pagesAlt": "Remnus'ta anlattığı sayfalara bağlanan bir mimari sayfası",
       "mapAlt": "Remnus'ta sayfaların, görevlerin ve kararların bağlantısını gösteren bilgi haritası"
     },
     "agents": {
-      "title": "Baştan ajanlar için yapıldı.",
-      "lede": "Remnus MCP'yi doğal olarak konuşur; MCP destekleyen her ajan burada okuyup yazabilir.",
+      "title": "İstediğiniz ajanı kullanın, <em>resim yine tek.</em>",
+      "lede": "Claude Code, Codex, Cursor ve MCP konuşan her istemci aynı haritaya yazar; kimin ne yaptığını görürsünüz.",
       "f1Title": "{count} MCP aracı",
-      "f1Body": "Uygulamada yapabildiğin her şeyi ajanın da yapabilir, aynı yetkilerle.",
+      "f1Body": "Uygulamada yapabildiğiniz her şeyi ajanınız da aynı yetkilerle yapabilir.",
       "f2Title": "Doğru bağlam",
       "f2Body": "Ajanlar tüm çalışma alanını değil, görev için önemli sayfaları bir token bütçesi içinde alır.",
-      "f3Title": "Hiçbir şey gözden kaçmaz",
-      "f3Body": "Her çağrı denetim kaydına düşer. Token'lar okuma ya da yazma yetkilidir ve istediğin an iptal edebilirsin.",
+      "f3Title": "Her şey kayıt altında",
+      "f3Body": "Her ajan okuması ve yazması kim, ne, ne zaman bilgisiyle kaydedilir. Token'lar okuma ya da yazma yetkilidir ve istediğiniz an iptal edebilirsiniz.",
       "f4Title": "Açık kaynak",
-      "f4Body": "AGPL-3.0. Bulutumuzu kullan ya da kendi sunucunda çalıştır.",
+      "f4Body": "AGPL-3.0. İçeriğinize ne olduğunu görün ya da kendi sunucunuzda çalıştırın.",
       "listedOn": "Listelendiği yerler",
-      "docsLink": "MCP dokümanlarını oku"
+      "docsLink": "MCP dokümanlarını okuyun"
     },
     "pricing": {
-      "title": "Başlamak ücretsiz. Büyüyünce sabit fiyat.",
-      "lede": "Ekip planları koltuk saymaz. Kendi sunucunda barındırmak ücretsiz.",
+      "title": "Başlamak ücretsiz. Ekipler için sabit fiyat.",
+      "lede": "Ajan ya da koltuk başına değil, ekip başına fiyat. Kendi sunucunuzda barındırmak ücretsiz.",
       "popular": "En popüler",
       "perMonth": "aylık",
       "compare": "Planları karşılaştır",
-      "selfHost": "GitHub'dan kendin barındır",
+      "selfHost": "GitHub'dan kendiniz barındırın",
       "included": "Dahil",
       "notIncluded": "Dahil değil"
     },
     "apps": {
-      "title": "Masaüstünde ve telefonunda.",
+      "title": "Masaüstünüzde ve telefonunuzda.",
       "desktopTitle": "Masaüstü uygulaması",
       "desktopBody": "Windows, macOS ve Linux için, kendi penceresinde.",
       "desktopCta": "İndir",
       "phoneTitle": "Telefon ve tablet",
-      "phoneBody": "Tarayıcıdan yükle. Uygulama mağazası gerekmez.",
+      "phoneBody": "Tarayıcıdan yükleyin. Uygulama mağazası gerekmez.",
       "phoneCta": "Nasıl yüklenir",
       "desktopAlt": "Sprint panosunu gösteren Remnus masaüstü uygulaması",
       "phoneAlt": "Telefonda bir panoyu gösteren Remnus"
     },
+    "faq": {
+      "title": "Aklınıza takılanlar.",
+      "items": [
+        {
+          "q": "Remnus kodumu okuyor mu?",
+          "a": "Kodunuzu zaten okuyan kendi ajanınız, kendi makinenizde okumaya devam eder. Remnus'a yalnızca ajanın çalışma alanına yazdıkları gelir: kararlar, notlar ve durum. Reponuz makinenizden çıkmaz."
+        },
+        {
+          "q": "Ajanların haritayı güncel tuttuğunu nasıl bilirim?",
+          "a": "Bağlanan her proje, ajanlarına önemli bir işten önce bağlam hazırlamasını ve kararları, tuzakları ve durum değişikliklerini oluştukları anda yazmasını söyler. Her güncelleme denetim kaydında görünür; sessiz geçen bir hafta da görünür."
+        },
+        {
+          "q": "npx remnus init repomda neyi değiştirir?",
+          "a": ".mcp.json, token dosyası git'e girmeyen bir .remnus klasörü, AGENTS.md ya da CLAUDE.md içinde işaretli kısa bir bölüm ve Claude Code için bir oturum kancası ekler. Var olan dosyalar yerinde düzenlenir, üzerlerine yazılmaz."
+        },
+        {
+          "q": "Hangi ajanlarla çalışır?",
+          "a": "Claude Code, Codex, Cursor, Windsurf, Antigravity ve uzak MCP destekleyen her istemci."
+        },
+        {
+          "q": "Ekibim veya müşterim görebilir mi?",
+          "a": "Ekip arkadaşlarınızı projenin çalışma alanına davet edin ya da herhangi bir sayfayı salt okunur bir bağlantıyla yayınlayın."
+        },
+        {
+          "q": "Remnus'u kendim barındırabilir miyim?",
+          "a": "Evet. Remnus AGPL-3.0 lisanslı açık kaynaktır. CLI'ı --server ile kendi sunucunuza yönlendirin."
+        }
+      ]
+    },
     "closing": {
-      "title": "Ajanlarına çalışacak bir yer ver.",
-      "body": "Ücretsiz başla ya da önce demoyu gez."
+      "title": "Ajanlar geliştirmeye devam etsin. <em>Hakimiyet sizde kalsın.</em>",
+      "body": "Bir prompt yapıştırın, bir kez giriş yapın; projeniz yeniden okunabilir hale gelsin. Ücretsiz başlayın ya da önce demoyu gezin."
     },
     "footer": {
-      "tagline": "Yapay zekâ ajanlarınla paylaştığın çalışma alanı.",
+      "tagline": "Ajanlarınızın işini okunabilir tutan çalışma alanı.",
       "product": "Ürün",
       "docs": "Dokümanlar",
       "blog": "Blog",
       "company": "Şirket"
     },
     "savings": {
-      "title": "Aynı iş, %{percent} daha az token.",
-      "lede": "Ajanlar tüm çalışma alanını değil; bir harita, ana hatlar ve yalnızca istedikleri alanları alır. Gerçek bir çalışma oturumunda ölçüldü.",
-      "usual": "Her şeyi okumak",
+      "title": "Aynı iş, her şeyi okuyan bir ajana göre <em>%{percent} daha az token.</em>",
+      "lede": "Gerçek bir çalışma oturumunu iki kez ölçtük: ajan bir kez her sayfayı, panonun bütün sütunlarını ve sayfaların tamamını okudu; bir kez de Remnus'un yolundan gitti: bir harita, ana hatlar ve yalnızca istediği alanlar.",
+      "usual": "Her şeyi tam okumak",
       "remnus": "Remnus ile",
       "rowOrient": "Yolunu bulmak",
       "rowQuery": "Panoya bakmak",
@@ -2962,12 +3021,12 @@
       "tokens": "{count} token",
       "room": "Bu, asıl iş için bağlam penceresinde {factor} kat daha fazla yer demek.",
       "method": "Nasıl ölçtük",
-      "calcTitle": "Sana ne kazandırır",
+      "calcTitle": "Size ne kazandırır",
       "calcSessions": "Günlük ajan oturumu",
       "calcPrice": "Milyon token başına girdi fiyatı",
       "calcTokens": "Ayda {amount} milyon token tasarruf",
-      "calcMoney": "her ay cebinde kalır",
-      "calcNote": "Yukarıda ölçülen oturum, senin oturum sayın ve seçtiğin fiyatla çarpılır. Kendi çalışma alanında sonuç farklı olur."
+      "calcMoney": "her ay cebinizde kalır",
+      "calcNote": "Yukarıda ölçülen oturum, sizin oturum sayınız ve seçtiğiniz fiyatla çarpılır. Kendi çalışma alanınızda sonuç farklı olur."
     }
   }
 }

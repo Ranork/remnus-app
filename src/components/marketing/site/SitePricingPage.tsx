@@ -6,6 +6,7 @@ import {
 import { auth } from '@/auth';
 import { Badge } from '@/components/ui/badge';
 import { buttonVariants } from '@/components/ui/button';
+import { GitHubMark } from '@/components/ui/github-mark';
 import { Tooltip } from '@/components/ui/tooltip';
 import type { PlanTier } from '@/lib/billing/plans';
 import { cn } from '@/lib/cn';
@@ -140,6 +141,7 @@ export default async function SitePricingPage() {
             rel="noopener noreferrer"
             className={cn(buttonVariants({ variant: 'outline', size: 'lg' }), 'shrink-0 text-fg')}
           >
+            <GitHubMark />
             {t('bridgePricingSelfCta')}
           </a>
         </div>

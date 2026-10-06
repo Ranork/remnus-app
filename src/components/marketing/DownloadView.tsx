@@ -1,10 +1,12 @@
 'use client';
 
 import { useEffect, useState, useSyncExternalStore } from 'react';
+import Image from 'next/image';
 import { useTranslations } from 'next-intl';
 import { usePostHog } from 'posthog-js/react';
 import { Download, Smartphone } from 'lucide-react';
 import { Button, buttonVariants } from '@/components/ui/button';
+import { GitHubMark } from '@/components/ui/github-mark';
 import { cn } from '@/lib/cn';
 import PageHead from './site/PageHead';
 import {
@@ -94,49 +96,48 @@ export default function DownloadView() {
   return (
     <section className="px-4 sm:px-8">
       <div className="mx-auto max-w-[1200px] pt-14 pb-24 sm:pt-20 lg:pb-32">
-        <div className="grid gap-10 lg:grid-cols-12 lg:items-end">
-          <div className="lg:col-span-7">
-            <PageHead title={t('title')} lede={t('subtitle')} />
-          </div>
+        <PageHead align="center" title={t('title')} lede={t('subtitle')} />
 
-          {/* Smart primary action for this device */}
-          <div className="flex flex-col items-start gap-3 lg:col-span-5 lg:items-end">
-            {!ready ? (
-              <span className="text-ui text-fg-3">{t('detecting')}</span>
-            ) : isMobileOs ? (
-              <>
-                {installStatus === 'installed' ? (
-                  <span className="text-ui font-medium text-green-400">{t('pwaInstalledBadge')}</span>
-                ) : installStatus === 'available' ? (
-                  <Button variant="signal" size="lg" onClick={handleInstall} className="h-11 px-5 text-[15px]">
-                    <Smartphone aria-hidden />
-                    {t('pwaInstallCta')}
-                  </Button>
-                ) : (
-                  <a href="#mobile-install" className={cn(buttonVariants({ variant: 'signal', size: 'lg' }), 'h-11 px-5 text-[15px]')}>
-                    <Smartphone aria-hidden />
-                    {t('pwaInstallCta')}
-                  </a>
-                )}
-                <span className="text-ui text-fg-3">{t('yourSystemBadge')}</span>
-              </>
-            ) : primary ? (
-              <>
-                <a
-                  href={downloadUrl(primary.file)}
-                  onClick={() => posthog?.capture('desktop_download_clicked', { os, file: primary.file, surface: 'download_page_primary' })}
-                  className={cn(buttonVariants({ variant: 'signal', size: 'lg' }), 'h-11 px-5 text-[15px]')}
-                >
-                  <OsLogo src={primary.logo} className="size-[18px]" />
-                  {t('downloadFor', { os: t(primary.osKey as Parameters<typeof t>[0]) })}
+        {/* The smart primary action for this device: centred, big, the page's one yellow. Its
+            row keeps its height while the OS is detected, so nothing below jumps. */}
+        <div className="mt-9 flex min-h-[5.75rem] flex-col items-center gap-3 sm:min-h-[6.25rem]">
+          {!ready ? (
+            <span className="flex h-12 items-center text-ui text-fg-3 sm:h-14">{t('detecting')}</span>
+          ) : isMobileOs ? (
+            <>
+              {installStatus === 'installed' ? (
+                <span className="flex h-12 items-center text-ui font-medium text-green-400 sm:h-14">{t('pwaInstalledBadge')}</span>
+              ) : installStatus === 'available' ? (
+                <Button variant="signal" size="lg" onClick={handleInstall} className={HERO_ACTION}>
+                  <Smartphone aria-hidden />
+                  {t('pwaInstallCta')}
+                </Button>
+              ) : (
+                <a href="#mobile-install" className={cn(buttonVariants({ variant: 'signal', size: 'lg' }), HERO_ACTION)}>
+                  <Smartphone aria-hidden />
+                  {t('pwaInstallCta')}
                 </a>
-                <span className="text-ui text-fg-3">{t('yourSystemBadge')}</span>
-              </>
-            ) : (
-              <span className="text-ui text-fg-3">{t('chooseBelow')}</span>
-            )}
-          </div>
+              )}
+              <span className="text-ui text-fg-3">{t('yourSystemBadge')}</span>
+            </>
+          ) : primary ? (
+            <>
+              <a
+                href={downloadUrl(primary.file)}
+                onClick={() => posthog?.capture('desktop_download_clicked', { os, file: primary.file, surface: 'download_page_primary' })}
+                className={cn(buttonVariants({ variant: 'signal', size: 'lg' }), HERO_ACTION)}
+              >
+                <OsLogo src={primary.logo} className="size-5" />
+                {t('downloadFor', { os: t(primary.osKey as Parameters<typeof t>[0]) })}
+              </a>
+              <span className="text-ui text-fg-3">{t('yourSystemBadge')}</span>
+            </>
+          ) : (
+            <span className="flex h-12 items-center text-ui text-fg-3 sm:h-14">{t('chooseBelow')}</span>
+          )}
         </div>
+
+        <DownloadStage desktopAlt={t('stageDesktopAlt')} phoneAlt={t('stagePhoneAlt')} />
 
         <div className="mt-16 grid gap-14 lg:mt-20 lg:grid-cols-2 lg:gap-12">
           {/* All desktop platforms */}
@@ -166,8 +167,9 @@ export default function DownloadView() {
                 href={RELEASES_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-sm font-medium text-fg underline decoration-line-strong underline-offset-4 hover:decoration-fg-3"
+                className="inline-flex items-center gap-2 text-sm font-medium text-fg underline decoration-line-strong underline-offset-4 hover:decoration-fg-3"
               >
+                <GitHubMark />
                 {t('viewAllReleases')}
               </a>
             </div>
@@ -177,12 +179,6 @@ export default function DownloadView() {
           <div id="mobile-install" className="scroll-mt-24">
             <h2 className={headCls}>{t('pwaHeading')}</h2>
             <p className="m-0 mb-5 text-[15px] leading-[1.65] text-fg-2">{t('pwaIntro')}</p>
-            {installStatus === 'available' && (
-              <Button variant="signal" size="lg" onClick={handleInstall} className="mb-5">
-                <Smartphone aria-hidden />
-                {t('pwaInstallCta')}
-              </Button>
-            )}
             {installStatus === 'installed' && <p className="m-0 mb-5 text-ui font-medium text-green-400">{t('pwaInstalledBadge')}</p>}
             <ul className={listCls}>
               <li className="flex items-start gap-4 px-5 py-4">
@@ -197,9 +193,34 @@ export default function DownloadView() {
                 <span className="flex min-w-0 flex-col">
                   <span className="text-sm font-medium text-fg">{t('pwaAndroidTitle')}</span>
                   <span className="mt-0.5 text-ui leading-[1.6] text-fg-2">{t('pwaAndroidBody')}</span>
+                  {/* Android Chrome: one tap opens the browser's own "add to home screen" prompt.
+                      Without the prompt (installed, or another browser) the steps above stand. */}
+                  {os === 'android' && installStatus === 'available' && (
+                    <Button variant="signal" onClick={handleInstall} className="mt-3 w-fit">
+                      <Smartphone aria-hidden />
+                      {t('pwaAndroidAdd')}
+                    </Button>
+                  )}
                 </span>
               </li>
             </ul>
+            {/* On a computer: scan to open this section on the phone, where the prompt above works. */}
+            {!isMobileOs && (
+              <div className="mt-4 hidden items-center gap-5 rounded-[14px] bg-sheet p-4 shadow-sheet sm:flex">
+                <Image
+                  src="/marketing/qr-mobile-install.svg"
+                  alt={t('pwaQrAlt')}
+                  width={120}
+                  height={120}
+                  unoptimized
+                  className="size-[120px] shrink-0 rounded-control"
+                />
+                <span className="flex min-w-0 flex-col">
+                  <span className="text-sm font-medium text-fg">{t('pwaQrTitle')}</span>
+                  <span className="mt-1 text-ui leading-[1.6] text-fg-2">{t('pwaQrBody')}</span>
+                </span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -249,7 +270,49 @@ export default function DownloadView() {
 }
 
 const headCls = 'm-0 mb-4 text-lg font-semibold tracking-[-0.015em] text-fg';
+const HERO_ACTION = 'h-12 px-6 text-base sm:h-14 sm:px-8 sm:text-[17px] [&_svg]:size-5';
 const listCls = 'm-0 list-none divide-y divide-line overflow-hidden rounded-[14px] bg-sheet p-0 shadow-sheet';
+
+/**
+ * The page's picture, like the landing's hero stage: the desktop app on the desk and the
+ * phone in front of it, from the real screenshots (one file per theme, `.site-shot-*`; the
+ * hidden one is lazy and never loads). The phone hangs below the window by the figure's
+ * bottom padding and stays inside the column, so nothing scrolls sideways.
+ */
+function DownloadStage({ desktopAlt, phoneAlt }: { desktopAlt: string; phoneAlt: string }) {
+  return (
+    <figure className="site-stage-glow relative m-0 mx-auto mt-10 max-w-[1080px] pb-10 sm:pb-14 lg:mt-14">
+      <div className="mr-[8%] overflow-hidden rounded-[14px] bg-desk shadow-modal ring-1 ring-line-strong sm:mr-[10%]">
+        {(['dark', 'light'] as const).map((tone) => (
+          <Image
+            key={tone}
+            src={`/marketing/app-board-${tone}.webp`}
+            alt={desktopAlt}
+            width={2400}
+            height={1500}
+            sizes="(min-width: 1240px) 980px, 92vw"
+            className={`site-shot-${tone} h-auto w-full`}
+          />
+        ))}
+      </div>
+      <div className="absolute right-0 bottom-0 w-[26%] max-w-[240px] min-w-[96px]">
+        <div className="overflow-hidden rounded-[20px] bg-desk p-1 shadow-modal ring-1 ring-line-strong sm:rounded-[30px] sm:p-1.5">
+          {(['dark', 'light'] as const).map((tone) => (
+            <Image
+              key={tone}
+              src={`/marketing/app-phone-${tone}.webp`}
+              alt={phoneAlt}
+              width={780}
+              height={1688}
+              sizes="(min-width: 1240px) 240px, 26vw"
+              className={`site-shot-${tone} h-auto w-full rounded-[16px] sm:rounded-[24px]`}
+            />
+          ))}
+        </div>
+      </div>
+    </figure>
+  );
+}
 
 /** The OS marks are single-colour SVGs; drawn as a mask so they take the text colour in both themes. */
 function OsLogo({ src, className }: { src: string; className?: string }) {

@@ -1807,7 +1807,13 @@
     "pwaAndroidStep3": "选择“安装应用”",
     "pwaModalDesktopLink": "想要原生桌面应用？支持 Windows、macOS 和 Linux",
     "pwaNudgeText": "把 Remnus 添加到主屏幕 — 全屏且始终保持最新。",
-    "pwaNudgeLater": "暂不"
+    "pwaNudgeLater": "暂不",
+    "stageDesktopAlt": "显示冲刺看板的 Remnus 桌面应用",
+    "stagePhoneAlt": "手机上显示看板的 Remnus",
+    "pwaAndroidAdd": "添加到主屏幕",
+    "pwaQrTitle": "用手机扫码",
+    "pwaQrBody": "用手机摄像头扫描这里：本页会在你的手机上打开，轻点一下就能把 Remnus 添加到主屏幕。",
+    "pwaQrAlt": "在手机上打开 remnus.com/download 的二维码"
   },
   "Privacy": {
     "title": "隐私政策",
@@ -2490,8 +2496,8 @@
   },
   "Site": {
     "meta": {
-      "title": "Remnus | 你和你的 AI 智能体共用的工作空间",
-      "description": "Claude Code、Cursor 和 Codex 通过 MCP 连接 Remnus，编写计划、移动任务，并让项目仪表盘保持最新。每一处改动你都看得见。"
+      "title": "Remnus | 重新掌控你的项目",
+      "description": "智能体负责开发，Remnus 把它们的工作变成你真正读得懂的页面和仪表盘：Claude Code、Codex 和 Cursor 通过 MCP 连接，每一处改动你都看得见。"
     },
     "nav": {
       "product": "产品",
@@ -2505,16 +2511,23 @@
       "menu": "菜单"
     },
     "hero": {
-      "title": "你和你的 AI 智能体，共用一个工作空间。",
-      "lede": "Claude Code、Cursor 和 Codex 通过 MCP 连接，编写计划、移动任务，并让项目仪表盘保持最新。每一处改动你都看得见，最终决定权在你。",
+      "title": "<em>重新掌控</em>你的项目。",
+      "lede": "智能体负责开发，Remnus 把它们的工作变成你真正读得懂的页面和仪表盘，主导权始终在你手里。",
       "demo": "试用演示",
       "demoLoading": "正在打开演示…",
       "start": "免费开始",
       "note": "免费开始，无需绑卡。开源。",
-      "worksWith": "支持"
+      "worksWith": "支持",
+      "quickTitle": "直接在你的智能体里开始",
+      "quickBody": "把这段粘贴到 Claude Code、Codex 或 Cursor。",
+      "quickCopy": "复制",
+      "quickCopied": "已复制",
+      "quickStep1": "智能体完成安装",
+      "quickStep2": "你登录一次",
+      "quickStep3": "项目被绘制成地图"
     },
     "stage": {
-      "label": "动画：Claude Code 在终端里规划一个功能，计划和任务随着它的工作出现在 Remnus 中。",
+      "label": "动画：{agent} 在终端里规划一个功能，计划和任务随着它的工作出现在 Remnus 中。",
       "prompt": "规划撤销历史，并在 Remnus 中跟踪",
       "newPage": "撤销历史计划",
       "task1": "记录命令日志",
@@ -2523,8 +2536,8 @@
       "tasksCreated": "{count} 个任务",
       "moved": "“{task}”已移到“{column}”",
       "done": "完成。计划和 3 个任务已在 Remnus 中。",
-      "editing": "Claude 正在编辑",
-      "edited": "Claude 刚刚编辑过",
+      "editing": "{agent} 正在编辑",
+      "edited": "{agent} 刚刚编辑过",
       "backlog": "待办",
       "inProgress": "进行中",
       "doneColumn": "已完成",
@@ -2542,16 +2555,33 @@
       "high": "高",
       "medium": "中"
     },
+    "problem": {
+      "title": "400 次提交之后，你还能说清楚<em>你的项目是怎么运作的</em>吗？",
+      "lede": "智能体写代码的速度，已经超过任何人阅读的速度。现有代码和人真正理解的代码之间的差距，有一个名字：理解债（comprehension debt）。智能体每多工作一周，这笔债就更大一些。",
+      "stat": "52%",
+      "statLabel": "的新代码如今由 AI 编写",
+      "statSource": "DX，State of AI Impact，2026 年第二季度",
+      "sourceLabel": "延伸阅读：Comprehension debt，Addy Osmani",
+      "diffsTitle": "看 diff",
+      "diffsBody": "每一行改动都看得到，却看不到项目变成了什么样。",
+      "diffsVerdict": "只有行，没有全貌",
+      "chatTitle": "聊天记录和手写文档",
+      "chatBody": "智能体解释完自己做了什么，会话就结束了。文档写好的那一周就已过时。",
+      "chatVerdict": "到周五就找不到了",
+      "remnusTitle": "Remnus",
+      "remnusBody": "做事的智能体自己维护一份可读、最新的项目全貌。你来阅读、修正、批准。",
+      "remnusVerdict": "最新，而且归你"
+    },
     "steps": {
-      "title": "一条命令即可上手。",
-      "lede": "无需养成新习惯。设置交给智能体，你只看结果。",
-      "s1Title": "连接你的项目",
-      "s1Body": "在你的仓库里运行一条命令。智能体通过 OAuth 登录，无需复制 API 密钥。",
+      "title": "<em>两分钟</em>，看清你的项目。",
+      "lede": "不用养成新习惯。安装交给智能体，你只看结果。",
+      "s1Title": "交给你的智能体",
+      "s1Body": "把上面的提示词粘贴给你的智能体。它会在你的仓库里运行这条命令，你在浏览器里登录一次。无需复制 token，不会覆盖你的任何文件。",
       "s1Alt": "在用其他 MCP 客户端？<link>在应用里连接它。</link>",
-      "s2Title": "智能体为项目绘制地图",
-      "s2Body": "它会建立仪表盘、待办列表和记录决策的页面，并持续保持更新。",
+      "s2Title": "让智能体讲给你听",
+      "s2Body": "它读取代码库，搭出第一张地图：概览、决策、架构、待办和风险。此后每个任务都会让地图保持最新。",
       "s3Title": "最终决定权在你",
-      "s3Body": "智能体的每次编辑都会被标记并记录。你可以查看、修改或撤回。",
+      "s3Body": "智能体提议，你来决定。智能体的每次编辑都会被标记并记录，你可以批准、修改或回滚。",
       "copy": "复制命令",
       "copied": "已复制",
       "miniOpen": "未完成",
@@ -2564,25 +2594,25 @@
       "miniRestore": "恢复"
     },
     "product": {
-      "title": "智能体写下的一切，都以可读的形式呈现。",
-      "lede": "来自一个由智能体持续更新的项目的真实界面。",
+      "title": "你的项目地图，<em>由构建它的智能体亲手绘制。</em>",
+      "lede": "来自一个由智能体持续更新的真实项目的界面。每个页面都显示哪个智能体在何时写了什么。",
       "tabDashboard": "仪表盘",
       "tabBoard": "看板",
       "tabPages": "页面",
       "tabMap": "地图",
-      "dashboardBody": "智能体一次调用即可搭建并持续更新的实时状态页。",
-      "boardBody": "任务可以是看板、表格或日历。与智能体读写的是同一批行。",
-      "pagesBody": "计划、决策和笔记都是简单的页面，整个团队都能编辑。",
-      "mapBody": "查看页面、任务和决策如何相互关联，以及哪些内容还没人审阅。",
+      "dashboardBody": "周一早上两分钟看完整周：智能体一次调用就搭好实时仪表盘，并随每个任务保持更新。",
+      "boardBody": "任务可以是看板、表格或日历：和你的智能体读写的是同一批行。",
+      "pagesBody": "决策、架构和笔记都是普通页面，整个团队都能阅读和修正。",
+      "mapBody": "看看页面、任务和决策如何相连，以及哪些还没有人审阅。",
       "dashboardAlt": "一个绘图应用项目的 Remnus 仪表盘，显示未完成和已完成的任务、状态分布及下一步",
       "boardAlt": "Remnus 中的冲刺看板，任务由智能体在各列之间移动",
       "pagesAlt": "Remnus 中的一个架构页面，链接到它所描述的页面",
       "mapAlt": "Remnus 知识地图，显示页面、任务和决策之间的关联"
     },
     "savings": {
-      "title": "同样的工作，token 减少 {percent}%。",
-      "lede": "智能体拿到的是地图、大纲和它们需要的字段，而不是整个工作空间。基于一次真实工作会话测得。",
-      "usual": "全部读一遍",
+      "title": "同样的工作，比读取一切的智能体<em>少用 {percent}% 的 token。</em>",
+      "lede": "我们把一次真实的工作会话测了两遍：一遍让智能体读完每个页面、看板的每一列和整页内容；一遍走 Remnus 的方式：一张地图、大纲，以及它要的字段。",
+      "usual": "全部完整读取",
       "remnus": "使用 Remnus",
       "rowOrient": "熟悉环境",
       "rowQuery": "查看看板",
@@ -2599,22 +2629,22 @@
       "calcNote": "上方测得的会话，乘以你的会话数和所选价格。你的工作空间结果会有所不同。"
     },
     "agents": {
-      "title": "从一开始就为智能体而生。",
-      "lede": "Remnus 原生支持 MCP，任何支持 MCP 的智能体都能在这里读写。",
+      "title": "想用哪个智能体都行，<em>全貌始终只有一份。</em>",
+      "lede": "Claude Code、Codex、Cursor 以及任何支持 MCP 的客户端都写进同一张地图，谁做了什么一目了然。",
       "f1Title": "{count} 个 MCP 工具",
       "f1Body": "你在应用里能做的事，智能体也能做，权限完全相同。",
       "f2Title": "恰当的上下文",
       "f2Body": "智能体在 token 预算内拿到与任务相关的页面，而不是整个工作空间。",
-      "f3Title": "一切都看得见",
-      "f3Body": "每次调用都会写入审计日志。token 分为只读和读写，随时可以撤销。",
+      "f3Title": "一切都有记录",
+      "f3Body": "智能体的每次读写都会记录是谁、做了什么、在何时。token 分为只读和可写，你可以随时撤销。",
       "f4Title": "开源",
-      "f4Body": "AGPL-3.0。使用我们的云服务，或部署在你自己的服务器上。",
+      "f4Body": "AGPL-3.0。清楚看到你的内容经历了什么，或在自己的服务器上运行。",
       "listedOn": "已收录于",
       "docsLink": "阅读 MCP 文档"
     },
     "pricing": {
-      "title": "免费开始。成长后也是固定价格。",
-      "lede": "团队方案不按席位计费。自行托管免费。",
+      "title": "免费开始。团队统一定价。",
+      "lede": "按团队计价，而不是按智能体或席位。自托管免费。",
       "popular": "最受欢迎",
       "perMonth": "每月",
       "compare": "比较方案",
@@ -2633,12 +2663,41 @@
       "desktopAlt": "显示冲刺看板的 Remnus 桌面应用",
       "phoneAlt": "手机上显示看板的 Remnus"
     },
+    "faq": {
+      "title": "常见问题。",
+      "items": [
+        {
+          "q": "Remnus 会读取我的代码吗？",
+          "a": "你自己的智能体照旧在你自己的机器上读代码。Remnus 只接收智能体写进工作空间的内容：决策、笔记和状态。你的仓库永远不会离开你的机器。"
+        },
+        {
+          "q": "我怎么知道智能体在保持地图最新？",
+          "a": "每个已连接的项目都会要求它的智能体在重要工作前准备上下文，并在决策、坑点和状态变化出现时立刻记下来。每次更新都会出现在审计日志里，所以一周毫无动静也看得出来。"
+        },
+        {
+          "q": "npx remnus init 会改动我仓库里的什么？",
+          "a": "它会添加 .mcp.json、一个 token 文件不进 git 的 .remnus 文件夹、AGENTS.md 或 CLAUDE.md 中一段带标记的简短说明，以及一个 Claude Code 会话钩子。已有文件只在原处编辑，绝不覆盖。"
+        },
+        {
+          "q": "支持哪些智能体？",
+          "a": "Claude Code、Codex、Cursor、Windsurf、Antigravity，以及任何支持远程 MCP 的客户端。"
+        },
+        {
+          "q": "我的团队或客户能看到吗？",
+          "a": "邀请队友进入项目的工作空间，或把任意页面发布为只读链接。"
+        },
+        {
+          "q": "我可以自己托管 Remnus 吗？",
+          "a": "可以。Remnus 以 AGPL-3.0 开源。用 --server 把 CLI 指向你自己的服务器。"
+        }
+      ]
+    },
     "closing": {
-      "title": "给你的智能体一个工作的地方。",
-      "body": "免费开始，或者先看看演示。"
+      "title": "让智能体继续构建，<em>主导权留在你手里。</em>",
+      "body": "粘贴一段提示词，登录一次，你的项目就重新变得清晰可读。免费开始，或先逛逛演示。"
     },
     "footer": {
-      "tagline": "你与 AI 智能体共享的工作空间。",
+      "tagline": "让智能体的工作始终清晰可读的工作空间。",
       "product": "产品",
       "docs": "文档",
       "blog": "博客",

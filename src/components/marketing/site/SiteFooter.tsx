@@ -55,6 +55,27 @@ export default async function SiteFooter({ home }: { home: string }) {
             Remnus
           </Link>
           <p className="m-0 max-w-[16rem] text-sm leading-[1.6] text-fg-3">{t('tagline')}</p>
+          {/* Scout Forge listing badge: a remote SVG, one per theme (the hidden one is lazy and never loads). */}
+          <a
+            href="https://scoutforge.net/apps/remnus?ref=badge"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-2 inline-flex w-fit rounded-[12px] opacity-90 transition-opacity duration-150 hover:opacity-100"
+          >
+            {(['dark', 'light'] as const).map((theme) => (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                key={theme}
+                src={`https://scoutforge.net/badge/remnus/image?theme=${theme}&size=default`}
+                alt="Remnus on Scout Forge"
+                width={300}
+                height={72}
+                loading="lazy"
+                decoding="async"
+                className={`site-shot-${theme} h-10 w-auto`}
+              />
+            ))}
+          </a>
         </div>
         {cols.map((col) => (
           <div key={col.head}>

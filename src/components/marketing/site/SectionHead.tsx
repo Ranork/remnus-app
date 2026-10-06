@@ -1,7 +1,8 @@
+import type { ReactNode } from 'react';
 import { cn } from '@/lib/cn';
 
 /** A section's heading on the left and its one supporting sentence on the right. */
-export default function SectionHead({ title, lede, className }: { title: string; lede?: string; className?: string }) {
+export default function SectionHead({ title, lede, className }: { title: ReactNode; lede?: string; className?: string }) {
   return (
     <div className={cn('grid gap-4 lg:grid-cols-12 lg:items-end lg:gap-10', className)}>
       <h2 className="m-0 text-[32px] leading-[1.06] font-semibold tracking-[-0.035em] text-balance text-fg sm:text-[40px] lg:col-span-7 lg:text-[46px]">

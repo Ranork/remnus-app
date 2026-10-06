@@ -2,6 +2,7 @@ import Link from '@/components/ui/link';
 import { getTranslations } from 'next-intl/server';
 import { Badge } from '@/components/ui/badge';
 import { buttonVariants } from '@/components/ui/button';
+import { GitHubMark } from '@/components/ui/github-mark';
 import { cn } from '@/lib/cn';
 import SectionHead from './SectionHead';
 
@@ -62,8 +63,9 @@ export default async function SitePricing() {
             href="https://github.com/Ranork/remnus-app"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-sm text-fg-2 underline decoration-line-strong underline-offset-4 hover:text-fg hover:decoration-fg-3"
+            className="inline-flex items-center gap-2 text-sm text-fg-2 underline decoration-line-strong underline-offset-4 hover:text-fg hover:decoration-fg-3"
           >
+            <GitHubMark />
             {t('selfHost')}
           </a>
         </div>

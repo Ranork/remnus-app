@@ -1,9 +1,10 @@
 import Image from 'next/image';
 import Link from '@/components/ui/link';
+import { ArrowRight } from 'lucide-react';
 import { getTranslations } from 'next-intl/server';
 import SectionHead from './SectionHead';
 
-/** The two other ways to open Remnus, each with the screen it shows. */
+/** The two other ways to open Remnus, each with the screen it shows; the whole sheet is the link. */
 export default async function SiteApps() {
   const t = await getTranslations('Site.apps');
   const apps = [
@@ -17,16 +18,18 @@ export default async function SiteApps() {
         <SectionHead title={t('title')} />
         <div className="mt-12 grid gap-6 md:grid-cols-[1.5fr_1fr] lg:mt-16">
           {apps.map((app) => (
-            <div key={app.title} className="flex flex-col overflow-hidden rounded-[14px] bg-sheet shadow-sheet">
+            <Link
+              key={app.title}
+              href={app.href}
+              className="group flex flex-col overflow-hidden rounded-[14px] bg-sheet shadow-sheet transition-shadow duration-200 hover:shadow-float"
+            >
               <div className="p-6 lg:p-7">
                 <h3 className="m-0 text-lg font-semibold tracking-[-0.015em] text-fg">{app.title}</h3>
                 <p className="m-0 mt-1.5 text-[15px] leading-[1.6] text-fg-2">{app.body}</p>
-                <Link
-                  href={app.href}
-                  className="mt-4 inline-flex text-sm font-medium text-fg underline decoration-line-strong underline-offset-4 hover:decoration-fg-3"
-                >
+                <span className="mt-4 inline-flex items-center gap-1.5 text-sm font-medium text-fg underline decoration-line-strong underline-offset-4 group-hover:decoration-fg-3">
                   {app.cta}
-                </Link>
+                  <ArrowRight className="size-3.5 transition-transform duration-200 group-hover:translate-x-0.5" aria-hidden />
+                </span>
               </div>
               <div className={app.phone ? 'mt-auto flex h-64 justify-center overflow-hidden px-6 lg:h-72' : 'mt-auto h-64 overflow-hidden pl-6 lg:h-72 lg:pl-7'}>
                 <div
@@ -49,7 +52,7 @@ export default async function SiteApps() {
                   ))}
                 </div>
               </div>
-            </div>
+            </Link>
           ))}
         </div>
       </div>

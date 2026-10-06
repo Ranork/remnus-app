@@ -3,6 +3,7 @@ import { getTranslations } from 'next-intl/server';
 import { RotateCcw } from 'lucide-react';
 import AIMark from '../AIMark';
 import CopyCommand from './CopyCommand';
+import { em } from './emphasis';
 import SectionHead from './SectionHead';
 
 /** How it starts: three real steps, each with the small piece of product it ends in. */
@@ -85,8 +86,8 @@ export default async function SiteSteps() {
   return (
     <section className="px-4 py-20 sm:px-8 lg:py-28">
       <div className="mx-auto max-w-[1200px]">
-        <SectionHead title={t('title')} lede={t('lede')} />
-        <ol className="m-0 mt-12 grid list-none gap-10 p-0 md:grid-cols-3 md:gap-8 lg:mt-16">
+        <SectionHead title={t.rich('title', { em })} lede={t('lede')} />
+        <ol className="m-0 mt-12 grid list-none grid-cols-1 gap-10 p-0 md:grid-cols-3 md:gap-8 lg:mt-16">
           {steps.map((step, i) => (
             <li key={step.title} className="flex flex-col border-t border-line-strong pt-6">
               <span className="flex size-7 items-center justify-center rounded-full text-ui font-semibold text-fg shadow-[inset_0_0_0_1px_var(--color-line-strong)]">

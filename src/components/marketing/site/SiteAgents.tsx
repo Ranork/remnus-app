@@ -1,6 +1,7 @@
 import Link from '@/components/ui/link';
 import { getTranslations } from 'next-intl/server';
 import { TOOLS } from '../LandingTools';
+import { em } from './emphasis';
 import SectionHead from './SectionHead';
 
 const REGISTRIES = [
@@ -23,7 +24,7 @@ export default async function SiteAgents() {
   return (
     <section className="px-4 py-20 sm:px-8 lg:py-28">
       <div className="mx-auto max-w-[1200px]">
-        <SectionHead title={t('title')} lede={t('lede')} />
+        <SectionHead title={t.rich('title', { em })} lede={t('lede')} />
         <dl className="m-0 mt-12 grid gap-x-10 sm:grid-cols-2 lg:mt-16 lg:grid-cols-4 lg:gap-x-8">
           {facts.map((fact) => (
             <div key={fact.title} className="border-t border-line-strong py-6">

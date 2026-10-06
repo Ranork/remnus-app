@@ -1807,7 +1807,13 @@
     "pwaAndroidStep3": "Elige “Instalar app”",
     "pwaModalDesktopLink": "¿Prefieres la app de escritorio nativa? Descárgala para Windows, macOS y Linux",
     "pwaNudgeText": "Añade Remnus a tu pantalla de inicio — a pantalla completa y siempre actualizado.",
-    "pwaNudgeLater": "Ahora no"
+    "pwaNudgeLater": "Ahora no",
+    "stageDesktopAlt": "La app de escritorio de Remnus con un tablero de sprint",
+    "stagePhoneAlt": "Remnus en un teléfono mostrando un tablero",
+    "pwaAndroidAdd": "Añadir a pantalla de inicio",
+    "pwaQrTitle": "Escanéalo con tu teléfono",
+    "pwaQrBody": "Apunta la cámara de tu teléfono aquí: esta página se abre en tu teléfono y puedes añadir Remnus a tu pantalla de inicio con un toque.",
+    "pwaQrAlt": "Código QR que abre remnus.com/download en tu teléfono"
   },
   "Privacy": {
     "title": "Política de Privacidad",
@@ -2490,8 +2496,8 @@
   },
   "Site": {
     "meta": {
-      "title": "Remnus | Un solo espacio para ti y tus agentes de IA",
-      "description": "Claude Code, Cursor y Codex se conectan a Remnus por MCP para escribir planes, mover tareas y mantener al día el panel de tu proyecto. Ves cada cambio."
+      "title": "Remnus | Recupera el control de tu proyecto",
+      "description": "Tus agentes lo construyen. Remnus convierte su trabajo en páginas y paneles que de verdad puedes leer: Claude Code, Codex y Cursor se conectan por MCP y tú ves cada cambio."
     },
     "nav": {
       "product": "Producto",
@@ -2505,16 +2511,23 @@
       "menu": "Menú"
     },
     "hero": {
-      "title": "Un solo espacio para ti y tus agentes de IA.",
-      "lede": "Claude Code, Cursor y Codex se conectan por MCP para escribir planes, mover tareas y mantener al día el panel de tu proyecto. Ves cada cambio y la última palabra es tuya.",
+      "title": "<em>Recupera el control</em> de tu proyecto.",
+      "lede": "Tus agentes lo construyen. Remnus convierte su trabajo en páginas y paneles que de verdad puedes leer, y la última palabra sigue siendo tuya.",
       "demo": "Probar la demo",
       "demoLoading": "Abriendo la demo…",
       "start": "Empezar gratis",
       "note": "Gratis para empezar, sin tarjeta. Código abierto.",
-      "worksWith": "Funciona con"
+      "worksWith": "Funciona con",
+      "quickTitle": "Empieza directamente en tu agente",
+      "quickBody": "Pega esto en Claude Code, Codex o Cursor.",
+      "quickCopy": "Copiar",
+      "quickCopied": "Copiado",
+      "quickStep1": "Tu agente lo instala",
+      "quickStep2": "Inicias sesión una vez",
+      "quickStep3": "Tu proyecto queda mapeado"
     },
     "stage": {
-      "label": "Animación: Claude Code planifica una función en una terminal y el plan y sus tareas aparecen en Remnus mientras trabaja.",
+      "label": "Animación: {agent} planifica una función en una terminal y el plan y sus tareas aparecen en Remnus mientras trabaja.",
       "prompt": "Planifica el historial de deshacer y síguelo en Remnus",
       "newPage": "Plan del historial de deshacer",
       "task1": "Llevar un registro de comandos",
@@ -2523,8 +2536,8 @@
       "tasksCreated": "{count} tareas",
       "moved": "{task} movida a {column}",
       "done": "Listo. El plan y 3 tareas están en Remnus.",
-      "editing": "Claude está editando",
-      "edited": "Claude acaba de editar",
+      "editing": "{agent} está editando",
+      "edited": "{agent} acaba de editar",
       "backlog": "Pendientes",
       "inProgress": "En curso",
       "doneColumn": "Hecho",
@@ -2542,16 +2555,33 @@
       "high": "Alta",
       "medium": "Media"
     },
+    "problem": {
+      "title": "400 commits después, ¿todavía puedes explicar <em>cómo funciona tu proyecto?</em>",
+      "lede": "Los agentes ya escriben código más rápido de lo que nadie puede leerlo. La brecha entre el código que existe y el que una persona entiende de verdad tiene nombre: deuda de comprensión (comprehension debt). Cada semana de trabajo de los agentes la hace más grande.",
+      "stat": "52 %",
+      "statLabel": "del código nuevo ya lo escribe la IA",
+      "statSource": "DX, State of AI Impact, T2 2026",
+      "sourceLabel": "Lee: Comprehension debt, de Addy Osmani",
+      "diffsTitle": "Leer diffs",
+      "diffsBody": "Muestra cada línea que cambió. Nunca muestra en qué se convirtió el proyecto.",
+      "diffsVerdict": "Líneas, sin imagen",
+      "chatTitle": "Chats y documentos escritos a mano",
+      "chatBody": "El agente se explica y luego la sesión se cierra. La documentación caduca la misma semana en que se escribe.",
+      "chatVerdict": "Olvidado el viernes",
+      "remnusTitle": "Remnus",
+      "remnusBody": "Los agentes que hacen el trabajo mantienen al día una imagen legible del proyecto. Tú la lees, la corriges y la apruebas.",
+      "remnusVerdict": "Al día, y tuyo"
+    },
     "steps": {
-      "title": "En marcha con un solo comando.",
-      "lede": "Sin hábitos nuevos. Tu agente hace la configuración y tú lees el resultado.",
-      "s1Title": "Conecta tu proyecto",
-      "s1Body": "Ejecuta un comando en tu repositorio. Tu agente inicia sesión con OAuth, así que no hay claves de API que copiar.",
+      "title": "<em>Dos minutos</em> para ver tu proyecto con claridad.",
+      "lede": "Sin hábitos nuevos. Tu agente hace la instalación y tú lees el resultado.",
+      "s1Title": "Dáselo a tu agente",
+      "s1Body": "Pega el prompt de arriba en tu agente. Él ejecuta este comando en tu repositorio y tú inicias sesión una vez en el navegador. Ningún token que copiar, nada tuyo se sobrescribe.",
       "s1Alt": "¿Usas otro cliente MCP? <link>Conéctalo desde la app.</link>",
-      "s2Title": "Tu agente lo mapea",
-      "s2Body": "Crea un panel, un backlog y páginas para las decisiones que toma, y los mantiene al día.",
-      "s3Title": "La última palabra es tuya",
-      "s3Body": "Cada edición de un agente queda marcada y registrada. Léela, corrígela o deshazla.",
+      "s2Title": "Deja que tu agente te lo explique",
+      "s2Body": "Lee el código y construye el primer mapa: visión general, decisiones, arquitectura, backlog y riesgos. A partir de ahí, cada tarea lo mantiene al día.",
+      "s3Title": "Tú tienes la última palabra",
+      "s3Body": "Los agentes proponen, tú decides. Cada cambio de un agente queda marcado y registrado, para que puedas aprobarlo, corregirlo o deshacerlo.",
       "copy": "Copiar comando",
       "copied": "Copiado",
       "miniOpen": "Abiertas",
@@ -2564,15 +2594,15 @@
       "miniRestore": "Restaurar"
     },
     "product": {
-      "title": "Todo lo que escriben tus agentes, en un formato que puedes leer.",
-      "lede": "Pantallas reales de un proyecto que un agente mantiene al día.",
+      "title": "El mapa de tu proyecto, <em>escrito por los agentes que lo construyen.</em>",
+      "lede": "Pantallas reales de un proyecto que un agente mantiene al día. Cada página muestra qué agente escribió qué, y cuándo.",
       "tabDashboard": "Panel",
       "tabBoard": "Tablero",
       "tabPages": "Páginas",
       "tabMap": "Mapa",
-      "dashboardBody": "Una pantalla de estado en vivo que tu agente crea con una llamada y mantiene al día.",
-      "boardBody": "Tareas como tablero, tabla o calendario. Las mismas filas que tu agente lee y escribe.",
-      "pagesBody": "Planes, decisiones y notas como páginas sencillas que todo el equipo puede editar.",
+      "dashboardBody": "Toda la semana en dos minutos el lunes por la mañana: tu agente crea un panel en vivo con una sola llamada y lo mantiene al día.",
+      "boardBody": "Tareas como tablero, tabla o calendario: las mismas filas que tu agente lee y escribe.",
+      "pagesBody": "Decisiones, arquitectura y notas como páginas sencillas que todo tu equipo puede leer y corregir.",
       "mapBody": "Mira cómo se conectan páginas, tareas y decisiones, y qué no ha revisado nadie todavía.",
       "dashboardAlt": "Panel de Remnus de un proyecto de app de dibujo con tareas abiertas y hechas, el reparto de estados y lo siguiente",
       "boardAlt": "Tablero del sprint en Remnus con tareas que un agente movió entre columnas",
@@ -2580,9 +2610,9 @@
       "mapAlt": "Mapa de conocimiento en Remnus que muestra cómo se conectan páginas, tareas y decisiones"
     },
     "savings": {
-      "title": "El mismo trabajo, un {percent} % menos de tokens.",
-      "lede": "Los agentes reciben un mapa, esquemas y solo los campos que piden, no todo tu espacio. Medido en una sesión de trabajo real.",
-      "usual": "Leerlo todo",
+      "title": "El mismo trabajo, <em>un {percent} % menos de tokens</em> que un agente que lo lee todo.",
+      "lede": "Medimos dos veces una sesión de trabajo real: una con el agente leyendo cada página, cada columna del tablero y las páginas completas, y otra a la manera de Remnus, con un mapa, esquemas y solo los campos que pide.",
+      "usual": "Leerlo todo completo",
       "remnus": "Con Remnus",
       "rowOrient": "Orientarse",
       "rowQuery": "Revisar el tablero",
@@ -2599,22 +2629,22 @@
       "calcNote": "La sesión medida arriba, por tus sesiones y el precio que elijas. En tu espacio el resultado será distinto."
     },
     "agents": {
-      "title": "Hecho para agentes desde el principio.",
-      "lede": "Remnus habla MCP de forma nativa, así que cualquier agente que lo admita puede leer y escribir aquí.",
+      "title": "Usa los agentes que quieras. <em>La imagen sigue siendo una.</em>",
+      "lede": "Claude Code, Codex, Cursor y cualquier cliente que hable MCP escriben en el mismo mapa, y ves quién hizo qué.",
       "f1Title": "{count} herramientas MCP",
       "f1Body": "Todo lo que haces en la app también lo puede hacer tu agente, con los mismos permisos.",
       "f2Title": "El contexto adecuado",
       "f2Body": "Los agentes reciben las páginas que importan para la tarea dentro de un presupuesto de tokens, no todo el espacio.",
-      "f3Title": "Nada pasa sin que lo veas",
-      "f3Body": "Cada llamada queda en el registro de auditoría. Los tokens son de lectura o de escritura y puedes revocarlos cuando quieras.",
+      "f3Title": "Todo queda registrado",
+      "f3Body": "Cada lectura y escritura de un agente se registra con quién, qué y cuándo. Los tokens son de lectura o de escritura, y puedes revocarlos en cualquier momento.",
       "f4Title": "Código abierto",
-      "f4Body": "AGPL-3.0. Usa nuestra nube o ejecútalo en tu propio servidor.",
+      "f4Body": "AGPL-3.0. Mira exactamente qué pasa con tu contenido, o ejecútalo en tu propio servidor.",
       "listedOn": "Publicado en",
       "docsLink": "Leer la documentación de MCP"
     },
     "pricing": {
-      "title": "Gratis para empezar. Un precio fijo cuando creces.",
-      "lede": "Los planes de equipo no cuentan puestos. Alojarlo tú mismo es gratis.",
+      "title": "Gratis para empezar. Precio fijo para equipos.",
+      "lede": "Se paga por equipo, no por agente ni por puesto. Alojarlo tú mismo es gratis.",
       "popular": "El más elegido",
       "perMonth": "al mes",
       "compare": "Comparar planes",
@@ -2633,12 +2663,41 @@
       "desktopAlt": "App de escritorio de Remnus con un tablero de sprint",
       "phoneAlt": "Remnus en un teléfono mostrando un tablero"
     },
+    "faq": {
+      "title": "Preguntas frecuentes.",
+      "items": [
+        {
+          "q": "¿Remnus lee mi código?",
+          "a": "Tu propio agente sigue leyendo tu código en tu propia máquina, como ya hace. Remnus solo recibe lo que el agente escribe en el espacio de trabajo: decisiones, notas y estado. Tu repositorio nunca sale de tu máquina."
+        },
+        {
+          "q": "¿Cómo sé que los agentes mantienen el mapa al día?",
+          "a": "Cada proyecto conectado indica a sus agentes que preparen contexto antes de un trabajo importante y que anoten decisiones, trampas y cambios de estado en cuanto ocurren. Cada actualización aparece en el registro de auditoría, así que una semana en silencio también se nota."
+        },
+        {
+          "q": "¿Qué cambia npx remnus init en mi repositorio?",
+          "a": "Añade .mcp.json, una carpeta .remnus cuyo archivo de token queda fuera de git, una sección breve y marcada en AGENTS.md o CLAUDE.md, y un hook de sesión para Claude Code. Los archivos existentes se editan en su sitio, nunca se sobrescriben."
+        },
+        {
+          "q": "¿Con qué agentes funciona?",
+          "a": "Claude Code, Codex, Cursor, Windsurf, Antigravity y cualquier cliente compatible con MCP remoto."
+        },
+        {
+          "q": "¿Puede verlo mi equipo o mi cliente?",
+          "a": "Invita a tus compañeros al espacio de trabajo del proyecto o publica cualquier página con un enlace de solo lectura."
+        },
+        {
+          "q": "¿Puedo alojar Remnus yo mismo?",
+          "a": "Sí. Remnus es código abierto bajo AGPL-3.0. Apunta la CLI a tu propio servidor con --server."
+        }
+      ]
+    },
     "closing": {
-      "title": "Dales a tus agentes un lugar donde trabajar.",
-      "body": "Empieza gratis o recorre antes la demo."
+      "title": "Deja que tus agentes sigan construyendo. <em>La última palabra es tuya.</em>",
+      "body": "Pega un prompt, inicia sesión una vez y tu proyecto vuelve a ser legible. Empieza gratis o recorre antes la demo."
     },
     "footer": {
-      "tagline": "El espacio que compartes con tus agentes de IA.",
+      "tagline": "El espacio de trabajo que mantiene legible el trabajo de tus agentes.",
       "product": "Producto",
       "docs": "Docs",
       "blog": "Blog",

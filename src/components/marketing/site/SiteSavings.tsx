@@ -1,6 +1,7 @@
 import Link from '@/components/ui/link';
 import { getLocale, getTranslations } from 'next-intl/server';
 import { cn } from '@/lib/cn';
+import { em } from './emphasis';
 import SavingsCalculator, { type CalculatorCopy } from './SavingsCalculator';
 import SectionHead from './SectionHead';
 import { SESSION_REMNUS, SESSION_ROOM_FACTOR, SESSION_SAVED_PERCENT, SESSION_STEPS, SESSION_USUAL } from './savingsBenchmark';
@@ -32,7 +33,7 @@ export default async function SiteSavings() {
   return (
     <section className="px-4 py-20 sm:px-8 lg:py-28">
       <div className="mx-auto max-w-[1200px]">
-        <SectionHead title={t('title', { percent: SESSION_SAVED_PERCENT })} lede={t('lede')} />
+        <SectionHead title={t.rich('title', { percent: SESSION_SAVED_PERCENT, em })} lede={t('lede')} />
 
         <div className="mt-12 grid gap-6 lg:mt-16 lg:grid-cols-12">
           <div className="rounded-[14px] bg-sheet p-6 shadow-sheet lg:col-span-7 lg:p-7">

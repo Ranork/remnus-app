@@ -1,4 +1,5 @@
 import { getTranslations } from 'next-intl/server';
+import { em } from './emphasis';
 import ProductTabs from './ProductTabs';
 import SectionHead from './SectionHead';
 
@@ -12,9 +13,9 @@ export default async function SiteProduct() {
   ];
 
   return (
-    <section id="product" className="scroll-mt-20 px-4 py-20 sm:px-8 lg:py-28">
+    <section id="product" className="site-product scroll-mt-20 px-4 py-20 sm:px-8 lg:py-28">
       <div className="mx-auto max-w-[1200px]">
-        <SectionHead title={t('title')} lede={t('lede')} />
+        <SectionHead title={t.rich('title', { em })} lede={t('lede')} />
         <div className="mt-12 lg:mt-14">
           <ProductTabs tabs={tabs} />
         </div>

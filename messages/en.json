@@ -1828,7 +1828,13 @@
     "pwaAndroidStep3": "Choose “Install app”",
     "pwaModalDesktopLink": "Prefer a native desktop app? Get it for Windows, macOS & Linux",
     "pwaNudgeText": "Add Remnus to your home screen — full-screen and always up to date.",
-    "pwaNudgeLater": "Not now"
+    "pwaNudgeLater": "Not now",
+    "stageDesktopAlt": "The Remnus desktop app showing a sprint board",
+    "stagePhoneAlt": "Remnus on a phone showing a board",
+    "pwaAndroidAdd": "Add to home screen",
+    "pwaQrTitle": "Scan with your phone",
+    "pwaQrBody": "Point your phone's camera here: this page opens on your phone, and you can add Remnus to your home screen in one tap.",
+    "pwaQrAlt": "QR code that opens remnus.com/download on your phone"
   },
   "Privacy": {
     "title": "Privacy Policy",
@@ -2815,8 +2821,8 @@
   },
   "Site": {
     "meta": {
-      "title": "Remnus | One workspace for you and your AI agents",
-      "description": "Claude Code, Cursor and Codex connect to Remnus over MCP to write plans, move tasks and keep your project dashboard current. You see every change."
+      "title": "Remnus | Know your project again",
+      "description": "Your agents build it. Remnus turns their work into pages and dashboards you can actually read: Claude Code, Codex and Cursor connect over MCP, and you see every change."
     },
     "nav": {
       "product": "Product",
@@ -2830,16 +2836,23 @@
       "menu": "Menu"
     },
     "hero": {
-      "title": "One workspace for you and your AI agents.",
-      "lede": "Claude Code, Cursor and Codex connect over MCP to write plans, move tasks and keep your project dashboard current. You see every change and stay in command.",
+      "title": "Know your project <em>again.</em>",
+      "lede": "Your agents build it. Remnus turns their work into pages and dashboards you can actually read, so you stay in command.",
       "demo": "Try the demo",
       "demoLoading": "Opening the demo…",
       "start": "Start free",
       "note": "Free to start, no card needed. Open source.",
-      "worksWith": "Works with"
+      "worksWith": "Works with",
+      "quickTitle": "Start right in your agent",
+      "quickBody": "Paste this into Claude Code, Codex or Cursor.",
+      "quickCopy": "Copy",
+      "quickCopied": "Copied",
+      "quickStep1": "Your agent installs it",
+      "quickStep2": "You sign in once",
+      "quickStep3": "Your project gets mapped"
     },
     "stage": {
-      "label": "Animation: Claude Code plans a feature in a terminal, and the plan and its tasks appear in Remnus while it works.",
+      "label": "Animation: {agent} plans a feature in a terminal, and the plan and its tasks appear in Remnus while it works.",
       "prompt": "Plan undo history and track it in Remnus",
       "newPage": "Undo history plan",
       "task1": "Keep a command log",
@@ -2848,8 +2861,8 @@
       "tasksCreated": "{count} tasks",
       "moved": "{task} moved to {column}",
       "done": "Done. The plan and 3 tasks are in Remnus.",
-      "editing": "Claude is editing",
-      "edited": "Claude edited just now",
+      "editing": "{agent} is editing",
+      "edited": "{agent} edited just now",
       "backlog": "Backlog",
       "inProgress": "In progress",
       "doneColumn": "Done",
@@ -2867,16 +2880,33 @@
       "high": "High",
       "medium": "Medium"
     },
+    "problem": {
+      "title": "400 commits in, can you still explain <em>how your project works?</em>",
+      "lede": "Agents now write code faster than anyone can read it. The gap between the code that exists and the code anyone actually understands has a name: comprehension debt. Every week of agent work makes it bigger.",
+      "stat": "52%",
+      "statLabel": "of new code is now written by AI",
+      "statSource": "DX, State of AI Impact, Q2 2026",
+      "sourceLabel": "Read: Comprehension debt, by Addy Osmani",
+      "diffsTitle": "Reading diffs",
+      "diffsBody": "Shows every line that changed. Never shows what the project became.",
+      "diffsVerdict": "Lines, no picture",
+      "chatTitle": "Chats and hand-written docs",
+      "chatBody": "The agent explains itself, then the session closes. Docs go stale the week you write them.",
+      "chatVerdict": "Gone by Friday",
+      "remnusTitle": "Remnus",
+      "remnusBody": "The agents doing the work keep a readable picture of the project up to date. You read it, correct it and approve it.",
+      "remnusVerdict": "Current, and yours"
+    },
     "steps": {
-      "title": "Up and running in one command.",
+      "title": "<em>Two minutes</em> to see your project clearly.",
       "lede": "No new habits. Your agent does the setup, you read the result.",
-      "s1Title": "Connect your project",
-      "s1Body": "Run one command in your repo. Your agent signs in with OAuth, so there are no API keys to copy.",
+      "s1Title": "Hand it to your agent",
+      "s1Body": "Paste the prompt above into your agent. It runs this command in your repo and you sign in once in your browser. No token to copy, nothing of yours overwritten.",
       "s1Alt": "Using another MCP client? <link>Connect it from the app.</link>",
-      "s2Title": "Your agent maps it",
-      "s2Body": "It sets up a dashboard, a backlog and pages for the decisions it makes, then keeps them current.",
-      "s3Title": "You stay in command",
-      "s3Body": "Every agent edit is marked and logged. Read it, fix it or roll it back.",
+      "s2Title": "Let your agent explain it",
+      "s2Body": "It reads the codebase and builds the first map: overview, decisions, architecture, backlog and risks. From then on, every task keeps it current.",
+      "s3Title": "You have the final say",
+      "s3Body": "Agents propose, you decide. Every agent edit is marked and logged, so you can approve it, fix it or roll it back.",
       "copy": "Copy command",
       "copied": "Copied",
       "miniOpen": "Open",
@@ -2889,15 +2919,15 @@
       "miniRestore": "Restore"
     },
     "product": {
-      "title": "Everything your agents write, in a form you can read.",
-      "lede": "Real screens from a project an agent keeps up to date.",
+      "title": "A map of your project, <em>written by the agents that build it.</em>",
+      "lede": "Real screens from a project an agent keeps up to date. Every page shows which agent wrote what, and when.",
       "tabDashboard": "Dashboard",
       "tabBoard": "Board",
       "tabPages": "Pages",
       "tabMap": "Map",
-      "dashboardBody": "A live status screen your agent builds in one call and keeps current.",
-      "boardBody": "Tasks as a board, a table or a calendar. The same rows your agent reads and writes.",
-      "pagesBody": "Plans, decisions and notes as plain pages your whole team can edit.",
+      "dashboardBody": "The whole week in two minutes on a Monday morning: your agent builds a live dashboard in one call and keeps it current.",
+      "boardBody": "Tasks as a board, a table or a calendar: the same rows your agent reads and writes.",
+      "pagesBody": "Decisions, architecture and notes as plain pages your whole team can read and correct.",
       "mapBody": "See how pages, tasks and decisions connect, and what nobody has reviewed yet.",
       "dashboardAlt": "Remnus dashboard of a paint app project with open and done tasks, the status mix and what is up next",
       "boardAlt": "Sprint board in Remnus with tasks an agent moved between columns",
@@ -2905,22 +2935,22 @@
       "mapAlt": "Knowledge map in Remnus showing how pages, tasks and decisions connect"
     },
     "agents": {
-      "title": "Built for agents from the start.",
-      "lede": "Remnus speaks MCP natively, so any agent that supports it can read and write here.",
+      "title": "Use whichever agents you like. <em>You still get one picture.</em>",
+      "lede": "Claude Code, Codex, Cursor and anything that speaks MCP write into the same map, and you can see who did what.",
       "f1Title": "{count} MCP tools",
       "f1Body": "Anything you can do in the app, your agent can do too, with the same permissions.",
       "f2Title": "The right context",
       "f2Body": "Agents get the pages that matter for the task within a token budget, not the whole workspace.",
-      "f3Title": "Nothing happens unseen",
-      "f3Body": "Every call lands in the audit log. Tokens are read or write, and you can revoke them at any time.",
+      "f3Title": "Everything on the record",
+      "f3Body": "Every agent read and write is logged with who, what and when. Tokens are read or write, and you can revoke them at any time.",
       "f4Title": "Open source",
-      "f4Body": "AGPL-3.0. Use our cloud or run it on your own server.",
+      "f4Body": "AGPL-3.0. See exactly what happens to your content, or run it on your own server.",
       "listedOn": "Listed on",
       "docsLink": "Read the MCP docs"
     },
     "pricing": {
-      "title": "Free to start. A flat price when you grow.",
-      "lede": "Team plans don't count seats. Self-hosting is free.",
+      "title": "Free to start. Flat pricing for teams.",
+      "lede": "Priced per team, not per agent or seat. Self-hosting is free.",
       "popular": "Most popular",
       "perMonth": "per month",
       "compare": "Compare plans",
@@ -2939,21 +2969,50 @@
       "desktopAlt": "Remnus desktop app showing a sprint board",
       "phoneAlt": "Remnus on a phone showing a board"
     },
+    "faq": {
+      "title": "Questions, answered.",
+      "items": [
+        {
+          "q": "Does Remnus read my code?",
+          "a": "Your own agent keeps reading your code on your own machine, as it already does. Remnus only receives what the agent writes into the workspace: decisions, notes and status. Your repository never leaves your machine."
+        },
+        {
+          "q": "How do I know the agents keep the map current?",
+          "a": "Every connected project tells its agents to prepare context before meaningful work and to write down decisions, gotchas and status changes as they happen. Every update shows up in the audit log, so a quiet week shows up too."
+        },
+        {
+          "q": "What does npx remnus init change in my repo?",
+          "a": "It adds .mcp.json, a .remnus folder whose token file stays out of git, a short marked section in AGENTS.md or CLAUDE.md, and a session hook for Claude Code. Existing files are edited in place, never overwritten."
+        },
+        {
+          "q": "Which agents does it work with?",
+          "a": "Claude Code, Codex, Cursor, Windsurf, Antigravity and any client that supports remote MCP."
+        },
+        {
+          "q": "Can my team or my client see it?",
+          "a": "Invite teammates into the project's workspace, or publish any page as a read-only link."
+        },
+        {
+          "q": "Can I host Remnus myself?",
+          "a": "Yes. Remnus is open source under AGPL-3.0. Point the CLI at your own server with --server."
+        }
+      ]
+    },
     "closing": {
-      "title": "Give your agents a place to work.",
-      "body": "Start free, or look around the demo first."
+      "title": "Let your agents keep building. <em>Stay in command.</em>",
+      "body": "Paste one prompt, sign in once, and your project is readable again. Start free, or look around the demo first."
     },
     "footer": {
-      "tagline": "The workspace you share with your AI agents.",
+      "tagline": "The workspace that keeps your agents' work readable.",
       "product": "Product",
       "docs": "Docs",
       "blog": "Blog",
       "company": "Company"
     },
     "savings": {
-      "title": "Same work, {percent}% fewer tokens.",
-      "lede": "Agents get a map, outlines and only the fields they ask for, not your whole workspace. Measured on a real working session.",
-      "usual": "Reading everything",
+      "title": "Same work, <em>{percent}% fewer tokens</em> than an agent that reads everything.",
+      "lede": "We measured one real working session twice: once with the agent reading every page, every board column and whole pages, and once the Remnus way, with a map, outlines and only the fields it asks for.",
+      "usual": "Reading everything in full",
       "remnus": "With Remnus",
       "rowOrient": "Find their way around",
       "rowQuery": "Check the board",
