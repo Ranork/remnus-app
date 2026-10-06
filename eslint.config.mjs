@@ -23,6 +23,15 @@ const eslintConfig = defineConfig([
   {
     rules: {
       "@typescript-eslint/no-explicit-any": "off",
+      // A leading underscore marks a deliberately unused binding (a server action's
+      // required `prevState`, a destructured field dropped from a rest object).
+      "@typescript-eslint/no-unused-vars": ["warn", {
+        argsIgnorePattern: "^_",
+        varsIgnorePattern: "^_",
+        caughtErrorsIgnorePattern: "^_",
+        destructuredArrayIgnorePattern: "^_",
+        ignoreRestSiblings: true,
+      }],
       // The React Compiler lint rules (eslint-plugin-react-hooks v6) flag two
       // patterns this codebase uses intentionally and pervasively: assigning a
       // latest-value ref during render (`refs`) and initializing/syncing state

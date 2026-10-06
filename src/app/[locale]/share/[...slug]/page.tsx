@@ -29,7 +29,7 @@ interface Props {
 
 async function buildSharedNavTree(
   shareMap: Record<string, string>,
-  workspaceId: string,
+  _workspaceId: string,
 ): Promise<SharedNavItem[]> {
   const ids = Object.keys(shareMap);
   if (ids.length < 2) return []; // nothing useful to navigate

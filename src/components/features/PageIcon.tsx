@@ -145,9 +145,11 @@ export default function PageIcon({
     return <LucideIcons.FileText size={size} className={`${colorClass} shrink-0 ${className}`} style={style} />;
   }
 
-  // Check if it's an uploaded image URL
+  // Check if it's an uploaded image URL. A plain <img>: icons come from any host the
+  // user pasted, which next/image would need whitelisted one by one.
   if (icon.startsWith('http://') || icon.startsWith('https://')) {
     return (
+      // eslint-disable-next-line @next/next/no-img-element
       <img
         src={icon}
         alt=""

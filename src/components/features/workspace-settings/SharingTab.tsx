@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { Globe, Copy, Check, Trash2, Lock, PenLine, ExternalLink, AlertCircle, Users, Loader2 } from 'lucide-react';
 import {
@@ -33,7 +33,7 @@ export default function SharingTab({ workspaceId, isAdmin, onNavigateToMembers }
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [confirmShare, setConfirmShare] = useState<ShareRecord | null>(null);
 
-  const load = async () => {
+  const load = useCallback(async () => {
     setLoading(true);
     try {
       const data = await getSharesByWorkspace(workspaceId);
@@ -41,9 +41,9 @@ export default function SharingTab({ workspaceId, isAdmin, onNavigateToMembers }
     } finally {
       setLoading(false);
     }
-  };
+  }, [workspaceId]);
 
-  useEffect(() => { load(); }, [workspaceId]);
+  useEffect(() => { void load(); }, [load]);
 
   const handleCopy = (share: ShareRecord) => {
     navigator.clipboard.writeText(shareUrl(share.slug)).then(() => {

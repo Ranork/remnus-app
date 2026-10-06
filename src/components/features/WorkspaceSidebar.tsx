@@ -593,7 +593,7 @@ export default function WorkspaceSidebar({
     setDraggedItemId(id);
   };
 
-  const handleItemDragOver = (e: React.DragEvent, id: string, workspaceId: string) => {
+  const handleItemDragOver = (e: React.DragEvent, id: string, _workspaceId: string) => {
     if (!draggedItemId || draggedItemId === id) return;
     if (isDescendant(localItems, id, draggedItemId)) return;
     

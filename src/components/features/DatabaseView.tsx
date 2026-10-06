@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useMemo, useRef, useCallback, useEffect, useTransition, useSyncExternalStore } from 'react';
-import { useRouter, useSearchParams, usePathname } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import Link from '@/components/ui/link';
 import { useTranslations } from 'next-intl';
 import { createPage, getPage, deletePage, duplicatePage, reorderPages, updatePageProperties } from '@/lib/actions/page';
@@ -459,7 +459,6 @@ export default function DatabaseView({
   const [, startTransition] = useTransition();
 
   const searchParams = useSearchParams();
-  const pathname = usePathname();
 
   // Sync activeViewId with URL query parameter
   useEffect(() => {

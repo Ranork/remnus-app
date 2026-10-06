@@ -1,7 +1,7 @@
 export const runtime = 'nodejs';
 
 import { db } from '@/db';
-import { oauthAuthCodes, oauthAccessTokens, oauthClients, users } from '@/db/schema';
+import { oauthAuthCodes, oauthAccessTokens, users } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
 import { randomBytes, createHash, randomUUID } from 'crypto';

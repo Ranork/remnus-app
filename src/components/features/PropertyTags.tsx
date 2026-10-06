@@ -308,8 +308,9 @@ export function UserAvatar({
 }) {
   const dim = { width: size, height: size };
   if (member?.image) {
-     
+    // A plain <img>: avatars come from the sign-in provider's own hosts.
     return (
+      // eslint-disable-next-line @next/next/no-img-element
       <img
         src={member.image}
         alt={member.name || ''}

@@ -2,7 +2,6 @@ import NextAuth from 'next-auth';
 import Credentials from 'next-auth/providers/credentials';
 import { DrizzleAdapter } from '@auth/drizzle-adapter';
 import type { DefaultSession } from 'next-auth';
-import bcrypt from 'bcryptjs';
 import { jwtVerify } from 'jose';
 import { db } from '@/db';
 import { users, accounts, sessions, verificationTokens, workspaces, workspaceMembers } from '@/db/schema';

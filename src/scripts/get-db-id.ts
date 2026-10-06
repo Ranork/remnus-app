@@ -1,6 +1,5 @@
 import { db } from '../db';
-import { databases, workspaceItems } from '../db/schema';
-import { eq } from 'drizzle-orm';
+import { databases } from '../db/schema';
 
 async function main() {
   // List all databases to find Work Plan

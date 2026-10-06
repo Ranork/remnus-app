@@ -118,7 +118,6 @@ const PageEditor = forwardRef<PageEditorHandle, PageEditorProps>(function PageEd
   onSchemaChange,
   initialPage,
   isPeek = false,
-  onClose,
   onPageUpdated,
   subItems,
   isAdmin = false,
