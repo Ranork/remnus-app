@@ -4,7 +4,6 @@ import { memo, useMemo, useRef, useState, useEffect, useSyncExternalStore } from
 import { useRouter } from 'next/navigation';
 import { formatDateValue, normalizeOption, type SelectOption } from '@/lib/types/properties';
 import { useLocale, useTranslations } from 'next-intl';
-import { useZoom } from '@/components/providers/ZoomProvider';
 import InlineCellEditor from './InlineCellEditor';
 import { useContextMenu, type MenuItem } from './ContextMenu';
 import { StatusChip, UserChip, UserTags, OptionChip, MarkDot, PropertyTypeIcon } from './PropertyTags';
@@ -120,7 +119,6 @@ export default function TableLayout({
   const t = useTranslations('Database');
   const tPage = useTranslations('Page');
   const locale = useLocale();
-  const zoom = useZoom();
   const router = useRouter();
   const schema: any[] = useMemo(() => database.schema ?? [], [database.schema]);
   // Stable between hover/drag re-renders so memoized rows can skip them.
@@ -440,12 +438,11 @@ export default function TableLayout({
   const handleRowMouseEnter = (e: React.MouseEvent, pageId: string) => {
     cancelHide();
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    // Divide by zoom: visual-viewport coords → fixed-ancestor local coords.
     setHoveredPageId(pageId);
     setActionPos({
-      top: rect.top / zoom,
-      left: (rect.left - ACTION_BAR_WIDTH + 4) / zoom,
-      height: rect.height / zoom,
+      top: rect.top,
+      left: rect.left - ACTION_BAR_WIDTH + 4,
+      height: rect.height,
     });
   };
 

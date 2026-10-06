@@ -6,7 +6,6 @@ import {
   Pilcrow, Heading1, Heading2, Heading3, List, ListOrdered, Quote, Code2,
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { useZoom } from '@/components/providers/ZoomProvider';
 import { cn } from '@/lib/cn';
 import {
   blockSelectionKey,
@@ -69,10 +68,6 @@ function ActionButton({ onPress, active, label, danger, children }: {
 
 export default function BlockSelectionToolbar({ editor }: Props) {
   const t = useTranslations('Editor');
-  const zoom = useZoom();
-  const zoomRef = useRef(zoom);
-  useEffect(() => { zoomRef.current = zoom; }, [zoom]);
-
   const anchorRef = useRef<HTMLDivElement>(null);
   const toolbarRef = useRef<HTMLDivElement>(null);
   const colorPanelRef = useRef<HTMLDivElement>(null);
@@ -110,18 +105,15 @@ export default function BlockSelectionToolbar({ editor }: Props) {
         if (!anchor) return;
         const anchorRect = anchor.getBoundingClientRect();
 
-        const z = zoomRef.current;
-        const toLocal = (v: number) => v / z;
-
         const toolbarW = toolbarRef.current?.offsetWidth ?? 320;
-        const topAbove = toLocal(firstCoords.top - anchorRect.top) - TOOLBAR_H - MARGIN;
+        const topAbove = firstCoords.top - anchorRect.top - TOOLBAR_H - MARGIN;
 
         const editorRect = view.dom.getBoundingClientRect();
-        const midX = toLocal((editorRect.left + editorRect.right) / 2 - anchorRect.left);
+        const midX = (editorRect.left + editorRect.right) / 2 - anchorRect.left;
         let left = midX - toolbarW / 2;
         // Clamp into viewport
-        const maxLeft = toLocal(window.innerWidth - anchorRect.left) - toolbarW - 8;
-        const minLeft = toLocal(0 - anchorRect.left) + 8;
+        const maxLeft = window.innerWidth - anchorRect.left - toolbarW - 8;
+        const minLeft = 8 - anchorRect.left;
         left = Math.max(minLeft, Math.min(left, maxLeft));
 
         setLayout({ top: Math.max(0, topAbove), left });

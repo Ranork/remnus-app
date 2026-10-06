@@ -43,7 +43,6 @@ import {
 } from '@/lib/actions/workspace';
 import { logout } from '@/lib/actions/auth';
 import type { ShellItemRow } from '@/lib/actions/workspace';
-import { initDesktopZoom } from '@/lib/desktop/zoom';
 import { SidebarSavings } from './AgentSavingsCard';
 import { AgentPresenceRows, AgentTouchMark, useServerNow, useWorkingWorkspaces } from './AgentPresence';
 import { EMPTY_PRESENCE, type AgentPresence, type PresenceTouch } from '@/lib/agentPresence';
@@ -174,9 +173,7 @@ export default function WorkspaceSidebar({
   const { isPeeking, pin } = useSidebarPeek();
 
   useEffect(() => {
-    const isTauriNow = '__TAURI_INTERNALS__' in window || '__TAURI__' in window;
-    setIsTauri(isTauriNow);
-    if (isTauriNow) initDesktopZoom();
+    setIsTauri('__TAURI_INTERNALS__' in window || '__TAURI__' in window);
   }, []);
 
   // Tree creation and editing states

@@ -6,7 +6,6 @@ import {
   Pilcrow, Heading1, Heading2, Heading3, List, ListOrdered, Quote, Code2,
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { useZoom } from '@/components/providers/ZoomProvider';
 import { cn } from '@/lib/cn';
 import { hasBlockSelection } from './BlockSelectionExtension';
 import EditorColorPanel from './EditorColorPanel';
@@ -115,10 +114,6 @@ export default function BubbleMenuBar({ editor }: Props) {
     apply: BLOCK_APPLIES[type],
   }));
 
-  const zoom = useZoom();
-  const zoomRef = useRef(zoom);
-  zoomRef.current = zoom;
-
   const [layout, setLayout] = useState<Layout | null>(null);
   const [blockMenuOpen, setBlockMenuOpen] = useState(false);
   const [colorPanel, setColorPanel] = useState<'both' | null>(null);
@@ -226,24 +221,18 @@ export default function BubbleMenuBar({ editor }: Props) {
         ? scrollable.getBoundingClientRect()
         : { top: 0, bottom: window.innerHeight, left: 0, right: window.innerWidth };
 
-      // getBoundingClientRect() returns visual-viewport coordinates.
-      // When ZoomProvider applies transform:scale(z), position:fixed is relative
-      // to that scaled ancestor — divide by z to convert to local coords.
-      const z = zoomRef.current;
-      const toLocal = (v: number) => v / z;
-
       const bounds: Bounds = {
-        minTop:    toLocal(vp.top    - anchorRect.top  + MARGIN),
-        maxBottom: toLocal(vp.bottom - anchorRect.top  - MARGIN),
-        minLeft:   toLocal(vp.left   - anchorRect.left + MARGIN),
-        maxRight:  toLocal(vp.right  - anchorRect.left - MARGIN),
+        minTop:    vp.top    - anchorRect.top  + MARGIN,
+        maxBottom: vp.bottom - anchorRect.top  - MARGIN,
+        minLeft:   vp.left   - anchorRect.left + MARGIN,
+        maxRight:  vp.right  - anchorRect.left - MARGIN,
       };
 
-      const menuWidth = menuRef.current?.offsetWidth ?? toLocal(Math.min(380, window.innerWidth - 32));
-      const topAbove = toLocal(selRect.top    - anchorRect.top)  - TOOLBAR_H - 8;
-      const topBelow = toLocal(selRect.bottom - anchorRect.top)  + 8;
+      const menuWidth = menuRef.current?.offsetWidth ?? Math.min(380, window.innerWidth - 32);
+      const topAbove = selRect.top    - anchorRect.top  - TOOLBAR_H - 8;
+      const topBelow = selRect.bottom - anchorRect.top  + 8;
       const top = topAbove >= bounds.minTop ? topAbove : topBelow;
-      const idealLeft = toLocal(selRect.left + selRect.width / 2 - anchorRect.left) - menuWidth / 2;
+      const idealLeft = selRect.left + selRect.width / 2 - anchorRect.left - menuWidth / 2;
       const left = Math.max(bounds.minLeft, Math.min(idealLeft, bounds.maxRight - menuWidth));
 
       setLayout({ top, left, bounds });

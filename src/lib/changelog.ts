@@ -45,6 +45,31 @@ const FIRST_VISIT_WINDOW_DAYS = 7;
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-10-06-desktop-zoom-stays-aligned',
+    date: '2026-10-06',
+    category: 'fixed',
+    title: {
+      en: 'Zooming the desktop app no longer shifts things',
+      tr: 'Masaüstünde yakınlaştırma artık hiçbir şeyi kaydırmıyor',
+      de: 'Zoom in der Desktop-App verschiebt nichts mehr',
+      es: 'El zoom de la app de escritorio ya no descoloca nada',
+      fr: 'Le zoom de l’application de bureau ne décale plus rien',
+      hi: 'डेस्कटॉप ऐप में ज़ूम करने से अब कुछ नहीं खिसकता',
+      ru: 'Масштаб в приложении для компьютера больше ничего не сдвигает',
+      zh: '桌面应用缩放后不再错位',
+    },
+    summary: {
+      en: 'When you zoom the desktop app in or out from settings, the knowledge map now responds exactly where you click and the floating buttons stay in their corner.',
+      tr: 'Masaüstü uygulamasını ayarlardan yakınlaştırıp uzaklaştırdığında bilgi haritası artık tam tıkladığın yerde yanıt veriyor ve yüzen butonlar köşelerinde kalıyor.',
+      de: 'Wenn du die Desktop-App in den Einstellungen vergrößerst oder verkleinerst, reagiert die Wissenskarte jetzt genau dort, wo du klickst, und die schwebenden Schaltflächen bleiben in ihrer Ecke.',
+      es: 'Cuando acercas o alejas la app de escritorio desde los ajustes, el mapa de conocimiento responde justo donde haces clic y los botones flotantes se quedan en su esquina.',
+      fr: 'Après un zoom avant ou arrière de l’application de bureau dans les réglages, la carte des connaissances réagit exactement là où l’on clique et les boutons flottants restent dans leur coin.',
+      hi: 'सेटिंग्स से डेस्कटॉप ऐप को ज़ूम इन या आउट करने पर नॉलेज मैप अब ठीक वहीं जवाब देता है जहाँ आप क्लिक करते हैं, और तैरते बटन अपने कोने में बने रहते हैं।',
+      ru: 'Если увеличить или уменьшить масштаб приложения для компьютера в настройках, карта знаний теперь срабатывает ровно там, где вы нажимаете, а плавающие кнопки остаются в своём углу.',
+      zh: '在设置中放大或缩小桌面应用后，知识地图会准确响应你点击的位置，浮动按钮也会留在角落里。',
+    },
+  },
+  {
     id: '2026-10-05-page-panels-float',
     date: '2026-10-05',
     category: 'improved',

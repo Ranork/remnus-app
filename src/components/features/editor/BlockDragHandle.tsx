@@ -16,7 +16,6 @@ import {
   Link2, Image as ImageIcon, SquarePlay, File as FileIcon,
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { useZoom } from '@/components/providers/ZoomProvider';
 import { cn } from '@/lib/cn';
 import { ConfirmDialog } from '../ConfirmDialog';
 import { extractYouTubeId } from './YoutubeEmbedExtension';
@@ -217,10 +216,6 @@ export default function BlockDragHandle({ editor }: Props) {
     getCoarsePointerSnapshot,
     getCoarsePointerServerSnapshot,
   );
-  const zoom = useZoom();
-  const zoomRef = useRef(zoom);
-   
-  zoomRef.current = zoom;
   const [handle, setHandle] = useState<Handle | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   // When the menu is opened via right-click, this holds the cursor point so the
@@ -297,12 +292,11 @@ export default function BlockDragHandle({ editor }: Props) {
           }
         } catch { /* out-of-range pos — treat as root */ }
 
-        const z = zoomRef.current;
         // Headings are tall; the collapse chevron sits at the heading's vertical
         // center (CSS top:50%), so center the grip too — otherwise the grip (top
         // aligned) and chevron land on different lines next to each other.
         const GRIP_HALF = 12; // p-1 (4) + 16px icon ≈ 24px tall
-        const newTop = (isHeading ? rect.top + rect.height / 2 - GRIP_HALF : rect.top + 2) / z;
+        const newTop = isHeading ? rect.top + rect.height / 2 - GRIP_HALF : rect.top + 2;
         let newLeft: number;
         if (isHeading) {
           newLeft = Math.max(2, er.left - 48);
@@ -311,7 +305,6 @@ export default function BlockDragHandle({ editor }: Props) {
         } else {
           newLeft = Math.max(2, er.left + (listLevel - 1) * LIST_INDENT - 20);
         }
-        newLeft = newLeft / z;
 
         const prev = handleRef.current;
         if (prev && prev.pos === found.pos && Math.abs(prev.top - newTop) < 1 && Math.abs(prev.left - newLeft) < 1) return;
@@ -345,10 +338,9 @@ export default function BlockDragHandle({ editor }: Props) {
       const dom = editor.view.nodeDOM(pos);
       if (!(dom instanceof HTMLElement)) { setHandle(null); return; }
       const rect = dom.getBoundingClientRect();
-      const z = zoomRef.current;
       // Sit just left of the block's own left edge (which already includes the
       // touch gutter + any list indent), so the ⋮ never lands on the text.
-      setHandle({ pos, top: (rect.top + 4) / z, left: Math.max(2, rect.left - 22) / z });
+      setHandle({ pos, top: rect.top + 4, left: Math.max(2, rect.left - 22) });
     };
     editor.on('selectionUpdate', place);
     editor.on('focus', place);
@@ -382,16 +374,15 @@ export default function BlockDragHandle({ editor }: Props) {
 
         const rect = found.dom.getBoundingClientRect();
         const relY = (y - rect.top) / Math.max(rect.height, 1);
-        const z = zoomRef.current;
         // Indent padding is applied inside the element (padding-left), so rect.left
         // doesn't change. Manually offset the line to align with visible content.
         const indent = (targetNode.attrs?.indent as number) ?? 0;
-        const indentPx = (indent * 24) / z; // 1.5rem = 24px per level
+        const indentPx = indent * 24; // 1.5rem = 24px per level
         const base = {
-          top: rect.top / z,
-          left: rect.left / z + indentPx,
-          width: rect.width / z - indentPx,
-          height: rect.height / z,
+          top: rect.top,
+          left: rect.left + indentPx,
+          width: rect.width - indentPx,
+          height: rect.height,
         };
 
         const canNest = !ITEM_NODES.has(targetNode.type.name) && !ITEM_NODES.has(src.node.type.name);
@@ -446,11 +437,10 @@ export default function BlockDragHandle({ editor }: Props) {
         pos = found.pos;
       }
       e.preventDefault();
-      const z = zoomRef.current;
       setAddMenuOpen(false);
       setTarget(tgt);
-      setHandle({ pos, top: e.clientY / z, left: e.clientX / z });
-      setMenuAnchor({ x: e.clientX / z, y: e.clientY / z });
+      setHandle({ pos, top: e.clientY, left: e.clientX });
+      setMenuAnchor({ x: e.clientX, y: e.clientY });
       setMenuOpen(true);
     };
     dom.addEventListener('contextmenu', onContextMenu);
@@ -769,14 +759,8 @@ export default function BlockDragHandle({ editor }: Props) {
   const openSub = (e: React.MouseEvent<HTMLElement>) => {
     if (subTimer.current) { clearTimeout(subTimer.current); subTimer.current = null; }
     const r = e.currentTarget.getBoundingClientRect();
-    const z = zoomRef.current;
-    const vw = window.innerWidth / z;
-    const vh = window.innerHeight / z;
-    const rRight = r.right / z;
-    const rLeft = r.left / z;
-    const rTop = r.top / z;
-    const left = rRight + SUB_W + 8 <= vw ? rRight + 4 : rLeft - SUB_W - 4;
-    const top = Math.min(rTop - 4, vh - (BLOCK_TYPES.length * 36 + 16));
+    const left = r.right + SUB_W + 8 <= window.innerWidth ? r.right + 4 : r.left - SUB_W - 4;
+    const top = Math.min(r.top - 4, window.innerHeight - (BLOCK_TYPES.length * 36 + 16));
     setSubPos({ top: Math.max(4, top), left: Math.max(4, left) });
     setSubOpen(true);
   };
@@ -814,10 +798,8 @@ export default function BlockDragHandle({ editor }: Props) {
   // or multi-block); a single block already has Delete.
   const showCut = targetKind === 'range' || targetKind === 'blocks';
   const currentTurnInto = turnOptions.find((o) => o.active)?.icon ?? <Pilcrow size={14} />;
-   
-  const vh = window.innerHeight / zoomRef.current;
-   
-  const vw = window.innerWidth / zoomRef.current;
+  const vh = window.innerHeight;
+  const vw = window.innerWidth;
   // Right-click → menu at the cursor; grip click → menu just below the grip.
   const menuTop = Math.min(menuAnchor ? menuAnchor.y : handle.top + 26, vh - 200);
   const menuLeft = Math.min(Math.max(4, menuAnchor ? menuAnchor.x : handle.left), vw - 210);
@@ -894,10 +876,8 @@ export default function BlockDragHandle({ editor }: Props) {
       )}
 
       {/* Custom drop indicator — replaces ProseMirror dropcursor for all our drags.
-          Rendered INLINE (not portaled to body) so its `position: fixed` resolves
-          against the same transformed containing block as the grip/menu — its
-          coords are already zoom-corrected (`/z`). Portaling to body would put it
-          outside the ZoomProvider transform and shift the line under desktop zoom. */}
+          Rendered inline next to the grip/menu, positioned with the same viewport
+          coordinates. */}
       {dropIndicator && (
         <div
           style={{

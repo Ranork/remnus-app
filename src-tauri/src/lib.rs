@@ -18,8 +18,6 @@ use tauri_plugin_updater::UpdaterExt;
 
 use agent_connect::{detect_installed_agents, install_remnus_skill, run_claude_connect, write_agent_config};
 
-const ZOOM_INIT: &str = "(function(){try{var z=parseFloat(localStorage.getItem('remnus_desktop_zoom'));if(z&&z>=0.5&&z<=2.0){var el=document.documentElement;el.style.zoom=String(z);if(z<1){var p=(100/z).toFixed(2)+'%';el.style.width=p;el.style.height=p;el.style.overflow='hidden';}}}catch(e){}})();";
-
 /// Holds the user-chosen download directory (None ⇒ the platform default
 /// Downloads folder). Persisted to a small text file in the app config dir so
 /// it survives restarts; loaded into this state on startup.
@@ -335,7 +333,6 @@ pub fn run() {
             // in the desktop app (they work in the browser).
             .disable_drag_drop_handler()
             .additional_browser_args("--disable-spell-checking --disable-features=msWebOOUI,msPdfOOUI,msSmartScreenProtection")
-            .initialization_script(ZOOM_INIT)
             // Downloads triggered from the WebView are handed to the system
             // browser, which has a real download UI (progress, history, "show in
             // folder") instead of the in-app toast whose "show in folder" cannot

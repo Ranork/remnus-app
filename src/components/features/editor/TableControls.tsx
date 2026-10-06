@@ -5,7 +5,6 @@ import {
   BetweenVerticalEnd, BetweenHorizontalEnd, Columns3, Rows3, Trash2, PanelTopClose, PaintBucket, Ban,
 } from 'lucide-react';
 import { useTranslations } from 'next-intl';
-import { useZoom } from '@/components/providers/ZoomProvider';
 import { cn } from '@/lib/cn';
 import { CELL_COLORS, COLOR_LABEL_KEY } from './editorColors';
 import { MENU_SURFACE, TOOLBAR_DIVIDER, TOOLBAR_HEIGHT, TOOLBAR_SURFACE, menuItem, toolbarButton } from './menuStyles';
@@ -33,10 +32,6 @@ function findActiveTable(editor: Editor): { pos: number } | null {
  */
 export default function TableControls({ editor }: Props) {
   const t = useTranslations('Editor');
-  const zoom = useZoom();
-  const zoomRef = useRef(zoom);
-  useEffect(() => { zoomRef.current = zoom; }, [zoom]);
-
   const anchorRef = useRef<HTMLDivElement>(null);
   const toolbarRef = useRef<HTMLDivElement>(null);
   const [layout, setLayout] = useState<{ top: number; left: number } | null>(null);
@@ -57,15 +52,12 @@ export default function TableControls({ editor }: Props) {
         if (!anchor) return;
         const anchorRect = anchor.getBoundingClientRect();
 
-        const z = zoomRef.current;
-        const toLocal = (v: number) => v / z;
-
         const toolbarW = toolbarRef.current?.offsetWidth ?? 200;
-        const top = toLocal(rect.top - anchorRect.top) - TOOLBAR_H - MARGIN;
-        let left = toLocal(rect.left - anchorRect.left);
+        const top = rect.top - anchorRect.top - TOOLBAR_H - MARGIN;
+        let left = rect.left - anchorRect.left;
         // Clamp into viewport.
-        const maxLeft = toLocal(window.innerWidth - anchorRect.left) - toolbarW - 8;
-        const minLeft = toLocal(0 - anchorRect.left) + 8;
+        const maxLeft = window.innerWidth - anchorRect.left - toolbarW - 8;
+        const minLeft = 8 - anchorRect.left;
         left = Math.max(minLeft, Math.min(left, maxLeft));
 
         setLayout({ top: Math.max(0, top), left });
