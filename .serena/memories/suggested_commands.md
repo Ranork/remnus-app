@@ -44,6 +44,7 @@ npm run bench:web -- setup|run|ids|cleanup   # (V2 R9) web routes on a local `ne
 #                           AUTH_SECRET=<throwaway>; bench: BENCH_AUTH_SECRET=<same> ... run --base <url> --log <server log>.
 #                           Local file DB only. Build with `npx next build` (never `npm run build`: migrates prod).
 npm run test:i18n-client     # (V2 R9.1) client message scopes match the code; `-- --write` regenerates src/i18n/clientNamespaces.ts
+npm run test:cli             # (R10.1) what remnus init writes, against hostile server data (no DB, no network)
 npm run bench:change-signal # (V2 R9/R9.8) Turso rows read per live-refresh poll, before/after migrations 0055 + 0056, on the
 #                           Turso DEV db (.env.turso-dev). Run from PowerShell (Turso DNS fails in Git Bash).
 npm run bench:mcp-handshake -- --project <dir> [--runs 5] [--bridge mcpjson|local]
