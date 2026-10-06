@@ -1,7 +1,8 @@
 # Remnus V2 Güncellemeleri — Chat Promptları
 
-> **Durum (2026-10-05):** U3 ve U4 tamamlandı (commit'siz, Playwright ile görsel olarak doğrulandı); sırada U1 → U2. Her prompt bitince kendi bölümünün sonuna
-> "Tamamlandı" notu düşer; bu satırı da güncelle.
+> **Durum (2026-10-06):** U1–U4 tamamlandı. U3+U4 `236bf5c`/`c0a09a1` ile canlıydı; U1, U2 ve
+> U1'in açık kalanları (test profili silindi, `ZOOM_INIT` kaldırıldı, fr 360 px nav) Hakan'ın
+> isteğiyle aynı gün commit'lenip push'landı ve masaüstü 0.1.20 olarak yayınlandı.
 
 Hazırlanma tarihi: 2026-10-05. Kaynak: Hakan'ın "V2 Landing Güncellemeleri" (13 madde + 1 açık
 tema maddesi) ve "V2 Uygulama Güncellemeleri" (9 madde; takvimde çok günlü kart ve select
@@ -205,6 +206,58 @@ vurgu işaretleme kuralı, hitap) güncelle + Serena `conventions` gerekirse; up
 commit yok; "Tamamlandı" notu.
 ```
 
+### ✅ U1 Tamamlandı (2026-10-06, commit'siz, migration yok, paket yok)
+
+Hakan'ın kararları: hitap **siz** (de Sie, fr vous, ru вы, hi आप; es tú, zh 你 kaldı); iki yeni
+bölüm onaylandı (Sorun + SSS); vurgu stili **sarı alt çizgi** (outline stroke denendi, seçilmedi);
+tr + en metni onaylandıktan sonra diğer 6 dil yazıldı.
+
+- **A — Anlatım:** `Site` metinleri (8 dil) /landing-next'in hikâyesiyle yeniden yazıldı: anlama
+  borcu → ajanların işi okunabilir sayfa ve panolara → son söz sizde. Yeni `SiteProblem` (hero'dan
+  sonra; kaynaklı %52, diff / sohbet / Remnus sütunları, Remnus sütunu signal çizgili) ve `SiteFaq`
+  (Uygulamalar'dan sonra; 6 soru, `<details>`). Bileşen, görsel ve animasyonlar aynı; adımlar
+  "Ajanınıza verin / Ajanınız size anlatsın / Son söz sizde" oldu.
+- **B — Tasarruf:** başlık kıyası söylüyor ("Aynı iş, her şeyi okuyan bir ajana göre %84 daha az
+  token."), lede iki ölçümü anlatıyor, `savings.usual` = "Her şeyi tam okumak". Kıyas tarafı
+  blog yazısından doğrulandı: her sayfa gövdesi + panonun tüm sütunları/satır gövdeleri + tam
+  sayfa ↔ özet, `fields` projeksiyonu, outline. Rakam ve yöntem değişmedi.
+- **C — Prompt kartı:** `site/HeroPrompt.tsx` (rol tokenları; `next/AgentPrompt`'taki çevrilmeyen
+  prompt; `CopyCommand`'dan ayrılan ortak `CopyButton`) hero'da eylemlerin altında, sahnenin
+  üstünde; 390'da tek sütun. `steps.s1Body` artık "yukarıdaki prompt'u yapıştırın; bu komutu o
+  çalıştırır" diyor, `npx remnus init` görseli kaldı.
+- **D — Vurgu:** mesajda `<em>…</em>` (başlık başına en fazla bir grup, 8 dilde aynı anlam grubu;
+  build script'i sayıları en ile karşılaştırdı), `site/emphasis.tsx` → `t.rich(key, { em })`,
+  `.site-em` (globals.css). `SectionHead`/`PageHead` başlığı artık `ReactNode`.
+- **E — Konsol:** terminal md+'da sahnenin sağ altından taşıyor (figure'a göre konumlu; sahne ve
+  kâğıt konumlu değil, `overflow-hidden` yalnız panoyu kırpıyor), md altında eski yığılma.
+  Ajan her döngüde değişiyor (Claude Code → Codex → Cursor): başlık, işaretler, çipler ve
+  `stage.label` `{agent}` ile; reduced-motion'da tek ajan. Yan düzeltme: sahnedeki ajan işaretleri
+  siyah çiziliyordu (AIMark `fill` yok) → figure'a `.site-marks`.
+- **Ek:** telefonda yatay taşma — `SiteSteps` ızgarası `grid-cols-1` (uzun de/ru mini satırları
+  sütunu genişletiyordu), `SiteNav`'da sözcük markası sm altında yalnız ekran okuyucuda.
+- **Ek (Hakan'ın oturum içi isteği) — masaüstü zoom:** Ayarlar → Masaüstü yakınlaştırması
+  `transform: scale()` ile yapılıyordu; harita tıklamaları ve yüzen butonlar kayıyordu. Artık
+  WebView'un kendi zoom'u (`getCurrentWebview().setZoom()`, yetki zaten vardı); `useZoom` ve
+  5 bileşendeki bölme kaldırıldı; eski anahtar `remnus_desktop_zoom` → `remnus_desktop_zoom_native`
+  (0.1.19'un init script'i böylece etkisiz). Changelog `2026-10-06-desktop-zoom-stays-aligned`
+  (8 dil). Web deploy'uyla gelir, masaüstü sürümü gerekmez; `src-tauri/src/lib.rs` `ZOOM_INIT`
+  bir sonraki masaüstü sürümünde silinebilir.
+
+**Açık kalanlar kapatıldı (2026-10-06, U2'den sonra, Hakan'ın isteğiyle):** `com.remnus.bench`
+test profili silindi; `src-tauri/src/lib.rs` `ZOOM_INIT` kaldırıldı (`cargo check` geçti, 0.1.20'de);
+fr 360 px nav taşması nav aralıkları ve CTA dolgusu telefonda daraltılarak giderildi (8 dil × 360/390
+taşma yok).
+
+Doğrulama: `tsc` (check config) temiz, eslint 0 hata (1 eski uyarı), `test:i18n-client` ok.
+Playwright (Hakan onaylı, playwright-core + sistem Chrome, dev :3100): `/` koyu + açık 1440 ve
+390, tr + en (+ 6 dilde örnekler); ajan dönüşümü Codex ve Cursor'a kadar görüldü; 8 dilde 390,
+820, 1240 ve 1440'ta yatay taşma yok (fr 360 px'te nav'da 12 px taşma kaldı, eskiden beri);
+`/landing-next`, `/landing-old`, `/pricing`, `/download` 200. Masaüstü: debug Tauri
+(`com.remnus.bench` profili) + :3000 proxy, %150 zoom: eski anahtar taşındı, devicePixelRatio
+1,5 → 2,25, haritada imleç altındaki düğüm tıklamayla seçildi (kapsayıcı ölçeklenmiyor),
+yüzen grup köşede (sağ 16, alt 72 + çerez şeridi), sıfırlama %100'e döndü. Test demo
+kullanıcıları id ile silindi; dev ve proxy durduruldu. Ekranlar `.playwright-mcp/u1/`.
+
 ---
 
 # U2 — Landing: görsel derinlik, İndir ve Fiyat sayfaları
@@ -269,6 +322,37 @@ eslint, tsc; Hakan onayıyla Playwright: `/`, `/pricing`, `/download` koyu + aç
 Changelog yok (pazarlama sayfası). AGENTS.md → Marketing (arka plan derinliği, İndir hero,
 QR) + gerekirse Serena; update-handoff; commit yok; "Tamamlandı" notu.
 ```
+
+### ✅ U2 Tamamlandı (2026-10-06, migration yok, paket yok)
+
+Hakan'ın kararları: derinlik = **iki yön birlikte** (ışık alanları + gren, bantsız); QR =
+"hangisi mantıklıysa" → statik SVG (bağımlılık yok); QR'ı telefonla okuttu, açıldı.
+
+- **A — Derinlik:** `globals.css` `.site`: üstte kâğıt tonunda lamba ışığı, `main > section::before`
+  ile solda/sağda sırayla yumuşak ışık alanları (bölümden 10rem taşar, ek yeri yok), hero sahnesi
+  ve İndir sahnesinin altında çok hafif signal sıcaklığı (`.site-stage-glow`), sabit SVG gren
+  (`.site::after`). Hepsi z-index -1, `.site` yığın bağlamında (kâğıtların, görsellerin, yazının
+  altında); yalnız gradyan + küçük data-URI karo, animasyon/blur/mavi yok, tüm temalarda.
+- **B — Açık tema ürün bölümü** beyaz bant (`.site-product`), koyu tema aynı.
+- **C — Küçük düzeltmeler:** Uygulamalar kutularının tamamı link (CTA ok'lu etiket, hover gölge,
+  global odak halkası); footer'da Scout Forge rozeti tema başına (koyu/açık SVG, lazy); GitHub işareti
+  `ui/github-mark.tsx` → /pricing self-host butonu, landing fiyat linki, İndir "tüm sürümler" linki
+  (`ProviderButtons` da aynı işareti kullanıyor).
+- **D — İndir hero'su:** ortalı `PageHead` (`align="center"`), OS'a göre büyük sarı buton (algılama
+  sırasında satır yüksekliği sabit), altında `DownloadStage` (masaüstü pano görüntüsü + önünde
+  telefon, tema başına), platform listesi altta; 390'da taşma yok.
+- **E — Android + QR:** Android Chrome'da Android satırında "Ana ekrana ekle" (`installPrompt`'un
+  yerel istemi); istem yoksa yazılı adımlar. Masaüstünde telefon bölümünde QR
+  (`public/marketing/qr-mobile-install.svg`, `https://remnus.com/download#mobile-install`, v5, H
+  düzeltme, ortada Remnus işareti, her temada koyu-üstü-beyaz). Telefon bölümündeki genel "kur"
+  butonu kalktı (masaüstü Chrome'da da çıkıyordu); mobilde hero butonu duruyor.
+- **Metin:** `Download` 8 dilde 6 yeni anahtar; tr ve de İndir sayfasına özgü metinler siz/Sie oldu
+  (uygulamanın kurulum modalı ve dürtmesindeki ortak anahtarlara dokunulmadı).
+
+Doğrulama: tsc temiz, eslint 0 hata, test:i18n-client ok; Playwright: `/`, `/download`, `/pricing`,
+`/wiki` koyu + açık, 1440 ve 390 (yatay taşma yok); Android UA + taklit `beforeinstallprompt` →
+buton çıktı ve yerel istem açıldı, QR gizli; QR'ı Hakan telefonla okuttu. Not: dev'de `globals.css`
+düzenlemesi iki kez bayat kaldı, `.next/dev` kenara alınıp yeniden başlatılarak çözüldü.
 
 ---
 
