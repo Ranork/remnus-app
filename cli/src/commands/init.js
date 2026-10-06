@@ -14,6 +14,7 @@ import {
 import {
   detectAgentDocs,
   ensureGitignore,
+  inlineText,
   writeAgentSection,
   writeMcpConfig,
   writeSessionStartHook,
@@ -76,7 +77,7 @@ async function calibrateUrlFor(serverUrl) {
   return `${serverUrl}/wiki/calibrate`;
 }
 
-function renderTemplate(name, values) {
+export function renderTemplate(name, values) {
   const raw = fs.readFileSync(path.join(TEMPLATE_DIR, name), 'utf8');
   return raw.replace(/\{\{(\w+)\}\}/g, (_match, key) => values[key] ?? '');
 }
@@ -193,11 +194,12 @@ export async function initCommand(options) {
   // HTML fallback is too large to read whole.
   const readWhole = calibrateUrl.endsWith('.md') ? ' (read the whole file, e.g. with curl)' : '';
 
+  // Name and scope come from the server (the workspace's owner names it): inline and bounded.
   const section = renderTemplate('agents-section.md', {
-    WORKSPACE_NAME: config.workspaceName,
-    WORKSPACE_ID: config.workspaceId,
-    MCP_URL: config.mcpUrl,
-    SCOPE: config.scope ?? 'set when the agent connects',
+    WORKSPACE_NAME: inlineText(config.workspaceName, 80),
+    WORKSPACE_ID: inlineText(config.workspaceId, 80),
+    MCP_URL: inlineText(config.mcpUrl, 300),
+    SCOPE: inlineText(config.scope ?? 'set when the agent connects', 40),
     CALIBRATE_URL: calibrateUrl,
     CALIBRATE_READ: readWhole,
   });

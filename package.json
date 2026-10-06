@@ -18,6 +18,7 @@
     "test:code-paths": "npx tsx src/scripts/test-code-paths.ts",
     "test:starter": "npx tsx src/scripts/test-starter-content.ts",
     "test:i18n-client": "npx tsx src/scripts/test-i18n-client.ts",
+    "test:cli": "node cli/test/files.test.mjs",
     "bench:context": "npx tsx src/scripts/benchmark-context-pack.ts",
     "bench:graph": "npx tsx src/scripts/bench-graph.ts",
     "bench:presence": "npx tsx src/scripts/bench-presence.ts",

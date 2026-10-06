@@ -12,6 +12,25 @@ const MARKER_END = '<!-- remnus:end -->';
 const GITIGNORE_START = '# remnus:start';
 const GITIGNORE_END = '# remnus:end';
 
+/**
+ * Server-provided text bound for an agent instruction file (AGENTS.md, CLAUDE.md, the
+ * cached map): the workspace name and scope come from whoever owns the workspace, and an
+ * agent reads those files as instructions. So it lands as one short inline phrase — no
+ * line breaks or control characters (a name can't start its own "## SYSTEM" heading), no
+ * HTML comment markers (it can't close the managed `remnus:start/end` block early), no
+ * emphasis or code fences that could break out of the sentence, and at most `max`
+ * characters.
+ */
+export function inlineText(value, max = 80) {
+  const text = String(value ?? '')
+    .replace(/[\u0000-\u001f\u007f-\u009f\u2028\u2029]+/g, ' ')
+    .replace(/<!--|-->/g, ' ')
+    .replace(/[`*]+/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return text.length > max ? `${text.slice(0, max - 1).trimEnd()}…` : text;
+}
+
 /** Keep the file's own newline convention so an edit doesn't rewrite every line in the diff. */
 function detectEol(text) {
   return text.includes('\r\n') ? '\r\n' : '\n';

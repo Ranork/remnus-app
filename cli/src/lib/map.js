@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 
+import { inlineText } from './files.js';
 import { REMNUS_DIR } from './project.js';
 import { callRpc } from './rpc.js';
 
@@ -59,7 +60,7 @@ export function readMapMeta(root) {
 export function renderMap({ config, digest, cursor, generatedAt }) {
   const header = `<!-- remnus:map workspace=${config.workspaceId} server=${config.serverUrl} cursor=${cursor} generated=${generatedAt} -->`;
   const note = [
-    `> **Cached map** of the Remnus workspace **${config.workspaceName ?? config.workspaceId}**, written by \`remnus\` on ${generatedAt}.`,
+    `> **Cached map** of the Remnus workspace **${inlineText(config.workspaceName ?? config.workspaceId)}**, written by \`remnus\` on ${generatedAt}.`,
     `> It is a snapshot: nothing after the \`cursor:\` line below is verified. Before writing, or when it`,
     `> looks stale, call \`get_changes_since\` with that cursor for the delta — do not re-crawl the tree.`,
   ].join('\n');
