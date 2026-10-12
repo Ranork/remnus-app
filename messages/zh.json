@@ -325,7 +325,9 @@
     "settings": "设置",
     "earlyAccess": "抢先体验",
     "agentsConnectNudge": "连接",
-    "duplicateEmpty": "复制（不含行）"
+    "duplicateEmpty": "复制（不含行）",
+    "viewOnly": "只读",
+    "viewOnlyHint": "你在这里的角色是查看者：可以阅读所有内容，但不能修改。"
   },
   "WorkspaceSettings": {
     "roleLabel": "角色",
@@ -1345,7 +1347,9 @@
     "contactFormSendFailed": "消息发送失败，请重试或直接给我们发邮件。",
     "viewerCannotWrite": "你在该工作区的角色是只读，因此无法以写入权限连接。",
     "agentLimitReachedJoin": "该工作区的智能体名额已满。请让所有者腾出一个名额或升级方案。",
-    "workspaceTooLarge": "此工作区太大，无法一次性复制。请不含行复制，或先拆分。"
+    "workspaceTooLarge": "此工作区太大，无法一次性复制。请不含行复制，或先拆分。",
+    "viewOnly": "你在该工作区的角色是只读，因此无法进行修改。",
+    "ownerOnlyAction": "只有工作区所有者可以执行此操作。"
   },
   "LanguageSwitcher": {
     "label": "语言"

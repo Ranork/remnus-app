@@ -7,10 +7,11 @@ import { getCurrentUserAllowingWorkspaceLock } from '@/lib/auth/session';
 import { assertWorkspaceLockAllows } from '@/lib/auth/workspaceLock';
 import { createWorkspaceDatabase, getActiveWorkspaceId } from './workspace';
 import { SELECT_COLOR_ORDER, normalizeOption, type SelectOption } from '@/lib/types/properties';
+import { roleAllows, roleRefusal, type WorkspaceNeed } from '@/lib/auth/workspaceRole';
 
 // Verify user has access to the workspace that owns this database.
 // Returns { userId, workspaceId } so callers can emit realtime events.
-async function assertDatabaseAccess(databaseId: string): Promise<{ userId: string; workspaceId: string }> {
+async function assertDatabaseAccess(databaseId: string, need: WorkspaceNeed = 'read'): Promise<{ userId: string; workspaceId: string }> {
   const user = await getCurrentUserAllowingWorkspaceLock();
 
   const [row] = await db
@@ -27,7 +28,7 @@ async function assertDatabaseAccess(databaseId: string): Promise<{ userId: strin
 
   if (user.role !== 'admin') {
     const [member] = await db
-      .select({ id: workspaceMembers.id })
+      .select({ id: workspaceMembers.id, role: workspaceMembers.role })
       .from(workspaceMembers)
       .where(
         and(
@@ -38,6 +39,10 @@ async function assertDatabaseAccess(databaseId: string): Promise<{ userId: strin
       .limit(1);
 
     if (!member) throw new Error('Unauthorized: no access to this database');
+
+    // A viewer reads; changing anything needs a member.
+
+    if (!roleAllows(member.role, need)) throw await roleRefusal(need);
   }
 
   return { userId: user.id, workspaceId: row.workspaceId };
@@ -75,7 +80,7 @@ export async function getDatabase(id: string) {
 }
 
 export async function updateDatabaseSchema(id: string, newSchema: any[]) {
-  const { workspaceId } = await assertDatabaseAccess(id);
+  const { workspaceId } = await assertDatabaseAccess(id, 'edit');
 
   // 1. Fetch current database schema to compare
   const [dbRow] = await db
@@ -245,6 +250,6 @@ export async function updateDatabaseSchema(id: string, newSchema: any[]) {
 }
 
 export async function updateDatabaseViews(id: string, views: any[]) {
-  await assertDatabaseAccess(id);
+  await assertDatabaseAccess(id, 'edit');
   await db.update(databases).set({ views, updatedAt: new Date() }).where(eq(databases.id, id));
 }

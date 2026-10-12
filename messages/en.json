@@ -325,7 +325,9 @@
     "settings": "Settings",
     "earlyAccess": "Early access",
     "agentsConnectNudge": "Connect",
-    "duplicateEmpty": "Duplicate without rows"
+    "duplicateEmpty": "Duplicate without rows",
+    "viewOnly": "View only",
+    "viewOnlyHint": "Your role here is Viewer: you can read everything but not change it."
   },
   "WorkspaceSettings": {
     "roleLabel": "Role",
@@ -1366,7 +1368,9 @@
     "crashBack": "Go back",
     "viewerCannotWrite": "Your role in this workspace is view-only, so it cannot be connected with write access.",
     "agentLimitReachedJoin": "This workspace has no free agent slots left. Ask its owner to free one or upgrade the plan.",
-    "workspaceTooLarge": "This workspace is too large to copy in one go. Copy it without rows, or split it first."
+    "workspaceTooLarge": "This workspace is too large to copy in one go. Copy it without rows, or split it first.",
+    "viewOnly": "Your role in this workspace is view-only, so you cannot change it.",
+    "ownerOnlyAction": "Only the workspace owner can do this."
   },
   "LanguageSwitcher": {
     "label": "Language"

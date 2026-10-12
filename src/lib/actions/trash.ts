@@ -8,6 +8,7 @@ import { getCurrentUserAllowingWorkspaceLock } from '@/lib/auth/session';
 import { assertWorkspaceLockAllows } from '@/lib/auth/workspaceLock';
 import { listTrashForWorkspaces, listTrashedIds, restoreSnapshot } from '@/lib/services/snapshots';
 import type { TrashEntry, RestoreResult } from '@/lib/services/snapshots';
+import { roleAllows, roleRefusal, type WorkspaceNeed } from '@/lib/auth/workspaceRole';
 
 // Direct from-clause re-export — same pattern as `RelatedPageRef` in
 // actions/workspace.ts. A locally-bound `export type { X }` (import type X,
@@ -23,14 +24,14 @@ export type TrashWorkspaceGroup = {
   entries: TrashEntry[];
 };
 
-async function assertWorkspaceAccess(workspaceId: string): Promise<string> {
+async function assertWorkspaceAccess(workspaceId: string, need: WorkspaceNeed = 'read'): Promise<string> {
   const user = await getCurrentUserAllowingWorkspaceLock();
   // Project windows are confined to their workspace — checked before any admin shortcut.
   await assertWorkspaceLockAllows(user, workspaceId);
   if (user.role === 'admin') return user.id;
 
   const [member] = await db
-    .select({ id: workspaceMembers.id })
+    .select({ id: workspaceMembers.id, role: workspaceMembers.role })
     .from(workspaceMembers)
     .where(and(eq(workspaceMembers.workspaceId, workspaceId), eq(workspaceMembers.userId, user.id)))
     .limit(1);
@@ -39,6 +40,8 @@ async function assertWorkspaceAccess(workspaceId: string): Promise<string> {
     const t = await getTranslations('Errors');
     throw new Error(t('unauthorized'));
   }
+  // A viewer reads; changing anything needs a member.
+  if (!roleAllows(member.role, need)) throw await roleRefusal(need);
   return user.id;
 }
 
@@ -91,7 +94,7 @@ export async function getTrashedLinkTargets(workspaceId: string, ids: string[]):
 // deleted would make the delete meaningless (same reasoning as agent
 // comments being append-only). See `.ai/FEATURE_BULK_AND_TRASH.md` §B.3.
 export async function restoreTrashItem(workspaceId: string, snapshotId: string): Promise<RestoreResult> {
-  await assertWorkspaceAccess(workspaceId);
+  await assertWorkspaceAccess(workspaceId, 'edit');
   const result = await restoreSnapshot(workspaceId, snapshotId);
   if (result.restored) {
     // Without this, the caller's own tab only picks the restore up on the

@@ -37,6 +37,7 @@ import {
 } from 'lucide-react';
 import { getWorkspaceGraphData, type GraphWorkspace } from '@/lib/actions/graph';
 import { openOrCreateHomeDashboard } from '@/lib/actions/dashboard';
+import { useCanEdit } from '@/components/providers/WorkspaceRoleContext';
 import { CHANGE_EVENT, mayPredateRender } from '@/components/providers/ActivityTracker';
 import { createInteractionGate } from '@/lib/interactionGate';
 import { foldText } from '@/lib/services/textFold';
@@ -306,6 +307,8 @@ export default function GraphScreen({
   };
 
   // Like the sidebar's Pano button: no home dashboard yet → create it, then open it.
+  // Not for a Viewer, who cannot create one.
+  const canCreateHome = useCanEdit(workspace.id);
   const openHome = () => {
     if (openingHome) return;
     setHomeFailed(false);
@@ -395,12 +398,12 @@ export default function GraphScreen({
               <LayoutDashboard />
               {tWorkspace('dashboardShort')}
             </Link>
-          ) : (
+          ) : canCreateHome ? (
             <Button variant="secondary" size="sm" onClick={openHome} loading={openingHome} title={t('openDashboard')} className="shrink-0">
               <LayoutDashboard />
               {tWorkspace('dashboardShort')}
             </Button>
-          )}
+          ) : null}
           {homeFailed && <span role="alert" className="text-xs text-red-400">{tWorkspace('dashboardOpenFailed')}</span>}
         </div>
 

@@ -136,6 +136,7 @@ export default function WorkspaceSettingsModal({
               <SharingTab
                 workspaceId={workspaceId}
                 isAdmin={currentUser.role === 'admin'}
+                canEdit={hasPrivilegedAccess || myRole === 'member'}
                 onNavigateToMembers={() => setActiveTab('members')}
               />
             </TabsPanel>
@@ -143,7 +144,7 @@ export default function WorkspaceSettingsModal({
               <BillingTab onOpenBilling={onOpenBilling} />
             </TabsPanel>
             <TabsPanel value="portability" className="animate-tab-fade">
-              <PortabilityTab workspaceId={workspaceId} workspaceName={workspaceName} />
+              <PortabilityTab workspaceId={workspaceId} workspaceName={workspaceName} canManage={hasPrivilegedAccess} />
             </TabsPanel>
           </DialogBody>
         </Tabs>

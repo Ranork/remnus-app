@@ -1,5 +1,5 @@
 ﻿'use client';
-import { useState, useTransition, useRef, useEffect, useMemo } from 'react';
+import { useState, useTransition, useRef, useEffect, useMemo, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from '@/components/ui/link';
@@ -105,6 +105,8 @@ type WorkspaceType = {
   homeDashboardItemId?: string | null;
   /** Access requests waiting on this user — non-zero only for owners, counted server-side. */
   pendingAccessRequests?: number | null;
+  /** The user's role here: a viewer gets no create / rename / move / delete affordances. */
+  role?: string | null;
 };
 
 type CurrentUser = {
@@ -331,6 +333,17 @@ export default function WorkspaceSidebar({
 
   // Local state for optimistic UI during drag and drop
   const [localWorkspaces, setLocalWorkspaces] = useState<WorkspaceType[]>(workspaces);
+  // Where this user may change things: everywhere for a platform admin, otherwise every
+  // workspace they are not a Viewer in. The server enforces the same rule on every write.
+  const roleByWorkspace = useMemo(() => new Map(workspaces.map((w) => [w.id, w.role ?? null])), [workspaces]);
+  const canEditWs = useCallback(
+    (workspaceId: string) => currentUser.role === 'admin' || roleByWorkspace.get(workspaceId) !== 'viewer',
+    [currentUser.role, roleByWorkspace],
+  );
+  const isOwnerOf = useCallback(
+    (workspaceId: string) => currentUser.role === 'admin' || roleByWorkspace.get(workspaceId) === 'owner',
+    [currentUser.role, roleByWorkspace],
+  );
   const [localItems, setLocalItems] = useState<ShellItemRow[]>(items);
 
   // Keep a ref so the sync effect can read latest localItems without depending on it
@@ -593,8 +606,9 @@ export default function WorkspaceSidebar({
     setDraggedItemId(id);
   };
 
-  const handleItemDragOver = (e: React.DragEvent, id: string, _workspaceId: string) => {
+  const handleItemDragOver = (e: React.DragEvent, id: string, workspaceId: string) => {
     if (!draggedItemId || draggedItemId === id) return;
+    if (!canEditWs(workspaceId)) return;
     if (isDescendant(localItems, id, draggedItemId)) return;
     
     e.preventDefault();
@@ -935,7 +949,7 @@ export default function WorkspaceSidebar({
   // the bottom-sheet (openMenuItemId) since coarse pointers have no right-click.
   const itemMenu = useContextMenu(() => setOpenMenuItemId(null));
 
-  const buildItemMenu = (item: ShellItemRow, workspaceId: string): MenuItem[] => [
+  const buildItemMenu = (item: ShellItemRow, workspaceId: string): MenuItem[] => canEditWs(workspaceId) ? [
     { id: 'open', label: t('open'), icon: ArrowUpRight, onSelect: () => router.push(hrefFor(item)) },
     { id: 'rename', label: t('rename'), icon: Edit3, onSelect: () => { setRenamingItemId(item.id); setRenamingTitle(item.title); } },
     { id: 'duplicate', label: t('duplicate'), icon: Copy, onSelect: () => handleDuplicateItem(item) },
@@ -964,6 +978,10 @@ export default function WorkspaceSidebar({
       : []),
     { kind: 'separator' },
     { id: 'delete', label: t('delete'), icon: Trash, danger: true, onSelect: () => handleDeleteItem(item) },
+  ] : [
+    // A Viewer: ways to open the item, nothing that changes it.
+    { id: 'open', label: t('open'), icon: ArrowUpRight, onSelect: () => router.push(hrefFor(item)) },
+    { id: 'copy-link', label: t('copyLink'), icon: Link2, onSelect: () => { navigator.clipboard?.writeText(window.location.origin + hrefFor(item)); } },
   ];
 
   const openMenuFor = (e: React.MouseEvent, item: ShellItemRow, workspaceId: string) => {
@@ -973,7 +991,8 @@ export default function WorkspaceSidebar({
     if (isDesktop) {
       setOpenMenuItemId(item.id); // keep the row highlighted while the menu is open
       itemMenu.open(e, buildItemMenu(item, workspaceId));
-    } else {
+    } else if (canEditWs(workspaceId)) {
+      // The phone sheet holds only edits; a Viewer opens items by tapping them.
       setOpenMenuItemId(prev => (prev === item.id ? null : item.id)); // mobile bottom sheet
     }
   };
@@ -1114,10 +1133,10 @@ export default function WorkspaceSidebar({
                   <div className="relative shrink-0" onClick={(e) => e.stopPropagation()}>
                     <button
                       ref={(el) => { workspaceIconRefs.current[w.id] = el; }}
-                      onClick={() => { if (!isProjectWindow) setActiveWorkspaceIconPickerId(activeWorkspaceIconPickerId === w.id ? null : w.id); }}
+                      onClick={() => { if (!isProjectWindow && isOwnerOf(w.id)) setActiveWorkspaceIconPickerId(activeWorkspaceIconPickerId === w.id ? null : w.id); }}
                       className="flex items-center justify-center"
-                      title={isProjectWindow ? undefined : t('changeIcon')}
-                      disabled={isProjectWindow}
+                      title={isProjectWindow || !isOwnerOf(w.id) ? undefined : t('changeIcon')}
+                      disabled={isProjectWindow || !isOwnerOf(w.id)}
                     >
                       {w.icon ? (
                         <PageIcon icon={w.icon} iconColor={w.iconColor} size={20} hideFallback={false} className="rounded" />
@@ -1180,16 +1199,18 @@ export default function WorkspaceSidebar({
 
                 {/* Workspace actions on hover */}
                 <div className="flex items-center gap-0.5 shrink-0 ml-1 sm:hidden sm:group-hover/root:flex" onClick={(e) => e.stopPropagation()}>
-                  <button
-                    onClick={() => {
-                      setTemplatePickerWorkspaceId(w.id);
-                      setExpandedWorkspaces(prev => ({ ...prev, [w.id]: true }));
-                    }}
-                    className="p-1 rounded-sm hover:bg-hover text-fg-3 hover:text-fg"
-                    title={t('newItem')}
-                  >
-                    <Plus size={14} />
-                  </button>
+                  {canEditWs(w.id) && (
+                    <button
+                      onClick={() => {
+                        setTemplatePickerWorkspaceId(w.id);
+                        setExpandedWorkspaces(prev => ({ ...prev, [w.id]: true }));
+                      }}
+                      className="p-1 rounded-sm hover:bg-hover text-fg-3 hover:text-fg"
+                      title={t('newItem')}
+                    >
+                      <Plus size={14} />
+                    </button>
+                  )}
                   {/* Hiding and workspace settings are management, denied to a locked
                       session — only the "new item" button above is content. */}
                   {!isProjectWindow && (
@@ -1266,7 +1287,7 @@ export default function WorkspaceSidebar({
                             } ${isLoading ? 'opacity-40 pointer-events-none' : ''} ${
                               isItemDragged ? 'opacity-30 animate-pulse' : ''
                             } ${isInvalidDropTarget ? 'opacity-35' : ''}`}
-                            draggable
+                            draggable={canEditWs(w.id)}
                             onDragStart={(e) => handleItemDragStart(e, item.id)}
                             onDragOver={(e) => handleItemDragOver(e, item.id, w.id)}
                             onDragEnd={handleItemDragEnd}
@@ -1307,6 +1328,8 @@ export default function WorkspaceSidebar({
                               <button
                                 ref={(el) => { itemRefs.current[item.id] = el; }}
                                 onClick={(e) => {
+                                  // A Viewer: the icon is part of the row's link.
+                                  if (!canEditWs(w.id)) return;
                                   e.preventDefault();
                                   e.stopPropagation();
                                   setActiveIconPickerId(activeIconPickerId === item.id ? null : item.id);
@@ -1379,7 +1402,7 @@ export default function WorkspaceSidebar({
                                 </div>
                               ) : (
                                 <div className="flex items-center gap-0.5 opacity-100 sm:opacity-0 sm:group-hover/item:opacity-100 transition-opacity shrink-0 ml-1" onClick={(e) => e.stopPropagation()}>
-                                  {item.type === 'page' && (
+                                  {item.type === 'page' && canEditWs(w.id) && (
                                     <button
                                       onClick={(e) => {
                                         e.stopPropagation();

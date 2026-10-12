@@ -48,6 +48,8 @@ import { normalizeOption } from '@/lib/types/properties';
 // Shared with the dashboard renderer (a server component), so a filter selects
 // the same rows in a view and in a dashboard block. See src/lib/tableFilters.ts.
 import { applyFilters, applySorts } from '@/lib/tableFilters';
+import { useCanEdit } from '@/components/providers/WorkspaceRoleContext';
+import ViewOnlyBadge from './ViewOnlyBadge';
 
 // The row editor (Tiptap + ProseMirror, the heaviest code in the app) only appears
 // when a row is opened in a peek, so it is not part of the view's first load (V2 R9);
@@ -257,6 +259,9 @@ export default function DatabaseView({
   const t = useTranslations('Database');
   const tPage = useTranslations('Page');
   const tWs = useTranslations('Workspace');
+  // A Viewer reads: rows open, nothing is written. Filters, sorts and view tweaks still work,
+  // for this visit only (they are not saved for everyone — see persistViews).
+  const canEdit = useCanEdit(database.workspaceId);
   // Schema mutations (new inline option, settings-panel save) only persist server-side
   // and revalidate the route for the NEXT navigation — they never touch this already-
   // mounted client tree. Mirror it locally (like localPages below) so option/color
@@ -416,13 +421,13 @@ export default function DatabaseView({
   };
 
   useEffect(() => {
-    if (dbName === savedDbName.current) return;
+    if (dbName === savedDbName.current || !canEdit) return;
     const timer = setTimeout(() => {
       if (database.itemId) updateWorkspaceItemTitle(database.itemId, dbName);
       savedDbName.current = dbName;
     }, 800);
     return () => clearTimeout(timer);
-  }, [dbName, database.itemId]);
+  }, [dbName, database.itemId, canEdit]);
 
   const handleIconSelect = (newIcon: string | null, newColor: string | null) => {
     if (database.itemId) {
@@ -499,12 +504,13 @@ export default function DatabaseView({
 
   const persistViews = useCallback(
     (next: DatabaseView[]) => {
+      if (!canEdit) return;
       clearTimeout(saveTimer.current);
       saveTimer.current = setTimeout(() => {
         updateDatabaseViews(database.id, next);
       }, 400);
     },
-    [database.id]
+    [database.id, canEdit]
   );
 
   const mutateViews = useCallback(
@@ -1062,6 +1068,18 @@ export default function DatabaseView({
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
   }, [selectionActive, exitSelection]);
+  // Escape closes the peek — after whatever sits on top of it (a menu, a picker, a
+  // dialog, an open panel card) has had its own Escape.
+  useEffect(() => {
+    if (!peekPageId) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape' || e.defaultPrevented || e.isComposing) return;
+      if (document.querySelector('[role="dialog"]:not([hidden]), [role="menu"], [role="listbox"]')) return;
+      setPeekPageId(null);
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [peekPageId]);
 
   const handleDateColChange = (dateCol: string) =>
     mutateConfig((cfg) => ({ ...cfg, dateCol }));
@@ -1203,12 +1221,13 @@ export default function DatabaseView({
             <button
               ref={dbButtonRef}
               onClick={() => setShowIconPicker(!showIconPicker)}
-              className="p-1 hover:bg-hover rounded-surface transition-colors duration-150 cursor-pointer flex items-center justify-center shrink-0"
-              title={database.icon ? tPage('changeIcon') : tPage('addIcon')}
+              disabled={!canEdit}
+              className="p-1 hover:bg-hover rounded-surface transition-colors duration-150 cursor-pointer flex items-center justify-center shrink-0 disabled:cursor-default disabled:hover:bg-transparent"
+              title={canEdit ? (database.icon ? tPage('changeIcon') : tPage('addIcon')) : undefined}
             >
               <PageIcon icon={database.icon} iconColor={database.iconColor} size={36} fallbackType="database" />
             </button>
-            {database.icon && (
+            {database.icon && canEdit && (
               <button
                 onClick={() => handleIconSelect(null, null)}
                 className="absolute -top-7 left-1/2 -translate-x-1/2 opacity-0 group-hover/icon-wrapper:opacity-100 focus-visible:opacity-100 h-6 px-2 text-2xs bg-fg text-desk rounded-control transition-opacity cursor-pointer font-medium whitespace-nowrap shadow-float z-20"
@@ -1234,6 +1253,7 @@ export default function DatabaseView({
             type="text"
             value={dbName}
             onChange={(e) => setDbName(e.target.value)}
+            readOnly={!canEdit}
             onKeyDown={(e) => {
               if (e.key === 'Enter' || e.key === 'ArrowDown') {
                 e.preventDefault();
@@ -1258,6 +1278,7 @@ export default function DatabaseView({
           onDuplicate={handleDuplicateView}
           onReorder={handleReorderViews}
           onUpdateIcon={handleUpdateViewIcon}
+          readOnly={!canEdit}
         />
 
         <div className="flex items-center gap-0.5 pb-1.5">
@@ -1266,6 +1287,7 @@ export default function DatabaseView({
               Renders nothing (no layout footprint) once idle/faded, same as
               every other SaveStatus consumer in the app. */}
           <SaveStatus state={saveState} className="mr-1" />
+          {!canEdit && <ViewOnlyBadge className="mr-1" />}
 
           <Tooltip content={tWs('refresh')}>
             <Button variant="ghost" size="icon-sm" onClick={handleManualRefresh} aria-label={tWs('refresh')}>
@@ -1282,7 +1304,7 @@ export default function DatabaseView({
           </Tooltip>
 
           {/* Bulk add/update — hidden on mobile, paste-driven multi-row add/update */}
-          <Tooltip content={t('bulkImport.button')}>
+          {canEdit && <Tooltip content={t('bulkImport.button')}>
             <Button
               variant="ghost"
               size="icon-sm"
@@ -1292,10 +1314,10 @@ export default function DatabaseView({
             >
               <ClipboardList />
             </Button>
-          </Tooltip>
+          </Tooltip>}
 
           {/* Pick several rows/cards to delete or move them in one go — not on the calendar */}
-          {canSelectRows && (
+          {canSelectRows && canEdit && (
             <Tooltip content={t('selectRows')}>
               <Button
                 variant="ghost"
@@ -1310,7 +1332,8 @@ export default function DatabaseView({
             </Tooltip>
           )}
 
-          <Button
+          {/* The settings panel edits the columns and the saved views: not for a Viewer. */}
+          {canEdit && <Button
             variant="ghost"
             size="sm"
             onClick={() => handleToggleSidebar(sidebarTab)}
@@ -1318,10 +1341,10 @@ export default function DatabaseView({
             className={sidebarOpen ? 'bg-hover text-fg' : ''}
           >
             <Settings /> {t('settings')}
-          </Button>
+          </Button>}
 
           {/* New Page button — hidden on mobile (available via bottom nav) */}
-          <Button
+          {canEdit && <Button
             variant="primary"
             size="sm"
             onClick={handleHeaderNewClick}
@@ -1329,7 +1352,7 @@ export default function DatabaseView({
             className="hidden sm:inline-flex ml-1.5"
           >
             <Plus /> {t('new')}
-          </Button>
+          </Button>}
         </div>
       </div>
 
@@ -1380,7 +1403,7 @@ export default function DatabaseView({
                 onDuplicatePage={handleDuplicatePage}
                 hasSorts={(config.sorts?.length ?? 0) > 0}
                 onUpdatePageProperties={handleUpdatePageProperties}
-                onCreatePage={handleAddRow}
+                onCreatePage={canEdit ? handleAddRow : undefined}
                 filters={config.filters}
                 sorts={config.sorts}
                 onFiltersChange={handleFiltersChange}
@@ -1390,6 +1413,7 @@ export default function DatabaseView({
                 defaultPageIconColor={config.defaultPageIconColor}
                 onPageIconChange={handlePageIconChange}
                 selection={selection}
+                readOnly={!canEdit}
               />
             ) : (
               <TableLayout
@@ -1409,7 +1433,7 @@ export default function DatabaseView({
                 onDuplicatePage={handleDuplicatePage}
                 hasSorts={(config.sorts?.length ?? 0) > 0}
                 onUpdatePageProperties={handleUpdatePageProperties}
-                onCreatePage={handleAddRow}
+                onCreatePage={canEdit ? handleAddRow : undefined}
                 filters={config.filters}
                 sorts={config.sorts}
                 onFiltersChange={handleFiltersChange}
@@ -1419,6 +1443,7 @@ export default function DatabaseView({
                 defaultPageIconColor={config.defaultPageIconColor}
                 onPageIconChange={handlePageIconChange}
                 selection={selection}
+                readOnly={!canEdit}
               />
             )
           ) : kanbanConfig ? (
@@ -1440,7 +1465,7 @@ export default function DatabaseView({
               propertyTextClamp={kanbanConfig.propertyTextClamp ?? 'truncate'}
               cardAppearance={getCardAppearance(kanbanConfig)}
               onUpdatePageProperties={handleUpdatePageProperties}
-              onCreatePage={(initialProperties) => handleAddRow(initialProperties, { openAfterCreate: true })}
+              onCreatePage={canEdit ? (initialProperties) => handleAddRow(initialProperties, { openAfterCreate: true }) : undefined}
               defaultPageIcon={config.defaultPageIcon}
               defaultPageIconColor={config.defaultPageIconColor}
               onPageIconChange={handlePageIconChange}
@@ -1448,6 +1473,7 @@ export default function DatabaseView({
               onCardsCollapsedChange={handlePagesCardCollapsedChange}
               hiddenGroups={kanbanConfig.hiddenGroups ?? []}
               selection={selection}
+              readOnly={!canEdit}
             />
           ) : calendarConfig ? (
             <CalendarView
@@ -1470,12 +1496,13 @@ export default function DatabaseView({
               showPropertyLabels={calendarConfig.showPropertyLabels ?? true}
               propertyTextClamp={calendarConfig.propertyTextClamp ?? 'truncate'}
               onUpdatePageProperties={handleUpdatePageProperties}
-              onCreatePage={(initialProperties) => handleAddRow(initialProperties, { openAfterCreate: true })}
+              onCreatePage={canEdit ? (initialProperties) => handleAddRow(initialProperties, { openAfterCreate: true }) : undefined}
               defaultPageIcon={config.defaultPageIcon}
               defaultPageIconColor={config.defaultPageIconColor}
               onPageIconChange={handlePageIconChange}
               onCardCollapsedChange={handlePageCardCollapsedChange}
               onCardsCollapsedChange={handlePagesCardCollapsedChange}
+              readOnly={!canEdit}
             />
           ) : null}
         </div>
@@ -1577,6 +1604,7 @@ export default function DatabaseView({
                 <PeekHeader
                   title={peekScrolled && peekPage ? (peekPage.properties?.title || tPage('untitled')) : null}
                   {...peekHeaderActions}
+                  canEdit={canEdit}
                 />
 
                 {/* Peek Editor Scrollable Content */}
@@ -1633,6 +1661,7 @@ export default function DatabaseView({
               <PeekHeader
                 title={peekScrolled && peekPage ? (peekPage.properties?.title || tPage('untitled')) : null}
                 {...peekHeaderActions}
+                canEdit={canEdit}
               />
 
               {/* Peek Editor Scrollable Content */}
@@ -1731,8 +1760,11 @@ function PeekHeader({
   onHistory,
   onDuplicate,
   onDelete,
+  canEdit,
 }: {
   title: string | null;
+  /** False for a Viewer: every item in the "⋯" menu changes the row, so it is left out. */
+  canEdit: boolean;
   onClose: () => void;
   onOpenFull: () => void;
   onMarkdown: () => void;
@@ -1763,7 +1795,7 @@ function PeekHeader({
           <Maximize2 />
           <span className="hidden sm:inline">{t('openInFullPage')}</span>
         </Button>
-        <DropdownMenu>
+        {canEdit && <DropdownMenu>
           <DropdownMenuTrigger
             className={buttonVariants({ variant: 'ghost', size: 'icon-sm' })}
             aria-label={tPage('pageOptions')}
@@ -1794,7 +1826,7 @@ function PeekHeader({
               {tPage('deletePage')}
             </DropdownMenuItem>
           </DropdownMenuContent>
-        </DropdownMenu>
+        </DropdownMenu>}
       </div>
     </div>
   );

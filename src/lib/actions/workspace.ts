@@ -6,12 +6,14 @@ import { revalidatePath } from 'next/cache';
 import { cookies } from 'next/headers';
 import { getCurrentUser, getCurrentUserAllowingWorkspaceLock } from '@/lib/auth/session';
 import { assertWorkspaceLockAllows } from '@/lib/auth/workspaceLock';
+import { roleAllows, roleRefusal, type WorkspaceNeed } from '@/lib/auth/workspaceRole';
 import { stockDatabaseSchema, type SchemaColumn } from '@/lib/templates';
 import type { DatabaseView } from '@/lib/types/views';
 import { getTranslations } from 'next-intl/server';
 import { getRequestLocale } from '@/i18n/requestLocale';
 import { getTemplateText } from '@/lib/starterContent';
-import { isCloudinaryUrl, deleteCloudinaryImage } from '@/lib/cloudinary';
+import { duplicateItemSubtree } from '@/lib/services/itemDuplicate';
+import { releaseIcon } from '@/lib/services/iconCleanup';
 import { checkCanCreateWorkspace } from '@/lib/services/billing';
 import { recordDeletionTombstone, getRelatedPages } from '@/lib/services/workspace';
 import { HOME_DASHBOARD_SQL } from '@/lib/services/dashboards';
@@ -61,14 +63,14 @@ async function untitledName(): Promise<string> {
 
 // ── Auth helpers ──────────────────────────────────────────────────────────────
 
-async function assertWorkspaceAccess(workspaceId: string): Promise<string> {
+async function assertWorkspaceAccess(workspaceId: string, need: WorkspaceNeed = 'read'): Promise<string> {
   const user = await getCurrentUserAllowingWorkspaceLock();
   // Project windows are confined to their workspace — checked before any admin shortcut.
   await assertWorkspaceLockAllows(user, workspaceId);
   if (user.role === 'admin') return user.id;
 
   const [member] = await db
-    .select({ id: workspaceMembers.id })
+    .select({ id: workspaceMembers.id, role: workspaceMembers.role })
     .from(workspaceMembers)
     .where(
       and(
@@ -82,6 +84,8 @@ async function assertWorkspaceAccess(workspaceId: string): Promise<string> {
     const t = await getTranslations('Errors');
     throw new Error(t('unauthorized'));
   }
+  // A viewer reads; changing content needs a member, managing the workspace its owner.
+  if (!roleAllows(member.role, need)) throw await roleRefusal(need);
   return user.id;
 }
 
@@ -92,9 +96,9 @@ async function assertWorkspaceAccess(workspaceId: string): Promise<string> {
  * deleting the workspace itself is workspace management rather than content, so a
  * workspace-locked session is refused here even for its own workspace.
  */
-async function assertWorkspaceManagementAccess(workspaceId: string): Promise<string> {
+async function assertWorkspaceManagementAccess(workspaceId: string, need: WorkspaceNeed = 'own'): Promise<string> {
   await getCurrentUser(); // throws for a workspace-locked session
-  return assertWorkspaceAccess(workspaceId);
+  return assertWorkspaceAccess(workspaceId, need);
 }
 
 export async function getActiveWorkspaceId(): Promise<string | null> {
@@ -151,6 +155,8 @@ export async function getWorkspaces() {
       createdAt: workspaces.createdAt,
       updatedAt: workspaces.updatedAt,
       hidden:    workspaceMembers.hidden,
+      // The caller's role here — the UI offers editing only where it would be allowed.
+      role:      workspaceMembers.role,
       homeDashboardItemId: HOME_DASHBOARD_SQL,
       // Requests waiting on this caller. Counted server-side and only for owners (the
       // role that can answer them — `assertOwner` in actions/accessRequests.ts), so no
@@ -309,19 +315,18 @@ export async function updateWorkspaceIcon(id: string, icon: string | null, iconC
   await assertWorkspaceManagementAccess(id);
 
   const [old] = await db.select({ icon: workspaces.icon }).from(workspaces).where(eq(workspaces.id, id)).limit(1);
-  if (isCloudinaryUrl(old?.icon) && old.icon !== icon) {
-    deleteCloudinaryImage(old.icon!);
-  }
 
   await db.update(workspaces)
     .set({ icon, iconColor, updatedAt: new Date() })
     .where(eq(workspaces.id, id));
+  if (old?.icon && old.icon !== icon) await releaseIcon(old.icon);
 
   revalidatePath('/', 'layout');
 }
 
 export async function setWorkspaceHidden(id: string, hidden: boolean) {
-  const userId = await assertWorkspaceManagementAccess(id);
+  // A per-user preference, not management: any member may hide a workspace from their own sidebar.
+  const userId = await assertWorkspaceManagementAccess(id, 'read');
 
   // Per-user preference — only flips the caller's own membership row, never other members'.
   await db.update(workspaceMembers)
@@ -473,7 +478,7 @@ export async function createStandalonePage(
   parentId?: string,
   options?: { initialContent?: string; icon?: string | null; iconColor?: string | null },
 ) {
-  const userId = await assertWorkspaceAccess(workspaceId);
+  const userId = await assertWorkspaceAccess(workspaceId, 'edit');
 
   const itemId = crypto.randomUUID();
   const pageId = crypto.randomUUID();
@@ -515,7 +520,7 @@ export async function createWorkspaceDatabase(
   name: string,
   options?: CreateDatabaseOptions & { parentId?: string | null },
 ) {
-  const userId = await assertWorkspaceAccess(workspaceId);
+  const userId = await assertWorkspaceAccess(workspaceId, 'edit');
 
   const itemId = crypto.randomUUID();
   const dbId = crypto.randomUUID();
@@ -578,7 +583,7 @@ export async function getStandalonePageByItemId(itemId: string) {
 export async function updateStandalonePageContent(itemId: string, content: string) {
   const item = await db.select({ workspaceId: workspaceItems.workspaceId, title: workspaceItems.title }).from(workspaceItems).where(eq(workspaceItems.id, itemId)).limit(1);
   if (item[0]) {
-    await assertWorkspaceAccess(item[0].workspaceId);
+    await assertWorkspaceAccess(item[0].workspaceId, 'edit');
     const [current] = await db.select({ content: standalonePages.content }).from(standalonePages).where(eq(standalonePages.itemId, itemId)).limit(1);
     const user = await getCurrentUserAllowingWorkspaceLock();
     await maybeSnapshotContentUpdate({
@@ -598,7 +603,7 @@ export async function updateStandalonePageContent(itemId: string, content: strin
 
 export async function updateWorkspaceItemTitle(itemId: string, title: string) {
   const item = await db.select({ workspaceId: workspaceItems.workspaceId }).from(workspaceItems).where(eq(workspaceItems.id, itemId)).limit(1);
-  if (item[0]) await assertWorkspaceAccess(item[0].workspaceId);
+  if (item[0]) await assertWorkspaceAccess(item[0].workspaceId, 'edit');
 
   await db.update(workspaceItems)
     .set({ title, updatedAt: new Date() })
@@ -621,15 +626,12 @@ export async function getDatabaseByItemId(itemId: string) {
 
 export async function updateWorkspaceItemIcon(itemId: string, icon: string | null, iconColor: string | null) {
   const item = await db.select({ workspaceId: workspaceItems.workspaceId, icon: workspaceItems.icon }).from(workspaceItems).where(eq(workspaceItems.id, itemId)).limit(1);
-  if (item[0]) await assertWorkspaceAccess(item[0].workspaceId);
-
-  if (isCloudinaryUrl(item[0]?.icon) && item[0].icon !== icon) {
-    deleteCloudinaryImage(item[0].icon!);
-  }
+  if (item[0]) await assertWorkspaceAccess(item[0].workspaceId, 'edit');
 
   await db.update(workspaceItems)
     .set({ icon, iconColor, updatedAt: new Date() })
     .where(eq(workspaceItems.id, itemId));
+  if (item[0]?.icon && item[0].icon !== icon) await releaseIcon(item[0].icon);
 
   revalidatePath('/', 'layout');
 }
@@ -638,7 +640,7 @@ export async function deleteWorkspaceItem(itemId: string) {
   const item = await db.select().from(workspaceItems).where(eq(workspaceItems.id, itemId)).limit(1);
   if (!item[0]) return;
 
-  const userId = await assertWorkspaceAccess(item[0].workspaceId);
+  const userId = await assertWorkspaceAccess(item[0].workspaceId, 'edit');
   const { workspaceId } = item[0];
   const user = await getCurrentUserAllowingWorkspaceLock();
   const actor: SnapshotActor = { kind: 'human', userId, label: user.name || user.email || 'Someone' };
@@ -858,94 +860,22 @@ export async function getSubItems(parentId: string): Promise<WorkspaceItemRow[]>
  * unless `includeRows` is false — its rows; `includeRows: false` is the "copy this board
  * as an empty template" path (the rows are the only thing it leaves out).
  */
+/**
+ * Copy an item with everything under it (sub-pages, pages under its rows, nested databases),
+ * right below the original. `includeRows: false` copies a board's structure without its cards.
+ */
 export async function duplicateWorkspaceItem(itemId: string, options?: { includeRows?: boolean }) {
   const includeRows = options?.includeRows !== false;
-  const item = await db.select().from(workspaceItems).where(eq(workspaceItems.id, itemId));
-  if (!item[0]) return null;
+  const [item] = await db.select({ workspaceId: workspaceItems.workspaceId }).from(workspaceItems).where(eq(workspaceItems.id, itemId)).limit(1);
+  if (!item) return null;
 
-  await assertWorkspaceAccess(item[0].workspaceId);
-  const { workspaceId } = item[0];
-
-  const newItemId = crypto.randomUUID();
-  const now = new Date();
-  await db.insert(workspaceItems).values({
-    id: newItemId,
-    workspaceId: item[0].workspaceId,
-    type: item[0].type,
-    title: item[0].title,
-    parentId: item[0].parentId,
-    sortOrder: item[0].sortOrder + 1,
-    icon: item[0].icon,
-    iconColor: item[0].iconColor,
-    createdAt: now,
-    updatedAt: now,
-  });
-
-  if (item[0].type === 'dashboard') {
-    const [dash] = await db.select().from(dashboards).where(eq(dashboards.itemId, itemId));
-    await db.insert(dashboards).values({
-      id: crypto.randomUUID(),
-      itemId: newItemId,
-      // The spec is copied as-is: its blocks point at the same databases, in
-      // the same workspace, so the duplicate shows the same live numbers.
-      spec: dash?.spec ?? { version: 1, blocks: [] },
-      createdAt: now,
-      updatedAt: now,
-    });
-    revalidatePath('/', 'layout');
-    return { type: 'dashboard' as const, itemId: newItemId };
-  }
-
-  if (item[0].type === 'page') {
-    const sp = await db.select().from(standalonePages).where(eq(standalonePages.itemId, itemId));
-    await db.insert(standalonePages).values({
-      id: crypto.randomUUID(),
-      itemId: newItemId,
-      content: sp[0]?.content ?? '',
-      createdAt: now,
-      updatedAt: now,
-    });
-    if (sp[0]?.content) await syncPageLinks(workspaceId, newItemId, 'page', sp[0].content);
-    revalidatePath('/', 'layout');
-    return { type: 'page' as const, itemId: newItemId };
-  } else {
-    const dbRow = await db.select().from(databases).where(eq(databases.itemId, itemId));
-    if (!dbRow[0]) { revalidatePath('/', 'layout'); return null; }
-
-    const newDbId = crypto.randomUUID();
-    await db.insert(databases).values({
-      id: newDbId,
-      name: dbRow[0].name,
-      itemId: newItemId,
-      schema: dbRow[0].schema,
-      views: dbRow[0].views,
-      createdAt: now,
-      updatedAt: now,
-    });
-
-    const existingPages = includeRows
-      ? await db.select().from(pages).where(eq(pages.databaseId, dbRow[0].id))
-      : [];
-    for (const p of existingPages) {
-      const newRowId = crypto.randomUUID();
-      await db.insert(pages).values({
-        id: newRowId,
-        databaseId: newDbId,
-        title: p.title,
-        content: p.content,
-        properties: p.properties,
-        sortOrder: p.sortOrder,
-        icon: p.icon,
-        iconColor: p.iconColor,
-        createdAt: now,
-        updatedAt: now,
-      });
-      if (p.content) await syncPageLinks(workspaceId, newRowId, 'database_row', p.content);
-    }
-
-    revalidatePath('/', 'layout');
-    return { type: 'database' as const, dbId: newDbId };
-  }
+  await assertWorkspaceAccess(item.workspaceId, 'edit');
+  const result = await duplicateItemSubtree({ itemId, includeRows });
+  revalidatePath('/', 'layout');
+  if (!result) return null;
+  return result.type === 'database'
+    ? { type: 'database' as const, dbId: result.dbId }
+    : { type: result.type, itemId: result.itemId };
 }
 
 export async function updateWorkspacesOrder(workspaceIds: string[]) {
@@ -977,7 +907,7 @@ export async function updateWorkspaceItemsOrder(itemIds: string[]) {
   const checkedWorkspaces = new Set<string>();
   for (const row of rows) {
     if (!checkedWorkspaces.has(row.workspaceId)) {
-      await assertWorkspaceAccess(row.workspaceId);
+      await assertWorkspaceAccess(row.workspaceId, 'edit');
       checkedWorkspaces.add(row.workspaceId);
     }
   }
@@ -1013,8 +943,8 @@ export async function reparentWorkspaceItem(
     throw new Error(t('itemNotFound'));
   }
 
-  await assertWorkspaceAccess(item.workspaceId);
-  if (targetWorkspaceId !== item.workspaceId) await assertWorkspaceAccess(targetWorkspaceId);
+  await assertWorkspaceAccess(item.workspaceId, 'edit');
+  if (targetWorkspaceId !== item.workspaceId) await assertWorkspaceAccess(targetWorkspaceId, 'edit');
 
   // Cycle guard: a new parent must not be the item itself or one of its descendants.
   if (newParentId) {
@@ -1065,8 +995,8 @@ export async function moveWorkspaceItemToWorkspace(itemId: string, targetWorkspa
     throw new Error(t('itemNotFound'));
   }
 
-  await assertWorkspaceAccess(item[0].workspaceId);
-  await assertWorkspaceAccess(targetWorkspaceId);
+  await assertWorkspaceAccess(item[0].workspaceId, 'edit');
+  await assertWorkspaceAccess(targetWorkspaceId, 'edit');
 
   await db.update(workspaceItems).set({ workspaceId: targetWorkspaceId, updatedAt: new Date() }).where(eq(workspaceItems.id, itemId));
 

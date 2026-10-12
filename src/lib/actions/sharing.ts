@@ -5,11 +5,12 @@ import { eq, and, count, inArray } from 'drizzle-orm';
 import { getCurrentUser } from '@/lib/auth/session';
 import { getTranslations } from 'next-intl/server';
 import { getAnyPageById } from '@/lib/services/workspace';
+import { roleAllows, roleRefusal, type WorkspaceNeed } from '@/lib/auth/workspaceRole';
 
 const SLUG_REGEX = /^[a-z0-9][a-z0-9\-/]*[a-z0-9]$|^[a-z0-9]$/;
 const MAX_SLUG_LEN = 120;
 
-async function assertWorkspaceMember(workspaceId: string): Promise<{ userId: string; role: string }> {
+async function assertWorkspaceMember(workspaceId: string, need: WorkspaceNeed = 'read'): Promise<{ userId: string; role: string }> {
   const user = await getCurrentUser();
   if (user.role === 'admin') return { userId: user.id, role: 'admin' };
 
@@ -23,6 +24,8 @@ async function assertWorkspaceMember(workspaceId: string): Promise<{ userId: str
     const t = await getTranslations('Errors');
     throw new Error(t('unauthorized'));
   }
+  // A viewer reads; changing anything needs a member.
+  if (!roleAllows(member.role, need)) throw await roleRefusal(need);
   return { userId: user.id, role: member.role };
 }
 
@@ -48,7 +51,7 @@ export async function createShare(
   width: ShareWidth = 'narrow',
 ): Promise<{ share?: ShareRecord; error?: string }> {
   const t = await getTranslations('Sharing');
-  const { userId, role } = await assertWorkspaceMember(workspaceId);
+  const { userId, role } = await assertWorkspaceMember(workspaceId, 'edit');
 
   // Verify page belongs to this workspace
   try {
@@ -105,7 +108,7 @@ export async function createShare(
 }
 
 export async function revokeShare(shareId: string, workspaceId: string): Promise<{ error?: string }> {
-  await assertWorkspaceMember(workspaceId);
+  await assertWorkspaceMember(workspaceId, 'edit');
   await db.delete(sharedPages).where(and(eq(sharedPages.id, shareId), eq(sharedPages.workspaceId, workspaceId)));
   return {};
 }
@@ -196,7 +199,7 @@ export async function updateShare(
   workspaceId: string,
   patch: { permission?: 'read' | 'write'; width?: ShareWidth; inSitemap?: boolean },
 ): Promise<{ error?: string }> {
-  const { role } = await assertWorkspaceMember(workspaceId);
+  const { role } = await assertWorkspaceMember(workspaceId, 'edit');
   if (patch.inSitemap !== undefined && role !== 'admin') {
     const tErr = await getTranslations('Errors');
     return { error: tErr('unauthorized') };
@@ -252,6 +255,7 @@ export async function updateSharedPageContent(
 }
 
 export async function countSharedPagesInWorkspace(workspaceId: string): Promise<number> {
+  await assertWorkspaceMember(workspaceId);
   const [row] = await db
     .select({ n: count() })
     .from(sharedPages)
@@ -260,7 +264,7 @@ export async function countSharedPagesInWorkspace(workspaceId: string): Promise<
 }
 
 export async function revokeAllSharesInWorkspace(workspaceId: string): Promise<void> {
-  await assertWorkspaceMember(workspaceId);
+  await assertWorkspaceMember(workspaceId, 'edit');
   await db.delete(sharedPages).where(eq(sharedPages.workspaceId, workspaceId));
 }
 

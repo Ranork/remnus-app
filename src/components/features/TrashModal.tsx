@@ -9,6 +9,7 @@ import { Dialog, DialogBody, DialogContent, DialogHeader, DialogTitle } from '@/
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
+import { useCanEdit } from '@/components/providers/WorkspaceRoleContext';
 
 const TYPE_ICON: Record<TrashEntry['itemType'], typeof FileText> = {
   page: FileText,
@@ -40,7 +41,8 @@ function TrashRow({
   entry: TrashEntry;
   t: ReturnType<typeof useTranslations>;
   locale: string;
-  onRestore: (id: string) => void;
+  /** Absent in a workspace this user only views: restoring is an edit. */
+  onRestore?: (id: string) => void;
   restoring: boolean;
 }) {
   const Icon = TYPE_ICON[entry.itemType];
@@ -73,10 +75,12 @@ function TrashRow({
           <span>{relativeTime(new Date(entry.createdAt), locale)}</span>
         </div>
       </div>
-      <Button size="sm" onClick={() => onRestore(entry.id)} loading={restoring} className="shrink-0">
-        <RotateCcw />
-        {t('trashRestore')}
-      </Button>
+      {onRestore && (
+        <Button size="sm" onClick={() => onRestore(entry.id)} loading={restoring} className="shrink-0">
+          <RotateCcw />
+          {t('trashRestore')}
+        </Button>
+      )}
     </li>
   );
 }
@@ -91,6 +95,7 @@ function WorkspaceSection({
   restoringId: string | null;
 }) {
   const { workspace: ws, entries } = group;
+  const canEdit = useCanEdit(ws.id);
   return (
     <section className="flex flex-col gap-2">
       <h3 className="flex items-center gap-2 px-1 text-xs font-medium text-fg-3">
@@ -115,7 +120,7 @@ function WorkspaceSection({
               t={t}
               locale={locale}
               restoring={restoringId === entry.id}
-              onRestore={(id) => onRestore(ws.id, id)}
+              onRestore={canEdit ? (id) => onRestore(ws.id, id) : undefined}
             />
           ))}
         </ul>

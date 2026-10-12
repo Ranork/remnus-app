@@ -24,6 +24,7 @@ import DemoFeedbackPrompt from '@/components/features/DemoFeedbackPrompt';
 import PwaInstallNudge from '@/components/features/PwaInstallNudge';
 import ProjectWindowBanner from '@/components/features/ProjectWindowBanner';
 import AccessibilityWidgetOff from '@/components/providers/AccessibilityWidgetOff';
+import { WorkspaceRoleProvider } from '@/components/providers/WorkspaceRoleContext';
 
 // The shell's copy of a sidebar row: everything but the timestamps (see `ShellItemRow`).
 function toShellItem(row: WorkspaceItemRow): ShellItemRow {
@@ -143,6 +144,10 @@ export default async function AppGroupLayout({
       <DownloadToast />
       <Toaster />
       <QueryProvider>
+        <WorkspaceRoleProvider
+          roles={Object.fromEntries(workspacesList.map((w) => [w.id, w.role]))}
+          isAdmin={session.user.role === 'admin'}
+        >
         <AppShell
           items={items}
           activeWorkspaceId={activeWorkspace?.id ?? ''}
@@ -179,6 +184,7 @@ export default async function AppGroupLayout({
         >
           {children}
         </AppShell>
+        </WorkspaceRoleProvider>
       </QueryProvider>
     </ClientMessages>
   );

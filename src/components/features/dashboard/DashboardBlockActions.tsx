@@ -8,6 +8,7 @@ import { ConfirmDialog } from '@/components/features/ConfirmDialog';
 import { Tooltip } from '@/components/ui/tooltip';
 import { deleteDashboardBlock, moveDashboardBlock } from '@/lib/actions/dashboard';
 import DashboardBlockEditor from './DashboardBlockEditor';
+import { useCanEdit } from '@/components/providers/WorkspaceRoleContext';
 
 /**
  * Per-block controls: edit settings, move up or down, remove. Adding a block
@@ -16,7 +17,22 @@ import DashboardBlockEditor from './DashboardBlockEditor';
  * Every operation addresses the block by its id, never by position, so two
  * people reordering at once can't swap the wrong pair.
  */
-export default function DashboardBlockActions({
+type DashboardBlockActionsProps = {
+  itemId: string;
+  blockId: string;
+  /** The readable block, for the editor. Absent for a block that could not be read — it can only be removed. */
+  block?: Record<string, unknown>;
+  canMoveUp: boolean;
+  canMoveDown: boolean;
+};
+
+/** Not offered to a Viewer: every control here changes the dashboard. */
+export default function DashboardBlockActions({ workspaceId, ...props }: DashboardBlockActionsProps & { workspaceId: string }) {
+  const canEdit = useCanEdit(workspaceId);
+  return canEdit ? <BlockActions {...props} /> : null;
+}
+
+function BlockActions({
   itemId,
   blockId,
   block,

@@ -23,6 +23,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import DateRangePicker from './DateRangePicker';
 import { OptionChip, PropertyTypeIcon, StatusChip, UserChip, UserTags } from './PropertyTags';
 import { PropertyValuePicker } from './PropertyValuePicker';
+import { useCanEdit } from '@/components/providers/WorkspaceRoleContext';
+import ViewOnlyBadge from './ViewOnlyBadge';
 
 /** Value kinds edited by picking rather than typing (the shared PropertyValuePicker). */
 const PICKED_TYPES = new Set(['select', 'multi_select', 'status', 'user', 'multi_user']);
@@ -63,12 +65,14 @@ function AutoGrowTextarea({
   onKeyDown,
   placeholder,
   className,
+  readOnly,
 }: {
   value: string;
   onChange: (e: React.ChangeEvent<HTMLTextAreaElement>) => void;
   onKeyDown?: (e: React.KeyboardEvent<HTMLTextAreaElement>) => void;
   placeholder?: string;
   className?: string;
+  readOnly?: boolean;
 }) {
   const ref = useRef<HTMLTextAreaElement>(null);
   const resize = useCallback(() => {
@@ -87,6 +91,7 @@ function AutoGrowTextarea({
       onKeyDown={onKeyDown}
       placeholder={placeholder}
       className={className}
+      readOnly={readOnly}
     />
   );
 }
@@ -128,6 +133,8 @@ const PageEditor = forwardRef<PageEditorHandle, PageEditorProps>(function PageEd
   const tDb = useTranslations('Database');
   const tEditor = useTranslations('Editor');
   const locale = useLocale();
+  // A Viewer reads the row: no title, icon, property, body, share, history or delete edits.
+  const canEdit = useCanEdit(database.workspaceId);
   const [properties, setProperties] = useState<Record<string, any>>(initialPage.properties || {});
   const [icon, setIcon] = useState<string | null>(initialPage.icon);
   const [iconColor, setIconColor] = useState<string | null>(initialPage.iconColor);
@@ -361,17 +368,18 @@ const PageEditor = forwardRef<PageEditorHandle, PageEditorProps>(function PageEd
           </Link>
           <div className="flex items-center gap-1">
             <SaveStatus state={saveState} className="mr-1" />
+            {!canEdit && <ViewOnlyBadge className="mr-1" />}
             <PageActionsMenu
               widthMode={widthMode}
               onWidthChange={(w) => { setWidthMode(w); localStorage.setItem(`page-width-${initialPage.id}`, w); }}
-              onShare={() => setShowShareModal(true)}
-              onMarkdown={() => setMarkdownDraft(editorRef.current?.getMarkdown() ?? initialPage.content ?? '')}
-              onHistory={() => setShowHistory(true)}
-              onDuplicate={async () => {
+              onShare={canEdit ? () => setShowShareModal(true) : undefined}
+              onMarkdown={canEdit ? () => setMarkdownDraft(editorRef.current?.getMarkdown() ?? initialPage.content ?? '') : undefined}
+              onHistory={canEdit ? () => setShowHistory(true) : undefined}
+              onDuplicate={canEdit ? async () => {
                 const newId = await duplicatePage(initialPage.id, database.id);
                 if (newId) router.push(`/db/${database.id}/${newId}`);
-              }}
-              onDelete={() => setShowDeleteConfirm(true)}
+              } : undefined}
+              onDelete={canEdit ? () => setShowDeleteConfirm(true) : undefined}
             />
           </div>
         </div>
@@ -384,12 +392,13 @@ const PageEditor = forwardRef<PageEditorHandle, PageEditorProps>(function PageEd
             <button
               ref={iconButtonRef}
               onClick={() => setShowIconPicker(!showIconPicker)}
-              className="p-1 hover:bg-hover rounded-surface transition-colors duration-150 cursor-pointer flex items-center justify-center shrink-0"
-              title={icon ? t('changeIcon') : t('addIcon')}
+              disabled={!canEdit}
+              className="p-1 hover:bg-hover rounded-surface transition-colors duration-150 cursor-pointer flex items-center justify-center shrink-0 disabled:cursor-default disabled:hover:bg-transparent"
+              title={canEdit ? (icon ? t('changeIcon') : t('addIcon')) : undefined}
             >
               <PageIcon icon={icon} iconColor={iconColor} size={36} fallbackType="page" />
             </button>
-            {icon && (
+            {icon && canEdit && (
               <button
                 onClick={() => handleIconSelect(null, null)}
                 className="absolute -top-7 left-1/2 -translate-x-1/2 opacity-0 group-hover/icon-wrapper:opacity-100 focus-visible:opacity-100 h-6 px-2 text-2xs bg-fg text-desk rounded-control transition-opacity cursor-pointer font-medium whitespace-nowrap shadow-float z-20"
@@ -414,7 +423,9 @@ const PageEditor = forwardRef<PageEditorHandle, PageEditorProps>(function PageEd
           <AutoGrowTextarea
             value={properties['title'] || ''}
             onChange={(e) => handleTextPropertyChange('title', e.target.value)}
+            readOnly={!canEdit}
             onKeyDown={(e) => {
+              if (!canEdit) return;
               if (e.key === 'Enter') {
                 e.preventDefault();
                 editorRef.current?.insertLineAtStart();
@@ -449,7 +460,9 @@ const PageEditor = forwardRef<PageEditorHandle, PageEditorProps>(function PageEd
 
       {/* Properties Section — a quiet two-column list: name (with its type glyph)
           on the left, the value on the right; every value edits in place. */}
-      <div className={`flex flex-col ${isPeek ? 'mb-6 gap-0.5' : 'mb-10 gap-1'}`}>
+      {/* A disabled fieldset turns every control inside read-only for a Viewer at once
+          (pickers, date buttons, inputs, checkboxes); links still open. */}
+      <fieldset disabled={!canEdit} className={`m-0 flex min-w-0 flex-col border-0 p-0 ${isPeek ? 'mb-6 gap-0.5' : 'mb-10 gap-1'}`}>
         {schema.filter((col) => col.id !== 'title').map((col) => {
           const val = properties[col.id];
           const isEmptyVal = val === undefined || val === null || val === '' || (Array.isArray(val) && val.length === 0);
@@ -585,7 +598,7 @@ const PageEditor = forwardRef<PageEditorHandle, PageEditorProps>(function PageEd
             </div>
           );
         })}
-      </div>
+      </fieldset>
 
       {/* The thread lives in the floating group (U4). Right under the attributes only
           its count stays, as a way to it — in peek too, since a peeked card is often
@@ -619,7 +632,7 @@ const PageEditor = forwardRef<PageEditorHandle, PageEditorProps>(function PageEd
         onCommentCount={setCommentCount}
         reviewSignal={reviewSignal}
         onReviewed={bumpReview}
-        repeat={{
+        repeat={canEdit ? {
           page: {
             id: initialPage.id,
             properties,
@@ -632,7 +645,7 @@ const PageEditor = forwardRef<PageEditorHandle, PageEditorProps>(function PageEd
             router.refresh();
             onSeriesChanged?.();
           },
-        }}
+        } : undefined}
         slot={isPeek ? floatSlot : undefined}
       />
 

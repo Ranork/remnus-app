@@ -325,7 +325,9 @@
     "settings": "Paramètres",
     "earlyAccess": "Accès anticipé",
     "agentsConnectNudge": "Connecter",
-    "duplicateEmpty": "Dupliquer sans les lignes"
+    "duplicateEmpty": "Dupliquer sans les lignes",
+    "viewOnly": "Lecture seule",
+    "viewOnlyHint": "Ici, votre rôle est Spectateur : vous pouvez tout lire, mais rien modifier."
   },
   "WorkspaceSettings": {
     "roleLabel": "Rôle",
@@ -1345,7 +1347,9 @@
     "crashBack": "Retour",
     "viewerCannotWrite": "Votre rôle dans cet espace est en lecture seule : impossible de se connecter avec un accès en écriture.",
     "agentLimitReachedJoin": "Cet espace n’a plus de place d’agent disponible. Demandez au propriétaire d’en libérer une ou de changer de forfait.",
-    "workspaceTooLarge": "Cet espace est trop volumineux pour être copié d'un coup. Copiez-le sans les lignes ou divisez-le d'abord."
+    "workspaceTooLarge": "Cet espace est trop volumineux pour être copié d'un coup. Copiez-le sans les lignes ou divisez-le d'abord.",
+    "viewOnly": "Votre rôle dans cet espace est en lecture seule : vous ne pouvez pas le modifier.",
+    "ownerOnlyAction": "Seul le propriétaire de l'espace peut faire cela."
   },
   "LanguageSwitcher": {
     "label": "Langue"

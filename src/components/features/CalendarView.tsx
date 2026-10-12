@@ -42,6 +42,8 @@ interface CalendarViewProps {
   propertyTextClamp?: 'truncate' | 'wrap';
   onUpdatePageProperties: (pageId: string, properties: Record<string, any>) => void;
   onCreatePage?: (initialProperties?: Record<string, any>) => void;
+  /** A Viewer: cards open, nothing on them changes (no drag, menus with edits, collapse or new). */
+  readOnly?: boolean;
   defaultPageIcon?: string;
   defaultPageIconColor?: string;
   onPageIconChange?: (pageId: string, icon: string | null, iconColor: string | null) => void;
@@ -150,6 +152,7 @@ export default function CalendarView({
   showPropertyLabels = true,
   propertyTextClamp = 'truncate',
   onCreatePage,
+  readOnly = false,
   defaultPageIcon,
   defaultPageIconColor,
   onPageIconChange,
@@ -256,7 +259,8 @@ export default function CalendarView({
       { id: 'delete', label: tPage('deletePage'), icon: Trash2, danger: true, onSelect: () => recurrence.requestDelete(pageId) },
     );
 
-    return items;
+    // A Viewer keeps the ways to open the card and nothing that changes it.
+    return readOnly ? items.slice(0, 3) : items;
   };
 
   const schema = database.schema as any[];
@@ -576,7 +580,7 @@ export default function CalendarView({
                       </span>
                     )}
                     <div className="absolute inset-y-0 right-0 flex items-center gap-0.5 opacity-0 transition-opacity group-hover/day:opacity-100 focus-within:opacity-100">
-                      {dayPages.length > 0 && (
+                      {dayPages.length > 0 && !readOnly && (
                         <button
                           type="button"
                           onClick={() => handleToggleDayCollapsed(dayPages, !allDayCardsCollapsed)}
@@ -587,15 +591,17 @@ export default function CalendarView({
                           {allDayCardsCollapsed ? <ChevronsUpDown size={14} /> : <ChevronsDownUp size={14} />}
                         </button>
                       )}
-                      <button
-                        type="button"
-                        onClick={() => onCreatePage?.({ [dateCol]: dayStr })}
-                        className="flex size-6 items-center justify-center rounded text-fg-3 transition-colors hover:bg-hover hover:text-fg cursor-pointer"
-                        title={t('calendarAddToDay')}
-                        aria-label={t('calendarAddToDay')}
-                      >
-                        <Plus size={14} />
-                      </button>
+                      {onCreatePage && (
+                        <button
+                          type="button"
+                          onClick={() => onCreatePage({ [dateCol]: dayStr })}
+                          className="flex size-6 items-center justify-center rounded text-fg-3 transition-colors hover:bg-hover hover:text-fg cursor-pointer"
+                          title={t('calendarAddToDay')}
+                          aria-label={t('calendarAddToDay')}
+                        >
+                          <Plus size={14} />
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -609,7 +615,7 @@ export default function CalendarView({
                       key={page.id}
                       onClick={() => onCardClick(page.id)}
                       onContextMenu={(e) => cardMenu.open(e, buildCardMenu(page.id))}
-                      draggable={true}
+                      draggable={!readOnly}
                       onDragStart={(e) => {
                         e.stopPropagation();
                         setDraggedCardId(page.id);
@@ -658,7 +664,7 @@ export default function CalendarView({
                           DnD which doesn't fire on touch; the invisible grip also
                           stole taps meant to open the card on mobile). */}
                       <div
-                        className="hidden lg:flex absolute right-1 top-1 z-10 items-center opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100"
+                        className={`${readOnly ? 'hidden' : 'hidden lg:flex'} absolute right-1 top-1 z-10 items-center opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100`}
                         onClick={(e) => e.stopPropagation()}
                       >
                         {/* Collapse/expand — hides the property list, keeping just the title */}
@@ -710,6 +716,8 @@ export default function CalendarView({
                           <button
                             type="button"
                             onClick={(e) => {
+                              // A Viewer: the icon is part of the card's click.
+                              if (readOnly) return;
                               e.preventDefault();
                               e.stopPropagation();
                               activeAnchorRef.current = e.currentTarget;

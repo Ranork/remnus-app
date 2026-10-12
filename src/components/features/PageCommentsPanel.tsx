@@ -12,6 +12,7 @@ import { cn } from '@/lib/cn';
 import { ConfirmDialog } from './ConfirmDialog';
 import { UserAvatar } from './PropertyTags';
 import AgentMark from './agents/AgentMark';
+import { useCanEdit } from '@/components/providers/WorkspaceRoleContext';
 
 type CommentsData = NonNullable<PagePanels['comments']>;
 
@@ -127,6 +128,8 @@ export default function CommentsThread({
 }) {
   const t = useTranslations('Comments');
   const locale = useLocale();
+  // A Viewer reads the thread; posting and deleting are edits.
+  const canEdit = useCanEdit(workspaceId);
   const [comments, setComments] = useState<CommentRow[] | null>(() => initial?.comments ?? null);
   const [viewer, setViewer] = useState<{ id: string; name: string | null; image: string | null; isOwner: boolean } | null>(
     () => (initial ? { id: initial.viewerUserId, name: initial.viewerName, image: initial.viewerImage, isOwner: initial.isOwner } : null),
@@ -213,7 +216,7 @@ export default function CommentsThread({
           ) : (
             <ol className="space-y-4">
               {comments.map((c) => {
-                const canDelete = c.authorUserId === viewer?.id || viewer?.isOwner;
+                const canDelete = canEdit && (c.authorUserId === viewer?.id || viewer?.isOwner);
                 const isAgent = c.authorKind === 'agent';
                 const created = new Date(c.createdAt);
                 return (
@@ -255,7 +258,7 @@ export default function CommentsThread({
             </ol>
           )}
 
-          <div className="mt-4 flex items-start gap-3">
+          {canEdit && <div className="mt-4 flex items-start gap-3">
             <div className="flex h-9 shrink-0 items-center">
               <UserAvatar member={viewer ? { id: viewer.id, name: viewer.name, email: null, image: viewer.image } : undefined} size={avatarSize} />
             </div>
@@ -301,7 +304,7 @@ export default function CommentsThread({
                 </button>
               )}
             </div>
-          </div>
+          </div>}
         </>
       )}
 

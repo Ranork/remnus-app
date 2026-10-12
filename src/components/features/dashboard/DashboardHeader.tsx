@@ -10,6 +10,8 @@ import { updateWorkspaceItemIcon, updateWorkspaceItemTitle, deleteWorkspaceItem 
 import { ConfirmDialog } from '@/components/features/ConfirmDialog';
 import { Button } from '@/components/ui/button';
 import { DashboardWidthButton } from './DashboardWidth';
+import { useCanEdit } from '@/components/providers/WorkspaceRoleContext';
+import ViewOnlyBadge from '@/components/features/ViewOnlyBadge';
 
 /**
  * Icon + editable title for a dashboard, mirroring `StandalonePageEditor`'s
@@ -41,6 +43,8 @@ export default function DashboardHeader({
   const t = useTranslations('Dashboard');
   const tPage = useTranslations('Page');
   const router = useRouter();
+  // A Viewer reads: no rename, icon or delete.
+  const canEdit = useCanEdit(workspaceId);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const [title, setTitle] = useState(initialTitle);
   const [icon, setIcon] = useState(initialIcon);
@@ -51,13 +55,13 @@ export default function DashboardHeader({
 
   // Debounced save, same shape as the page editor's title save.
   useEffect(() => {
-    if (title === savedTitle.current) return;
+    if (title === savedTitle.current || !canEdit) return;
     const timer = setTimeout(() => {
       updateWorkspaceItemTitle(itemId, title);
       savedTitle.current = title;
     }, 600);
     return () => clearTimeout(timer);
-  }, [title, itemId]);
+  }, [title, itemId, canEdit]);
 
   // A rename made elsewhere (an agent, another tab) arrives in `initialTitle` on the next
   // refresh; adopt it unless a local edit is still waiting for the save above.
@@ -87,8 +91,9 @@ export default function DashboardHeader({
         <button
           ref={iconButtonRef}
           onClick={() => setShowIconPicker(!showIconPicker)}
-          className="flex shrink-0 cursor-pointer items-center justify-center rounded-control p-1 transition-colors duration-150 hover:bg-hover"
-          title={icon ? tPage('changeIcon') : tPage('addIcon')}
+          disabled={!canEdit}
+          className="flex shrink-0 cursor-pointer items-center justify-center rounded-control p-1 transition-colors duration-150 hover:bg-hover disabled:cursor-default disabled:hover:bg-transparent"
+          title={canEdit ? (icon ? tPage('changeIcon') : tPage('addIcon')) : undefined}
         >
           <PageIcon icon={icon} iconColor={iconColor} size={compact ? 18 : 34} fallbackType="dashboard" />
         </button>
@@ -108,6 +113,7 @@ export default function DashboardHeader({
           type="text"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
+          readOnly={!canEdit}
           placeholder={t('untitled')}
           aria-label={t('renameDashboard')}
           className={
@@ -119,9 +125,10 @@ export default function DashboardHeader({
         {!compact && <p className="text-xs text-fg-4">{t('blockCount', { count: blockCount })}</p>}
       </div>
 
+      {!canEdit && <ViewOnlyBadge className="shrink-0" />}
       <DashboardWidthButton compact={compact} />
 
-      {isHome && (
+      {isHome && canEdit && (
         <Button
           variant="ghost"
           size={compact ? 'icon-sm' : 'icon'}

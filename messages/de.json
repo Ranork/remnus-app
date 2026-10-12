@@ -325,7 +325,9 @@
     "settings": "Einstellungen",
     "earlyAccess": "Früher Zugang",
     "agentsConnectNudge": "Verbinden",
-    "duplicateEmpty": "Ohne Zeilen duplizieren"
+    "duplicateEmpty": "Ohne Zeilen duplizieren",
+    "viewOnly": "Nur lesen",
+    "viewOnlyHint": "Ihre Rolle hier ist Betrachter: Sie können alles lesen, aber nichts ändern."
   },
   "WorkspaceSettings": {
     "roleLabel": "Rolle",
@@ -1345,7 +1347,9 @@
     "crashBack": "Zurück",
     "viewerCannotWrite": "Ihre Rolle in diesem Workspace ist reines Lesen, daher ist keine Verbindung mit Schreibzugriff möglich.",
     "agentLimitReachedJoin": "In diesem Workspace ist kein Agentenplatz mehr frei. Bitten Sie den Inhaber, einen freizugeben oder den Tarif zu erweitern.",
-    "workspaceTooLarge": "Dieser Arbeitsbereich ist zu groß, um ihn in einem Schritt zu kopieren. Kopieren Sie ihn ohne Zeilen oder teilen Sie ihn zuerst auf."
+    "workspaceTooLarge": "Dieser Arbeitsbereich ist zu groß, um ihn in einem Schritt zu kopieren. Kopieren Sie ihn ohne Zeilen oder teilen Sie ihn zuerst auf.",
+    "viewOnly": "Ihre Rolle in diesem Workspace ist reines Lesen, daher können Sie nichts ändern.",
+    "ownerOnlyAction": "Das kann nur der Eigentümer des Workspace."
   },
   "LanguageSwitcher": {
     "label": "Sprache"

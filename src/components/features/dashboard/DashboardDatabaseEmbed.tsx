@@ -10,6 +10,7 @@ import { EmptyState } from '@/components/ui/empty-state';
 import { Rows3 } from 'lucide-react';
 import { deletePage, duplicatePage, updatePageProperties } from '@/lib/actions/page';
 import { getCardAppearance, type CardAccentSide, type CardMarkStyle, type DatabaseView, type ViewFilter, type ViewSort } from '@/lib/types/views';
+import { useCanEdit } from '@/components/providers/WorkspaceRoleContext';
 
 /**
  * The `database_embed` block — the real `TableLayout` / `KanbanBoard`, not a
@@ -34,13 +35,17 @@ export default function DashboardDatabaseEmbed({
   view,
   rows,
   members,
+  workspaceId,
 }: {
   database: { id: string; name: string; schema: unknown[] };
   view: DatabaseView;
   rows: Record<string, unknown>[];
   members: WorkspaceMember[];
+  /** The dashboard's workspace (its databases live there too): a Viewer gets a read-only table. */
+  workspaceId: string;
 }) {
   const t = useTranslations('Dashboard');
+  const readOnly = !useCanEdit(workspaceId);
   const router = useRouter();
   const [, startTransition] = useTransition();
   const [localRows, setLocalRows] = useState(rows);
@@ -122,6 +127,7 @@ export default function DashboardDatabaseEmbed({
           showPropertyLabels={config.showPropertyLabels ?? true}
           cardAppearance={getCardAppearance(config)}
           onUpdatePageProperties={patchProperties}
+          readOnly={readOnly}
         />
       );
     }
@@ -150,10 +156,11 @@ export default function DashboardDatabaseEmbed({
         onToggleHideColumn={toggleHideColumn}
         disableRowDrag
         showToggleColumnsButton={false}
+        readOnly={readOnly}
       />
     );
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [localRows, columnOrder, hiddenColumns, filters, sorts, groupOrder, config, database]);
+  }, [localRows, columnOrder, hiddenColumns, filters, sorts, groupOrder, config, database, readOnly]);
 
   if (!localRows.length) {
     return <EmptyState size="sm" icon={<Rows3 />} title={t('noRows')} />;

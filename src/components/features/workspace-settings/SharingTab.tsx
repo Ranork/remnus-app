@@ -16,6 +16,8 @@ import { SettingsPage, SettingsSection } from '@/components/ui/settings';
 interface Props {
   workspaceId: string;
   isAdmin: boolean;
+  /** Not a Viewer here: revoking a link is an edit. */
+  canEdit: boolean;
   onNavigateToMembers?: () => void;
 }
 
@@ -24,7 +26,7 @@ function shareUrl(slug: string) {
   return `${window.location.origin}/share/${slug}`;
 }
 
-export default function SharingTab({ workspaceId, isAdmin, onNavigateToMembers }: Props) {
+export default function SharingTab({ workspaceId, isAdmin, canEdit, onNavigateToMembers }: Props) {
   const t = useTranslations('Sharing');
   const locale = useLocale();
   const dateFormat = new Intl.DateTimeFormat(locale, { day: 'numeric', month: 'short', year: 'numeric' });
@@ -108,17 +110,19 @@ export default function SharingTab({ workspaceId, isAdmin, onNavigateToMembers }
                     {copiedId === share.id ? <Check /> : <Copy />}
                     {copiedId === share.id ? t('linkCopied') : t('copyLink')}
                   </Button>
-                  <Tooltip content={t('revokeShare')}>
-                    <Button
-                      size="icon-sm"
-                      variant="ghost"
-                      onClick={() => handleRevoke(share)}
-                      aria-label={t('revokeShare')}
-                      className="hover:text-red-400"
-                    >
-                      <Trash2 />
-                    </Button>
-                  </Tooltip>
+                  {canEdit && (
+                    <Tooltip content={t('revokeShare')}>
+                      <Button
+                        size="icon-sm"
+                        variant="ghost"
+                        onClick={() => handleRevoke(share)}
+                        aria-label={t('revokeShare')}
+                        className="hover:text-red-400"
+                      >
+                        <Trash2 />
+                      </Button>
+                    </Tooltip>
+                  )}
                 </div>
               </li>
             ))}

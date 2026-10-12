@@ -62,12 +62,16 @@ export async function POST(req: NextRequest) {
   }
   if (requestedWorkspaceId) {
     const member = await db
-      .select({ id: workspaceMembers.id })
+      .select({ id: workspaceMembers.id, role: workspaceMembers.role })
       .from(workspaceMembers)
       .where(and(eq(workspaceMembers.workspaceId, requestedWorkspaceId), eq(workspaceMembers.userId, user.id)))
       .limit(1);
     if (!member.length) {
       return NextResponse.json({ error: 'Forbidden workspace' }, { status: 403 });
+    }
+    // A viewer cannot change the workspace, so a file for it would have nowhere to go.
+    if (member[0].role === 'viewer') {
+      return NextResponse.json({ error: 'View-only workspace' }, { status: 403 });
     }
   }
   const workspaceId = requestedWorkspaceId;

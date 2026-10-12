@@ -16,6 +16,7 @@ import {
   type DashboardPatch,
 } from '@/lib/services/dashboards';
 import { composeHomeDashboardBlocks } from '@/lib/services/homeDashboard';
+import { roleAllows, roleRefusal, type WorkspaceNeed } from '@/lib/auth/workspaceRole';
 
 /**
  * Session-aware actions for dashboard items. The cookie-free half (spec
@@ -28,14 +29,14 @@ import { composeHomeDashboardBlocks } from '@/lib/services/homeDashboard';
  * (AGENTS.md -> Project Install §4).
  */
 
-async function assertWorkspaceAccess(workspaceId: string): Promise<string> {
+async function assertWorkspaceAccess(workspaceId: string, need: WorkspaceNeed = 'read'): Promise<string> {
   const user = await getCurrentUserAllowingWorkspaceLock();
   // Project windows are confined to their workspace — checked before any admin shortcut.
   await assertWorkspaceLockAllows(user, workspaceId);
   if (user.role === 'admin') return user.id;
 
   const [member] = await db
-    .select({ id: workspaceMembers.id })
+    .select({ id: workspaceMembers.id, role: workspaceMembers.role })
     .from(workspaceMembers)
     .where(and(eq(workspaceMembers.workspaceId, workspaceId), eq(workspaceMembers.userId, user.id)))
     .limit(1);
@@ -44,6 +45,8 @@ async function assertWorkspaceAccess(workspaceId: string): Promise<string> {
     const t = await getTranslations('Errors');
     throw new Error(t('unauthorized'));
   }
+  // A viewer reads; changing anything needs a member.
+  if (!roleAllows(member.role, need)) throw await roleRefusal(need);
   return user.id;
 }
 
@@ -65,7 +68,7 @@ export async function createDashboard(
   parentId?: string,
   options?: { spec?: unknown; icon?: string | null; iconColor?: string | null },
 ) {
-  await assertWorkspaceAccess(workspaceId);
+  await assertWorkspaceAccess(workspaceId, 'edit');
 
   const validated = options?.spec === undefined ? { ok: true as const, spec: EMPTY_DASHBOARD_SPEC } : validateDashboardSpec(options.spec);
   if (!validated.ok) throw new Error(`Invalid dashboard spec: ${validated.error}`);
@@ -156,7 +159,7 @@ async function loadSpecForWrite(itemId: string): Promise<{ workspaceId: string; 
     .limit(1);
   if (!item || item.type !== 'dashboard') throw new Error('Dashboard not found');
 
-  await assertWorkspaceAccess(item.workspaceId);
+  await assertWorkspaceAccess(item.workspaceId, 'edit');
 
   const [row] = await db
     .select({ spec: dashboards.spec })
@@ -353,7 +356,7 @@ export async function openOrCreateHomeDashboard(workspaceId: string, title: stri
 
 /** Make an existing dashboard the workspace's home (null clears it). */
 export async function setWorkspaceHomeDashboard(workspaceId: string, itemId: string | null): Promise<{ ok: boolean; error?: string }> {
-  await assertWorkspaceAccess(workspaceId);
+  await assertWorkspaceAccess(workspaceId, 'edit');
   try {
     await setHomeDashboard(workspaceId, itemId);
   } catch (err) {

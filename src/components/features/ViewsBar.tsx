@@ -27,6 +27,8 @@ interface ViewsBarProps {
   onDuplicate: (id: string) => void;
   onReorder: (views: DatabaseView[]) => void;
   onUpdateIcon?: (id: string, icon: string | null, color: string | null) => void;
+  /** A Viewer switches between the views but does not add, rename, re-icon, reorder or delete them. */
+  readOnly?: boolean;
 }
 
 const VIEW_TYPES = [
@@ -57,6 +59,7 @@ export default function ViewsBar({
   onDuplicate,
   onReorder,
   onUpdateIcon,
+  readOnly = false,
 }: ViewsBarProps) {
   const t = useTranslations('Database');
   const tWs = useTranslations('Workspace');
@@ -161,16 +164,18 @@ export default function ViewsBar({
             ))}
           </DropdownMenuContent>
         </DropdownMenu>
-        <DropdownMenu>
-          <DropdownMenuTrigger
-            className={buttonVariants({ variant: 'ghost', size: 'icon-sm' })}
-            aria-label={t('addView')}
-            title={t('addView')}
-          >
-            <Plus />
-          </DropdownMenuTrigger>
-          <DropdownMenuContent>{addViewItems}</DropdownMenuContent>
-        </DropdownMenu>
+        {!readOnly && (
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              className={buttonVariants({ variant: 'ghost', size: 'icon-sm' })}
+              aria-label={t('addView')}
+              title={t('addView')}
+            >
+              <Plus />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>{addViewItems}</DropdownMenuContent>
+          </DropdownMenu>
+        )}
       </div>
     )}
 
@@ -190,12 +195,13 @@ export default function ViewsBar({
             <div
               key={view.id}
               className={cn(
-                'relative flex shrink-0 cursor-grab active:cursor-grabbing',
+                'relative flex shrink-0',
+                !readOnly && 'cursor-grab active:cursor-grabbing',
                 draggedViewId === view.id && 'opacity-25',
                 // Drop line (signal) on the tab the dragged one would land before.
                 dragOverViewId === view.id && 'before:absolute before:inset-y-2 before:-left-0.5 before:w-0.5 before:rounded-full before:bg-signal',
               )}
-              draggable={!isRenaming}
+              draggable={!isRenaming && !readOnly}
               onDragStart={(e) => handleDragStart(e, view.id)}
               onDragOver={(e) => handleDragOver(e, view.id)}
               onDragLeave={() => handleDragLeave(view.id)}
@@ -206,22 +212,22 @@ export default function ViewsBar({
                 value={view.id}
                 ref={(el: HTMLButtonElement | null) => { viewRefs.current[view.id] = el; }}
                 onClick={(e) => {
-                  if (!isActive || isRenaming) return;
+                  if (!isActive || isRenaming || readOnly) return;
                   const last = lastMenuCloseRef.current;
                   if (last && last.id === view.id && Date.now() - last.at < 400) return;
                   setMenuView({ id: view.id, anchor: e.currentTarget });
                 }}
-                aria-haspopup={isActive ? 'menu' : undefined}
+                aria-haspopup={isActive && !readOnly ? 'menu' : undefined}
                 className={cn('h-10', isRenaming && 'invisible')}
               >
                 <span
                   onClick={(e) => {
-                    if (!isActive) return;
+                    if (!isActive || readOnly) return;
                     e.stopPropagation();
                     setActiveIconPickerViewId(view.id);
                   }}
-                  className="flex items-center justify-center rounded p-0.5 transition-colors hover:bg-hover"
-                  title={isActive ? t('changeIcon') : undefined}
+                  className={cn('flex items-center justify-center rounded p-0.5 transition-colors', !readOnly && 'hover:bg-hover')}
+                  title={isActive && !readOnly ? t('changeIcon') : undefined}
                 >
                   <ViewIcon view={view} />
                 </span>
@@ -261,16 +267,18 @@ export default function ViewsBar({
         })}
       </TabsList>
 
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          className={cn(buttonVariants({ variant: 'ghost', size: 'icon-sm' }), 'ml-1')}
-          aria-label={t('addView')}
-          title={t('addView')}
-        >
-          <Plus />
-        </DropdownMenuTrigger>
-        <DropdownMenuContent>{addViewItems}</DropdownMenuContent>
-      </DropdownMenu>
+      {!readOnly && (
+        <DropdownMenu>
+          <DropdownMenuTrigger
+            className={cn(buttonVariants({ variant: 'ghost', size: 'icon-sm' }), 'ml-1')}
+            aria-label={t('addView')}
+            title={t('addView')}
+          >
+            <Plus />
+          </DropdownMenuTrigger>
+          <DropdownMenuContent>{addViewItems}</DropdownMenuContent>
+        </DropdownMenu>
+      )}
     </Tabs>
 
     <DropdownMenu

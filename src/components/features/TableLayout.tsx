@@ -87,6 +87,7 @@ export default function TableLayout({
   disableRowDrag = false,
   showToggleColumnsButton = true,
   selection,
+  readOnly = false,
 }: {
   database: any;
   onSchemaChange?: (schema: any[]) => void;
@@ -118,6 +119,8 @@ export default function TableLayout({
   showToggleColumnsButton?: boolean;
   /** While rows are being picked (bulk delete / move), a click on a row selects it instead of opening it. */
   selection?: { selecting: boolean; selectedIds: ReadonlySet<string> };
+  /** A Viewer: rows open, cells do not edit, rows do not drag, the row menu has no edits. */
+  readOnly?: boolean;
 }) {
   const t = useTranslations('Database');
   const tPage = useTranslations('Page');
@@ -157,9 +160,11 @@ export default function TableLayout({
     { id: 'open', label: t('open'), icon: ArrowUpRight, onSelect: () => onRowClick(pageId) },
     { id: 'open-full', label: t('openInFullPage'), icon: Maximize2, onSelect: () => router.push(`/db/${database.id}/${pageId}`) },
     { id: 'copy-link', label: t('copyLink'), icon: Link2, onSelect: () => { navigator.clipboard?.writeText(`${window.location.origin}/db/${database.id}/${pageId}`); } },
-    { kind: 'separator' },
-    { id: 'duplicate', label: t('duplicatePage'), icon: Copy, onSelect: () => onDuplicatePage(pageId) },
-    { id: 'delete', label: tPage('deletePage'), icon: Trash2, danger: true, onSelect: () => requestDelete(pageId) },
+    ...(readOnly ? [] : [
+      { kind: 'separator' } as MenuItem,
+      { id: 'duplicate', label: t('duplicatePage'), icon: Copy, onSelect: () => onDuplicatePage(pageId) } as MenuItem,
+      { id: 'delete', label: tPage('deletePage'), icon: Trash2, danger: true, onSelect: () => requestDelete(pageId) } as MenuItem,
+    ]),
   ];
 
   useEffect(() => {
@@ -378,7 +383,7 @@ export default function TableLayout({
 
   // ── Row drag (initiated only from grip button) ─────────────────────────────
   const handleGripDragStart = (e: React.DragEvent, pageId: string) => {
-    if (hasSorts || disableRowDrag) { e.preventDefault(); return; }
+    if (hasSorts || disableRowDrag || readOnly) { e.preventDefault(); return; }
     const rowEl = rowRefs.current.get(pageId);
     if (rowEl) e.dataTransfer.setDragImage(rowEl, 24, rowEl.offsetHeight / 2);
     setDraggedRowId(pageId);
@@ -613,6 +618,7 @@ export default function TableLayout({
                     isCoarsePointer={isCoarsePointer}
                     selecting={selection?.selecting ?? false}
                     selected={selection?.selectedIds.has(page.id) ?? false}
+                    readOnly={readOnly}
                     locale={locale}
                     defaultPageIcon={defaultPageIcon}
                     defaultPageIconColor={defaultPageIconColor}
@@ -666,7 +672,7 @@ export default function TableLayout({
         >
           <button
             type="button"
-            draggable={!hasSorts && !disableRowDrag}
+            draggable={!hasSorts && !disableRowDrag && !readOnly}
             onDragStart={(e) => {
               e.stopPropagation();
               if (hoveredPageId) handleGripDragStart(e, hoveredPageId);
@@ -871,6 +877,8 @@ type TableRowProps = {
   /** Bulk-select mode: the whole row toggles `selected`; cells do not edit in place. */
   selecting: boolean;
   selected: boolean;
+  /** A Viewer: the row opens on click, nothing in it edits. */
+  readOnly: boolean;
   locale: string;
   defaultPageIcon?: string;
   defaultPageIconColor?: string;
@@ -909,6 +917,7 @@ function sameRowProps(a: TableRowProps, b: TableRowProps): boolean {
     a.isCoarsePointer === b.isCoarsePointer &&
     a.selecting === b.selecting &&
     a.selected === b.selected &&
+    a.readOnly === b.readOnly &&
     a.locale === b.locale &&
     a.defaultPageIcon === b.defaultPageIcon &&
     a.defaultPageIconColor === b.defaultPageIconColor &&
@@ -930,6 +939,7 @@ const TableRow = memo(function TableRow({
   isCoarsePointer,
   selecting,
   selected,
+  readOnly,
   locale,
   defaultPageIcon,
   defaultPageIconColor,
@@ -972,7 +982,7 @@ const TableRow = memo(function TableRow({
           // Touch: let the click bubble to the row → opens the peek modal.
           // `id` columns show the row's real (immutable) primary key — never editable.
           // Picking rows: every cell is part of the row's click, none edits in place.
-          if (selecting || col.id === 'title' || col.type === 'id' || isCoarsePointer) return;
+          if (selecting || readOnly || col.id === 'title' || col.type === 'id' || isCoarsePointer) return;
           e.stopPropagation();
           // A checkbox needs no editor: the cell is the toggle.
           if (col.type === 'checkbox') {
@@ -1013,8 +1023,8 @@ const TableRow = memo(function TableRow({
                     type="button"
                     ref={iconButtonRef}
                     onClick={(e) => {
-                      // Picking rows: the icon is just part of the row.
-                      if (selecting) return;
+                      // Picking rows or viewing only: the icon is just part of the row.
+                      if (selecting || readOnly) return;
                       e.preventDefault();
                       e.stopPropagation();
                       actions.toggleIconPicker(page.id);
@@ -1044,8 +1054,8 @@ const TableRow = memo(function TableRow({
                 <span
                   onClick={(e) => {
                     // Touch: don't rename — let it bubble to the row → peek modal.
-                    // Picking rows: no rename either, the click selects the row.
-                    if (isCoarsePointer || selecting) return;
+                    // Picking rows or viewing only: no rename, the click selects / opens the row.
+                    if (isCoarsePointer || selecting || readOnly) return;
                     e.stopPropagation();
                     actions.editCell(page.id, col.id);
                   }}

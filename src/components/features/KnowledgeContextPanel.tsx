@@ -8,6 +8,7 @@ import type { KnowledgeCorpusItem, KnowledgeStatus } from '@/lib/services/knowle
 import { Button } from '@/components/ui/button';
 import { Input, Textarea } from '@/components/ui/input';
 import { SimpleSelect } from '@/components/ui/select';
+import { useCanEdit } from '@/components/providers/WorkspaceRoleContext';
 
 const EMPTY_FORM = { conceptType: '', description: '', tags: '', sources: '', status: 'draft' as KnowledgeStatus, staleAfter: '' };
 
@@ -49,6 +50,8 @@ export default function KnowledgeForm({
   onChange?: (value: KnowledgeCorpusItem) => void;
 }) {
   const t = useTranslations('Page');
+  // A Viewer sees the metadata; saving and reviewing are edits.
+  const canEdit = useCanEdit(workspaceId);
   const [knowledge, setKnowledge] = useState<KnowledgeCorpusItem | null>(() => initial ?? null);
   const [form, setForm] = useState(() => (initial ? formFor(initial) : EMPTY_FORM));
   const [busy, setBusy] = useState<'load' | 'save' | 'review' | null>(() => (initial && refreshKey === 0 ? null : 'load'));
@@ -115,7 +118,7 @@ export default function KnowledgeForm({
     <div className="space-y-4">
         <p className="text-xs leading-relaxed text-fg-3">{t('knowledgeHint')}</p>
         {busy === 'load' ? <Loader2 size={14} className="animate-spin text-fg-4" aria-hidden /> : (
-          <>
+          <fieldset disabled={!canEdit} className="m-0 min-w-0 space-y-4 border-0 p-0">
             <div className="grid gap-3 sm:grid-cols-2">
               <label className={labelCls}>
                 <span>{t('knowledgeType')}</span>
@@ -132,6 +135,7 @@ export default function KnowledgeForm({
                     { value: 'deprecated', label: t('knowledgeStatusDeprecated') },
                   ]}
                   aria-label={t('knowledgeStatus')}
+                  disabled={!canEdit}
                   size="sm"
                   className="w-full"
                 />
@@ -156,16 +160,20 @@ export default function KnowledgeForm({
               <Textarea value={form.sources} onChange={event => setForm(current => ({ ...current, sources: event.target.value }))} rows={2} placeholder={t('knowledgeSourcesHint')} className="min-h-16 font-mono text-xs" />
             </label>
             <div className="flex flex-wrap items-center gap-2">
-              <Button variant="primary" size="sm" onClick={save} loading={busy === 'save'} disabled={!!busy}>
-                <Check />{t('knowledgeSave')}
-              </Button>
-              <Button variant="outline" size="sm" onClick={review} loading={busy === 'review'} disabled={!!busy}>
-                <ShieldCheck />{t('knowledgeReview')}
-              </Button>
+              {canEdit && (
+                <>
+                  <Button variant="primary" size="sm" onClick={save} loading={busy === 'save'} disabled={!!busy}>
+                    <Check />{t('knowledgeSave')}
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={review} loading={busy === 'review'} disabled={!!busy}>
+                    <ShieldCheck />{t('knowledgeReview')}
+                  </Button>
+                </>
+              )}
               <span role="status" className="text-xs text-fg-3">{message || trustLabel}</span>
             </div>
-            <p className="text-xs leading-relaxed text-fg-3">{t('knowledgeReviewHint')}</p>
-          </>
+            {canEdit && <p className="text-xs leading-relaxed text-fg-3">{t('knowledgeReviewHint')}</p>}
+          </fieldset>
         )}
     </div>
   );

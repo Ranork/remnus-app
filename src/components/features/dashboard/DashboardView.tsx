@@ -94,7 +94,7 @@ export default async function DashboardView({
       )}
 
       {blocks.length === 0 && !resolved.fatal ? (
-        <EmptyDashboard itemId={item.id} />
+        <EmptyDashboard itemId={item.id} workspaceId={item.workspaceId} />
       ) : (
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {blocks.map((entry, index) => {
@@ -104,6 +104,7 @@ export default async function DashboardView({
             const actions = id && (
               <DashboardBlockActions
                 itemId={item.id}
+                workspaceId={item.workspaceId}
                 blockId={id}
                 block={entry.kind === 'invalid' ? undefined : entry.block}
                 canMoveUp={index > 0}
@@ -120,7 +121,7 @@ export default async function DashboardView({
                   className={`group/block relative min-w-0 ${span} ${isHeader ? 'mb-3 pb-2' : ''}`}
                 >
                   <div className="absolute right-2 top-2 z-10">{actions}</div>
-                  <BlockBody entry={entry} members={members} />
+                  <BlockBody entry={entry} members={members} workspaceId={item.workspaceId} />
                 </section>
               );
             }
@@ -140,7 +141,7 @@ export default async function DashboardView({
                   <div className="absolute right-2 top-2 z-10">{actions}</div>
                 )}
                 <div className="flex min-w-0 flex-1 flex-col">
-                  <BlockBody entry={entry} members={members} />
+                  <BlockBody entry={entry} members={members} workspaceId={item.workspaceId} />
                 </div>
               </section>
             );
@@ -151,14 +152,14 @@ export default async function DashboardView({
       {(blocks.length > 0 || resolved.fatal) && (
         <div className="mt-6 flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t border-line pt-4">
           <p className="text-xs leading-relaxed text-fg-4">{t('agentEditedNote')}</p>
-          <DashboardAddBlock itemId={item.id} />
+          <DashboardAddBlock itemId={item.id} workspaceId={item.workspaceId} />
         </div>
       )}
     </DashboardWidthFrame>
   );
 }
 
-async function BlockBody({ entry, members }: { entry: ResolvedBlock; members: WorkspaceMember[] }) {
+async function BlockBody({ entry, members, workspaceId }: { entry: ResolvedBlock; members: WorkspaceMember[]; workspaceId: string }) {
   switch (entry.kind) {
     case 'invalid':
       return <BlockInvalid id={entry.id} error={entry.error} />;
@@ -181,16 +182,18 @@ async function BlockBody({ entry, members }: { entry: ResolvedBlock; members: Wo
     case 'savings':
       return <AgentSavingsCard variant="dashboard" metrics={entry.metrics} />;
     case 'database_embed':
-      return <DatabaseEmbedBody entry={entry} members={members} />;
+      return <DatabaseEmbedBody entry={entry} members={members} workspaceId={workspaceId} />;
   }
 }
 
 async function DatabaseEmbedBody({
   entry,
   members,
+  workspaceId,
 }: {
   entry: Extract<ResolvedBlock, { kind: 'database_embed' }>;
   members: WorkspaceMember[];
+  workspaceId: string;
 }) {
   const t = await getTranslations('Dashboard');
   return (
@@ -200,6 +203,7 @@ async function DatabaseEmbedBody({
         view={entry.view}
         rows={entry.rows as unknown as Record<string, unknown>[]}
         members={members}
+        workspaceId={workspaceId}
       />
       {entry.truncated > 0 && (
         <p className="pt-2 text-xs text-fg-3">{t('andMore', { count: entry.truncated })}</p>
@@ -208,12 +212,12 @@ async function DatabaseEmbedBody({
   );
 }
 
-async function EmptyDashboard({ itemId }: { itemId: string }) {
+async function EmptyDashboard({ itemId, workspaceId }: { itemId: string; workspaceId: string }) {
   const t = await getTranslations('Dashboard');
   return (
     <div className="rounded-surface bg-raised shadow-sheet lg:bg-sheet">
       <EmptyState icon={<LayoutDashboard />} title={t('emptyTitle')} description={t('emptyBody')}>
-        <DashboardAddBlock itemId={itemId} prominent />
+        <DashboardAddBlock itemId={itemId} workspaceId={workspaceId} prominent />
       </EmptyState>
     </div>
   );

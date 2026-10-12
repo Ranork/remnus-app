@@ -15,6 +15,7 @@
     "test:agent-access": "npx tsx src/scripts/test-agent-access.ts",
     "test:workspace-deletion": "npx tsx src/scripts/test-workspace-deletion.ts",
     "test:workspace-duplicate": "npx tsx src/scripts/test-workspace-duplicate.ts",
+    "test:item-duplicate": "npx tsx src/scripts/test-item-duplicate.ts",
     "test:bulk-contract": "npx tsx src/scripts/test-bulk-contract.ts",
     "test:mcp-agent-contract": "npx tsx src/scripts/test-mcp-agent-contract.ts",
     "test:oauth-refresh": "npx tsx src/scripts/test-oauth-refresh.ts",

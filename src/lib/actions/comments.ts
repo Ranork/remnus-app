@@ -13,8 +13,9 @@ import {
   type CommentRow,
 } from '@/lib/services/comments';
 import { getAnyPageById } from '@/lib/services/workspace';
+import { roleAllows, roleRefusal, type WorkspaceNeed } from '@/lib/auth/workspaceRole';
 
-async function assertWorkspaceAccess(workspaceId: string): Promise<{ userId: string; isOwner: boolean }> {
+async function assertWorkspaceAccess(workspaceId: string, need: WorkspaceNeed = 'read'): Promise<{ userId: string; isOwner: boolean }> {
   const user = await getCurrentUserAllowingWorkspaceLock();
   // Project windows are confined to their workspace — checked before any admin shortcut.
   await assertWorkspaceLockAllows(user, workspaceId);
@@ -30,6 +31,8 @@ async function assertWorkspaceAccess(workspaceId: string): Promise<{ userId: str
     const t = await getTranslations('Errors');
     throw new Error(t('unauthorized'));
   }
+  // A viewer reads; changing anything needs a member.
+  if (!roleAllows(member.role, need)) throw await roleRefusal(need);
   return { userId: user.id, isOwner: member.role === 'owner' };
 }
 
@@ -55,7 +58,7 @@ export async function addComment(
   body: string,
   kind: CommentKind = 'note',
 ) {
-  const { userId } = await assertWorkspaceAccess(workspaceId);
+  const { userId } = await assertWorkspaceAccess(workspaceId, 'edit');
   const user = await getCurrentUserAllowingWorkspaceLock();
   const authorLabel = user.name || user.email || 'Someone';
 
@@ -72,6 +75,6 @@ export async function addComment(
 }
 
 export async function deleteComment(workspaceId: string, commentId: string) {
-  const { userId, isOwner } = await assertWorkspaceAccess(workspaceId);
+  const { userId, isOwner } = await assertWorkspaceAccess(workspaceId, 'edit');
   return deletePageComment(workspaceId, commentId, userId, isOwner);
 }

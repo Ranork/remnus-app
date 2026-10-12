@@ -14,6 +14,8 @@ import { Field, SettingsPage, SettingsSection } from '@/components/ui/settings';
 interface PortabilityTabProps {
   workspaceId: string;
   workspaceName: string;
+  /** The context policy is the owner's to change; everyone else sees it. */
+  canManage: boolean;
 }
 
 interface ExportResult {
@@ -43,7 +45,7 @@ function safeDownloadName(workspaceName: string): string {
   return `${base}-okf.zip`;
 }
 
-export default function PortabilityTab({ workspaceId, workspaceName }: PortabilityTabProps) {
+export default function PortabilityTab({ workspaceId, workspaceName, canManage }: PortabilityTabProps) {
   const t = useTranslations('WorkspaceSettings');
   const locale = useLocale();
   const [isExporting, setIsExporting] = useState(false);
@@ -213,6 +215,7 @@ export default function PortabilityTab({ workspaceId, workspaceName }: Portabili
                 setContextPolicy(current => ({ ...current, mode: mode as ContextPolicy['mode'] }));
               }}
               aria-label={t('contextPolicyTitle')}
+              disabled={!canManage}
               className="grid gap-2 sm:grid-cols-3"
             >
               {(['manual', 'smart', 'strict'] as const).map(mode => (
@@ -241,6 +244,7 @@ export default function PortabilityTab({ workspaceId, workspaceName }: Portabili
                   onValueChange={value => { setPolicySaved(false); setContextPolicy(current => ({ ...current, autoMaxTokens: Number(value) })); }}
                   options={[1000, 2000, 4000, 6000].map(n => ({ value: String(n), label: n.toLocaleString(locale) }))}
                   aria-label={t('contextPolicyBudget')}
+                  disabled={!canManage}
                   className="w-full"
                 />
               </Field>
@@ -254,14 +258,18 @@ export default function PortabilityTab({ workspaceId, workspaceName }: Portabili
                     { value: 'human-reviewed-only', label: t('contextPolicyTrustOnly') },
                   ]}
                   aria-label={t('contextPolicyTrust')}
+                  disabled={!canManage}
                   className="w-full"
                 />
               </Field>
             </div>
+            {!canManage && <p className="text-xs leading-relaxed text-fg-3">{t('ownerOnlyHint')}</p>}
             <div className="flex items-center gap-3">
-              <Button variant="primary" onClick={saveContextPolicy} loading={policyBusy === 'save'}>
-                {t('contextPolicySave')}
-              </Button>
+              {canManage && (
+                <Button variant="primary" onClick={saveContextPolicy} loading={policyBusy === 'save'}>
+                  {t('contextPolicySave')}
+                </Button>
+              )}
               {policySaved && (
                 <span role="status" className="inline-flex items-center gap-1.5 text-xs text-fg-2">
                   <CheckCircle size={14} className="text-green-400" />

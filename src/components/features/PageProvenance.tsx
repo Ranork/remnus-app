@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Tooltip } from '@/components/ui/tooltip';
 import { toast } from '@/components/ui/toast';
 import { cn } from '@/lib/cn';
+import { useCanEdit } from '@/components/providers/WorkspaceRoleContext';
 import { AgentDisc, agentLabel, formatAgo, useServerNow } from './AgentPresence';
 
 /**
@@ -43,6 +44,8 @@ export default function PageProvenanceLine({
   const locale = useLocale();
   const now = useServerNow(provenance.at);
   const [reviewed, setReviewed] = useState(provenance.reviewed);
+  // Recording a review is an edit: a Viewer sees the state, not the button.
+  const canEdit = useCanEdit(workspaceId);
   const [busy, setBusy] = useState(false);
 
   // Each read brings the server's verdict: a new edit clears a review.
@@ -124,11 +127,13 @@ export default function PageProvenanceLine({
               <Shield size={13} aria-hidden />
               {t('provenanceUnreviewed')}
             </span>
-            <Tooltip content={t('provenanceReviewHint')}>
-              <Button variant="outline" size="xs" loading={busy} onClick={review}>
-                {t('provenanceReview')}
-              </Button>
-            </Tooltip>
+            {canEdit && (
+              <Tooltip content={t('provenanceReviewHint')}>
+                <Button variant="outline" size="xs" loading={busy} onClick={review}>
+                  {t('provenanceReview')}
+                </Button>
+              </Tooltip>
+            )}
           </>
         )}
       </span>

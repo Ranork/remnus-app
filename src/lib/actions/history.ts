@@ -9,17 +9,18 @@ import { assertWorkspaceLockAllows } from '@/lib/auth/workspaceLock';
 import { getAnyPageById } from '@/lib/services/workspace';
 import { listContentVersions, restoreContentVersion } from '@/lib/services/snapshots';
 import type { ContentVersion, RestoreVersionResult } from '@/lib/services/snapshots';
+import { roleAllows, roleRefusal, type WorkspaceNeed } from '@/lib/auth/workspaceRole';
 
 export type { ContentVersion, RestoreVersionResult } from '@/lib/services/snapshots';
 
-async function assertWorkspaceAccess(workspaceId: string): Promise<string> {
+async function assertWorkspaceAccess(workspaceId: string, need: WorkspaceNeed = 'read'): Promise<string> {
   const user = await getCurrentUserAllowingWorkspaceLock();
   // Project windows are confined to their workspace — checked before any admin shortcut.
   await assertWorkspaceLockAllows(user, workspaceId);
   if (user.role === 'admin') return user.id;
 
   const [member] = await db
-    .select({ id: workspaceMembers.id })
+    .select({ id: workspaceMembers.id, role: workspaceMembers.role })
     .from(workspaceMembers)
     .where(and(eq(workspaceMembers.workspaceId, workspaceId), eq(workspaceMembers.userId, user.id)))
     .limit(1);
@@ -28,6 +29,8 @@ async function assertWorkspaceAccess(workspaceId: string): Promise<string> {
     const t = await getTranslations('Errors');
     throw new Error(t('unauthorized'));
   }
+  // A viewer reads; changing anything needs a member.
+  if (!roleAllows(member.role, need)) throw await roleRefusal(need);
   return user.id;
 }
 
@@ -41,7 +44,7 @@ export async function getPageHistory(workspaceId: string, pageId: string): Promi
 // (`actions/trash.ts`): an agent reverting a human's edit would defeat the
 // point of the edit. No MCP counterpart exists.
 export async function restoreVersion(workspaceId: string, pageId: string, snapshotId: string): Promise<RestoreVersionResult> {
-  const userId = await assertWorkspaceAccess(workspaceId);
+  const userId = await assertWorkspaceAccess(workspaceId, 'edit');
   const user = await getCurrentUserAllowingWorkspaceLock();
   const result = await restoreContentVersion(workspaceId, pageId, snapshotId, {
     kind: 'human', userId, label: user.name || user.email || 'Someone',

@@ -12,6 +12,7 @@ import { useTranslations, useLocale } from 'next-intl';
 import FlagIcon from './FlagIcon';
 import { AgentsModal, BillingModal, TemplatePickerModal, TrashModal, UserSettingsModal } from './lazyDialogs';
 import { useWhatsNew } from './WhatsNewButton';
+import { useCanEdit } from '@/components/providers/WorkspaceRoleContext';
 
 type WorkspaceType = { id: string; name: string };
 type CurrentUser = {
@@ -136,6 +137,13 @@ export default function MobileNavWrapper({
   const pageMatch = pathname.match(/^\/page\/([^/]+)/);
   const currentDatabaseId = dbMatch?.[1] ?? null;
   const currentPageItemId = pageMatch?.[1] ?? null;
+  // "+" creates in the open database / page, else at the root of the active workspace —
+  // offered only where this user may create (not as a Viewer).
+  const targetWorkspaceId =
+    (currentDatabaseId && items.find((i) => i.databaseId === currentDatabaseId)?.workspaceId)
+    || (currentPageItemId && items.find((i) => i.id === currentPageItemId)?.workspaceId)
+    || activeWorkspace.id;
+  const canCreate = useCanEdit(targetWorkspaceId);
 
   const handleNew = async () => {
     if (currentDatabaseId) {
@@ -349,7 +357,7 @@ export default function MobileNavWrapper({
           <Layers size={22} />
         </button>
 
-        {activeWorkspace.id && (
+        {activeWorkspace.id && canCreate && (
           <button
             onClick={handleNew}
             disabled={isAdding}

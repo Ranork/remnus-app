@@ -153,7 +153,8 @@ export function copiedIcon(icon: string | null, iconColor: string | null): { ico
 
 // ── Chunked inserts ───────────────────────────────────────────────────────────
 
-function chunkBySize<T>(rows: T[], columnsPerRow: number, sizeOf: (row: T) => number): T[][] {
+/** Insert batches under SQLite's bind limit and a soft byte cap (shared with the item copy). */
+export function chunkBySize<T>(rows: T[], columnsPerRow: number, sizeOf: (row: T) => number): T[][] {
   const out: T[][] = [];
   for (const group of chunkRows(rows, columnsPerRow)) {
     let current: T[] = [];
@@ -173,7 +174,7 @@ function chunkBySize<T>(rows: T[], columnsPerRow: number, sizeOf: (row: T) => nu
   return out;
 }
 
-const textSize = (...parts: Array<string | null | undefined>) => parts.reduce((n, p) => n + (p ? p.length : 0), 0);
+export const textSize = (...parts: Array<string | null | undefined>) => parts.reduce((n, p) => n + (p ? p.length : 0), 0);
 
 // ── The copy ──────────────────────────────────────────────────────────────────
 

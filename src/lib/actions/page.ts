@@ -6,7 +6,8 @@ import { revalidatePath } from 'next/cache';
 import { getCurrentUserAllowingWorkspaceLock } from '@/lib/auth/session';
 import { assertWorkspaceLockAllows } from '@/lib/auth/workspaceLock';
 import { deleteWorkspaceItem } from './workspace';
-import { isCloudinaryUrl, deleteCloudinaryImage } from '@/lib/cloudinary';
+import { releaseIcon } from '@/lib/services/iconCleanup';
+import { duplicateRowSubtree } from '@/lib/services/itemDuplicate';
 import { recordDeletionTombstone, bulkMoveRowsToDatabase, RowMoveSchemaError } from '@/lib/services/workspace';
 import { snapshotBeforeDelete, maybeSnapshotContentUpdate } from '@/lib/services/snapshots';
 import { exdateOccurrenceForPage } from '@/lib/services/recurrence';
@@ -16,6 +17,7 @@ import { getPageProvenance } from '@/lib/services/pageProvenance';
 import { coerceRowValues, extractRowContent, assignOptionColors, type DatabaseColumn } from '@/lib/utils/propertyCoercion';
 import { stockStatusDefault } from '@/lib/templates';
 import { BULK_ROWS_PER_CALL } from '@/lib/constants/bulkRows';
+import { roleAllows, roleRefusal, type WorkspaceNeed } from '@/lib/auth/workspaceRole';
 
 const MAX_BULK_ROWS = 500;
 
@@ -31,7 +33,7 @@ function getSchemaDefaults(schema: DatabaseColumn[]): Record<string, any> {
 
 // Verify user has access to the workspace that owns this database.
 // Returns { userId, workspaceId } so callers can emit realtime events.
-async function assertDatabaseAccess(databaseId: string): Promise<{ userId: string; workspaceId: string }> {
+async function assertDatabaseAccess(databaseId: string, need: WorkspaceNeed = 'read'): Promise<{ userId: string; workspaceId: string }> {
   const user = await getCurrentUserAllowingWorkspaceLock();
 
   const [row] = await db
@@ -48,7 +50,7 @@ async function assertDatabaseAccess(databaseId: string): Promise<{ userId: strin
 
   if (user.role !== 'admin') {
     const [member] = await db
-      .select({ id: workspaceMembers.id })
+      .select({ id: workspaceMembers.id, role: workspaceMembers.role })
       .from(workspaceMembers)
       .where(
         and(
@@ -59,6 +61,10 @@ async function assertDatabaseAccess(databaseId: string): Promise<{ userId: strin
       .limit(1);
 
     if (!member) throw new Error('Unauthorized: no access to this database');
+
+    // A viewer reads; changing anything needs a member.
+
+    if (!roleAllows(member.role, need)) throw await roleRefusal(need);
   }
 
   return { userId: user.id, workspaceId: row.workspaceId };
@@ -71,7 +77,7 @@ export async function createPage(
   icon?: string | null,
   iconColor?: string | null
 ) {
-  await assertDatabaseAccess(databaseId);
+  await assertDatabaseAccess(databaseId, 'edit');
 
   const id = crypto.randomUUID();
   const existing = await db.select({ sortOrder: pages.sortOrder }).from(pages).where(eq(pages.databaseId, databaseId));
@@ -145,7 +151,7 @@ export async function updatePageProperties(id: string, properties: any) {
   const page = await db.select().from(pages).where(eq(pages.id, id));
   if (!page[0]) return;
 
-  await assertDatabaseAccess(page[0].databaseId);
+  await assertDatabaseAccess(page[0].databaseId, 'edit');
 
   const title = typeof properties.title === 'string' ? properties.title : page[0].title;
   await db
@@ -205,7 +211,7 @@ export async function updatePageContent(id: string, content: string) {
   const page = await db.select({ databaseId: pages.databaseId, title: pages.title, content: pages.content }).from(pages).where(eq(pages.id, id)).limit(1);
   let workspaceId: string | null = null;
   if (page[0]) {
-    ({ workspaceId } = await assertDatabaseAccess(page[0].databaseId));
+    ({ workspaceId } = await assertDatabaseAccess(page[0].databaseId, 'edit'));
     const user = await getCurrentUserAllowingWorkspaceLock();
     await maybeSnapshotContentUpdate({
       workspaceId, originalId: id, itemType: 'database_row', title: page[0].title,
@@ -219,7 +225,7 @@ export async function updatePageContent(id: string, content: string) {
 }
 
 export async function deletePage(id: string, databaseId: string) {
-  const { userId, workspaceId } = await assertDatabaseAccess(databaseId);
+  const { userId, workspaceId } = await assertDatabaseAccess(databaseId, 'edit');
 
   // Access above is checked on `databaseId`, which the caller supplies next to `id` —
   // so the row has to be confirmed to live in that database before anything is
@@ -274,7 +280,7 @@ export type BulkRowResult = { id: string; ok: boolean; error?: string };
  * concurrent writers would lose each other's exceptions.
  */
 export async function deletePages(ids: string[], databaseId: string): Promise<BulkRowResult[]> {
-  await assertDatabaseAccess(databaseId);
+  await assertDatabaseAccess(databaseId, 'edit');
   const unique = [...new Set(ids)];
   if (unique.length > BULK_ROWS_PER_CALL) throw new Error(`At most ${BULK_ROWS_PER_CALL} rows per call`);
 
@@ -306,7 +312,7 @@ export async function moveRowsToDatabase(
   databaseId: string,
   targetDatabaseId: string,
 ): Promise<{ results: BulkRowResult[]; mismatch?: undefined } | { mismatch: string[]; results?: undefined }> {
-  const { workspaceId } = await assertDatabaseAccess(databaseId);
+  const { workspaceId } = await assertDatabaseAccess(databaseId, 'edit');
   const unique = [...new Set(ids)];
   if (unique.length > BULK_ROWS_PER_CALL) throw new Error(`At most ${BULK_ROWS_PER_CALL} rows per call`);
 
@@ -336,43 +342,26 @@ export async function moveRowsToDatabase(
 }
 
 export async function duplicatePage(id: string, databaseId: string) {
-  const { workspaceId } = await assertDatabaseAccess(databaseId);
+  const { workspaceId } = await assertDatabaseAccess(databaseId, 'edit');
 
   // Same reason as deletePage: the source row must belong to the database access was
   // checked on, or this copied another workspace's row into yours.
   const source = await db.select().from(pages).where(and(eq(pages.id, id), eq(pages.databaseId, databaseId)));
   if (!source[0]) return;
 
-  const newId = crypto.randomUUID();
-  const sourcePage = source[0];
-
   const existing = await db.select({ sortOrder: pages.sortOrder }).from(pages).where(eq(pages.databaseId, databaseId));
   const maxSort = existing.reduce((max, p) => p.sortOrder > max ? p.sortOrder : max, 0);
 
-  const copiedTitle = sourcePage.title;
-  const copiedProps = { ...((sourcePage.properties as Record<string, any>) || {}) };
-
-  const now = new Date();
-  await db.insert(pages).values({
-    id: newId,
-    databaseId,
-    title: copiedTitle,
-    content: sourcePage.content || '',
-    properties: copiedProps,
-    sortOrder: maxSort + 1,
-    icon: sourcePage.icon,
-    iconColor: sourcePage.iconColor,
-    createdAt: now,
-    updatedAt: now,
-  });
-
-  if (sourcePage.content) await syncPageLinks(workspaceId, newId, 'database_row', sourcePage.content);
-  revalidatePath(`/db/${databaseId}`);
-  return newId;
+  // The row with the pages nested under it, as the last card of the same database.
+  const { rowId, nestedItems } = await duplicateRowSubtree({ workspaceId, row: source[0], sortOrder: maxSort + 1 });
+  // Sub-pages copied with the row are new sidebar entries; a lone row is only board content.
+  if (nestedItems > 0) revalidatePath('/', 'layout');
+  else revalidatePath(`/db/${databaseId}`);
+  return rowId;
 }
 
 export async function reorderPages(databaseId: string, orderedIds: string[]) {
-  const { workspaceId } = await assertDatabaseAccess(databaseId);
+  const { workspaceId } = await assertDatabaseAccess(databaseId, 'edit');
 
   // A single Kanban/Calendar/Table drag only actually moves one card, but
   // `orderedIds` is the full page list re-expressed in its new order — most
@@ -403,15 +392,12 @@ export async function updatePageIcon(id: string, icon: string | null, iconColor:
   const page = await db.select().from(pages).where(eq(pages.id, id));
   if (!page[0]) return;
 
-  await assertDatabaseAccess(page[0].databaseId);
-
-  if (isCloudinaryUrl(page[0].icon) && page[0].icon !== icon) {
-    deleteCloudinaryImage(page[0].icon!);
-  }
+  await assertDatabaseAccess(page[0].databaseId, 'edit');
 
   await db.update(pages)
     .set({ icon, iconColor, updatedAt: new Date() })
     .where(eq(pages.id, id));
+  if (page[0].icon && page[0].icon !== icon) await releaseIcon(page[0].icon);
 
   revalidatePath(`/db/${page[0].databaseId}`);
   revalidatePath(`/db/${page[0].databaseId}/${id}`);
@@ -421,7 +407,7 @@ export async function updatePageCardCollapsed(id: string, collapsed: boolean) {
   const page = await db.select({ databaseId: pages.databaseId }).from(pages).where(eq(pages.id, id));
   if (!page[0]) return;
 
-  await assertDatabaseAccess(page[0].databaseId);
+  await assertDatabaseAccess(page[0].databaseId, 'edit');
 
   await db.update(pages)
     .set({ cardCollapsed: collapsed })
@@ -448,7 +434,7 @@ export async function updatePagesCardCollapsed(ids: string[], collapsed: boolean
   const databaseId = rows[0].databaseId;
   const targetIds = rows.filter((r) => r.databaseId === databaseId).map((r) => r.id);
 
-  await assertDatabaseAccess(databaseId);
+  await assertDatabaseAccess(databaseId, 'edit');
 
   // Chunked so a very busy column stays well under SQLite's bound-parameter cap.
   for (let i = 0; i < targetIds.length; i += 100) {
@@ -471,7 +457,7 @@ export async function bulkCreatePages(
   databaseId: string,
   rows: Record<string, unknown>[],
 ): Promise<{ created: number; errors: { row: number; message: string }[]; addedOptions: BulkAddedOption[] }> {
-  const { workspaceId } = await assertDatabaseAccess(databaseId);
+  const { workspaceId } = await assertDatabaseAccess(databaseId, 'edit');
 
   if (!rows.length) return { created: 0, errors: [], addedOptions: [] };
   if (rows.length > MAX_BULK_ROWS) throw new Error(`Too many rows: max ${MAX_BULK_ROWS} per import`);
@@ -554,7 +540,7 @@ export async function bulkUpdatePagesByMatch(
   matchColumnId: string,
   rows: Record<string, unknown>[],
 ): Promise<{ updated: number; unmatched: number[]; errors: { row: number; message: string }[]; addedOptions: BulkAddedOption[] }> {
-  const { workspaceId } = await assertDatabaseAccess(databaseId);
+  const { workspaceId } = await assertDatabaseAccess(databaseId, 'edit');
 
   if (!rows.length) return { updated: 0, unmatched: [], errors: [], addedOptions: [] };
   if (rows.length > MAX_BULK_ROWS) throw new Error(`Too many rows: max ${MAX_BULK_ROWS} per import`);

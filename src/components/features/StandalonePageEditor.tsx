@@ -19,6 +19,8 @@ import { useTabNav } from '@/components/providers/TabsContext';
 import { tabKeys } from './tabs/keys';
 import type { WorkspaceItemRow } from '@/lib/actions/workspace';
 import type { PageProvenance } from '@/lib/agentPresence';
+import { useCanEdit } from '@/components/providers/WorkspaceRoleContext';
+import ViewOnlyBadge from './ViewOnlyBadge';
 
 function debounce<T extends (...args: any[]) => any>(fn: T, delay: number) {
   let timer: ReturnType<typeof setTimeout>;
@@ -48,6 +50,8 @@ export default function StandalonePageEditor({
   const t = useTranslations('Page');
   const tEditor = useTranslations('Editor');
   const tWs = useTranslations('Workspace');
+  // A Viewer reads: no title, icon, body, share or history edits (the server refuses them too).
+  const canEdit = useCanEdit(item.workspaceId);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [title, setTitle] = useState(item.title);
   const savedTitle = useRef(item.title);
@@ -127,14 +131,14 @@ export default function StandalonePageEditor({
 
 
   useEffect(() => {
-    if (title === savedTitle.current) return;
+    if (title === savedTitle.current || !canEdit) return;
     const t = setTimeout(() => {
       updateWorkspaceItemTitle(item.id, title);
       patchPageCache({ item: { title } });
       savedTitle.current = title;
     }, 800);
     return () => clearTimeout(t);
-  }, [title, item.id, patchPageCache]);
+  }, [title, item.id, patchPageCache, canEdit]);
 
   // A rename made elsewhere (an agent, another tab) arrives in `item.title` on the next
   // refresh; the input read it only once. Adopt it unless a local edit is still waiting
@@ -186,6 +190,7 @@ export default function StandalonePageEditor({
         </div>
         <div className="flex items-center gap-1">
           <SaveStatus state={saveState} className="mr-1" />
+          {!canEdit && <ViewOnlyBadge className="mr-1" />}
 
           <Button variant="ghost" size="sm" onClick={handleRefresh} title={tWs('refresh')} aria-label={tWs('refresh')}>
             <RefreshCw className={isRefreshing ? 'animate-spin' : ''} />
@@ -195,9 +200,9 @@ export default function StandalonePageEditor({
           <PageActionsMenu
             widthMode={widthMode}
             onWidthChange={changeWidth}
-            onShare={() => setShowShareModal(true)}
-            onMarkdown={() => setMarkdownDraft(editorRef.current?.getMarkdown() ?? page.content)}
-            onHistory={() => setShowHistory(true)}
+            onShare={canEdit ? () => setShowShareModal(true) : undefined}
+            onMarkdown={canEdit ? () => setMarkdownDraft(editorRef.current?.getMarkdown() ?? page.content) : undefined}
+            onHistory={canEdit ? () => setShowHistory(true) : undefined}
           />
         </div>
 
@@ -236,12 +241,13 @@ export default function StandalonePageEditor({
             <button
               ref={iconButtonRef}
               onClick={() => setShowIconPicker(!showIconPicker)}
-              className="p-1 hover:bg-hover rounded-surface transition-colors duration-150 cursor-pointer flex items-center justify-center shrink-0"
-              title={icon ? t('changeIcon') : t('addIcon')}
+              disabled={!canEdit}
+              className="p-1 hover:bg-hover rounded-surface transition-colors duration-150 cursor-pointer flex items-center justify-center shrink-0 disabled:cursor-default disabled:hover:bg-transparent"
+              title={canEdit ? (icon ? t('changeIcon') : t('addIcon')) : undefined}
             >
               <PageIcon icon={icon} iconColor={iconColor} size={36} fallbackType="page" />
             </button>
-            {icon && (
+            {icon && canEdit && (
               <button
                 onClick={() => handleIconSelect(null, null)}
                 className="absolute -top-7 left-1/2 -translate-x-1/2 opacity-0 group-hover/icon-wrapper:opacity-100 focus-visible:opacity-100 h-6 px-2 text-2xs bg-fg text-desk rounded-control transition-opacity cursor-pointer font-medium whitespace-nowrap shadow-float z-20"
@@ -267,7 +273,9 @@ export default function StandalonePageEditor({
             type="text"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
+            readOnly={!canEdit}
             onKeyDown={(e) => {
+              if (!canEdit) return;
               if (e.key === 'Enter') {
                 e.preventDefault();
                 editorRef.current?.insertLineAtStart();

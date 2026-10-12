@@ -26,13 +26,14 @@ import {
   type ScopeImpact,
 } from '@/lib/services/recurrence';
 import { normalizeRule, type RecurrenceRule } from '@/lib/recurrence/rule';
+import { roleAllows, roleRefusal, type WorkspaceNeed } from '@/lib/auth/workspaceRole';
 
 // Session-aware wrappers over `services/recurrence.ts`. Everything here goes
 // through `assertDatabaseAccess` and finishes with the same realtime publish +
 // revalidate the other database mutations use, so a series change lands on
 // other open clients exactly like a normal row edit does.
 
-async function assertDatabaseAccess(databaseId: string): Promise<{ userId: string; workspaceId: string }> {
+async function assertDatabaseAccess(databaseId: string, need: WorkspaceNeed = 'read'): Promise<{ userId: string; workspaceId: string }> {
   const user = await getCurrentUserAllowingWorkspaceLock();
 
   const [row] = await db
@@ -49,7 +50,7 @@ async function assertDatabaseAccess(databaseId: string): Promise<{ userId: strin
 
   if (user.role !== 'admin') {
     const [member] = await db
-      .select({ id: workspaceMembers.id })
+      .select({ id: workspaceMembers.id, role: workspaceMembers.role })
       .from(workspaceMembers)
       .where(
         and(
@@ -60,19 +61,23 @@ async function assertDatabaseAccess(databaseId: string): Promise<{ userId: strin
       .limit(1);
 
     if (!member) throw new Error('Unauthorized: no access to this database');
+
+    // A viewer reads; changing anything needs a member.
+
+    if (!roleAllows(member.role, need)) throw await roleRefusal(need);
   }
 
   return { userId: user.id, workspaceId: row.workspaceId };
 }
 
-async function assertPageAccess(pageId: string) {
+async function assertPageAccess(pageId: string, need: WorkspaceNeed = 'read') {
   const [page] = await db
     .select({ databaseId: pages.databaseId, seriesId: pages.seriesId, occurrenceDate: pages.occurrenceDate })
     .from(pages)
     .where(eq(pages.id, pageId))
     .limit(1);
   if (!page) throw new Error('Page not found');
-  const access = await assertDatabaseAccess(page.databaseId);
+  const access = await assertDatabaseAccess(page.databaseId, need);
   return { ...access, ...page };
 }
 
@@ -174,7 +179,7 @@ export async function setPageRecurrence(
   dateColId: string,
   rule: RecurrenceRule,
 ): Promise<{ seriesId: string; created: number } | null> {
-  const { userId, databaseId } = await assertPageAccess(pageId);
+  const { userId, databaseId } = await assertPageAccess(pageId, 'edit');
 
   if (!normalizeRule(rule)) throw new Error('Invalid recurrence rule');
 
@@ -199,7 +204,7 @@ export async function changeSeriesRule(
   newRule: RecurrenceRule,
   scope: 'thisAndFollowing' | 'all',
 ) {
-  const { userId, databaseId, seriesId, occurrenceDate } = await assertPageAccess(pageId);
+  const { userId, databaseId, seriesId, occurrenceDate } = await assertPageAccess(pageId, 'edit');
   if (!seriesId) throw new Error('This card is not part of a series');
   if (!normalizeRule(newRule)) throw new Error('Invalid recurrence rule');
 
@@ -218,7 +223,7 @@ export async function deleteRecurringPage(
   scope: RecurrenceScope,
   includeDirty = false,
 ): Promise<{ deleted: number; preserved: number }> {
-  const { workspaceId, databaseId } = await assertPageAccess(pageId);
+  const { workspaceId, databaseId } = await assertPageAccess(pageId, 'edit');
 
   const result = await deleteOccurrences(pageId, scope, includeDirty);
   if (!result) {
@@ -237,7 +242,7 @@ export async function deleteRecurringPage(
 
 /** "Seriden çıkar" — the card stays, stops following the rule. */
 export async function detachPageFromSeries(pageId: string): Promise<boolean> {
-  const { databaseId } = await assertPageAccess(pageId);
+  const { databaseId } = await assertPageAccess(pageId, 'edit');
   const ok = await detachOccurrence(pageId);
   if (ok) finish(databaseId);
   return ok;
@@ -255,7 +260,7 @@ export async function endSeriesRecurrence(
   pageId: string,
   scope: 'thisAndFollowing' | 'all',
 ): Promise<{ removed: number } | null> {
-  const { databaseId, seriesId, occurrenceDate } = await assertPageAccess(pageId);
+  const { databaseId, seriesId, occurrenceDate } = await assertPageAccess(pageId, 'edit');
   if (!seriesId) return null;
 
   const result =

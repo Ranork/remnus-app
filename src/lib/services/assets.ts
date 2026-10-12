@@ -37,7 +37,7 @@ export async function recordAsset(input: RecordAssetInput): Promise<void> {
 }
 
 // Delete an asset both from Cloudinary and our ledger. Allowed when the caller
-// uploaded it, or is a member of the workspace it belongs to. Returns true if a
+// uploaded it, or can edit the workspace it belongs to (a viewer cannot). Returns true if a
 // matching, authorized asset was found and removed.
 export async function deleteAssetByUrl(url: string, userId: string): Promise<boolean> {
   if (!url) return false;
@@ -48,11 +48,11 @@ export async function deleteAssetByUrl(url: string, userId: string): Promise<boo
   let authorized = asset.userId === userId;
   if (!authorized && asset.workspaceId) {
     const member = await db
-      .select({ id: workspaceMembers.id })
+      .select({ id: workspaceMembers.id, role: workspaceMembers.role })
       .from(workspaceMembers)
       .where(and(eq(workspaceMembers.workspaceId, asset.workspaceId), eq(workspaceMembers.userId, userId)))
       .limit(1);
-    authorized = member.length > 0;
+    authorized = member.length > 0 && member[0].role !== 'viewer';
   }
   if (!authorized) return false;
 

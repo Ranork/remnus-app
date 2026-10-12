@@ -21,6 +21,7 @@ npm run test:code-paths  # P13: knowledge sources read as repo paths + file matc
 npm run test:workspace-deletion  # deleteWorkspaceData leaves nothing behind (DATABASE_URL="file:local.db"; refuses remote)
 npm run test:trash-links  # delete + restore keeps links, restore re-syncs page_links, map orphan≠hub (DATABASE_URL="file:local.db"; refuses remote)
 npm run test:workspace-duplicate  # whole-workspace copy: remapping + both modes (DATABASE_URL="file:local.db"; refuses remote)
+npm run test:item-duplicate  # role rule + write-action audit + branch copies of page/database/row (DATABASE_URL="file:local.db"; refuses remote)
 npm run test:bulk-contract  # per-entry bulk_update_pages, cross-database row move rules, get_status (DATABASE_URL="file:local.db"; refuses remote)
 npm run test:mcp-agent-contract  # what an agent is told/can do through the real MCP handler (DATABASE_URL="file:local.db"; refuses remote)
 npm run test:oauth-refresh  # refresh grant: rotation, cross-instance replay, races, theft, legacy rows (DATABASE_URL="file:local.db"; refuses remote)

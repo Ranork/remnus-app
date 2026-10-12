@@ -118,6 +118,7 @@ import { IndentedParagraph, IndentShortcuts, IndentGlobal, MAX_INDENT } from './
 import { BlockSelection } from './BlockSelectionExtension';
 import BlockSelectionToolbar from './BlockSelectionToolbar';
 import type { WorkspaceItemRow } from '@/lib/actions/workspace';
+import { useCanEdit } from '@/components/providers/WorkspaceRoleContext';
 
 
 export type BlockEditorHandle = {
@@ -258,8 +259,11 @@ const BlockEditor = forwardRef<BlockEditorHandle, Props>(function BlockEditor({
   parentId,
   initialSubItems,
   shareMap,
-  editable = true,
+  editable: editableProp = true,
 }, ref) {
+  // A viewer reads the body; the editor offers no editing where the server would refuse it.
+  const canEditWorkspace = useCanEdit(workspaceId);
+  const editable = editableProp && canEditWorkspace;
   const editorRef = useRef<any>(null);
   const router = useRouter();
   const tEditor = useTranslations('Editor');

@@ -6,6 +6,7 @@ import { usePathname, useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { LayoutDashboard, Loader2, Waypoints } from 'lucide-react';
 import { openOrCreateHomeDashboard } from '@/lib/actions/dashboard';
+import { useCanEdit } from '@/components/providers/WorkspaceRoleContext';
 
 /**
  * The two pinned entries at the top of a project in the sidebar: its Pano (dashboard)
@@ -34,6 +35,8 @@ export default function WorkspaceQuickLinks({
   const router = useRouter();
   const [creating, startCreate] = useTransition();
   const [failed, setFailed] = useState(false);
+  // Creating the missing Pano is an edit: a Viewer gets only the map until one exists.
+  const canCreateHome = useCanEdit(workspaceId);
 
   const dashboardActive = !!homeDashboardId && pathname.startsWith(`/dashboard/${homeDashboardId}`);
   const mapActive = pathname.startsWith(`/graph/${workspaceId}`);
@@ -70,7 +73,7 @@ export default function WorkspaceQuickLinks({
             <LayoutDashboard size={14} className={iconCls(dashboardActive)} />
             <span className="truncate">{t('dashboardShort')}</span>
           </Link>
-        ) : (
+        ) : canCreateHome && (
           <button type="button" onClick={createHome} disabled={creating} aria-busy={creating} className={`${cls(false)} cursor-pointer disabled:opacity-60`}>
             {creating ? (
               <Loader2 size={14} className={`animate-spin ${iconCls(false)}`} />

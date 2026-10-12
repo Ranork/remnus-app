@@ -55,6 +55,7 @@ export default function KanbanBoard({
   onCardsCollapsedChange,
   hiddenGroups = [],
   selection,
+  readOnly = false,
 }: {
   database: any;
   onSchemaChange?: (schema: any[]) => void;
@@ -84,8 +85,12 @@ export default function KanbanBoard({
   hiddenGroups?: string[];
   /** While cards are being picked (bulk delete / move), a click on a card selects it instead of opening it. */
   selection?: { selecting: boolean; selectedIds: ReadonlySet<string> };
+  /** A Viewer: cards open, nothing on them changes (no drag, in-place edits, menus or collapse). */
+  readOnly?: boolean;
 }) {
   const selecting = selection?.selecting ?? false;
+  // Picking cards and viewing only both make the whole card a plain click target.
+  const locked = selecting || readOnly;
   const t = useTranslations('Database');
   const tPage = useTranslations('Page');
   const locale = useLocale();
@@ -98,9 +103,11 @@ export default function KanbanBoard({
     { id: 'open', label: t('open'), icon: ArrowUpRight, onSelect: () => onCardClick(pageId) },
     { id: 'open-full', label: t('openInFullPage'), icon: Maximize2, onSelect: () => router.push(`/db/${database.id}/${pageId}`) },
     { id: 'copy-link', label: t('copyLink'), icon: Link2, onSelect: () => { navigator.clipboard?.writeText(`${window.location.origin}/db/${database.id}/${pageId}`); } },
-    { kind: 'separator' },
-    { id: 'duplicate', label: t('duplicatePage'), icon: Copy, onSelect: () => onDuplicatePage(pageId) },
-    { id: 'delete', label: tPage('deletePage'), icon: Trash2, danger: true, onSelect: () => requestDelete(pageId) },
+    ...(readOnly ? [] : [
+      { kind: 'separator' } as MenuItem,
+      { id: 'duplicate', label: t('duplicatePage'), icon: Copy, onSelect: () => onDuplicatePage(pageId) } as MenuItem,
+      { id: 'delete', label: tPage('deletePage'), icon: Trash2, danger: true, onSelect: () => requestDelete(pageId) } as MenuItem,
+    ]),
   ];
 
   const [editingCell, setEditingCell] = useState<{ pageId: string; colId: string } | null>(null);
@@ -361,7 +368,7 @@ export default function KanbanBoard({
                 <span className="truncate">{isUncategorized ? t('uncategorized') : columnName}</span>
                 <span className="text-xs font-normal text-fg-3">{columnPages.length}</span>
               </h3>
-              {columnPages.length > 0 && (
+              {columnPages.length > 0 && !readOnly && (
                 <button
                   type="button"
                   // Stops the header's mousedown from arming the column drag.
@@ -399,7 +406,7 @@ export default function KanbanBoard({
                     key={page.id}
                     onClick={() => onCardClick(page.id)}
                     onContextMenu={(e) => cardMenu.open(e, buildCardMenu(page.id))}
-                    draggable={!selecting}
+                    draggable={!locked}
                     onDragStart={(e) => {
                       e.stopPropagation();
                       handleCardDragStart(e, page.id);
@@ -428,7 +435,7 @@ export default function KanbanBoard({
                       </div>
                     )}
                     {/* Hover card actions — not while picking cards: the whole card is the click target */}
-                    <div className={`absolute right-1.5 top-1.5 z-10 flex items-center opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100 ${selecting ? 'hidden' : ''}`} onClick={(e) => e.stopPropagation()}>
+                    <div className={`absolute right-1.5 top-1.5 z-10 flex items-center opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100 ${locked ? 'hidden' : ''}`} onClick={(e) => e.stopPropagation()}>
                       {/* Collapse/expand — hides the property list, keeping just the title */}
                       <button
                         type="button"
@@ -475,6 +482,8 @@ export default function KanbanBoard({
                             type="button"
                             ref={(el) => { itemRefs.current[page.id] = el; }}
                             onClick={(e) => {
+                              // Locked: the icon is part of the card's click.
+                              if (locked) return;
                               e.preventDefault();
                               e.stopPropagation();
                               setActiveIconPickerPageId(activeIconPickerPageId === page.id ? null : page.id);
@@ -562,7 +571,7 @@ export default function KanbanBoard({
                               );
                             } else if (c.type === 'checkbox') {
                               display = (
-                                <span onClick={(e) => e.stopPropagation()} className={selecting ? 'pointer-events-none inline-flex' : 'inline-flex'}>
+                                <span onClick={(e) => e.stopPropagation()} className={locked ? 'pointer-events-none inline-flex' : 'inline-flex'}>
                                   <Checkbox
                                     size="sm"
                                     checked={val === true || val === 'true'}
@@ -592,8 +601,8 @@ export default function KanbanBoard({
                             }
 
                             const handlePropClick = (e: React.MouseEvent) => {
-                              // Picking cards: the click belongs to the card, no in-place editing.
-                              if (selecting) return;
+                              // Picking cards or viewing only: the click belongs to the card.
+                              if (locked) return;
                               e.stopPropagation();
                               if (c.type === 'checkbox') return;
                               setEditingCell({ pageId: page.id, colId: c.id });
@@ -638,15 +647,18 @@ export default function KanbanBoard({
                   );
                 })
               )}
-              {/* "+ New" at the bottom of the group, visible on hover of the column */}
-              <button
-                type="button"
-                onClick={() => onCreatePage?.(isUncategorized ? {} : { [groupByCol]: columnName })}
-                className="mt-0.5 flex w-full shrink-0 cursor-pointer items-center gap-1.5 rounded-control px-2 py-1.5 text-left text-xs font-medium text-fg-3 opacity-0 transition duration-150 group-hover/col:opacity-100 hover:bg-hover hover:text-fg focus-visible:opacity-100"
-              >
-                <Plus size={14} />
-                <span>{t('new')}</span>
-              </button>
+              {/* "+ New" at the bottom of the group, visible on hover of the column — only
+                  for someone who may create (no handler for a Viewer). */}
+              {onCreatePage && (
+                <button
+                  type="button"
+                  onClick={() => onCreatePage(isUncategorized ? {} : { [groupByCol]: columnName })}
+                  className="mt-0.5 flex w-full shrink-0 cursor-pointer items-center gap-1.5 rounded-control px-2 py-1.5 text-left text-xs font-medium text-fg-3 opacity-0 transition duration-150 group-hover/col:opacity-100 hover:bg-hover hover:text-fg focus-visible:opacity-100"
+                >
+                  <Plus size={14} />
+                  <span>{t('new')}</span>
+                </button>
+              )}
             </div>
           </div>
         );

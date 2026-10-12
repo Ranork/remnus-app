@@ -32,9 +32,10 @@ export default function PageActionsMenu({
 }: {
   widthMode: PageWidthMode;
   onWidthChange: (mode: PageWidthMode) => void;
-  onShare: () => void;
-  onMarkdown: () => void;
-  onHistory: () => void;
+  /** Each of these is left out for someone who can only view the page. */
+  onShare?: () => void;
+  onMarkdown?: () => void;
+  onHistory?: () => void;
   onDuplicate?: () => void;
   onDelete?: () => void;
 }) {
@@ -67,20 +68,26 @@ export default function PageActionsMenu({
             </DropdownMenuItem>
           ))}
         </DropdownMenuGroup>
-        <DropdownMenuSeparator className="hidden lg:block" />
+        {(onShare || onMarkdown || onHistory) && <DropdownMenuSeparator className="hidden lg:block" />}
 
-        <DropdownMenuItem onClick={onShare}>
-          <Globe />
-          {tSharing('shareButton')}
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={onMarkdown}>
-          <FileCode2 />
-          {t('markdown.button')}
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={onHistory}>
-          <History />
-          {t('history.button')}
-        </DropdownMenuItem>
+        {onShare && (
+          <DropdownMenuItem onClick={onShare}>
+            <Globe />
+            {tSharing('shareButton')}
+          </DropdownMenuItem>
+        )}
+        {onMarkdown && (
+          <DropdownMenuItem onClick={onMarkdown}>
+            <FileCode2 />
+            {t('markdown.button')}
+          </DropdownMenuItem>
+        )}
+        {onHistory && (
+          <DropdownMenuItem onClick={onHistory}>
+            <History />
+            {t('history.button')}
+          </DropdownMenuItem>
+        )}
 
         {(onDuplicate || onDelete) && <DropdownMenuSeparator />}
         {onDuplicate && (

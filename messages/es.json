@@ -325,7 +325,9 @@
     "settings": "Configuración",
     "earlyAccess": "Acceso anticipado",
     "agentsConnectNudge": "Conectar",
-    "duplicateEmpty": "Duplicar sin filas"
+    "duplicateEmpty": "Duplicar sin filas",
+    "viewOnly": "Solo lectura",
+    "viewOnlyHint": "Aquí tu rol es Espectador: puedes leerlo todo, pero no cambiarlo."
   },
   "WorkspaceSettings": {
     "roleLabel": "Rol",
@@ -1345,7 +1347,9 @@
     "crashBack": "Volver",
     "viewerCannotWrite": "Tu rol en este espacio es de solo lectura, así que no puede conectarse con acceso de escritura.",
     "agentLimitReachedJoin": "Este espacio no tiene plazas de agente libres. Pide a su propietario que libere una o mejore el plan.",
-    "workspaceTooLarge": "Este espacio es demasiado grande para copiarlo de una vez. Cópialo sin filas o divídelo antes."
+    "workspaceTooLarge": "Este espacio es demasiado grande para copiarlo de una vez. Cópialo sin filas o divídelo antes.",
+    "viewOnly": "Tu rol en este espacio es de solo lectura, así que no puedes cambiarlo.",
+    "ownerOnlyAction": "Solo el propietario del espacio puede hacer esto."
   },
   "LanguageSwitcher": {
     "label": "Idioma"

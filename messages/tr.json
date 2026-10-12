@@ -325,7 +325,9 @@
     "settings": "Ayarlar",
     "earlyAccess": "Erken erişim",
     "agentsConnectNudge": "Bağla",
-    "duplicateEmpty": "Satırlar olmadan çoğalt"
+    "duplicateEmpty": "Satırlar olmadan çoğalt",
+    "viewOnly": "Yalnızca görüntüleme",
+    "viewOnlyHint": "Buradaki rolünüz İzleyici: her şeyi okuyabilir, ama değiştiremezsiniz."
   },
   "WorkspaceSettings": {
     "roleLabel": "Rol",
@@ -1366,7 +1368,9 @@
     "crashBack": "Geri dön",
     "viewerCannotWrite": "Bu çalışma alanındaki rolünüz yalnızca görüntüleme; bu yüzden yazma erişimiyle bağlanamaz.",
     "agentLimitReachedJoin": "Bu çalışma alanında boş ajan yeri kalmadı. Sahibinden bir yer açmasını veya planı yükseltmesini isteyin.",
-    "workspaceTooLarge": "Bu çalışma alanı tek seferde kopyalanamayacak kadar büyük. Satırlar olmadan kopyalayın ya da önce bölün."
+    "workspaceTooLarge": "Bu çalışma alanı tek seferde kopyalanamayacak kadar büyük. Satırlar olmadan kopyalayın ya da önce bölün.",
+    "viewOnly": "Bu çalışma alanındaki rolünüz yalnızca görüntüleme; bu yüzden değişiklik yapamazsınız.",
+    "ownerOnlyAction": "Bunu yalnızca çalışma alanının sahibi yapabilir."
   },
   "LanguageSwitcher": {
     "label": "Dil"
