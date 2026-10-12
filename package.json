@@ -17,6 +17,7 @@
     "test:workspace-duplicate": "npx tsx src/scripts/test-workspace-duplicate.ts",
     "test:bulk-contract": "npx tsx src/scripts/test-bulk-contract.ts",
     "test:mcp-agent-contract": "npx tsx src/scripts/test-mcp-agent-contract.ts",
+    "test:oauth-refresh": "npx tsx src/scripts/test-oauth-refresh.ts",
     "test:trash-links": "npx tsx src/scripts/test-trash-links.ts",
     "test:code-paths": "npx tsx src/scripts/test-code-paths.ts",
     "test:starter": "npx tsx src/scripts/test-starter-content.ts",

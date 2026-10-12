@@ -2,9 +2,9 @@ export const runtime = 'nodejs';
 
 import { db } from '@/db';
 import { oauthAuthCodes, oauthAccessTokens, users } from '@/db/schema';
-import { eq } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
-import { randomBytes, createHash, randomUUID } from 'crypto';
+import { randomBytes, createHash, createHmac, randomUUID } from 'crypto';
 import { checkCanAddAgent } from '@/lib/services/billing';
 import { captureServer, isCaptureAllowedForUser, captureForUser, captureAnonymous } from '@/lib/analytics/server';
 import { maybeSendAgentConnectedEmail } from '@/lib/email/lifecycle';
@@ -13,26 +13,23 @@ const ACCESS_TOKEN_TTL_MS  = 60 * 60 * 1000;          // 1 hour
 const REFRESH_TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
 // Refresh tokens rotate on every use (OAuth 2.1 §4.13.2) — the old row is deliberately
-// left unusable. A client with multiple concurrent instances (or a retry racing a prior
+// left unusable. A client with several concurrent instances (or a retry racing a prior
 // success) can legitimately present that same now-rotated token again a moment later;
-// without this, the loser of that race gets a hard failure and, per the incident this
-// grace window was built for, falls back to its now-revoked access token too — the
-// "session died mid-way" symptom. REFRESH_REPLAY_GRACE_MS bounds how long a reused
-// refresh token is treated as a benign race instead of theft. Best-effort, in-memory,
-// per-instance (same tradeoff as the MCP route's rate limiter) — a cache miss inside the
-// window still falls through to a plain invalid_grant, never to revoking anything, so a
-// miss is never worse than today; only a genuine post-window reuse revokes the chain.
+// without a grace, the loser of that race gets a hard failure and, per the incident this
+// was built for, falls back to its now-revoked access token too — the "session died
+// mid-way" symptom. REFRESH_REPLAY_GRACE_MS bounds how long a reused refresh token is
+// treated as a benign race instead of theft.
+//
+// The replay is answered with the SAME new pair, and that pair is not stored anywhere (a
+// stored plaintext token would be a credential at rest): it is DERIVED. The rotated pair —
+// the new row's id, both prefixes and both secrets — is an HMAC, keyed with the server
+// secret, of the old row's id and the old refresh secret the client presents. So any
+// instance can recompute it, which an in-memory cache could not offer on a serverless
+// platform where the replay may land anywhere. It also makes rotation idempotent: two
+// instances rotating one token at the same moment insert the same row (the second insert is
+// a no-op) and hand out identical tokens. Rows rotated before this existed carry random
+// successors; a replay of those inside the window is refused plainly, never revoked.
 const REFRESH_REPLAY_GRACE_MS = 45_000;
-type CachedRotation = { accessToken: string; refreshToken: string; scope: string; cachedAt: number };
-const recentRotations = new Map<string, CachedRotation>();
-
-function cacheRotation(oldRowId: string, entry: Omit<CachedRotation, 'cachedAt'>): void {
-  const now = Date.now();
-  for (const [key, cached] of recentRotations) {
-    if (now - cached.cachedAt > REFRESH_REPLAY_GRACE_MS) recentRotations.delete(key);
-  }
-  recentRotations.set(oldRowId, { ...entry, cachedAt: now });
-}
 
 function oauthError(code: string, description: string, status = 400) {
   return Response.json(
@@ -47,21 +44,64 @@ function tokenResponse(body: Record<string, unknown>) {
   });
 }
 
-async function generateTokenPair(): Promise<{
+type TokenSecrets = {
+  /** Set for a derived pair: the successor row's primary key (see the note above). */
+  id?: string;
+  accessPrefix: string; accessSecret: string;
+  refreshPrefix: string; refreshSecret: string;
+};
+
+function randomSecrets(): TokenSecrets {
+  return {
+    accessPrefix: randomBytes(4).toString('hex'),
+    accessSecret: randomBytes(32).toString('hex'),
+    refreshPrefix: randomBytes(4).toString('hex'),
+    refreshSecret: randomBytes(32).toString('hex'),
+  };
+}
+
+/**
+ * The pair a refresh of row `oldRowId`, presenting `oldRefreshSecret`, rotates to. Same shape
+ * as `randomSecrets` (8-hex prefixes, 64-hex secrets), so nothing downstream can tell the
+ * difference. `null` without a server secret to key it with — the caller then rotates to a
+ * random pair and a replay simply has no grace.
+ */
+function deriveRotatedSecrets(oldRowId: string, oldRefreshSecret: string): TokenSecrets | null {
+  const key = process.env.AUTH_SECRET;
+  if (!key) return null;
+  const derive = (label: string) =>
+    createHmac('sha256', key).update(`remnus/oauth-refresh-rotation/v1\n${label}\n${oldRowId}\n${oldRefreshSecret}`).digest('hex');
+  const h = derive('id');
+  return {
+    // UUID-shaped (version 4, RFC 4122 variant) like every other row id.
+    id: `${h.slice(0, 8)}-${h.slice(8, 12)}-4${h.slice(13, 16)}-${'89ab'[parseInt(h[16], 16) & 3]}${h.slice(17, 20)}-${h.slice(20, 32)}`,
+    accessPrefix: derive('access-prefix').slice(0, 8),
+    accessSecret: derive('access-secret'),
+    refreshPrefix: derive('refresh-prefix').slice(0, 8),
+    refreshSecret: derive('refresh-secret'),
+  };
+}
+
+async function sealTokenPair(secrets: TokenSecrets): Promise<{
   accessToken: string; accessPrefix: string; accessHash: string;
   refreshToken: string; refreshPrefix: string; refreshHash: string;
 }> {
-  const aPrefix = randomBytes(4).toString('hex');
-  const aSecret = randomBytes(32).toString('hex');
-  const accessToken = `oa_${aPrefix}_${aSecret}`;
-  const accessHash = await bcrypt.hash(aSecret, 10);
+  const [accessHash, refreshHash] = await Promise.all([
+    bcrypt.hash(secrets.accessSecret, 10),
+    bcrypt.hash(secrets.refreshSecret, 10),
+  ]);
+  return {
+    accessToken: `oa_${secrets.accessPrefix}_${secrets.accessSecret}`,
+    accessPrefix: secrets.accessPrefix,
+    accessHash,
+    refreshToken: `or_${secrets.refreshPrefix}_${secrets.refreshSecret}`,
+    refreshPrefix: secrets.refreshPrefix,
+    refreshHash,
+  };
+}
 
-  const rPrefix = randomBytes(4).toString('hex');
-  const rSecret = randomBytes(32).toString('hex');
-  const refreshToken = `or_${rPrefix}_${rSecret}`;
-  const refreshHash = await bcrypt.hash(rSecret, 10);
-
-  return { accessToken, accessPrefix: aPrefix, accessHash, refreshToken, refreshPrefix: rPrefix, refreshHash };
+async function generateTokenPair() {
+  return sealTokenPair(randomSecrets());
 }
 
 function verifyS256(codeVerifier: string, codeChallenge: string): boolean {
@@ -213,6 +253,29 @@ async function revokeRotationChain(startRow: typeof oauthAccessTokens.$inferSele
   }
 }
 
+/**
+ * A rotated refresh token presented again inside the grace window: hand out the pair it
+ * rotated to — recomputed, not looked up (see the note at the top). `null` when there is
+ * nothing safe to hand out: the successor is not the derived one (rotated before derivation
+ * existed, or the server secret changed), is gone, or has already been used or revoked in
+ * turn, which means the client has long since moved on.
+ */
+async function replayRotation(old: typeof oauthAccessTokens.$inferSelect, oldRefreshSecret: string): Promise<Record<string, unknown> | null> {
+  const derived = deriveRotatedSecrets(old.id, oldRefreshSecret);
+  if (!derived || !old.replacedByTokenId || old.replacedByTokenId !== derived.id) return null;
+
+  const [successor] = await db.select().from(oauthAccessTokens).where(eq(oauthAccessTokens.id, derived.id)).limit(1);
+  if (!successor || successor.revokedAt) return null;
+
+  return {
+    access_token:  `oa_${derived.accessPrefix}_${derived.accessSecret}`,
+    token_type:    'Bearer',
+    expires_in:    Math.max(1, Math.floor((successor.expiresAt.getTime() - Date.now()) / 1000)),
+    refresh_token: `or_${derived.refreshPrefix}_${derived.refreshSecret}`,
+    scope:         successor.scope,
+  };
+}
+
 async function handleRefreshToken(params: URLSearchParams): Promise<Response> {
   const refreshToken = params.get('refresh_token');
   const clientId     = params.get('client_id');
@@ -247,30 +310,22 @@ async function handleRefreshToken(params: URLSearchParams): Promise<Response> {
   if (row.revokedAt) {
     const withinGrace = !!row.replacedAt && Date.now() - row.replacedAt.getTime() <= REFRESH_REPLAY_GRACE_MS;
     if (withinGrace) {
-      const cached = recentRotations.get(row.id);
-      if (cached) {
-        return tokenResponse({
-          access_token:  cached.accessToken,
-          token_type:    'Bearer',
-          expires_in:    ACCESS_TOKEN_TTL_MS / 1000,
-          refresh_token: cached.refreshToken,
-          scope:         cached.scope,
-        });
-      }
-      // Cache miss (different serverless instance, or cold start) — fail plainly without
-      // touching the active chain, same as today. Only a reuse OUTSIDE the grace window
-      // (below) is treated as theft.
+      const replayed = await replayRotation(row, rSecret);
+      if (replayed) return tokenResponse(replayed);
+      // Nothing safe to hand out (see replayRotation) — fail plainly without touching the
+      // active chain. Only a reuse OUTSIDE the grace window (below) is treated as theft.
       return oauthError('invalid_grant', 'Refresh token already used');
     }
     await revokeRotationChain(row);
     return oauthError('invalid_grant', 'Refresh token already used');
   }
 
-  // Rotate: issue the new pair first, then point the old row at it — cacheRotation needs
-  // the new row's id before the old row is marked revoked.
-  const tokens = await generateTokenPair();
+  // Rotate. The successor's id is derived too, so a racing request rotating this same token
+  // inserts the very same row: the insert below is then a no-op and both get identical tokens.
+  const derived = deriveRotatedSecrets(row.id, rSecret);
+  const tokens = await sealTokenPair(derived ?? randomSecrets());
   const now = new Date();
-  const newId = randomUUID();
+  const newId = derived?.id ?? randomUUID();
 
   await db.insert(oauthAccessTokens).values({
     id:                 newId,
@@ -287,13 +342,12 @@ async function handleRefreshToken(params: URLSearchParams): Promise<Response> {
     displayName:        row.displayName ?? null,
     expiresAt:          new Date(now.getTime() + ACCESS_TOKEN_TTL_MS),
     createdAt:          now,
-  });
+  }).onConflictDoNothing();
 
+  // Only the first writer marks the old row: a racing twin must not push `replacedAt` forward.
   await db.update(oauthAccessTokens)
     .set({ revokedAt: now, replacedByTokenId: newId, replacedAt: now })
-    .where(eq(oauthAccessTokens.id, row.id));
-
-  cacheRotation(row.id, { accessToken: tokens.accessToken, refreshToken: tokens.refreshToken, scope: row.scope });
+    .where(and(eq(oauthAccessTokens.id, row.id), isNull(oauthAccessTokens.revokedAt)));
 
   return tokenResponse({
     access_token:  tokens.accessToken,
