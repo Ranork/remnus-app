@@ -1,6 +1,6 @@
 # Remnus V2 Revizeleri — Chat Promptları
 
-> **Durum (2026-10-02/03): **R9–R10 canlıda (2026-10-02; Vercel deploy success, post-deploy smoke'ta bulunan `/app` soft-nav 405 regresyonu `8f8ea3c` ile aynı gün düzeltildi) ve masaüstü 0.1.19 yayınlandı (Tauri Release 4/4 yeşil, `latest.json` 0.1.19, auto-update dağıtımda); CLI 0.1.11 2026-10-06'da npm'de yayınlandı (R10.1 düzeltmesiyle) ve masaüstü 0.1.20 çıktı — bkz. R11 Birikenler.** R1–R4 tamamlandı ve canlıda; R5–R8 + R8.1–R8.6 tamamlandı (commit'li); R8.7 tamamlandı (yeni site `/`'de; eski landing `/landing-old`, `/landing-next` arşivde); R8.8 tamamlandı (commit'li, migration yok); R8.9 tamamlandı (şablon tarih açığı 2026-10-02'de kapatıldı, `80ca02a`); R9 tamamlandı (2026-10-02, commit'li; migration 0055 prod'da); R9.x kapandı (2026-10-02, commit'li: R9.1, R9.2, R9.4, R9.5, R9.8 yapıldı, R9.7 ölçüldü — değişiklik gerekmedi, R9.3 ölçümde değmez; migration 0056 prod'da; R9.6 R11'e taşındı); R10 tamamlandı (2026-10-02, 3 oturum, commit'li; 1 Medium düzeltildi = güvenlik başlıkları `next.config.ts`; 5 Low → R10.1–R10.5 promptları; ayrıntı gitignored `SECURITY_AUDIT_2026-10-02.md`; bağımlılık yükseltmeleri Hakan'a); R11 sırada (son madde).** Her prompt bitince
+> **Durum (2026-10-12): **R9–R10 canlıda (2026-10-02; Vercel deploy success, post-deploy smoke'ta bulunan `/app` soft-nav 405 regresyonu `8f8ea3c` ile aynı gün düzeltildi) ve masaüstü 0.1.19 yayınlandı (Tauri Release 4/4 yeşil, `latest.json` 0.1.19, auto-update dağıtımda); CLI 0.1.11 2026-10-06'da npm'de yayınlandı (R10.1 düzeltmesiyle) ve masaüstü 0.1.20 çıktı — bkz. R11 Birikenler.** R1–R4 tamamlandı ve canlıda; R5–R8 + R8.1–R8.6 tamamlandı (commit'li); R8.7 tamamlandı (yeni site `/`'de; eski landing `/landing-old`, `/landing-next` arşivde); R8.8 tamamlandı (commit'li, migration yok); R8.9 tamamlandı (şablon tarih açığı 2026-10-02'de kapatıldı, `80ca02a`); R9 tamamlandı (2026-10-02, commit'li; migration 0055 prod'da); R9.x kapandı (2026-10-02, commit'li: R9.1, R9.2, R9.4, R9.5, R9.8 yapıldı, R9.7 ölçüldü — değişiklik gerekmedi, R9.3 ölçümde değmez; migration 0056 prod'da; R9.6 R11'e taşındı); R10 tamamlandı (2026-10-02, 3 oturum, commit'li; 1 Medium düzeltildi = güvenlik başlıkları `next.config.ts`; 5 Low → R10.1–R10.5 promptları; ayrıntı gitignored `SECURITY_AUDIT_2026-10-02.md`; bağımlılık yükseltmeleri Hakan'a); R11 tamamlandı (2026-10-12: CLI 0.1.12 npm `latest`, masaüstü 0.1.20, web `9c99a57`; yayın sonrası test notu R11 sonunda).** Her prompt bitince
 > kendi bölümünün sonuna "Tamamlandı" notu düşer; bu satırı da güncelle.
 
 Hazırlanma tarihi: 2026-09-26. Kaynak: Hakan'ın "RemnusV2 Revizeler" listesi (18 madde +
@@ -2915,7 +2915,7 @@ açık same-origin `redirect` callback (savunma derinliği).
 | R6 | `cli/templates/agents-section.md`: iki satır — "kalibrasyonu yenile" isteği → rehberin "Running it again" bölümü; izlenmeye değer yeni database/alan → ana panoya blok. Sürüm artırılmadı (0.1.11'de birleşir). Yalnız yeni `init`/`sync` ile yazılan AGENTS.md'ye girer | — |
 | R6+ | — | `skills/remnus/SKILL.md` değişti (`tick`/`append`, `move_item` `position`); masaüstü `install_remnus_skill` bunu `include_str!` ile gömüyor → sonraki masaüstü sürümüne girer |
 | R9 | Kod değişmedi, sürüm artmaz. Ama `npx remnus open`'ın yazdırdığı `/w/<id>` linki (`cli/src/commands/open.js`) R9 öncesi workspace'i hiç değiştirmiyordu; R9'un **web** düzeltmesi (`/w/[id]` route handler) canlıya çıkmadan R11'in `open` testleri yanlış workspace'i açar → R9 web deploy'u yayın sonrası testten ÖNCE canlıda olmalı | Kod değişmedi. Masaüstü `remnus://open` → `DesktopOpenListener` → `/w/<id>` aynı web düzeltmesine dayanır (aynı koşul). Tauri `TabPane` artık talep anında yükleniyor (web'den gelir, binary değil) — R11 testinde ilk sekmenin açılış süresine bak |
-| **R11 testi (2026-10-12)** | `cli/package.json` → **0.1.12, HENÜZ YAYINLANMADI** (Hakan: `cd cli && npm publish`). Taşıdığı: `init --help`/`--version` artık komutu çalıştırmıyor (`cli.js`); `doctor` güncelleme beklerken "Everything checks out" demiyor; Windows'ta CLI verisi `%LOCALAPPDATA%\remnus-cli` (eskisi masaüstü kurulum klasörüydü; eski `settings.json` okunuyor) | Masaüstü sürümü gerekmez: `remnus://open` boş "Adsız" sekme hatası **web** tarafında düzeltildi (`DesktopOpenListener` + `TabsContext`), web deploy'u ile gelir |
+| **R11 testi (2026-10-12)** | `cli/package.json` → **0.1.12, yayınlandı 2026-10-12** (npm `latest`). Taşıdığı: `init --help`/`--version` artık komutu çalıştırmıyor (`cli.js`); `doctor` güncelleme beklerken "Everything checks out" demiyor; Windows'ta CLI verisi `%LOCALAPPDATA%\remnus-cli` (eskisi masaüstü kurulum klasörüydü; eski `settings.json` okunuyor) | Masaüstü sürümü gerekmez: `remnus://open` boş "Adsız" sekme hatası **web** tarafında düzeltildi (`DesktopOpenListener` + `TabsContext`), web deploy'u ile gelir |
 | **Yayın (2026-10-06)** | **CLI 0.1.11 YAYINLANDI** (`npm publish`, `latest` = 0.1.11; `npx remnus@0.1.11 --help` ve `doctor` temiz dizinde doğrulandı). İçine R10.1 girdi: sunucudan gelen workspace adı/scope AGENTS.md, CLAUDE.md ve harita başlığına `inlineText` ile yazılıyor; `npm run test:cli`. Sürüm artırılmadı (0.1.11 hiç yayınlanmamıştı). | **Masaüstü 0.1.20**: `e8e296e` + tag `v0.1.20` (V2 U1/U2 sonrası). Taşıdığı: masaüstü zoom'u WebView'un kendi zoom'u (web tarafı) + `ZOOM_INIT` init script'i kaldırıldı + R6+'nın SKILL.md değişikliği. Release workflow'u `actions/checkout@v5`/`setup-node@v5`'e geçti (Node 20 uyarısı; sonraki sürümden itibaren). |
 | **Yayın (2026-10-03)** | **CLI 0.1.11 HENÜZ YAYINLANMADI** (npm publish Hakan'ın npm oturumu/2FA ile; `DESKTOP_OPEN_MIN_VERSION = 0.1.19` zaten bu masaüstü sürümüyle uyumlu, sıra sorunu yok). | **Masaüstü 0.1.19 yayınlandı**: `npm run release:patch` → `493cedf` + tag `v0.1.19`; Tauri Release 4/4 yeşil (34 dk), release draft değil, `latest.json` version 0.1.19 (linux/windows/macOS arm64+x64, imzalı) → in-app auto-updater mevcut kullanıcılara sunar. Taşıdığı: R1 `remnus://open` rotası. Yerel cargo check atlandı (CI derledi). |
 
@@ -2970,7 +2970,7 @@ Hakan'dan açık onay al; token/OTP değerini asla yazdırma.
 - `.ai/CURRENT_TASK.md`, update-handoff; bu bölümün sonuna "Tamamlandı" notu.
 ```
 
-### R11 — Yayın sonrası test (2026-10-12, Claude; ilk tur, düzeltmeler commit bekliyor)
+### R11 — Yayın sonrası test (2026-10-12, Claude)
 
 **A — CLI 0.1.11 (canlı, geçici dizin, test workspace'i sonra silindi):** npm `latest` = 0.1.11 = `cli/package.json`;
 `init` linki "Only if no browser window appeared" etiketli, "For the agent" bloğu var; kullanılmış link → "Bu proje zaten
@@ -3004,4 +3004,23 @@ laboratuvar (demo hesabı, 40 ms/20 Mbit, 3 koşu): `/page` hazır 3,3–3,5 sn 
 senaryo 2 geçti (3/3: uygulama kapalı → açılıyor, proje sayfası içerikle görünüyor, tek sekme). Senaryo 6 (soğuk açılış →
 proje sayfası görünür, CLI başlangıcından): 9,6 / 6,2 / 5,9 sn (CLI çıkışı 2,1–3,1 sn, uygulama penceresi ~3–4 sn; R9 notundaki
 2,6–3,0 sn yalnız sekme içeriği, bu ölçüm uygulamanın açılışını da içeriyor — doğrudan kıyas değil). Senaryo 4 (çıkış
-yapılmış) **yapılmadı**: giriş bilgisi gerekiyor.
+yapılmış) bu turda yapılmadı: giriş bilgisi gerekiyordu, aşağıda Hakan'la yapıldı.
+
+**B, senaryo 4 gerçek masaüstünde (2026-10-12, Hakan + Claude; CDP :9333 izleyicisi + her belgeye eklenen salt-okunur
+`desktop-open-workspace` dinleyicisi, `.playwright-mcp/r11/desk-watch4.cjs`):** **kaldı**, girişten sonra proje sayfası
+kendiliğinden açılmıyor. Akış: oturum açıkken başka bir workspace → Çıkış yap (`/login`) → `r11b` test projesinde
+`npx -y remnus@0.1.12 open` iki kez ("Opened in the Remnus desktop app") → giriş → ilk erişilebilir workspace'in panosu, proje
+yok. Neden: kabuktaki `DesktopOpenState.web_ready` (`src-tauri/src/lib.rs`) ilk `desktop-open-ready`'de true oluyor ve bir daha
+false olmuyor. Çıkıştan sonra sayfa `/login`'de, yani AppShell ve `DesktopOpenListener` yok. Kabuk ise sayfanın hâlâ dinlediğini
+sanıp olayı hemen gönderiyor; iki olayın da `/login`'e ulaştığı izlendi ve ikisi de orada düştü. `pending` hiç dolmadığı için
+girişten sonraki `desktop-open-ready` de bir şey teslim etmiyor. Girişten sonra çalıştırılan bir sonraki `open` doğru sayfayı
+açıyor (yeni sekme "R11 test sayfası", workspace çerezi r11-test). **Ayrı iş.** Düzeltme yönü: web tarafında, 0.1.20 ile de
+çalışır, AppShell dışındaki sayfalarda (kök layout) olay dinlenir, workspace id kısa ömürlü `sessionStorage`'a yazılır ve
+`DesktopOpenListener` mount'ta onu tüketir. Masaüstü sürümü gerektiren alternatif: kabuk, sayfa teslim aldığını bildirene kadar
+`pending`'i tutar. Ek gözlem (tasarım gereği, değişiklik yok): çıkış `remnus_workspace_id` ve son yol çerezlerini siliyor, bu
+yüzden giriş son sayfaya değil ilk workspace'in ana panosuna iniyor.
+
+> **✅ R11 — Tamamlandı (2026-10-12).** Yayında: CLI 0.1.12 (npm `latest`), masaüstü 0.1.20, web `9c99a57`. Yayın sonrası
+> test: A geçti; B 1, 2, 3, 5 geçti, 4 kaldı (çıkış yapılmışken gelen link `/login`'de düşüyor, girişten sonra tekrarlanan `open`
+> açıyor; ayrı iş, yukarıda), 6 ölçüldü (9,6 / 6,2 / 5,9 sn, uygulama açılışı dahil); C ölçülemedi, gerileme sinyali yok, R9
+> notuna ek yok.
