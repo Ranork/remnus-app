@@ -7,6 +7,8 @@ import type { ShellItemRow } from '@/lib/actions/workspace';
 
 /** Same shape rule as the CLI and the desktop shell: never build a path from anything else. */
 const WORKSPACE_ID_RE = /^[A-Za-z0-9_-]{1,64}$/;
+/** A settled content page, where a soft navigation into a new tab is safe. */
+const CONTENT_PATH_RE = /^\/(page|db|dashboard|graph)\//;
 
 function activeWorkspaceCookie(): string | null {
   const match = document.cookie.split(';').map((c) => c.trim()).find((c) => c.startsWith('remnus_workspace_id='));
@@ -34,7 +36,9 @@ function entryPath(items: ShellItemRow[], workspaceId: string): string | null {
  * sidebar's workspace switch; arriving there switches the workspace cookie (the sidebar
  * syncs it from the path). Never `/w/<id>` in a tab: that is a route handler, which only a
  * hard navigation runs — a tab pushed to it stayed blank (R11). A workspace this window
- * holds no page of (empty, or joined since it loaded) gets that hard navigation instead.
+ * holds no page of (empty, or joined since it loaded), or a link that arrives while the
+ * window is not on a content page (a cold start lands on the redirecting `/app`), gets that
+ * hard navigation instead.
  *
  * The shell holds a link that arrives before this page is listening (the app was closed,
  * or still loading) and sends it once it hears `desktop-open-ready`, so the listener is
@@ -66,13 +70,24 @@ export default function DesktopOpenListener({ items }: { items: ShellItemRow[] }
           const id = event.payload?.workspaceId;
           if (typeof id !== 'string' || !WORKSPACE_ID_RE.test(id)) return;
           if (activeWorkspaceCookie() === id) return;
-          const href = entryPath(itemsRef.current, id);
+          // Off a content page — above all a cold start, where the link arrives while `/app`
+          // is still redirecting and a push would collide with that redirect (both were lost:
+          // a blank tab on `/app`) — the hard route does the whole job.
+          const settled = CONTENT_PATH_RE.test(window.location.pathname);
+          const href = settled ? entryPath(itemsRef.current, id) : null;
           if (!href) {
             window.location.assign(`/w/${id}`);
             return;
           }
-          if (tabsRef.current) tabsRef.current.openInNewTab(href);
-          else routerRef.current.push(href);
+          const tabs = tabsRef.current;
+          if (!tabs) {
+            routerRef.current.push(href);
+            return;
+          }
+          // A tab already showing that page is brought forward rather than duplicated.
+          const open = tabs.tabs.find((t) => t.href === href);
+          if (open) tabs.activateTab(open.id);
+          else tabs.openInNewTab(href);
         });
         if (cancelled) {
           off();
