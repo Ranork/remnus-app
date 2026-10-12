@@ -2915,6 +2915,7 @@ açık same-origin `redirect` callback (savunma derinliği).
 | R6 | `cli/templates/agents-section.md`: iki satır — "kalibrasyonu yenile" isteği → rehberin "Running it again" bölümü; izlenmeye değer yeni database/alan → ana panoya blok. Sürüm artırılmadı (0.1.11'de birleşir). Yalnız yeni `init`/`sync` ile yazılan AGENTS.md'ye girer | — |
 | R6+ | — | `skills/remnus/SKILL.md` değişti (`tick`/`append`, `move_item` `position`); masaüstü `install_remnus_skill` bunu `include_str!` ile gömüyor → sonraki masaüstü sürümüne girer |
 | R9 | Kod değişmedi, sürüm artmaz. Ama `npx remnus open`'ın yazdırdığı `/w/<id>` linki (`cli/src/commands/open.js`) R9 öncesi workspace'i hiç değiştirmiyordu; R9'un **web** düzeltmesi (`/w/[id]` route handler) canlıya çıkmadan R11'in `open` testleri yanlış workspace'i açar → R9 web deploy'u yayın sonrası testten ÖNCE canlıda olmalı | Kod değişmedi. Masaüstü `remnus://open` → `DesktopOpenListener` → `/w/<id>` aynı web düzeltmesine dayanır (aynı koşul). Tauri `TabPane` artık talep anında yükleniyor (web'den gelir, binary değil) — R11 testinde ilk sekmenin açılış süresine bak |
+| **R11 testi (2026-10-12)** | `cli/package.json` → **0.1.12, HENÜZ YAYINLANMADI** (Hakan: `cd cli && npm publish`). Taşıdığı: `init --help`/`--version` artık komutu çalıştırmıyor (`cli.js`); `doctor` güncelleme beklerken "Everything checks out" demiyor; Windows'ta CLI verisi `%LOCALAPPDATA%\remnus-cli` (eskisi masaüstü kurulum klasörüydü; eski `settings.json` okunuyor) | Masaüstü sürümü gerekmez: `remnus://open` boş "Adsız" sekme hatası **web** tarafında düzeltildi (`DesktopOpenListener` + `TabsContext`), web deploy'u ile gelir |
 | **Yayın (2026-10-06)** | **CLI 0.1.11 YAYINLANDI** (`npm publish`, `latest` = 0.1.11; `npx remnus@0.1.11 --help` ve `doctor` temiz dizinde doğrulandı). İçine R10.1 girdi: sunucudan gelen workspace adı/scope AGENTS.md, CLAUDE.md ve harita başlığına `inlineText` ile yazılıyor; `npm run test:cli`. Sürüm artırılmadı (0.1.11 hiç yayınlanmamıştı). | **Masaüstü 0.1.20**: `e8e296e` + tag `v0.1.20` (V2 U1/U2 sonrası). Taşıdığı: masaüstü zoom'u WebView'un kendi zoom'u (web tarafı) + `ZOOM_INIT` init script'i kaldırıldı + R6+'nın SKILL.md değişikliği. Release workflow'u `actions/checkout@v5`/`setup-node@v5`'e geçti (Node 20 uyarısı; sonraki sürümden itibaren). |
 | **Yayın (2026-10-03)** | **CLI 0.1.11 HENÜZ YAYINLANMADI** (npm publish Hakan'ın npm oturumu/2FA ile; `DESKTOP_OPEN_MIN_VERSION = 0.1.19` zaten bu masaüstü sürümüyle uyumlu, sıra sorunu yok). | **Masaüstü 0.1.19 yayınlandı**: `npm run release:patch` → `493cedf` + tag `v0.1.19`; Tauri Release 4/4 yeşil (34 dk), release draft değil, `latest.json` version 0.1.19 (linux/windows/macOS arm64+x64, imzalı) → in-app auto-updater mevcut kullanıcılara sunar. Taşıdığı: R1 `remnus://open` rotası. Yerel cargo check atlandı (CI derledi). |
 
@@ -2968,3 +2969,25 @@ Hakan'dan açık onay al; token/OTP değerini asla yazdırma.
 - AGENTS.md / Serena'da sürüm numaraları geçen yerler (Project Install) güncel.
 - `.ai/CURRENT_TASK.md`, update-handoff; bu bölümün sonuna "Tamamlandı" notu.
 ```
+
+### R11 — Yayın sonrası test (2026-10-12, Claude; ilk tur, düzeltmeler commit bekliyor)
+
+**A — CLI 0.1.11 (canlı, geçici dizin, test workspace'i sonra silindi):** npm `latest` = 0.1.11 = `cli/package.json`;
+`init` linki "Only if no browser window appeared" etiketli, "For the agent" bloğu var; kullanılmış link → "Bu proje zaten
+bağlandı"; 5,5 dk sonra açılan link → "Bu bağlantının süresi doldu" (CLI de 5 dk'da "Timed out" ile çıkıyor); 0.1.10'a pin'li
+kopyada `doctor` `.mcp.json` ve hook için ayrı "newer remnus" uyarısı veriyor. Bulunan: `init --help` kurulumu başlatıyordu;
+`doctor` uyarıya rağmen "Everything checks out"; Windows'ta CLI verisi masaüstü kurulum klasörüne yazılıyordu → üçü CLI 0.1.12'de.
+
+**B — Masaüstü 0.1.20:** `open --prefer desktop` → uygulama öne geliyor ama **boş "Adsız" sekme** (proje açılmıyor). Neden:
+`DesktopOpenListener` `/w/<id>`'ye soft push yapıyordu (R9'dan beri route handler, yalnız hard navigation). Düzeltme (web):
+workspace'in en üst öğesi shell'in `items`'ından (sidebar'ın workspace geçişi gibi), öğe yoksa hard `/w/<id>`; ayrıca
+`TabsContext` reconcile'ı yalnız gerçek pathname değişiminde aktif sekmeyi taşıyor (yoksa araya giren re-render yeni sekmeyi
+eski sayfaya geri çekiyordu). Yerelde Tauri köprüsü taklit edilerek doğrulandı (`.playwright-mcp/r11/desktop-open-check.cjs`,
+8/8 × 3 koşu). Senaryo 5 (`--prefer window` iki kez) geçti: tek pencere, "This project's window is already open". 1–4 ve 6
+**deploy sonrası yeniden test edilecek**.
+
+**C — Canlı hız:** `agent_activity` p50/p95 R9 etkisini ayırt edemiyor (öncesi iad1 dönemiyle karışık, dub1-öncesi R9 örneği
+n≈13; günlük p50 145–698 ms oynuyor) — gerileme kanıtı yok. Vercel metrik sorgusu 400 (Observability Plus yok olabilir,
+doğrulanmadı); PostHog atlandı (Hakan kullanmıyor); Turso panelinde yalnız toplam (11,14 M okuma), günlük eğri yok. Canlı
+laboratuvar (demo hesabı, 40 ms/20 Mbit, 3 koşu): `/page` hazır 3,3–3,5 sn (TTFB ~0,7 sn), `/db` 2,8–3,1, `/graph` 3,9,
+`/w` girişi 2,6 — yerel R9 sayılarıyla aynı ortam değil.
