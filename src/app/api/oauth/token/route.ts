@@ -4,7 +4,7 @@ import { db } from '@/db';
 import { oauthAuthCodes, oauthAccessTokens, users } from '@/db/schema';
 import { and, eq, isNull } from 'drizzle-orm';
 import bcrypt from 'bcryptjs';
-import { randomBytes, createHash, createHmac, randomUUID } from 'crypto';
+import { randomBytes, createHash, createHmac, hkdfSync, randomUUID } from 'crypto';
 import { checkCanAddAgent } from '@/lib/services/billing';
 import { captureServer, isCaptureAllowedForUser, captureForUser, captureAnonymous } from '@/lib/analytics/server';
 import { maybeSendAgentConnectedEmail } from '@/lib/email/lifecycle';
@@ -22,8 +22,11 @@ const REFRESH_TOKEN_TTL_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 //
 // The replay is answered with the SAME new pair, and that pair is not stored anywhere (a
 // stored plaintext token would be a credential at rest): it is DERIVED. The rotated pair —
-// the new row's id, both prefixes and both secrets — is an HMAC, keyed with the server
-// secret, of the old row's id and the old refresh secret the client presents. So any
+// the new row's id, both prefixes and both secrets — is an HMAC, keyed with a purpose-specific
+// subkey of the server secret (HKDF, so the session-signing secret itself never keys it), of
+// the old row's id and the old refresh secret the client presents — a secret the server has
+// just verified against the old row's hash, so a caller cannot make it derive anything for a
+// token it does not hold. So any
 // instance can recompute it, which an in-memory cache could not offer on a serverless
 // platform where the replay may land anywhere. It also makes rotation idempotent: two
 // instances rotating one token at the same moment insert the same row (the second insert is
@@ -66,11 +69,30 @@ function randomSecrets(): TokenSecrets {
  * difference. `null` without a server secret to key it with — the caller then rotates to a
  * random pair and a replay simply has no grace.
  */
+let warnedNoSecret = false;
+let subkeyCache: { secret: string; key: Buffer } | null = null;
+/** The HMAC key for rotation: derived from the server secret for this one purpose. */
+function rotationSubkey(secret: string): Buffer {
+  if (subkeyCache?.secret !== secret) {
+    subkeyCache = { secret, key: Buffer.from(hkdfSync('sha256', secret, 'remnus-oauth', 'refresh-rotation/v1', 32)) };
+  }
+  return subkeyCache.key;
+}
+
 function deriveRotatedSecrets(oldRowId: string, oldRefreshSecret: string): TokenSecrets | null {
   const key = process.env.AUTH_SECRET;
-  if (!key) return null;
+  if (!key) {
+    // Said once per instance: without the key a replayed refresh token has no grace, which is
+    // exactly the "session died mid-way" symptom, and nothing else would point at the cause.
+    if (!warnedNoSecret) {
+      warnedNoSecret = true;
+      console.error('[oauth/token] AUTH_SECRET is not set: refresh tokens rotate to random pairs and a replayed one gets no grace');
+    }
+    return null;
+  }
+  const subkey = rotationSubkey(key);
   const derive = (label: string) =>
-    createHmac('sha256', key).update(`remnus/oauth-refresh-rotation/v1\n${label}\n${oldRowId}\n${oldRefreshSecret}`).digest('hex');
+    createHmac('sha256', subkey).update(`${label}\n${oldRowId}\n${oldRefreshSecret}`).digest('hex');
   const h = derive('id');
   return {
     // UUID-shaped (version 4, RFC 4122 variant) like every other row id.
