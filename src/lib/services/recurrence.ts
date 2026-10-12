@@ -930,23 +930,72 @@ export async function exdateOccurrenceForPage(pageId: string): Promise<boolean> 
     .limit(1);
   if (!page?.seriesId || !page.occurrenceDate) return false;
 
-  const series = await getSeries(page.seriesId);
-  if (!series) return false;
-  const rule = normalizeRule(series.rule);
-  if (!rule) return false;
+  return (await exdateOccurrences([{ seriesId: page.seriesId, occurrenceDate: page.occurrenceDate }])) > 0;
+}
 
-  await db
-    .update(recurrenceSeries)
-    .set({
-      rule: {
-        ...rule,
-        exDates: [...new Set([...(rule.exDates ?? []), page.occurrenceDate])],
-      } as unknown as Record<string, unknown>,
-      updatedAt: new Date(),
-    })
-    .where(eq(recurrenceSeries.id, page.seriesId));
+export interface OccurrenceRef {
+  seriesId: string;
+  /** `YYYY-MM-DD` — the date the rule generated the card for. */
+  occurrenceDate: string;
+}
 
-  return true;
+/**
+ * Which of these rows are occurrences of a repeating series, and of which — read from the
+ * given workspace only, so an id from anywhere else is simply absent from the result. Taken
+ * BEFORE the rows are deleted: afterwards there is nothing left to ask.
+ */
+export async function occurrencesOfPages(workspaceId: string, pageIds: string[]): Promise<Map<string, OccurrenceRef>> {
+  const found = new Map<string, OccurrenceRef>();
+  const ids = [...new Set(pageIds)];
+  for (let i = 0; i < ids.length; i += 500) {
+    const rows = await db
+      .select({ id: pages.id, seriesId: pages.seriesId, occurrenceDate: pages.occurrenceDate })
+      .from(pages)
+      .innerJoin(databases, eq(databases.id, pages.databaseId))
+      .innerJoin(workspaceItems, eq(workspaceItems.id, databases.itemId))
+      .where(and(eq(workspaceItems.workspaceId, workspaceId), inArray(pages.id, ids.slice(i, i + 500))));
+    for (const r of rows) {
+      if (r.seriesId && r.occurrenceDate) found.set(r.id, { seriesId: r.seriesId, occurrenceDate: r.occurrenceDate });
+    }
+  }
+  return found;
+}
+
+/**
+ * Records deleted occurrences on their series' rule (EXDATE) so no later top-up regenerates
+ * them. Each series' rule is read and rewritten ONCE with all of its dates, one series after
+ * the other: deleting several occurrences of one series with one rewrite each, concurrently,
+ * let the writers overwrite each other, and the exceptions that were lost came back as cards
+ * at the next top-up — a bulk delete of finished recurring cards undoing itself.
+ * Returns how many series were updated.
+ */
+export async function exdateOccurrences(occurrences: OccurrenceRef[]): Promise<number> {
+  const bySeries = new Map<string, Set<string>>();
+  for (const o of occurrences) {
+    if (!bySeries.has(o.seriesId)) bySeries.set(o.seriesId, new Set());
+    bySeries.get(o.seriesId)!.add(o.occurrenceDate);
+  }
+
+  let updated = 0;
+  for (const [seriesId, dates] of bySeries) {
+    const series = await getSeries(seriesId);
+    if (!series) continue;
+    const rule = normalizeRule(series.rule);
+    if (!rule) continue;
+
+    await db
+      .update(recurrenceSeries)
+      .set({
+        rule: {
+          ...rule,
+          exDates: [...new Set([...(rule.exDates ?? []), ...dates])],
+        } as unknown as Record<string, unknown>,
+        updatedAt: new Date(),
+      })
+      .where(eq(recurrenceSeries.id, seriesId));
+    updated += 1;
+  }
+  return updated;
 }
 
 /** Removes one card from its series without touching the rest — "seriden çıkar". */

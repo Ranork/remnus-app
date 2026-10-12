@@ -4,7 +4,7 @@
  * Next.js session cookies. Every function enforces workspace isolation.
  */
 import { db } from '@/db';
-import { exdateOccurrenceForPage, getOccurrenceInfo } from '@/lib/services/recurrence';
+import { exdateOccurrenceForPage, exdateOccurrences, getOccurrenceInfo, occurrencesOfPages } from '@/lib/services/recurrence';
 import { getHomeDashboardItemId } from '@/lib/services/dashboards';
 import { applyBodyEdits, BodyEditError, type TickRequest } from '@/lib/services/bodyEdits';
 import {
@@ -2037,7 +2037,14 @@ async function deleteWorkspaceItemAndDescendants(
 }
 
 /** `deadIds`: collect instead of releasing, for a caller deleting several items at once. */
-export async function deleteItemFromWorkspace(workspaceId: string, itemId: string, actor: SnapshotActor, deadIds?: string[]) {
+export async function deleteItemFromWorkspace(
+  workspaceId: string,
+  itemId: string,
+  actor: SnapshotActor,
+  deadIds?: string[],
+  /** The caller records a row's series exception itself (a bulk delete does, once per series). */
+  options?: { skipExdate?: boolean },
+) {
   const [item] = await db
     .select({
       workspaceId: workspaceItems.workspaceId, type: workspaceItems.type, title: workspaceItems.title,
@@ -2078,7 +2085,7 @@ export async function deleteItemFromWorkspace(workspaceId: string, itemId: strin
   // Same reason as the web delete path in `actions/page.ts`: a deleted
   // occurrence has to be recorded on its rule, or the next materialization
   // recreates it and the agent's delete silently undoes itself.
-  await exdateOccurrenceForPage(itemId).catch(() => {});
+  if (!options?.skipExdate) await exdateOccurrenceForPage(itemId).catch(() => {});
   await snapshotBeforeDelete({
     workspaceId, originalId: itemId, itemType: 'database_row', title: page.title,
     content: page.content, properties: page.properties, icon: page.icon, iconColor: page.iconColor,
@@ -2103,9 +2110,19 @@ export async function bulkDeleteItemsFromWorkspace(
 ): Promise<{ id: string; ok: boolean; error?: string }[]> {
   // One release for the whole batch, after every item's trash copy exists.
   const deadIds: string[] = [];
+  // Deleting a repeating series' occurrence must also be recorded on the series, or the next
+  // top-up recreates it. Done per row, concurrently, those rewrites of one rule overwrite each
+  // other — so the occurrences are read first, the rows deleted without it, and each series
+  // is rewritten once for the rows that really went.
+  const occurrences = await occurrencesOfPages(workspaceId, itemIds).catch(() => new Map());
   const settled = await Promise.allSettled(
-    itemIds.map((id) => deleteItemFromWorkspace(workspaceId, id, actor, deadIds)),
+    itemIds.map((id) => deleteItemFromWorkspace(workspaceId, id, actor, deadIds, { skipExdate: true })),
   );
+  const deletedOccurrences = itemIds.flatMap((id, i) => {
+    const occurrence = settled[i].status === 'fulfilled' ? occurrences.get(id) : undefined;
+    return occurrence ? [occurrence] : [];
+  });
+  if (deletedOccurrences.length > 0) await exdateOccurrences(deletedOccurrences).catch(() => {});
   await releaseDeletedItems(deadIds);
   return settled.map((result, i) => (
     result.status === 'fulfilled'

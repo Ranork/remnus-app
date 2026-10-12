@@ -7,6 +7,10 @@
  *    naming the columns, when the target cannot hold them (`RowMoveSchemaError`); moves
  *    only rows that live in the caller's workspace; re-maps column ids by name; and keeps
  *    a moved occurrence of a repeating series from following the old series.
+ *  - `bulkDeleteItemsFromWorkspace` (MCP `bulk_delete_pages`): deleting several occurrences of
+ *    one repeating series records ALL of their dates on the series (they used to overwrite each
+ *    other's exceptions and come back at the next top-up), and never touches another
+ *    workspace's series.
  *  - `getConnectionStatus` (MCP `get_status`): what it reports for an expiring OAuth token
  *    and for a write token narrowed to read.
  *
@@ -18,8 +22,8 @@ import 'dotenv/config';
 
 import { eq, inArray, sql } from 'drizzle-orm';
 import { db } from '@/db';
-import { databases, pages, users, workspaceItems, workspaceMembers, workspaces } from '@/db/schema';
-import { bulkMoveRowsToDatabase, bulkUpdatePages, RowMoveSchemaError } from '@/lib/services/workspace';
+import { databases, pages, recurrenceSeries, users, workspaceItems, workspaceMembers, workspaces } from '@/db/schema';
+import { bulkDeleteItemsFromWorkspace, bulkMoveRowsToDatabase, bulkUpdatePages, RowMoveSchemaError } from '@/lib/services/workspace';
 import { getConnectionStatus } from '@/lib/services/connectionStatus';
 import { deleteWorkspaceData } from '@/lib/services/workspaceDeletion';
 import type { TokenContext } from '@/app/api/mcp/context';
@@ -51,7 +55,13 @@ const ids = {
   srcDb: `${SUFFIX}-src`, tgtDb: `${SUFFIX}-tgt`, badDb: `${SUFFIX}-bad`, foreignDb: `${SUFFIX}-foreign`,
   rows: [1, 2, 3].map((n) => `${SUFFIX}-row${n}`),
   foreignRow: `${SUFFIX}-foreign-row`,
+  recDb: `${SUFFIX}-rec`,
+  recRows: [1, 2, 3, 4, 5].map((n) => `${SUFFIX}-rec-row${n}`),
+  recSeries: `${SUFFIX}-rec-series`,
+  foreignSeries: `${SUFFIX}-foreign-series`,
 };
+const DAILY = { freq: 'daily', interval: 1, startDate: '2026-10-12', end: { type: 'never' }, exDates: [] as string[] };
+const recDate = (i: number) => `2026-10-${String(12 + i).padStart(2, '0')}`;
 
 async function seedWorkspace(workspaceId: string, name: string) {
   const now = new Date();
@@ -93,12 +103,25 @@ async function main() {
       { id: 'title', name: 'Title', type: 'text' },
       { id: 'col_status', name: 'Status', type: 'status' },
     ]);
+    await seedDatabase(W1, ids.recDb, 'Chores', [
+      { id: 'title', name: 'Title', type: 'text' },
+      { id: 'col_due', name: 'Due', type: 'date' },
+    ]);
+    await db.insert(recurrenceSeries).values([
+      { id: ids.recSeries, databaseId: ids.recDb, dateColId: 'col_due', rule: { ...DAILY }, template: { title: 'Chore' }, createdAt: now, updatedAt: now },
+      { id: ids.foreignSeries, databaseId: ids.foreignDb, dateColId: 'col_due', rule: { ...DAILY }, template: { title: 'Other' }, createdAt: now, updatedAt: now },
+    ]);
     await db.insert(pages).values([
+      ...ids.recRows.map((id, i) => ({
+        id, databaseId: ids.recDb, title: `Chore ${i + 1}`, content: '', properties: {}, sortOrder: i,
+        seriesId: ids.recSeries, occurrenceDate: recDate(i), createdAt: now, updatedAt: now,
+      })),
       ...ids.rows.map((id, i) => ({
         id, databaseId: ids.srcDb, title: `Task ${i + 1}`, content: '', properties: { col_status: 'Todo' }, sortOrder: i,
         seriesId: i === 2 ? `${SUFFIX}-series` : null, occurrenceDate: i === 2 ? '2026-10-12' : null, createdAt: now, updatedAt: now,
       })),
       { id: ids.foreignRow, databaseId: ids.foreignDb, title: 'Not yours', content: '', properties: { col_status: 'Todo' }, sortOrder: 0, createdAt: now, updatedAt: now },
+      { id: `${ids.foreignRow}-occ`, databaseId: ids.foreignDb, title: 'Not yours, repeating', content: '', properties: {}, sortOrder: 1, seriesId: ids.foreignSeries, occurrenceDate: recDate(0), createdAt: now, updatedAt: now },
     ]);
 
     console.log('bulkUpdatePages:');
@@ -140,6 +163,24 @@ async function main() {
     const occurrence = inTarget.find((r) => r.id === ids.rows[2])!;
     const plain = inTarget.find((r) => r.id === ids.rows[0])!;
     check('an occurrence of a repeating series stops following it', occurrence.seriesDetached === true && plain.seriesDetached === false);
+
+    console.log('\nbulkDeleteItemsFromWorkspace and repeating cards:');
+    const exDatesOf = async (seriesId: string) => {
+      const [r] = await db.select({ rule: recurrenceSeries.rule }).from(recurrenceSeries).where(eq(recurrenceSeries.id, seriesId));
+      return [...(((r?.rule ?? {}) as { exDates?: string[] }).exDates ?? [])].sort();
+    };
+    const deleted = await bulkDeleteItemsFromWorkspace(
+      W1,
+      [...ids.recRows.slice(0, 4), `${ids.foreignRow}-occ`, `${SUFFIX}-no-such-row`],
+      { kind: 'agent', label: 'Contract test' },
+    );
+    check('the four occurrences are deleted', ids.recRows.slice(0, 4).every((id) => deleted.find((r) => r.id === id)?.ok));
+    check('the foreign row and the missing id are refused', deleted.find((r) => r.id === `${ids.foreignRow}-occ`)?.ok === false && deleted.find((r) => r.id === `${SUFFIX}-no-such-row`)?.ok === false);
+    check('ALL four dates are recorded as exceptions on the series', (await exDatesOf(ids.recSeries)).join() === [0, 1, 2, 3].map(recDate).join(), JSON.stringify(await exDatesOf(ids.recSeries)));
+    check('the card that was not deleted keeps its date open', !(await exDatesOf(ids.recSeries)).includes(recDate(4)));
+    check('another workspace\'s series is untouched', (await exDatesOf(ids.foreignSeries)).length === 0);
+    const [foreignCard] = await db.select({ id: pages.id }).from(pages).where(eq(pages.id, `${ids.foreignRow}-occ`));
+    check('…and so is its card', !!foreignCard);
 
     console.log('\ngetConnectionStatus:');
     const base: TokenContext = {
