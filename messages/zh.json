@@ -324,7 +324,8 @@
     "myTrash": "回收站",
     "settings": "设置",
     "earlyAccess": "抢先体验",
-    "agentsConnectNudge": "连接"
+    "agentsConnectNudge": "连接",
+    "duplicateEmpty": "复制（不含行）"
   },
   "WorkspaceSettings": {
     "roleLabel": "角色",
@@ -662,7 +663,18 @@
     "accessRequestsTitle": "访问申请",
     "accessRequestFrom": "来自 {project}",
     "approveRequest": "批准",
-    "denyRequest": "拒绝"
+    "denyRequest": "拒绝",
+    "duplicateTitle": "复制工作区",
+    "duplicateHint": "基于此工作区创建一个新的工作区，适合作为下一个项目的模板。成员、智能体连接、分享链接和评论不会被复制。",
+    "duplicateAction": "复制…",
+    "duplicateDialogHint": "你将成为副本的所有者。此工作区不会有任何改变。",
+    "duplicateNameLabel": "副本名称",
+    "duplicateEverything": "全部内容",
+    "duplicateEverythingDesc": "页面、仪表板，以及每个数据库的列、视图和行。",
+    "duplicateStructure": "仅结构",
+    "duplicateStructureDesc": "相同的页面、仪表板和数据库，保留列与视图，但不含行。适合作为模板。",
+    "duplicateConfirm": "创建副本",
+    "duplicateFailed": "无法复制该工作区，未创建任何内容，请重试。"
   },
   "Templates": {
     "modalTitle": "新建条目",
@@ -910,7 +922,26 @@
       "ignoredColumns": "已忽略（无匹配属性）：{columns}",
       "moreRows": "还有 {count} 行",
       "tooManyRows": "行数过多 — 每次导入最多 {max} 行"
-    }
+    },
+    "selectRows": "选择行",
+    "selectedCount": "已选 {count} 项",
+    "selectAll": "全选",
+    "selectDone": "完成",
+    "selectCancel": "取消",
+    "bulkMove": "移动到…",
+    "bulkDelete": "删除",
+    "bulkDeleteTitle": "删除 {count} 行？",
+    "bulkDeleteBody": "它们会进入回收站，30 天内可以恢复。",
+    "bulkDeleted": "已将 {count} 行移入回收站",
+    "bulkPartialFailed": "{total} 项中有 {failed} 项未能处理，它们仍处于选中状态。",
+    "bulkMoveTitle": "移动 {count} 行",
+    "bulkMoveHint": "选择要移入的数据库。它必须包含与当前数据库名称和类型都相同的列。",
+    "bulkMoveTarget": "移动到",
+    "bulkMoveNoTargets": "此工作区中没有可供移入的其他数据库。",
+    "bulkMoveConfirm": "移动",
+    "bulkMoveMismatch": "该数据库缺少以下列，或这些列的类型不同：{columns}。未移动任何内容。",
+    "bulkMoved": "已将 {count} 行移动到 {database}",
+    "bulkFailed": "出了点问题，请重试。"
   },
   "Dashboard": {
     "deleteDashboard": "删除仪表盘",
@@ -1313,7 +1344,8 @@
     "contactFormRateLimited": "最近发送的消息过多，请稍后再试。",
     "contactFormSendFailed": "消息发送失败，请重试或直接给我们发邮件。",
     "viewerCannotWrite": "你在该工作区的角色是只读，因此无法以写入权限连接。",
-    "agentLimitReachedJoin": "该工作区的智能体名额已满。请让所有者腾出一个名额或升级方案。"
+    "agentLimitReachedJoin": "该工作区的智能体名额已满。请让所有者腾出一个名额或升级方案。",
+    "workspaceTooLarge": "此工作区太大，无法一次性复制。请不含行复制，或先拆分。"
   },
   "LanguageSwitcher": {
     "label": "语言"
@@ -1457,11 +1489,11 @@
     "bridgeSetupStripTitle": "无需 API 密钥。",
     "bridgeSetupStripBody": "直接在编辑器中通过 OAuth 登录一次即可——无需复制、粘贴或轮换任何令牌。",
     "bridgeToolsSnum": "06 / MCP",
-    "bridgeToolsH2Part1": "27 个工具、7 个资源和 7 个提示词 —",
+    "bridgeToolsH2Part1": "28 个工具、7 个资源和 7 个提示词 —",
     "bridgeToolsH2Accent": "全部",
     "bridgeToolsH2Part2": "可用。",
     "bridgeToolsSubhead": "你在界面里能做的一切，你的 AI 也能做。相同的认证、相同的权限、相同的审计日志。",
-    "bridgeToolsFooterText": "只读令牌可解锁 11 个读取工具。写入权限再增加 16 个,实现完整的创建、更新和删除控制。",
+    "bridgeToolsFooterText": "只读令牌可解锁 12 个读取工具。写入权限再增加 16 个,实现完整的创建、更新和删除控制。",
     "bridgeToolsFlagshipContext": "在明确的令牌预算内为代理提供正确的产品上下文，并附带可信度与时效性信号。",
     "bridgeContextDemoEyebrow": "上下文效率，实际呈现",
     "bridgeContextDemoTitle": "输入一个任务，只输出有用的上下文。",
@@ -1499,7 +1531,7 @@
     "bridgePricingSelfPrice": "$0",
     "bridgePricingSelfF1": "无限工作区和页面",
     "bridgePricingSelfF2": "所有视图和数据库",
-    "bridgePricingSelfF3": "完整 MCP 访问（27 个工具）",
+    "bridgePricingSelfF3": "完整 MCP 访问（28 个工具）",
     "bridgePricingSelfF4": "内置 8 种语言",
     "bridgePricingSelfF5": "无需云或账户",
     "bridgePricingSelfCta": "在 GitHub 上查看",

@@ -23,7 +23,7 @@
 // Cookie-free by design (the service-layer convention).
 
 import { db } from '@/db';
-import { agentTokens, oauthAccessTokens, users, workspaceContextPolicies, workspaceMembers } from '@/db/schema';
+import { agentTokens, oauthAccessTokens, users, workspaceContextPolicies, workspaceMembers, workspaces } from '@/db/schema';
 import { and, eq, inArray, isNull } from 'drizzle-orm';
 import { maxScopeForRole, type MemberRole } from './accessRequests';
 
@@ -91,6 +91,7 @@ export async function findPatForAuth(prefix: string) {
   const [row] = await db
     .select({
       token: agentTokens,
+      workspaceName: workspaces.name,
       memberRole: workspaceMembers.role,
       accountId: users.id,
       accountRole: users.role,
@@ -105,6 +106,7 @@ export async function findPatForAuth(prefix: string) {
       eq(workspaceMembers.userId, agentTokens.createdBy),
     ))
     .leftJoin(users, eq(users.id, agentTokens.createdBy))
+    .leftJoin(workspaces, eq(workspaces.id, agentTokens.workspaceId))
     .leftJoin(workspaceContextPolicies, eq(workspaceContextPolicies.workspaceId, agentTokens.workspaceId))
     .where(and(eq(agentTokens.tokenPrefix, prefix), isNull(agentTokens.revokedAt)))
     .limit(1);
@@ -119,6 +121,7 @@ export async function findPatForAuth(prefix: string) {
       row.memberRole,
     ),
     policy: policyFrom(row),
+    workspaceName: row.workspaceName ?? null,
     // The owner's analytics decision rides along, so logging a call needs no extra read (V2 R9.5).
     analytics: { allowed: row.accountConsent === 'granted', role: row.accountRole ?? null },
   };
@@ -129,6 +132,7 @@ export async function findOAuthTokenForAuth(prefix: string) {
   const [row] = await db
     .select({
       token: oauthAccessTokens,
+      workspaceName: workspaces.name,
       memberRole: workspaceMembers.role,
       accountId: users.id,
       accountRole: users.role,
@@ -143,6 +147,7 @@ export async function findOAuthTokenForAuth(prefix: string) {
       eq(workspaceMembers.userId, oauthAccessTokens.userId),
     ))
     .leftJoin(users, eq(users.id, oauthAccessTokens.userId))
+    .leftJoin(workspaces, eq(workspaces.id, oauthAccessTokens.workspaceId))
     .leftJoin(workspaceContextPolicies, eq(workspaceContextPolicies.workspaceId, oauthAccessTokens.workspaceId))
     .where(and(eq(oauthAccessTokens.tokenPrefix, prefix), isNull(oauthAccessTokens.revokedAt)))
     .limit(1);
@@ -157,6 +162,7 @@ export async function findOAuthTokenForAuth(prefix: string) {
       row.memberRole,
     ),
     policy: policyFrom(row),
+    workspaceName: row.workspaceName ?? null,
     // The owner's analytics decision rides along, so logging a call needs no extra read (V2 R9.5).
     analytics: { allowed: row.accountConsent === 'granted', role: row.accountRole ?? null },
   };

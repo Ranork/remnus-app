@@ -25,10 +25,11 @@ export const PageMarkdownDialog = lazyComponent(() => import('./PageMarkdownDial
 export const PageHistoryModal = lazyComponent(() => import('./PageHistoryModal').then((m) => m.PageHistoryModal));
 export const BulkRowsDialog = lazyComponent(() => import('./BulkRowsDialog').then((m) => m.BulkRowsDialog));
 export const ConnectModal = lazyComponent(() => import('./agents/ConnectModal').then((m) => m.default));
+export const RowSelectionBar = lazyComponent(() => import('./RowSelectionBar').then((m) => m.default));
 
 const ALL = [
   AgentsModal, BillingModal, TrashModal, UserSettingsModal, WorkspaceSettingsModal, TemplatePickerModal,
-  IconPicker, ShareModal, PageMarkdownDialog, PageHistoryModal, BulkRowsDialog, ConnectModal,
+  IconPicker, ShareModal, PageMarkdownDialog, PageHistoryModal, BulkRowsDialog, ConnectModal, RowSelectionBar,
 ];
 
 let preloaded = false;

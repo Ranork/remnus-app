@@ -52,7 +52,7 @@ Strict does not replace write scope, authorization, or destructive confirmation,
 *   **Rate limit:** 60 requests/minute per token.
 *   **Traceability (audit log):** every tool call (which page was read, which property changed) is written to the workspace audit log.
 
-### 27 MCP tools (agent capabilities)
+### 28 MCP tools (agent capabilities)
 
 | Tool | Scope | What it does (for agents) |
 |---|---|---|
@@ -67,6 +67,7 @@ Strict does not replace write scope, authorization, or destructive confirmation,
 | `query_audit_log` | read | Read past activity records for this (or other) agents |
 | `get_changes_since` | read | Pull everything that changed since a given timestamp (delta-sync) |
 | `get_related_pages` | read | Link-graph analysis (find parent/child/backlinks) |
+| `get_status` | read | Check this connection: workspace, scope, token expiry and what to do about it |
 | `create_page` | write | Create a new document or task (row) |
 | `bulk_create_pages` | write | **(Agent-specific)** Create up to 100 pages or rows in one call, nesting pages created together |
 | `update_page` | write | Update a page's content or properties (status, tags, etc.) |
@@ -126,7 +127,7 @@ Plans scale by agent density rather than headcount: **Free / Startup / Professio
 |---|---|
 | Category | Human-Agent Collaborative Workspace |
 | MCP endpoint | `https://www.remnus.com/api/mcp` |
-| Tools / Resources / Prompts | 27 / 7 / 7 |
+| Tools / Resources / Prompts | 28 / 7 / 7 |
 | Auth model | Agent-first: OAuth 2.1 + PKCE, PAT |
 | Security/trust | Full workspace audit log |
 | License | AGPL-3.0 |

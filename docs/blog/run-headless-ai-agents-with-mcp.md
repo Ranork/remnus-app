@@ -57,7 +57,7 @@ Grant the narrowest scope the job actually needs. Remnus PATs carry one of two s
 
 | Scope | Permitted tools |
 | --- | --- |
-| `read` | `prepare_context`, `search_workspace`, `list_workspace`, `get_page`, `get_database_schema`, `query_database`, `list_members`, `query_audit_log`, `get_changes_since`, `get_related_pages` |
+| `read` | `prepare_context`, `search_workspace`, `list_workspace`, `get_page`, `get_database_schema`, `query_database`, `list_members`, `query_audit_log`, `get_changes_since`, `get_related_pages`, `get_status` |
 | `write` | All read tools, plus `create_page`, `update_page`, `bulk_update_pages`, `delete_page`, `move_item`, `create_database`, `update_database_schema`, and the database-view tools |
 
 A scheduled report or a CI analysis step that only reads never needs more than `read` — calling a write tool with a read-scoped token returns an error and makes no change, so over-scoping doesn't add resilience, only risk. Reserve `write` for jobs that genuinely create or modify content, like nightly documentation updates or backlog cleanup.

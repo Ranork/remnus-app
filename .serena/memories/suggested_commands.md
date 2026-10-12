@@ -20,6 +20,9 @@ npm run bench:context    # Synthetic Context Pack ranking/token regression + (P1
 npm run test:code-paths  # P13: knowledge sources read as repo paths + file matching (pure, no DB)
 npm run test:workspace-deletion  # deleteWorkspaceData leaves nothing behind (DATABASE_URL="file:local.db"; refuses remote)
 npm run test:trash-links  # delete + restore keeps links, restore re-syncs page_links, map orphan≠hub (DATABASE_URL="file:local.db"; refuses remote)
+npm run test:workspace-duplicate  # whole-workspace copy: remapping + both modes (DATABASE_URL="file:local.db"; refuses remote)
+npm run test:bulk-contract  # per-entry bulk_update_pages, cross-database row move rules, get_status (DATABASE_URL="file:local.db"; refuses remote)
+npm run test:mcp-agent-contract  # what an agent is told/can do through the real MCP handler (DATABASE_URL="file:local.db"; refuses remote)
 # Real type check while .next/dev/types/routes.d.ts is half-written: a syntax error there makes tsc skip ALL semantic
 # checks ("only .next errors" ≠ clean). Restart dev to regenerate it, or tsc -p a temp config that excludes .next/dev
 # and next-env.d.ts (next-env imports that file) and includes .next/types instead.

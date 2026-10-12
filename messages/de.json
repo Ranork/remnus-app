@@ -324,7 +324,8 @@
     "myTrash": "Papierkorb",
     "settings": "Einstellungen",
     "earlyAccess": "Früher Zugang",
-    "agentsConnectNudge": "Verbinden"
+    "agentsConnectNudge": "Verbinden",
+    "duplicateEmpty": "Ohne Zeilen duplizieren"
   },
   "WorkspaceSettings": {
     "roleLabel": "Rolle",
@@ -662,7 +663,18 @@
     "accessRequestsTitle": "Zugriffsanfragen",
     "accessRequestFrom": "aus {project}",
     "approveRequest": "Freigeben",
-    "denyRequest": "Ablehnen"
+    "denyRequest": "Ablehnen",
+    "duplicateTitle": "Arbeitsbereich duplizieren",
+    "duplicateHint": "Erstellen Sie aus diesem Arbeitsbereich einen neuen, praktisch als Vorlage für das nächste Projekt. Mitglieder, Agent-Verbindungen, Freigabelinks und Kommentare werden nicht kopiert.",
+    "duplicateAction": "Duplizieren…",
+    "duplicateDialogHint": "Sie werden Eigentümer der Kopie. In diesem Arbeitsbereich ändert sich nichts.",
+    "duplicateNameLabel": "Name der Kopie",
+    "duplicateEverything": "Alles",
+    "duplicateEverythingDesc": "Seiten, Dashboards und jede Datenbank mit Spalten, Ansichten und Zeilen.",
+    "duplicateStructure": "Nur die Struktur",
+    "duplicateStructureDesc": "Dieselben Seiten, Dashboards und Datenbanken mit Spalten und Ansichten, aber ohne Zeilen. Ideal als Vorlage.",
+    "duplicateConfirm": "Kopie erstellen",
+    "duplicateFailed": "Der Arbeitsbereich konnte nicht kopiert werden. Es wurde nichts angelegt – bitte erneut versuchen."
   },
   "Templates": {
     "modalTitle": "Neues Element",
@@ -910,7 +922,26 @@
       "ignoredColumns": "Ignoriert (keine passende Eigenschaft): {columns}",
       "moreRows": "{count, plural, one {# weitere Zeile} other {# weitere Zeilen}}",
       "tooManyRows": "Zu viele Zeilen — maximal {max} pro Import"
-    }
+    },
+    "selectRows": "Zeilen auswählen",
+    "selectedCount": "{count} ausgewählt",
+    "selectAll": "Alle auswählen",
+    "selectDone": "Fertig",
+    "selectCancel": "Abbrechen",
+    "bulkMove": "Verschieben nach…",
+    "bulkDelete": "Löschen",
+    "bulkDeleteTitle": "{count, plural, one {# Zeile löschen?} other {# Zeilen löschen?}}",
+    "bulkDeleteBody": "Sie landen im Papierkorb und lassen sich 30 Tage lang wiederherstellen.",
+    "bulkDeleted": "{count, plural, one {# Zeile in den Papierkorb verschoben} other {# Zeilen in den Papierkorb verschoben}}",
+    "bulkPartialFailed": "{failed} von {total} konnten nicht verarbeitet werden. Sie bleiben ausgewählt.",
+    "bulkMoveTitle": "{count, plural, one {# Zeile verschieben} other {# Zeilen verschieben}}",
+    "bulkMoveHint": "Wählen Sie die Zieldatenbank. Sie braucht dieselben Spalten wie diese, nach Name und Typ.",
+    "bulkMoveTarget": "Verschieben nach",
+    "bulkMoveNoTargets": "In diesem Arbeitsbereich gibt es keine andere Datenbank, in die sie verschoben werden könnten.",
+    "bulkMoveConfirm": "Verschieben",
+    "bulkMoveMismatch": "In dieser Datenbank fehlen diese Spalten oder sie haben einen anderen Typ: {columns}. Es wurde nichts verschoben.",
+    "bulkMoved": "{count, plural, one {# Zeile nach {database} verschoben} other {# Zeilen nach {database} verschoben}}",
+    "bulkFailed": "Etwas ist schiefgelaufen. Bitte erneut versuchen."
   },
   "Dashboard": {
     "deleteDashboard": "Dashboard löschen",
@@ -1313,7 +1344,8 @@
     "crashReload": "Neu laden",
     "crashBack": "Zurück",
     "viewerCannotWrite": "Ihre Rolle in diesem Workspace ist reines Lesen, daher ist keine Verbindung mit Schreibzugriff möglich.",
-    "agentLimitReachedJoin": "In diesem Workspace ist kein Agentenplatz mehr frei. Bitten Sie den Inhaber, einen freizugeben oder den Tarif zu erweitern."
+    "agentLimitReachedJoin": "In diesem Workspace ist kein Agentenplatz mehr frei. Bitten Sie den Inhaber, einen freizugeben oder den Tarif zu erweitern.",
+    "workspaceTooLarge": "Dieser Arbeitsbereich ist zu groß, um ihn in einem Schritt zu kopieren. Kopieren Sie ihn ohne Zeilen oder teilen Sie ihn zuerst auf."
   },
   "LanguageSwitcher": {
     "label": "Sprache"
@@ -1457,11 +1489,11 @@
     "bridgeSetupStripTitle": "Keine API-Schlüssel.",
     "bridgeSetupStripBody": "Melden Sie sich einmal per OAuth an, direkt aus Ihrem Editor — kein Token zum Kopieren, Einfügen oder Rotieren.",
     "bridgeToolsSnum": "06 / MCP",
-    "bridgeToolsH2Part1": "27 Tools, 7 Ressourcen & 7 Prompts —",
+    "bridgeToolsH2Part1": "28 Tools, 7 Ressourcen & 7 Prompts —",
     "bridgeToolsH2Accent": "Alle",
     "bridgeToolsH2Part2": "verfügbar.",
     "bridgeToolsSubhead": "Alles, was du in der Benutzeroberfläche tun kannst, kann auch deine KI. Dieselbe Authentifizierung, dieselben Bereiche, dasselbe Audit-Log.",
-    "bridgeToolsFooterText": "Read-Token schalten 11 Read-Tools frei. Der Write-Scope fügt 16 weitere für volle Kontrolle über Erstellen, Aktualisieren und Löschen hinzu.",
+    "bridgeToolsFooterText": "Read-Token schalten 12 Read-Tools frei. Der Write-Scope fügt 16 weitere für volle Kontrolle über Erstellen, Aktualisieren und Löschen hinzu.",
     "bridgeToolsFlagshipContext": "Gibt Agenten den richtigen Produktkontext innerhalb eines Token-Budgets — mit Vertrauens- und Aktualitätssignalen.",
     "bridgeContextDemoEyebrow": "Kontexteffizienz in der Praxis",
     "bridgeContextDemoTitle": "Eine Aufgabe hinein. Nur der nützliche Kontext heraus.",
@@ -1499,7 +1531,7 @@
     "bridgePricingSelfPrice": "$0",
     "bridgePricingSelfF1": "Unbegrenzte Arbeitsbereiche & Seiten",
     "bridgePricingSelfF2": "Alle Ansichten & Datenbanken",
-    "bridgePricingSelfF3": "Voller MCP-Zugriff (27 Tools)",
+    "bridgePricingSelfF3": "Voller MCP-Zugriff (28 Tools)",
     "bridgePricingSelfF4": "8 Sprachen integriert",
     "bridgePricingSelfF5": "Keine Cloud oder Account nötig",
     "bridgePricingSelfCta": "Auf GitHub ansehen",

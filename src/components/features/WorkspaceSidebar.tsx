@@ -873,11 +873,11 @@ export default function WorkspaceSidebar({
     });
   };
 
-  const handleDuplicateItem = (item: ShellItemRow) => {
+  const handleDuplicateItem = (item: ShellItemRow, includeRows = true) => {
     setOpenMenuItemId(null);
     setLoadingItem({ id: item.id, action: 'duplicate' });
     startTransition(async () => {
-      const result = await duplicateWorkspaceItem(item.id);
+      const result = await duplicateWorkspaceItem(item.id, { includeRows });
       if (result?.type === 'page') router.push(`/page/${result.itemId}`);
       else if (result?.type === 'dashboard') router.push(`/dashboard/${result.itemId}`);
       else if (result?.type === 'database') router.push(`/db/${result.dbId}`);
@@ -939,6 +939,10 @@ export default function WorkspaceSidebar({
     { id: 'open', label: t('open'), icon: ArrowUpRight, onSelect: () => router.push(hrefFor(item)) },
     { id: 'rename', label: t('rename'), icon: Edit3, onSelect: () => { setRenamingItemId(item.id); setRenamingTitle(item.title); } },
     { id: 'duplicate', label: t('duplicate'), icon: Copy, onSelect: () => handleDuplicateItem(item) },
+    // A board copied as an empty template: same columns and views, none of its rows.
+    ...(item.type === 'database'
+      ? [{ id: 'duplicate-empty', label: t('duplicateEmpty'), icon: Copy, onSelect: () => handleDuplicateItem(item, false) } as MenuItem]
+      : []),
     { id: 'copy-link', label: t('copyLink'), icon: Link2, onSelect: () => { navigator.clipboard?.writeText(window.location.origin + hrefFor(item)); } },
     { kind: 'separator' },
     ...(item.type === 'page'
@@ -1525,6 +1529,15 @@ export default function WorkspaceSidebar({
               <Copy size={16} className="text-fg-3 shrink-0" />
               {t('duplicate')}
             </button>
+            {activeMenuItem.type === 'database' && (
+              <button
+                onClick={() => handleDuplicateItem(activeMenuItem, false)}
+                className="w-full flex items-center gap-3 px-4 py-3.5 text-sm text-fg-2 active:bg-hover transition-colors"
+              >
+                <Copy size={16} className="text-fg-3 shrink-0" />
+                {t('duplicateEmpty')}
+              </button>
+            )}
             {/* Same reason as the desktop menu above: dashboards aren't publishable in v1. */}
             {activeMenuItem.type !== 'dashboard' && (
               <button

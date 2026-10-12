@@ -37,6 +37,7 @@ Column types: `text` | `number` | `select` | `multi_select` | `status` | `user` 
 - `get_database_schema` — columns only, no rows. Cheap; call before querying.
 - `query_database` — schema + rows, with optional `filters`. Paginated.
 - `list_members` — workspace members and roles.
+- `get_status` — this connection's own state: workspace, scope, whether write tools are offered, when the token expires and what to do about it. Call it when Remnus tools are missing, a write is refused or a call fails with 401, before guessing at the cause.
 - `query_audit_log` — history of MCP tool calls (yours and other agents').
 - `get_changes_since` — the delta since a cursor (from the digest/map header or a previous call). The normal way to catch up; always returns a `nextCursor` to keep.
 - `get_related_pages` — parent, children, outgoing links, backlinks, row siblings and source files, without bodies. With `resource` (a file path) instead of `pageId`: the pages written against that file — ask it before changing the file.
@@ -45,8 +46,8 @@ Column types: `text` | `number` | `select` | `multi_select` | `status` | `user` 
 - `create_page` — new standalone page OR database row (see decision below).
 - `bulk_create_pages` — up to 100 pages/rows in one call, created in order; nest pages created in the same call with `ref`/`parentRef`. Prefer it whenever you'd create more than a couple of items.
 - `update_page` — change title/content/properties of one item. `tick` checks `- [ ]` tasks by their text and `append` adds to the end — neither resends the body.
-- `bulk_update_pages` — many updates in one call. Prefer this over a loop.
-- `delete_page` — delete a page, row, dashboard, or whole database. **Guarded.**
+- `bulk_update_pages` — many updates in one call. Prefer this over a loop. Every entry answers `ok` / `error` on its own and the ones that succeeded stay applied, so after a failure or a dropped connection re-send only the entries with `ok: false` (or, if you got no answer at all, check with `get_changes_since` / `query_database` first — repeating an update is safe).
+- `delete_page` — delete a page, row, dashboard, or whole database (to the Trash — a person can restore it). **Guarded.**
 - `bulk_delete_pages` — delete up to 100 pages/rows/databases in one call. **Guarded**, same preview/confirm shape as `delete_page`. Response reports each id's own ok/error — never all-or-nothing.
 - `move_item` — reparent a sidebar item; `newParentId: null` → root. `position` (0 = first) sets its place among siblings; pass the current parent to reorder in place.
 - `bulk_move_items` — move up to 100 items in one call: pass `newParentId` to reparent (batched `move_item`), or `targetDatabaseId` to move database rows to a different database. Cross-database moves are refused entirely if the target's columns don't cover the source's by name and type.
@@ -97,11 +98,12 @@ For meaningful multi-page product or coding work, start with `prepare_context` (
 Passing `properties: { status: "Done" }` changes only `status`; every other property is untouched. To *clear* a field, set it explicitly to `null`/`""`. Never re-send the whole property bag thinking you must preserve it — you don't, and doing so risks clobbering changes made since you read.
 
 ### 3. Confirm destructive operations with the human, not just the flag
-`delete_page` and `update_database_schema` (when removing columns) require `confirm: true`. That flag is a safety latch, not your decision to make:
-- Call them **once without `confirm`** to get the preview ("This will permanently delete …").
+`delete_page`, `bulk_delete_pages` and `update_database_schema` (when removing columns) require `confirm: true`. That flag is a safety latch, not your decision to make:
+- Call them **once without `confirm`** to get the preview ("This will delete … It moves to the Trash …").
 - Show that preview to the user and get an explicit yes.
 - Only then call again with `confirm: true`.
-Deleting a database row is irreversible; deleting a database or a parent page cascades to its children. Removing a column destroys that column's data across all rows.
+
+**A deleted page, row or database is recoverable.** It moves to the Trash with its content and a person can restore it there for 30 days — so deleting what the user asked you to delete (archiving finished cards, clearing a scratch section) is not a one-way door. You cannot restore it yourself and there is no tool to read the Trash; tell the user what you deleted so they know where to look. Deleting a database or a parent page puts each item under it in the Trash too (each restores on its own). **Removing a column is different:** it destroys that column's data across all rows and the Trash does not bring it back.
 
 ### 4. Filtering & pagination
 - `query_database` filters use column ID → value: `{ "col_status": "Done" }`. For `multi_select`, pass an array: `{ "col_tags": ["Bug"] }`. Get exact IDs/options from `get_database_schema`.

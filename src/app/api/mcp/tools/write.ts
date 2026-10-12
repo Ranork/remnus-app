@@ -275,7 +275,7 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
   server.registerTool(
     'bulk_update_pages',
     {
-      description: 'Update many pages/rows in one call, each with update_page\'s rules (partial patch, properties merged, title synced; one entry per page). Concurrent and NOT atomic: on an error, entries that already succeeded stay applied and the error does not say which — re-read before retrying.',
+      description: 'Update many pages/rows in one call, each with update_page\'s rules (partial patch, properties merged, title synced; one entry per page). Concurrent and NOT atomic, but never silent: every entry reports its own ok/error, entries that succeeded stay applied, and a failed one does not undo the others. Retry only the entries with ok: false — repeating an update is safe.',
       inputSchema: {
         updates: z.array(z.object({
           pageId: z.string().describe('Page or row id'),
@@ -288,10 +288,15 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
         contextRunId: CONTEXT_RUN_ID,
       },
       outputSchema: z.object({
+        requested: z.number().describe('Entries in the call'),
+        succeeded: z.number().describe('Entries applied'),
+        failed: z.number().describe('Entries that errored'),
         results: z.array(z.object({
           id: z.string().describe('Updated page or row ID'),
           updated: z.boolean().describe('Whether this update was applied'),
-        }).passthrough()).describe('Per-update results'),
+          ok: z.boolean().describe('false = this entry was NOT applied; see error'),
+          error: z.string().optional().describe('Why this entry was not applied'),
+        }).passthrough()).describe('Per-update results, in request order'),
       }),
       annotations: { title: 'Bulk update pages', readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: false },
     },
@@ -309,11 +314,13 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
       }
       try {
         const results = await bulkUpdatePages(ctx.workspaceId, updates, { tokenId: ctx.tokenId }, agentActor(ctx), { generatedBy: actorId(ctx) });
-        const text = JSON.stringify(results);
-        await logActivity(ctx, 'bulk_update_pages', 'success', undefined, undefined, text, {
+        const succeeded = results.filter(r => r.ok).length;
+        const out = { requested: updates.length, succeeded, failed: results.length - succeeded, results };
+        const text = JSON.stringify(out);
+        await logActivity(ctx, 'bulk_update_pages', succeeded > 0 || results.length === 0 ? 'success' : 'error', undefined, undefined, text, {
           itemsAffected: results.filter(r => r.updated).length,
         });
-        return { content: [{ type: 'text' as const, text }], structuredContent: { results } };
+        return { content: [{ type: 'text' as const, text }], structuredContent: out };
       } catch (err) {
         await logActivity(ctx, 'bulk_update_pages', 'error');
         return { content: [{ type: 'text' as const, text: `Error: ${errorText(err)}` }], isError: true };
@@ -391,7 +398,7 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
   server.registerTool(
     'delete_page',
     {
-      description: 'Delete a page, database, dashboard or row. Without confirm: true it only returns a preview of what would be deleted.',
+      description: 'Delete a page, database, dashboard or row. Without confirm: true it only returns a preview of what would be deleted. Recoverable: the item moves to the Trash and a person can restore it for 30 days (you cannot restore it yourself).',
       inputSchema: {
         pageId: z.string().describe('Page or row id'),
         confirm: z.boolean().optional().default(false),
@@ -412,7 +419,7 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
       try {
         if (!confirm) {
           const item = await getAnyPageById(ctx.workspaceId, pageId);
-          const preview = `This will permanently delete "${item.title}" (type: ${item.type}). Set confirm: true to proceed.`;
+          const preview = `This will delete "${item.title}" (type: ${item.type}). It moves to the Trash, where a person can restore it for 30 days; you cannot restore it yourself. Set confirm: true to proceed.`;
           return { content: [{ type: 'text' as const, text: preview }], structuredContent: { deleted: false, id: pageId, preview } };
         }
         const contextError = await requireContext(ctx, contextRunId, 'delete_page', pageId);
@@ -432,7 +439,7 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
   server.registerTool(
     'bulk_delete_pages',
     {
-      description: 'Delete up to 100 pages, databases or rows. Without confirm: true it only previews. Each entry reports its own ok/error, so one bad id does not sink the batch.',
+      description: 'Delete up to 100 pages, databases or rows. Without confirm: true it only previews. Each entry reports its own ok/error, so one bad id does not sink the batch. Recoverable: every item moves to the Trash and a person can restore it for 30 days (you cannot restore it yourself).',
       inputSchema: {
         pageIds: z.array(z.string()).max(100),
         confirm: z.boolean().optional().default(false),
@@ -472,7 +479,7 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
               return { id, title: `<${String(err)}>`, type: 'unknown' };
             }
           }));
-          const preview = `This will permanently delete ${items.length} item(s). Set confirm: true to proceed.`;
+          const preview = `This will delete ${items.length} item(s). They move to the Trash, where a person can restore them for 30 days; you cannot restore them yourself. Set confirm: true to proceed.`;
           const out = { deleted: false, requested: pageIds.length, items, preview };
           return { content: [{ type: 'text' as const, text: preview }], structuredContent: out };
         }

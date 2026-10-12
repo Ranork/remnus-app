@@ -10,6 +10,7 @@ import { ConfirmDialog } from '@/components/features/ConfirmDialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { DangerZone, Field, SettingsPage, SettingsSection } from '@/components/ui/settings';
+import DuplicateWorkspaceSection from './DuplicateWorkspaceSection';
 
 interface GeneralTabProps {
   workspaceId: string;
@@ -17,6 +18,8 @@ interface GeneralTabProps {
   workspaceIcon?: string | null;
   workspaceIconColor?: string | null;
   hasPrivilegedAccess: boolean;
+  /** Any member who is not a viewer may take a copy of the workspace. */
+  canDuplicate: boolean;
   onRenamed: (newName: string) => void;
   onIconChanged?: (icon: string | null, iconColor: string | null) => void;
   onDeleted: () => void;
@@ -29,6 +32,7 @@ export default function GeneralTab({
   workspaceIcon,
   workspaceIconColor,
   hasPrivilegedAccess,
+  canDuplicate,
   onRenamed,
   onIconChanged,
   onDeleted,
@@ -189,6 +193,10 @@ export default function GeneralTab({
           {storageBytes === null ? '…' : formatBytes(storageBytes)}
         </p>
       </SettingsSection>
+
+      {canDuplicate && (
+        <DuplicateWorkspaceSection workspaceId={workspaceId} workspaceName={workspaceName} onDone={onClose} />
+      )}
 
       {hasPrivilegedAccess && (
         <DangerZone

@@ -1,6 +1,6 @@
 # Read Tools
 
-All 11 read tools are available to every token regardless of scope.
+All 12 read tools are available to every token regardless of scope.
 
 ---
 
@@ -176,6 +176,31 @@ List all members of the workspace with their roles and join dates.
 **Parameters** — none
 
 **Returns** — array of `{ userId, email, name, role, joinedAt }`
+
+---
+
+## get_status
+
+Check this connection: which workspace it is bound to, what the token may do right now, when it expires and what to do about it. Call it when Remnus tools are missing from a session, a write is refused, or a call fails with `401` — it tells you whether the problem is the token or something else.
+
+It is the authenticated counterpart of the public `/api/health` probe, which only knows whether the server and database are up and nothing about the caller.
+
+**Parameters** — none
+
+**Returns**
+
+| Field | Type | Description |
+|---|---|---|
+| `server` | object | `{ name, version }` of the MCP server |
+| `workspace` | object | `{ id, name }` the token is bound to |
+| `connection` | object | `{ kind, agentName, scope, writeTools, scopeNote? }` — `kind` is `oauth` or `personal_access_token`; `scope` is what the session may do **now**; `writeTools` says whether the write tools are part of it |
+| `expiresAt` | string \| null | ISO time the credential stops working; `null` = never (a PAT without expiry) |
+| `expiresInSeconds` | number \| null | Seconds left (never negative) |
+| `renewal` | string | What to do about the expiry — OAuth tokens last one hour and the client renews them; a PAT has to be replaced by a workspace owner |
+| `contextPolicy` | string | `manual`, `smart` or `strict` |
+| `serverTime` | string | The server's clock, ISO |
+
+`scopeNote` appears when the token was granted more than its owner's current role allows — a write token whose owner became a viewer reads only, and the write tools are then not offered at all. The note says so, instead of the tools silently being absent.
 
 ---
 

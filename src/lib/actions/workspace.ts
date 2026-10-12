@@ -18,6 +18,7 @@ import { HOME_DASHBOARD_SQL } from '@/lib/services/dashboards';
 import { syncPageLinks, removeOutgoingPageLinks } from '@/lib/services/pageLinks';
 import { snapshotBeforeDelete, maybeSnapshotContentUpdate, type SnapshotActor } from '@/lib/services/snapshots';
 import { deleteWorkspaceData } from '@/lib/services/workspaceDeletion';
+import { duplicateWorkspaceData, DuplicateWorkspaceLimitError, DuplicateWorkspaceTooLargeError } from '@/lib/services/workspaceDuplicate';
 import { touchWorkspaces } from '@/lib/services/changeVersion';
 import { getPageProvenance } from '@/lib/services/pageProvenance';
 
@@ -201,6 +202,48 @@ export async function createWorkspace(name: string) {
     role: 'owner',
     createdAt: new Date(),
   });
+
+  const cookieStore = await cookies();
+  cookieStore.set('remnus_workspace_id', id, { path: '/' });
+  revalidatePath('/', 'layout');
+  return { id };
+}
+
+/**
+ * Copies a workspace — pages, databases with their columns and views, dashboards — into a
+ * new workspace owned by the caller. `includeData: false` leaves out the database rows, so a
+ * workspace set up for one project can be reused as an empty template. Members, tokens,
+ * share links, comments and the trash are never copied. See `services/workspaceDuplicate.ts`.
+ */
+export async function duplicateWorkspace(sourceWorkspaceId: string, name: string, includeData: boolean) {
+  // Copying is workspace management, so a project window (workspace-locked session) is refused here.
+  const user = await getCurrentUser();
+  const t = await getTranslations('Errors');
+
+  if (user.role !== 'admin') {
+    const [member] = await db
+      .select({ role: workspaceMembers.role })
+      .from(workspaceMembers)
+      .where(and(eq(workspaceMembers.workspaceId, sourceWorkspaceId), eq(workspaceMembers.userId, user.id)))
+      .limit(1);
+    // A viewer can read the workspace but not take a copy of it home.
+    if (!member || member.role === 'viewer') return { error: t('unauthorized') };
+  }
+
+  let id: string;
+  try {
+    id = await duplicateWorkspaceData({
+      sourceWorkspaceId,
+      userId: user.id,
+      name,
+      includeData,
+      skipPlanLimit: user.role === 'admin',
+    });
+  } catch (err) {
+    if (err instanceof DuplicateWorkspaceLimitError) return { error: t('workspaceLimitReached') };
+    if (err instanceof DuplicateWorkspaceTooLargeError) return { error: t('workspaceTooLarge') };
+    throw err;
+  }
 
   const cookieStore = await cookies();
   cookieStore.set('remnus_workspace_id', id, { path: '/' });
@@ -805,7 +848,13 @@ export async function getSubItems(parentId: string): Promise<WorkspaceItemRow[]>
   return rows.map((r) => ({ ...r, databaseId: r.databaseId ?? null }));
 }
 
-export async function duplicateWorkspaceItem(itemId: string) {
+/**
+ * Copies one sidebar item next to the original. A database copies its schema, views and —
+ * unless `includeRows` is false — its rows; `includeRows: false` is the "copy this board
+ * as an empty template" path (the rows are the only thing it leaves out).
+ */
+export async function duplicateWorkspaceItem(itemId: string, options?: { includeRows?: boolean }) {
+  const includeRows = options?.includeRows !== false;
   const item = await db.select().from(workspaceItems).where(eq(workspaceItems.id, itemId));
   if (!item[0]) return null;
 
@@ -869,7 +918,9 @@ export async function duplicateWorkspaceItem(itemId: string) {
       updatedAt: now,
     });
 
-    const existingPages = await db.select().from(pages).where(eq(pages.databaseId, dbRow[0].id));
+    const existingPages = includeRows
+      ? await db.select().from(pages).where(eq(pages.databaseId, dbRow[0].id))
+      : [];
     for (const p of existingPages) {
       const newRowId = crypto.randomUUID();
       await db.insert(pages).values({

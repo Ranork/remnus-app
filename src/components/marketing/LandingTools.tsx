@@ -29,6 +29,7 @@ export const TOOLS = [
   { scope: 'read',  tool: 'query_audit_log' },
   { scope: 'read',  tool: 'get_changes_since' },
   { scope: 'read',  tool: 'get_related_pages' },
+  { scope: 'read',  tool: 'get_status' },
   { scope: 'write', tool: 'create_page' },
   { scope: 'write', tool: 'bulk_create_pages' },
   { scope: 'write', tool: 'update_page' },

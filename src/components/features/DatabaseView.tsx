@@ -7,7 +7,7 @@ import { useTranslations } from 'next-intl';
 import { createPage, getPage, deletePage, duplicatePage, reorderPages, updatePageProperties } from '@/lib/actions/page';
 import { updateDatabaseViews } from '@/lib/actions/database';
 import { updateWorkspaceItemIcon, updateWorkspaceItemTitle } from '@/lib/actions/workspace';
-import { Plus, Settings, X, Maximize2, ArrowLeftRight, MoreHorizontal, Trash2, Copy, ChevronLeft, RefreshCw, ClipboardList, FileCode2, Globe, History, Loader2 } from 'lucide-react';
+import { Plus, Settings, X, Maximize2, ArrowLeftRight, MoreHorizontal, Trash2, Copy, ChevronLeft, RefreshCw, ClipboardList, FileCode2, Globe, History, Loader2, ListChecks } from 'lucide-react';
 import { Button, buttonVariants } from '@/components/ui/button';
 import { Tooltip } from '@/components/ui/tooltip';
 import {
@@ -20,7 +20,7 @@ import {
 import TableLayout from './TableLayout';
 import GroupedTableLayout from './GroupedTableLayout';
 import { ConfirmDialog } from './ConfirmDialog';
-import { BulkRowsDialog, IconPicker, PageHistoryModal, PageMarkdownDialog, ShareModal } from './lazyDialogs';
+import { BulkRowsDialog, IconPicker, PageHistoryModal, PageMarkdownDialog, RowSelectionBar, ShareModal } from './lazyDialogs';
 import KanbanBoard from './KanbanBoard';
 import CalendarView from './CalendarView';
 import { useRecurrenceControls } from './recurrence/useRecurrenceControls';
@@ -269,6 +269,9 @@ export default function DatabaseView({
   const tabNav = useTabNav();
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [bulkDialogOpen, setBulkDialogOpen] = useState(false);
+  // Picking rows/cards in a table or board to delete or move several at once.
+  const [selecting, setSelecting] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<ReadonlySet<string>>(() => new Set());
 
   const handleManualRefresh = useCallback(() => {
     setIsRefreshing(true);
@@ -984,6 +987,57 @@ export default function DatabaseView({
   const tableConfig = isTableView ? (config as TableViewConfig) : null;
   const kanbanConfig = config.type === 'kanban' ? (config as KanbanViewConfig) : null;
   const calendarConfig = config.type === 'calendar' ? (config as CalendarViewConfig) : null;
+
+  // Selection only makes sense where cards can be picked: the calendar has no such mode.
+  const canSelectRows = !!tableConfig || !!kanbanConfig;
+  const selectionActive = selecting && canSelectRows;
+  const selection = useMemo(() => ({ selecting: selectionActive, selectedIds }), [selectionActive, selectedIds]);
+  const exitSelection = useCallback(() => {
+    setSelecting(false);
+    setSelectedIds(new Set());
+  }, []);
+  const toggleSelected = (pageId: string) => {
+    // A row still being created has no real id to act on yet.
+    if (pendingPageIds.has(pageId) || pageId.startsWith('temp-')) return;
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(pageId)) next.delete(pageId);
+      else next.add(pageId);
+      return next;
+    });
+  };
+  const selectableIds = useMemo(
+    () => processedPages.filter((p) => !p.id.startsWith('temp-') && !pendingPageIds.has(p.id)).map((p) => p.id),
+    [processedPages, pendingPageIds],
+  );
+  const removeRows = useCallback((ids: string[]) => {
+    const gone = new Set(ids);
+    setLocalPages((prev) => prev.filter((p) => !gone.has(p.id)));
+    setSelectedIds((prev) => new Set([...prev].filter((id) => !gone.has(id))));
+    setPeekPageId((open) => (open && gone.has(open) ? null : open));
+  }, []);
+  // Leaving a view without card picking ends the mode; Escape ends it too (unless a dialog is up).
+  useEffect(() => {
+    if (selecting && !canSelectRows) exitSelection();
+  }, [selecting, canSelectRows, exitSelection]);
+  // A refresh (or another tab) can remove a picked row; it must not stay selected, uncountable and undeletable.
+  useEffect(() => {
+    setSelectedIds((prev) => {
+      if (prev.size === 0) return prev;
+      const present = new Set(localPages.map((p) => p.id));
+      const kept = [...prev].filter((id) => present.has(id));
+      return kept.length === prev.size ? prev : new Set(kept);
+    });
+  }, [localPages]);
+  useEffect(() => {
+    if (!selectionActive) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !e.defaultPrevented && !document.querySelector('[role="dialog"]')) exitSelection();
+    };
+    document.addEventListener('keydown', onKey);
+    return () => document.removeEventListener('keydown', onKey);
+  }, [selectionActive, exitSelection]);
+
   const tableGroupColumn = tableConfig?.groupByCol
     ? schema.find((col: any) => col.id === tableConfig.groupByCol)
     : null;
@@ -1220,6 +1274,22 @@ export default function DatabaseView({
             </Button>
           </Tooltip>
 
+          {/* Pick several rows/cards to delete or move them in one go — not on the calendar */}
+          {canSelectRows && (
+            <Tooltip content={t('selectRows')}>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                onClick={() => (selectionActive ? exitSelection() : setSelecting(true))}
+                aria-pressed={selectionActive}
+                aria-label={t('selectRows')}
+                className={selectionActive ? 'bg-hover text-fg' : ''}
+              >
+                <ListChecks />
+              </Button>
+            </Tooltip>
+          )}
+
           <Button
             variant="ghost"
             size="sm"
@@ -1242,6 +1312,18 @@ export default function DatabaseView({
           </Button>
         </div>
       </div>
+
+      {selectionActive && (
+        <RowSelectionBar
+          databaseId={database.id}
+          workspaceId={database.workspaceId}
+          selectedIds={[...selectedIds]}
+          selectableCount={selectableIds.length}
+          onSelectAll={() => setSelectedIds(new Set(selectableIds))}
+          onDone={exitSelection}
+          onRemoved={removeRows}
+        />
+      )}
 
       {bulkDialogOpen && (
         <BulkRowsDialog
@@ -1271,7 +1353,7 @@ export default function DatabaseView({
                 onColumnWidthsChange={handleColumnWidthsChange}
                 rowColorCol={tableConfig.rowColorCol}
                 onColumnOrderChange={handleColumnOrderChange}
-                onRowClick={handlePageClick}
+                onRowClick={selectionActive ? toggleSelected : handlePageClick}
                 onRowReorder={handleRowReorder}
                 onDeletePage={handleDeletePage}
                 onRecurringDelete={recurrence.requestDelete}
@@ -1287,6 +1369,7 @@ export default function DatabaseView({
                 defaultPageIcon={config.defaultPageIcon}
                 defaultPageIconColor={config.defaultPageIconColor}
                 onPageIconChange={handlePageIconChange}
+                selection={selection}
               />
             ) : (
               <TableLayout
@@ -1299,7 +1382,7 @@ export default function DatabaseView({
                 onColumnWidthsChange={handleColumnWidthsChange}
                 rowColorCol={tableConfig.rowColorCol}
                 onColumnOrderChange={handleColumnOrderChange}
-                onRowClick={handlePageClick}
+                onRowClick={selectionActive ? toggleSelected : handlePageClick}
                 onRowReorder={handleRowReorder}
                 onDeletePage={handleDeletePage}
                 onRecurringDelete={recurrence.requestDelete}
@@ -1315,6 +1398,7 @@ export default function DatabaseView({
                 defaultPageIcon={config.defaultPageIcon}
                 defaultPageIconColor={config.defaultPageIconColor}
                 onPageIconChange={handlePageIconChange}
+                selection={selection}
               />
             )
           ) : kanbanConfig ? (
@@ -1325,7 +1409,7 @@ export default function DatabaseView({
               groupByCol={kanbanConfig.groupByCol}
               groupOrder={kanbanConfig.groupOrder}
               onGroupOrderChange={handleGroupOrderChange}
-              onCardClick={handlePageClick}
+              onCardClick={selectionActive ? toggleSelected : handlePageClick}
               onCardMove={handleCardReorder}
               onDeletePage={handleDeletePage}
               onRecurringDelete={recurrence.requestDelete}
@@ -1343,6 +1427,7 @@ export default function DatabaseView({
               onCardCollapsedChange={handlePageCardCollapsedChange}
               onCardsCollapsedChange={handlePagesCardCollapsedChange}
               hiddenGroups={kanbanConfig.hiddenGroups ?? []}
+              selection={selection}
             />
           ) : calendarConfig ? (
             <CalendarView

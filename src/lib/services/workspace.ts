@@ -1382,17 +1382,26 @@ export async function bulkUpdatePages(
    *  id's type; `updatePageById` already knows it, so it reports it back. */
   knowledge?: { generatedBy: string },
 ) {
-  const results = await Promise.all(
+  // allSettled, not all: one bad id must not hide which of the others were applied. This
+  // used to reject as a whole and the error did not say which entries had already landed —
+  // exactly how a dropped batch of 11 rows once looked finished when it was not.
+  const settled = await Promise.allSettled(
     updates.map(({ pageId, ...patch }) => updatePageById(workspaceId, pageId, patch, agentCtx, actor)),
   );
   if (knowledge) {
-    await recordGeneratedKnowledgeBulk(
-      workspaceId,
-      results.map((r, i) => ({ itemId: updates[i].pageId, itemType: r.itemType })),
-      knowledge.generatedBy,
-    ).catch(() => {});
+    const applied: { itemId: string; itemType: 'page' | 'database' | 'database_row' }[] = [];
+    settled.forEach((r, i) => {
+      if (r.status === 'fulfilled') applied.push({ itemId: updates[i].pageId, itemType: r.value.itemType });
+    });
+    if (applied.length > 0) {
+      await recordGeneratedKnowledgeBulk(workspaceId, applied, knowledge.generatedBy).catch(() => {});
+    }
   }
-  return results.map((r, i) => ({ id: updates[i].pageId, updated: r.updated }));
+  return settled.map((r, i): { id: string; updated: boolean; ok: boolean; error?: string } => (
+    r.status === 'fulfilled'
+      ? { id: updates[i].pageId, updated: r.value.updated, ok: true }
+      : { id: updates[i].pageId, updated: false, ok: false, error: String(r.reason?.message ?? r.reason) }
+  ));
 }
 
 export async function createPageInWorkspace(
@@ -2230,6 +2239,14 @@ export async function bulkMoveItemsInWorkspace(
 // stricter check than the bulk-paste-import path (`propertyCoercion.ts`'s
 // `coerceRowValues`, which auto-appends unknown option values) — that
 // leniency is exactly what this feature must not do.
+/** The target database cannot hold the source's columns; `columns` names them (by their source names). */
+export class RowMoveSchemaError extends Error {
+  constructor(readonly columns: string[]) {
+    super(`Target database is missing or has a different type for: ${columns.join(', ')}`);
+    this.name = 'RowMoveSchemaError';
+  }
+}
+
 export async function bulkMoveRowsToDatabase(
   workspaceId: string,
   itemIds: string[],
@@ -2245,10 +2262,17 @@ export async function bulkMoveRowsToDatabase(
   const targetSchema: Array<{ id: string; name: string; type: string }> = targetRecord.schema ?? [];
   const targetByName = new Map(targetSchema.map((c) => [c.name.toLowerCase(), c]));
 
-  const rows = await db
-    .select({ id: pages.id, databaseId: pages.databaseId, properties: pages.properties })
+  const allRows = await db
+    .select({ id: pages.id, databaseId: pages.databaseId, properties: pages.properties, seriesId: pages.seriesId })
     .from(pages)
     .where(inArray(pages.id, itemIds));
+  // Only rows of THIS workspace may be moved into it — the target check above says nothing
+  // about where an id the caller supplied actually lives.
+  const workspaceDatabases = new Map<string, boolean>();
+  for (const dbId of new Set(allRows.map((r) => r.databaseId))) {
+    workspaceDatabases.set(dbId, await assertDatabaseInWorkspace(dbId, workspaceId).then(() => true, () => false));
+  }
+  const rows = allRows.filter((r) => workspaceDatabases.get(r.databaseId));
   const rowById = new Map(rows.map((r) => [r.id, r]));
 
   const sourceDatabaseIds = Array.from(new Set(rows.map((r) => r.databaseId)));
@@ -2267,9 +2291,7 @@ export async function bulkMoveRowsToDatabase(
       if (!match || match.type !== col.type) missing.add(col.name);
     }
   }
-  if (missing.size > 0) {
-    throw new Error(`Target database is missing or has a different type for: ${Array.from(missing).join(', ')}`);
-  }
+  if (missing.size > 0) throw new RowMoveSchemaError(Array.from(missing));
 
   const [maxSortRow] = await db
     .select({ maxSort: sql<number>`coalesce(max(${pages.sortOrder}), -1)` })
@@ -2291,7 +2313,13 @@ export async function bulkMoveRowsToDatabase(
         remapped[targetCol ? targetCol.id : colId] = value;
       }
       await db.update(pages)
-        .set({ databaseId: targetDbId, properties: remapped, sortOrder: nextSort++, updatedAt: new Date() })
+        .set({
+          databaseId: targetDbId, properties: remapped, sortOrder: nextSort++, updatedAt: new Date(),
+          // An occurrence of a repeating series keeps its seat in the series (so the old board's
+          // top-up does not recreate it) but stops following it: a rule change must not reach a
+          // card that now lives somewhere else.
+          ...(row.seriesId ? { seriesDetached: true } : {}),
+        })
         .where(eq(pages.id, id));
       results.push({ id, ok: true });
     } catch (err) {

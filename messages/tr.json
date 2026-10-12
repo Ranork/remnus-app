@@ -324,7 +324,8 @@
     "myTrash": "Çöp Kutusu",
     "settings": "Ayarlar",
     "earlyAccess": "Erken erişim",
-    "agentsConnectNudge": "Bağla"
+    "agentsConnectNudge": "Bağla",
+    "duplicateEmpty": "Satırlar olmadan çoğalt"
   },
   "WorkspaceSettings": {
     "roleLabel": "Rol",
@@ -662,7 +663,18 @@
     "accessRequestsTitle": "Erişim istekleri",
     "accessRequestFrom": "{project} projesinden",
     "approveRequest": "Onayla",
-    "denyRequest": "Reddet"
+    "denyRequest": "Reddet",
+    "duplicateTitle": "Çalışma alanını çoğalt",
+    "duplicateHint": "Bu çalışma alanından yeni bir çalışma alanı oluşturun; bir sonraki proje için şablon olarak işe yarar. Üyeler, ajan bağlantıları, paylaşım bağlantıları ve yorumlar kopyalanmaz.",
+    "duplicateAction": "Çoğalt…",
+    "duplicateDialogHint": "Kopyanın sahibi siz olursunuz. Bu çalışma alanında hiçbir şey değişmez.",
+    "duplicateNameLabel": "Kopyanın adı",
+    "duplicateEverything": "Her şey",
+    "duplicateEverythingDesc": "Sayfalar, panolar ve her veritabanı; sütunları, görünümleri ve satırlarıyla birlikte.",
+    "duplicateStructure": "Yalnızca yapı",
+    "duplicateStructureDesc": "Aynı sayfalar, panolar ve veritabanları sütunları ve görünümleriyle gelir, ancak satırlar gelmez. Şablon için idealdir.",
+    "duplicateConfirm": "Kopyayı oluştur",
+    "duplicateFailed": "Çalışma alanı kopyalanamadı. Hiçbir şey oluşturulmadı; lütfen tekrar deneyin."
   },
   "Templates": {
     "modalTitle": "Yeni öğe",
@@ -910,7 +922,26 @@
       "ignoredColumns": "Yok sayılacak (eşleşen özellik yok): {columns}",
       "moreRows": "{count} satır daha",
       "tooManyRows": "Çok fazla satır — içe aktarma başına en fazla {max}"
-    }
+    },
+    "selectRows": "Satırları seç",
+    "selectedCount": "{count} seçili",
+    "selectAll": "Tümünü seç",
+    "selectDone": "Bitti",
+    "selectCancel": "İptal",
+    "bulkMove": "Taşı…",
+    "bulkDelete": "Sil",
+    "bulkDeleteTitle": "{count} satır silinsin mi?",
+    "bulkDeleteBody": "Çöp Kutusu'na taşınırlar; 30 gün boyunca geri yükleyebilirsiniz.",
+    "bulkDeleted": "{count} satır Çöp Kutusu'na taşındı",
+    "bulkPartialFailed": "{total} satırdan {failed} tanesi işlenemedi. Hâlâ seçili durumdalar.",
+    "bulkMoveTitle": "{count} satır taşınsın",
+    "bulkMoveHint": "Taşınacakları veritabanını seçin. Ad ve tür olarak bununla aynı sütunlara sahip olması gerekir.",
+    "bulkMoveTarget": "Taşınacak yer",
+    "bulkMoveNoTargets": "Bu çalışma alanında taşıyabileceğiniz başka bir veritabanı yok.",
+    "bulkMoveConfirm": "Taşı",
+    "bulkMoveMismatch": "Bu veritabanında şu sütunlar yok ya da farklı türde: {columns}. Hiçbir şey taşınmadı.",
+    "bulkMoved": "{count} satır {database} içine taşındı",
+    "bulkFailed": "Bir şeyler ters gitti. Lütfen tekrar deneyin."
   },
   "Dashboard": {
     "deleteDashboard": "Panoyu sil",
@@ -1334,7 +1365,8 @@
     "crashReload": "Yeniden yükle",
     "crashBack": "Geri dön",
     "viewerCannotWrite": "Bu çalışma alanındaki rolünüz yalnızca görüntüleme; bu yüzden yazma erişimiyle bağlanamaz.",
-    "agentLimitReachedJoin": "Bu çalışma alanında boş ajan yeri kalmadı. Sahibinden bir yer açmasını veya planı yükseltmesini isteyin."
+    "agentLimitReachedJoin": "Bu çalışma alanında boş ajan yeri kalmadı. Sahibinden bir yer açmasını veya planı yükseltmesini isteyin.",
+    "workspaceTooLarge": "Bu çalışma alanı tek seferde kopyalanamayacak kadar büyük. Satırlar olmadan kopyalayın ya da önce bölün."
   },
   "LanguageSwitcher": {
     "label": "Dil"
@@ -1478,11 +1510,11 @@
     "bridgeSetupStripTitle": "API anahtarı yok.",
     "bridgeSetupStripBody": "Editöründen tek seferde OAuth ile giriş yap — kopyalanacak, yapıştırılacak ya da yenilenecek bir token yok.",
     "bridgeToolsSnum": "06 / MCP",
-    "bridgeToolsH2Part1": "27 araç, 7 kaynak ve 7 prompt —",
+    "bridgeToolsH2Part1": "28 araç, 7 kaynak ve 7 prompt —",
     "bridgeToolsH2Accent": "Hepsi",
     "bridgeToolsH2Part2": "kullanılabilir.",
     "bridgeToolsSubhead": "Arayüzde yapabildiğin her şeyi yapay zekan da yapabilir. Aynı kimlik doğrulama, aynı kapsam, aynı denetim günlüğü.",
-    "bridgeToolsFooterText": "Okuma tokenları 11 okuma aracını açar. Yazma kapsamı, tam oluşturma/güncelleme/silme kontrolü için 16 araç daha ekler.",
+    "bridgeToolsFooterText": "Okuma tokenları 12 okuma aracını açar. Yazma kapsamı, tam oluşturma/güncelleme/silme kontrolü için 16 araç daha ekler.",
     "bridgeToolsFlagshipContext": "Ajana açık bir token bütçesi içinde doğru ürün bağlamını; güven ve güncellik sinyalleriyle verin.",
     "bridgeContextDemoEyebrow": "Pratikte bağlam verimliliği",
     "bridgeContextDemoTitle": "Bir görev girer. Yalnızca işe yarayan bağlam çıkar.",
@@ -1520,7 +1552,7 @@
     "bridgePricingSelfPrice": "$0",
     "bridgePricingSelfF1": "Sınırsız çalışma alanı ve sayfa",
     "bridgePricingSelfF2": "Tüm görünümler ve veritabanları",
-    "bridgePricingSelfF3": "Tam MCP erişimi (27 araç)",
+    "bridgePricingSelfF3": "Tam MCP erişimi (28 araç)",
     "bridgePricingSelfF4": "8 dil yerleşik",
     "bridgePricingSelfF5": "Bulut veya hesap gerekmez",
     "bridgePricingSelfCta": "GitHub’da görüntüle",

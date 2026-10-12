@@ -28,7 +28,7 @@ Authorization: Bearer rmns_xxxxxxxxxxxxxxxx
 
 | Scope | Permitted tools |
 |---|---|
-| `read` | `prepare_context`, `search_workspace`, `list_workspace`, `get_page`, `get_pages`, `get_database_schema`, `query_database`, `list_members`, `query_audit_log`, `get_changes_since`, `get_related_pages` |
+| `read` | `prepare_context`, `search_workspace`, `list_workspace`, `get_page`, `get_pages`, `get_database_schema`, `query_database`, `list_members`, `query_audit_log`, `get_changes_since`, `get_related_pages`, `get_status` |
 | `write` | All read tools + `create_page`, `bulk_create_pages`, `update_page`, `bulk_update_pages`, `delete_page`, `bulk_delete_pages`, `move_item`, `bulk_move_items`, `create_database`, `update_database_schema`, `create_database_view`, `update_database_view`, `delete_database_view`, `create_dashboard`, `update_dashboard`, `add_comment` |
 
 Calling a write tool with a read-scoped token returns an error and makes no changes.
@@ -42,6 +42,8 @@ The preflight never upgrades permissions: a read-scoped actor still cannot write
 ## Token expiry
 
 PATs can be created with or without an expiry date; expired tokens return `401 Unauthorized`. OAuth access tokens always expire after 1 hour and are transparently refreshed by the client — no manual renewal.
+
+If the Remnus tools disappear from a session part-way through (most often because the client could not refresh an expired OAuth token), call [`get_status`](read-tools.md#get_status) while any Remnus tool still answers: it reports when the token expires and whether the session is still allowed to write. If nothing answers, reconnect the server in your client to sign in again. A write token whose owner has since become a viewer is read-only — the write tools are then not offered at all, and `get_status` says why.
 
 ## Token revocation
 

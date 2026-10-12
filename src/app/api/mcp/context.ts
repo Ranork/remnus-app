@@ -9,7 +9,15 @@ export type TokenContext = {
   /** Which table tokenId points at — routes the audit-log FK columns (migration 0034). */
   tokenKind: 'pat' | 'oauth';
   workspaceId: string;
+  /** The workspace's name, read with the token (no query of its own). Unset outside a real
+   *  request (scripts) — `getConnectionStatus` then looks it up. */
+  workspaceName?: string | null;
   scope: 'read' | 'write';
+  /** The scope stored on the token. Differs from `scope` when the holder's current role
+   *  narrows it (a viewer's write token reads) — `get_status` reports the difference. */
+  storedScope?: 'read' | 'write';
+  /** When this credential stops working (epoch ms). Null = never (a PAT without expiry). */
+  expiresAt?: number | null;
   agentName: string | null;
   /** The user who owns the token (PAT creator / OAuth grantee) — for funnel attribution. */
   ownerUserId: string | null;

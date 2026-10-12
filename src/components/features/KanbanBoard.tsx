@@ -54,6 +54,7 @@ export default function KanbanBoard({
   onCardCollapsedChange,
   onCardsCollapsedChange,
   hiddenGroups = [],
+  selection,
 }: {
   database: any;
   onSchemaChange?: (schema: any[]) => void;
@@ -81,7 +82,10 @@ export default function KanbanBoard({
   onCardCollapsedChange?: (pageId: string, collapsed: boolean) => void;
   onCardsCollapsedChange?: (pageIds: string[], collapsed: boolean) => void;
   hiddenGroups?: string[];
+  /** While cards are being picked (bulk delete / move), a click on a card selects it instead of opening it. */
+  selection?: { selecting: boolean; selectedIds: ReadonlySet<string> };
 }) {
+  const selecting = selection?.selecting ?? false;
   const t = useTranslations('Database');
   const tPage = useTranslations('Page');
   const locale = useLocale();
@@ -387,6 +391,7 @@ export default function KanbanBoard({
               ) : (
                 groupedPages[columnName].slice(0, cardLimit).map((page) => {
                   const isCardEditing = editingCell?.pageId === page.id;
+                  const isSelected = selection?.selectedIds.has(page.id) ?? false;
                   const markValue = showMark && markColumn ? page.properties[markColumn.id] : undefined;
                   const hasMark = markValue !== undefined && markValue !== null && markValue !== '' && !(Array.isArray(markValue) && markValue.length === 0);
                   return (
@@ -394,7 +399,7 @@ export default function KanbanBoard({
                     key={page.id}
                     onClick={() => onCardClick(page.id)}
                     onContextMenu={(e) => cardMenu.open(e, buildCardMenu(page.id))}
-                    draggable={true}
+                    draggable={!selecting}
                     onDragStart={(e) => {
                       e.stopPropagation();
                       handleCardDragStart(e, page.id);
@@ -408,6 +413,7 @@ export default function KanbanBoard({
                     className={`group relative mb-2 cursor-pointer rounded-control bg-raised shadow-[inset_0_0_0_1px_var(--card-edge,var(--color-line))] transition-shadow hover:shadow-[inset_0_0_0_1px_var(--card-edge-strong,var(--color-line-strong))]
                       ${isCardEditing ? 'z-30 overflow-visible' : 'overflow-hidden'}
                       ${draggedCardId === page.id ? 'opacity-25' : ''}
+                      ${isSelected ? 'ring-2 ring-signal' : ''}
                       ${dragOverCardId === page.id && dragOverPosition === 'before' ? 'before:absolute before:inset-x-0 before:-top-1.5 before:h-0.5 before:rounded-full before:bg-signal' : ''}
                       ${dragOverCardId === page.id && dragOverPosition === 'after' ? 'after:absolute after:inset-x-0 after:-bottom-1.5 after:h-0.5 after:rounded-full after:bg-signal' : ''}
                     `}
@@ -416,8 +422,13 @@ export default function KanbanBoard({
                     {hasMark && markColumn && markAsAccent && (
                       <CardAccent column={markColumn} value={markValue} side={cardAppearance!.accentSide} />
                     )}
-                    {/* Hover card actions */}
-                    <div className="absolute right-1.5 top-1.5 z-10 flex items-center opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100" onClick={(e) => e.stopPropagation()}>
+                    {selecting && (
+                      <div className="pointer-events-none absolute right-2 top-2 z-10">
+                        <Checkbox size="sm" checked={isSelected} readOnly tabIndex={-1} aria-label={page.title || tPage('untitled')} />
+                      </div>
+                    )}
+                    {/* Hover card actions — not while picking cards: the whole card is the click target */}
+                    <div className={`absolute right-1.5 top-1.5 z-10 flex items-center opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100 ${selecting ? 'hidden' : ''}`} onClick={(e) => e.stopPropagation()}>
                       {/* Collapse/expand — hides the property list, keeping just the title */}
                       <button
                         type="button"
@@ -551,7 +562,7 @@ export default function KanbanBoard({
                               );
                             } else if (c.type === 'checkbox') {
                               display = (
-                                <span onClick={(e) => e.stopPropagation()} className="inline-flex">
+                                <span onClick={(e) => e.stopPropagation()} className={selecting ? 'pointer-events-none inline-flex' : 'inline-flex'}>
                                   <Checkbox
                                     size="sm"
                                     checked={val === true || val === 'true'}
@@ -581,6 +592,8 @@ export default function KanbanBoard({
                             }
 
                             const handlePropClick = (e: React.MouseEvent) => {
+                              // Picking cards: the click belongs to the card, no in-place editing.
+                              if (selecting) return;
                               e.stopPropagation();
                               if (c.type === 'checkbox') return;
                               setEditingCell({ pageId: page.id, colId: c.id });

@@ -7,7 +7,7 @@ import { getCurrentUserAllowingWorkspaceLock } from '@/lib/auth/session';
 import { assertWorkspaceLockAllows } from '@/lib/auth/workspaceLock';
 import { deleteWorkspaceItem } from './workspace';
 import { isCloudinaryUrl, deleteCloudinaryImage } from '@/lib/cloudinary';
-import { recordDeletionTombstone } from '@/lib/services/workspace';
+import { recordDeletionTombstone, bulkMoveRowsToDatabase, RowMoveSchemaError } from '@/lib/services/workspace';
 import { snapshotBeforeDelete, maybeSnapshotContentUpdate } from '@/lib/services/snapshots';
 import { exdateOccurrenceForPage } from '@/lib/services/recurrence';
 import { syncPageLinks, removeOutgoingPageLinks } from '@/lib/services/pageLinks';
@@ -15,6 +15,7 @@ import { touchWorkspaces } from '@/lib/services/changeVersion';
 import { getPageProvenance } from '@/lib/services/pageProvenance';
 import { coerceRowValues, extractRowContent, assignOptionColors, type DatabaseColumn } from '@/lib/utils/propertyCoercion';
 import { stockStatusDefault } from '@/lib/templates';
+import { BULK_ROWS_PER_CALL } from '@/lib/constants/bulkRows';
 
 const MAX_BULK_ROWS = 500;
 
@@ -261,6 +262,77 @@ export async function deletePage(id: string, databaseId: string) {
   // good, so a restore brings them back; only the row's own graph rows go.
   await removeOutgoingPageLinks([id]);
   revalidatePath(`/db/${databaseId}`);
+}
+
+export type BulkRowResult = { id: string; ok: boolean; error?: string };
+
+/**
+ * Deletes several rows of one database to the Trash — what `deletePage` does, once per row,
+ * and never as one all-or-nothing call: every row reports its own result, so the screen can
+ * keep exactly the rows that are still there. Rows go one after another on purpose: deleting
+ * several occurrences of one repeating series rewrites that series' rule each time, and
+ * concurrent writers would lose each other's exceptions.
+ */
+export async function deletePages(ids: string[], databaseId: string): Promise<BulkRowResult[]> {
+  await assertDatabaseAccess(databaseId);
+  const unique = [...new Set(ids)];
+  if (unique.length > BULK_ROWS_PER_CALL) throw new Error(`At most ${BULK_ROWS_PER_CALL} rows per call`);
+
+  const results: BulkRowResult[] = [];
+  for (const id of unique) {
+    try {
+      const [exists] = await db
+        .select({ id: pages.id })
+        .from(pages)
+        .where(and(eq(pages.id, id), eq(pages.databaseId, databaseId)))
+        .limit(1);
+      if (!exists) { results.push({ id, ok: false, error: 'Row not found' }); continue; }
+      await deletePage(id, databaseId);
+      results.push({ id, ok: true });
+    } catch (err) {
+      results.push({ id, ok: false, error: err instanceof Error ? err.message : String(err) });
+    }
+  }
+  return results;
+}
+
+/**
+ * Moves rows of one database into another database of the same workspace (an archive
+ * board, say). Refused as a whole — `mismatch` names the columns — unless the target holds
+ * every column of this database by name and type; a property is never dropped silently.
+ */
+export async function moveRowsToDatabase(
+  ids: string[],
+  databaseId: string,
+  targetDatabaseId: string,
+): Promise<{ results: BulkRowResult[]; mismatch?: undefined } | { mismatch: string[]; results?: undefined }> {
+  const { workspaceId } = await assertDatabaseAccess(databaseId);
+  const unique = [...new Set(ids)];
+  if (unique.length > BULK_ROWS_PER_CALL) throw new Error(`At most ${BULK_ROWS_PER_CALL} rows per call`);
+
+  // Same reason as deletePage: the ids are the caller's, so each must live in the database access was checked on.
+  const owned = unique.length
+    ? await db.select({ id: pages.id }).from(pages).where(and(inArray(pages.id, unique), eq(pages.databaseId, databaseId)))
+    : [];
+  const ownedIds = new Set(owned.map((r) => r.id));
+  const movable = unique.filter((id) => ownedIds.has(id));
+
+  let moved: BulkRowResult[] = [];
+  if (movable.length > 0) {
+    try {
+      moved = await bulkMoveRowsToDatabase(workspaceId, movable, targetDatabaseId);
+    } catch (err) {
+      if (err instanceof RowMoveSchemaError) return { mismatch: err.columns };
+      throw err;
+    }
+    await touchWorkspaces(workspaceId);
+    revalidatePath(`/db/${databaseId}`);
+    revalidatePath(`/db/${targetDatabaseId}`);
+  }
+  const movedById = new Map(moved.map((r) => [r.id, r]));
+  return {
+    results: unique.map((id) => movedById.get(id) ?? { id, ok: false, error: 'Row not found' }),
+  };
 }
 
 export async function duplicatePage(id: string, databaseId: string) {

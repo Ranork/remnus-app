@@ -324,7 +324,8 @@
     "myTrash": "Papelera",
     "settings": "Configuración",
     "earlyAccess": "Acceso anticipado",
-    "agentsConnectNudge": "Conectar"
+    "agentsConnectNudge": "Conectar",
+    "duplicateEmpty": "Duplicar sin filas"
   },
   "WorkspaceSettings": {
     "roleLabel": "Rol",
@@ -662,7 +663,18 @@
     "accessRequestsTitle": "Solicitudes de acceso",
     "accessRequestFrom": "desde {project}",
     "approveRequest": "Aprobar",
-    "denyRequest": "Rechazar"
+    "denyRequest": "Rechazar",
+    "duplicateTitle": "Duplicar espacio",
+    "duplicateHint": "Crea un espacio nuevo a partir de este, útil como plantilla para el próximo proyecto. Los miembros, las conexiones de agentes, los enlaces compartidos y los comentarios no se copian.",
+    "duplicateAction": "Duplicar…",
+    "duplicateDialogHint": "Serás el propietario de la copia. Este espacio no cambia en nada.",
+    "duplicateNameLabel": "Nombre de la copia",
+    "duplicateEverything": "Todo",
+    "duplicateEverythingDesc": "Páginas, paneles y cada base de datos con sus columnas, vistas y filas.",
+    "duplicateStructure": "Solo la estructura",
+    "duplicateStructureDesc": "Las mismas páginas, paneles y bases de datos con sus columnas y vistas, pero sin filas. Ideal para una plantilla.",
+    "duplicateConfirm": "Crear copia",
+    "duplicateFailed": "No se pudo copiar el espacio. No se creó nada; inténtalo de nuevo."
   },
   "Templates": {
     "modalTitle": "Nuevo elemento",
@@ -910,7 +922,26 @@
       "ignoredColumns": "Ignoradas (sin propiedad coincidente): {columns}",
       "moreRows": "{count, plural, one {# fila más} other {# filas más}}",
       "tooManyRows": "Demasiadas filas — máximo {max} por importación"
-    }
+    },
+    "selectRows": "Seleccionar filas",
+    "selectedCount": "{count} seleccionadas",
+    "selectAll": "Seleccionar todo",
+    "selectDone": "Listo",
+    "selectCancel": "Cancelar",
+    "bulkMove": "Mover a…",
+    "bulkDelete": "Eliminar",
+    "bulkDeleteTitle": "{count, plural, one {¿Eliminar # fila?} other {¿Eliminar # filas?}}",
+    "bulkDeleteBody": "Pasan a la Papelera, donde puedes restaurarlas durante 30 días.",
+    "bulkDeleted": "{count, plural, one {# fila pasó a la Papelera} other {# filas pasaron a la Papelera}}",
+    "bulkPartialFailed": "No se pudieron procesar {failed} de {total}. Siguen seleccionadas.",
+    "bulkMoveTitle": "{count, plural, one {Mover # fila} other {Mover # filas}}",
+    "bulkMoveHint": "Elige la base de datos de destino. Debe tener las mismas columnas que esta, por nombre y tipo.",
+    "bulkMoveTarget": "Mover a",
+    "bulkMoveNoTargets": "No hay otra base de datos en este espacio a la que moverlas.",
+    "bulkMoveConfirm": "Mover",
+    "bulkMoveMismatch": "A esa base de datos le faltan estas columnas o las tiene con otro tipo: {columns}. No se movió nada.",
+    "bulkMoved": "{count, plural, one {# fila movida a {database}} other {# filas movidas a {database}}}",
+    "bulkFailed": "Algo salió mal. Inténtalo de nuevo."
   },
   "Dashboard": {
     "deleteDashboard": "Eliminar panel",
@@ -1313,7 +1344,8 @@
     "crashReload": "Recargar",
     "crashBack": "Volver",
     "viewerCannotWrite": "Tu rol en este espacio es de solo lectura, así que no puede conectarse con acceso de escritura.",
-    "agentLimitReachedJoin": "Este espacio no tiene plazas de agente libres. Pide a su propietario que libere una o mejore el plan."
+    "agentLimitReachedJoin": "Este espacio no tiene plazas de agente libres. Pide a su propietario que libere una o mejore el plan.",
+    "workspaceTooLarge": "Este espacio es demasiado grande para copiarlo de una vez. Cópialo sin filas o divídelo antes."
   },
   "LanguageSwitcher": {
     "label": "Idioma"
@@ -1457,11 +1489,11 @@
     "bridgeSetupStripTitle": "Sin claves API.",
     "bridgeSetupStripBody": "Inicia sesión una sola vez con OAuth, directamente desde tu editor — sin token que copiar, pegar o rotar.",
     "bridgeToolsSnum": "06 / MCP",
-    "bridgeToolsH2Part1": "27 herramientas, 7 recursos & 7 prompts —",
+    "bridgeToolsH2Part1": "28 herramientas, 7 recursos & 7 prompts —",
     "bridgeToolsH2Accent": "Todas",
     "bridgeToolsH2Part2": "disponibles.",
     "bridgeToolsSubhead": "Todo lo que puedes hacer en la interfaz, tu IA también puede. Misma autenticación, mismos permisos, mismo registro de auditoría.",
-    "bridgeToolsFooterText": "Los tokens de lectura desbloquean 11 herramientas. El alcance de escritura agrega 16 más para un control completo de creación, actualización y eliminación.",
+    "bridgeToolsFooterText": "Los tokens de lectura desbloquean 12 herramientas. El alcance de escritura agrega 16 más para un control completo de creación, actualización y eliminación.",
     "bridgeToolsFlagshipContext": "Da al agente el contexto de producto correcto dentro de un presupuesto de tokens, con señales de confianza y vigencia.",
     "bridgeContextDemoEyebrow": "Eficiencia de contexto, en la práctica",
     "bridgeContextDemoTitle": "Entra una tarea. Sale solo el contexto útil.",
@@ -1499,7 +1531,7 @@
     "bridgePricingSelfPrice": "$0",
     "bridgePricingSelfF1": "Espacios de trabajo y páginas ilimitados",
     "bridgePricingSelfF2": "Todas las vistas y bases de datos",
-    "bridgePricingSelfF3": "Acceso MCP completo (27 herramientas)",
+    "bridgePricingSelfF3": "Acceso MCP completo (28 herramientas)",
     "bridgePricingSelfF4": "8 idiomas incluidos",
     "bridgePricingSelfF5": "Sin nube ni cuenta necesaria",
     "bridgePricingSelfCta": "Ver en GitHub",

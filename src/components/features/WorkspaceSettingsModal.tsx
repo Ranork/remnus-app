@@ -112,6 +112,7 @@ export default function WorkspaceSettingsModal({
                 workspaceIcon={workspaceIcon}
                 workspaceIconColor={workspaceIconColor}
                 hasPrivilegedAccess={hasPrivilegedAccess}
+                canDuplicate={hasPrivilegedAccess || myRole === 'member'}
                 onRenamed={onRenamed}
                 onIconChanged={onIconChanged}
                 onDeleted={onDeleted}

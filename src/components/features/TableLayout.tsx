@@ -86,6 +86,7 @@ export default function TableLayout({
   onPageIconChange,
   disableRowDrag = false,
   showToggleColumnsButton = true,
+  selection,
 }: {
   database: any;
   onSchemaChange?: (schema: any[]) => void;
@@ -115,6 +116,8 @@ export default function TableLayout({
   onPageIconChange?: (pageId: string, icon: string | null, iconColor: string | null) => void;
   disableRowDrag?: boolean;
   showToggleColumnsButton?: boolean;
+  /** While rows are being picked (bulk delete / move), a click on a row selects it instead of opening it. */
+  selection?: { selecting: boolean; selectedIds: ReadonlySet<string> };
 }) {
   const t = useTranslations('Database');
   const tPage = useTranslations('Page');
@@ -608,6 +611,8 @@ export default function TableLayout({
                     dropEdge={dragOverRowId === page.id ? dropPosition : null}
                     iconPickerOpen={activeIconPickerPageId === page.id}
                     isCoarsePointer={isCoarsePointer}
+                    selecting={selection?.selecting ?? false}
+                    selected={selection?.selectedIds.has(page.id) ?? false}
                     locale={locale}
                     defaultPageIcon={defaultPageIcon}
                     defaultPageIconColor={defaultPageIconColor}
@@ -863,6 +868,9 @@ type TableRowProps = {
   dropEdge: 'before' | 'after' | null;
   iconPickerOpen: boolean;
   isCoarsePointer: boolean;
+  /** Bulk-select mode: the whole row toggles `selected`; cells do not edit in place. */
+  selecting: boolean;
+  selected: boolean;
   locale: string;
   defaultPageIcon?: string;
   defaultPageIconColor?: string;
@@ -899,6 +907,8 @@ function sameRowProps(a: TableRowProps, b: TableRowProps): boolean {
     a.dropEdge === b.dropEdge &&
     a.iconPickerOpen === b.iconPickerOpen &&
     a.isCoarsePointer === b.isCoarsePointer &&
+    a.selecting === b.selecting &&
+    a.selected === b.selected &&
     a.locale === b.locale &&
     a.defaultPageIcon === b.defaultPageIcon &&
     a.defaultPageIconColor === b.defaultPageIconColor &&
@@ -918,6 +928,8 @@ const TableRow = memo(function TableRow({
   dropEdge,
   iconPickerOpen,
   isCoarsePointer,
+  selecting,
+  selected,
   locale,
   defaultPageIcon,
   defaultPageIconColor,
@@ -940,7 +952,8 @@ const TableRow = memo(function TableRow({
       // A plain row: no status tint. The row's mark (if the view sets one)
       // is a dot or status ring before the title.
       className={[
-        'hover:bg-hover/50 cursor-pointer transition-colors group',
+        'cursor-pointer transition-colors group',
+        selected ? 'bg-signal-soft/50 hover:bg-signal-soft/70' : 'hover:bg-hover/50',
         editingColId !== null ? 'relative z-20' : '',
         dragged ? 'opacity-25' : '',
         dropEdge === 'before'
@@ -958,7 +971,8 @@ const TableRow = memo(function TableRow({
         const handleCellClick = (e: React.MouseEvent) => {
           // Touch: let the click bubble to the row → opens the peek modal.
           // `id` columns show the row's real (immutable) primary key — never editable.
-          if (col.id === 'title' || col.type === 'id' || isCoarsePointer) return;
+          // Picking rows: every cell is part of the row's click, none edits in place.
+          if (selecting || col.id === 'title' || col.type === 'id' || isCoarsePointer) return;
           e.stopPropagation();
           // A checkbox needs no editor: the cell is the toggle.
           if (col.type === 'checkbox') {
@@ -990,12 +1004,17 @@ const TableRow = memo(function TableRow({
               />
             ) : col.id === 'title' ? (
               <div className="flex items-center gap-2 overflow-hidden">
+                {selecting && (
+                  <Checkbox size="sm" checked={selected} readOnly tabIndex={-1} aria-label={val || tPage('untitled')} className="pointer-events-none shrink-0" />
+                )}
                 {markColumn && <MarkDot column={markColumn} value={page.properties[markColumn.id]} />}
                 <div className="relative shrink-0 select-none">
                   <button
                     type="button"
                     ref={iconButtonRef}
                     onClick={(e) => {
+                      // Picking rows: the icon is just part of the row.
+                      if (selecting) return;
                       e.preventDefault();
                       e.stopPropagation();
                       actions.toggleIconPicker(page.id);
@@ -1025,7 +1044,8 @@ const TableRow = memo(function TableRow({
                 <span
                   onClick={(e) => {
                     // Touch: don't rename — let it bubble to the row → peek modal.
-                    if (isCoarsePointer) return;
+                    // Picking rows: no rename either, the click selects the row.
+                    if (isCoarsePointer || selecting) return;
                     e.stopPropagation();
                     actions.editCell(page.id, col.id);
                   }}

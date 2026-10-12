@@ -29,6 +29,7 @@ import {
 import { MAX_CONTEXT_KEYWORD_CHARS, MAX_CONTEXT_KEYWORDS, prepareContextPackWithStats } from '@/lib/services/contextPack';
 import { listPageComments } from '@/lib/services/comments';
 import { getPagesForResource } from '@/lib/services/codeSources';
+import { getConnectionStatus } from '@/lib/services/connectionStatus';
 import { appUrl, logActivity, type TokenContext } from '../context';
 
 type PageRead = Awaited<ReturnType<typeof getAnyPageById>>;
@@ -390,6 +391,43 @@ export function registerReadTools(server: McpServer, ctx: TokenContext) {
         return { content: [{ type: 'text' as const, text }], structuredContent: { members } };
       } catch (err) {
         await logActivity(ctx, 'list_members', 'error');
+        return { content: [{ type: 'text' as const, text: `Error: ${String(err)}` }], isError: true };
+      }
+    },
+  );
+
+  server.registerTool(
+    'get_status',
+    {
+      description: 'Check this connection: workspace, scope, whether write tools are offered, when the token expires and what to do about it. Call it when Remnus tools are missing, a write is refused, or a call fails with 401.',
+      inputSchema: {},
+      outputSchema: z.object({
+        ok: z.literal(true),
+        server: z.object({ name: z.string(), version: z.string() }),
+        workspace: z.object({ id: z.string(), name: z.string().nullable() }),
+        connection: z.object({
+          kind: z.string().describe('oauth | personal_access_token'),
+          agentName: z.string().nullable(),
+          scope: z.string().describe('read | write — what this session may do now'),
+          writeTools: z.boolean(),
+          scopeNote: z.string().optional().describe('Present when the owner\'s role narrows the token'),
+        }),
+        expiresAt: z.string().nullable().describe('ISO time; null = never expires'),
+        expiresInSeconds: z.number().nullable(),
+        renewal: z.string(),
+        contextPolicy: z.string().describe('manual | smart | strict'),
+        serverTime: z.string(),
+      }),
+      annotations: { title: 'Connection status', readOnlyHint: true, openWorldHint: false },
+    },
+    async () => {
+      try {
+        const status = await getConnectionStatus(ctx);
+        const text = JSON.stringify(status);
+        await logActivity(ctx, 'get_status', 'success', undefined, undefined, text);
+        return { content: [{ type: 'text' as const, text }], structuredContent: { ...status } };
+      } catch (err) {
+        await logActivity(ctx, 'get_status', 'error');
         return { content: [{ type: 'text' as const, text: `Error: ${String(err)}` }], isError: true };
       }
     },

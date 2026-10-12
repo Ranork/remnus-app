@@ -43,7 +43,7 @@ New project instead? Skip straight to [Project Install](project-install.md).
 | [Getting Started](getting-started.md) | OAuth connect, PAT fallback, first call |
 | [Connect Your Editor](connect-editors.md) | Windsurf, Continue, Antigravity, Cline, Zed & more — ready configs + OAuth |
 | [Authentication](authentication.md) | Bearer tokens, scopes, rate limits |
-| [Read Tools](read-tools.md) | 11 read-only tools |
+| [Read Tools](read-tools.md) | 12 read-only tools |
 | [Write Tools](write-tools.md) | 16 write tools |
 | [Dashboards](dashboards.md) | Live status screens an agent builds from JSON blocks |
 | [Resources](resources.md) | 7 MCP resources |

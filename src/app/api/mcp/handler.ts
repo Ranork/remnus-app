@@ -20,6 +20,7 @@ import { db } from '@/db';
 import { agentTokens } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { effectiveAgentScope, findOAuthTokenForAuth, findPatForAuth } from '@/lib/services/agentAccess';
+import { MCP_SERVER_NAME, MCP_SERVER_VERSION, formatServerTitle } from '@/lib/services/connectionStatus';
 import { registerResources } from './resources';
 import { registerPrompts } from './prompts';
 import { registerReadTools } from './tools/read';
@@ -123,7 +124,7 @@ export async function verifyBearerToken(authHeader: string | null): Promise<Toke
     }
 
     console.log('[mcp/auth] oauth_token_ok', { prefix: prefix8, scope });
-    return { tokenId: row.id, tokenKind: 'oauth', workspaceId: row.workspaceId, scope, agentName: row.agentName ?? null, ownerUserId: row.userId ?? null, contextPolicy: found.policy, ownerAnalytics: found.analytics };
+    return { tokenId: row.id, tokenKind: 'oauth', workspaceId: row.workspaceId, workspaceName: found.workspaceName, scope, storedScope: found.grant.tokenScope, expiresAt: row.expiresAt.getTime(), agentName: row.agentName ?? null, ownerUserId: row.userId ?? null, contextPolicy: found.policy, ownerAnalytics: found.analytics };
   }
 
   // Personal access token (rmns_ prefix)
@@ -147,7 +148,7 @@ export async function verifyBearerToken(authHeader: string | null): Promise<Toke
 
   touchLastUsed(row.id);
 
-  return { tokenId: row.id, tokenKind: 'pat', workspaceId: row.workspaceId, scope, agentName: row.agentName ?? null, ownerUserId: row.createdBy ?? null, contextPolicy: found.policy, ownerAnalytics: found.analytics };
+  return { tokenId: row.id, tokenKind: 'pat', workspaceId: row.workspaceId, workspaceName: found.workspaceName, scope, storedScope: found.grant.tokenScope, expiresAt: row.expiresAt?.getTime() ?? null, agentName: row.agentName ?? null, ownerUserId: row.createdBy ?? null, contextPolicy: found.policy, ownerAnalytics: found.analytics };
 }
 
 // ── Rate limiting (60 req/min per token, in-memory token bucket) ──────────────
@@ -213,7 +214,7 @@ export function renderInstructions(ctx: TokenContext, policy: Pick<ContextPolicy
   ];
   if (ctx.scope === 'write') {
     lines.push(
-      'Writing: update_page/bulk_update_pages merge properties (partial patches are safe) and also sync `title` into the row\'s title property. delete_page and destructive schema/view changes require confirm: true — omit it first to preview.',
+      'Writing: update_page/bulk_update_pages merge properties (partial patches are safe) and also sync `title` into the row\'s title property. delete_page/bulk_delete_pages and destructive schema/view changes require confirm: true — omit it first to preview. Deleted pages, databases and rows go to the Trash: a person can restore them for 30 days, you cannot.',
     );
     if (policy.mode === 'strict') {
       lines.push('Strict context is enabled: Remnus mutation tools reject calls without a current contextRunId from this same agent and workspace. Authorization and destructive confirmation still apply separately.');
@@ -336,8 +337,13 @@ async function runMcpRequest(req: Request, endpoint: McpEndpoint): Promise<Respo
     ? renderInstructions(ctx, contextPolicyOf(ctx))
     : undefined;
 
+  // The server's display `title` is "Remnus: <workspace name>" (the name came with the token, no
+  // query of its own): a client that lists several connected servers, or shows one in a
+  // permission prompt, can then tell two Remnus workspaces apart. `name` stays the stable id.
+  const title = formatServerTitle(ctx.workspaceName);
+
   // Build and register server capabilities
-  const server = new McpServer({ name: 'remnus-mcp', version: '1.1.0' }, { instructions });
+  const server = new McpServer({ name: MCP_SERVER_NAME, version: MCP_SERVER_VERSION, ...(title ? { title } : {}) }, { instructions });
   registerResources(server, ctx);
   registerPrompts(server, ctx);
   registerReadTools(server, ctx);

@@ -324,7 +324,8 @@
     "myTrash": "Corbeille",
     "settings": "Paramètres",
     "earlyAccess": "Accès anticipé",
-    "agentsConnectNudge": "Connecter"
+    "agentsConnectNudge": "Connecter",
+    "duplicateEmpty": "Dupliquer sans les lignes"
   },
   "WorkspaceSettings": {
     "roleLabel": "Rôle",
@@ -662,7 +663,18 @@
     "accessRequestsTitle": "Demandes d’accès",
     "accessRequestFrom": "depuis {project}",
     "approveRequest": "Accepter",
-    "denyRequest": "Refuser"
+    "denyRequest": "Refuser",
+    "duplicateTitle": "Dupliquer l'espace",
+    "duplicateHint": "Créez un nouvel espace à partir de celui-ci, pratique comme modèle pour le prochain projet. Les membres, les connexions d'agents, les liens de partage et les commentaires ne sont pas copiés.",
+    "duplicateAction": "Dupliquer…",
+    "duplicateDialogHint": "Vous devenez propriétaire de la copie. Rien ne change dans cet espace.",
+    "duplicateNameLabel": "Nom de la copie",
+    "duplicateEverything": "Tout",
+    "duplicateEverythingDesc": "Les pages, les tableaux de bord et chaque base de données avec ses colonnes, ses vues et ses lignes.",
+    "duplicateStructure": "Structure uniquement",
+    "duplicateStructureDesc": "Les mêmes pages, tableaux de bord et bases de données avec leurs colonnes et leurs vues, mais sans lignes. Idéal pour un modèle.",
+    "duplicateConfirm": "Créer la copie",
+    "duplicateFailed": "L'espace n'a pas pu être copié. Rien n'a été créé ; veuillez réessayer."
   },
   "Templates": {
     "modalTitle": "Nouvel élément",
@@ -910,7 +922,26 @@
       "ignoredColumns": "Ignorées (aucune propriété correspondante) : {columns}",
       "moreRows": "{count, plural, one {# autre ligne} other {# autres lignes}}",
       "tooManyRows": "Trop de lignes — {max} maximum par import"
-    }
+    },
+    "selectRows": "Sélectionner des lignes",
+    "selectedCount": "{count} sélectionnées",
+    "selectAll": "Tout sélectionner",
+    "selectDone": "Terminé",
+    "selectCancel": "Annuler",
+    "bulkMove": "Déplacer vers…",
+    "bulkDelete": "Supprimer",
+    "bulkDeleteTitle": "{count, plural, one {Supprimer # ligne ?} other {Supprimer # lignes ?}}",
+    "bulkDeleteBody": "Elles vont dans la Corbeille, où vous pouvez les restaurer pendant 30 jours.",
+    "bulkDeleted": "{count, plural, one {# ligne déplacée dans la Corbeille} other {# lignes déplacées dans la Corbeille}}",
+    "bulkPartialFailed": "{failed} sur {total} n'ont pas pu être traitées. Elles restent sélectionnées.",
+    "bulkMoveTitle": "{count, plural, one {Déplacer # ligne} other {Déplacer # lignes}}",
+    "bulkMoveHint": "Choisissez la base de données de destination. Elle doit avoir les mêmes colonnes que celle-ci, par nom et par type.",
+    "bulkMoveTarget": "Déplacer vers",
+    "bulkMoveNoTargets": "Il n'y a pas d'autre base de données dans cet espace où les déplacer.",
+    "bulkMoveConfirm": "Déplacer",
+    "bulkMoveMismatch": "Cette base de données n'a pas ces colonnes, ou les a avec un autre type : {columns}. Rien n'a été déplacé.",
+    "bulkMoved": "{count, plural, one {# ligne déplacée vers {database}} other {# lignes déplacées vers {database}}}",
+    "bulkFailed": "Une erreur est survenue. Veuillez réessayer."
   },
   "Dashboard": {
     "deleteDashboard": "Supprimer le tableau de bord",
@@ -1313,7 +1344,8 @@
     "crashReload": "Recharger",
     "crashBack": "Retour",
     "viewerCannotWrite": "Votre rôle dans cet espace est en lecture seule : impossible de se connecter avec un accès en écriture.",
-    "agentLimitReachedJoin": "Cet espace n’a plus de place d’agent disponible. Demandez au propriétaire d’en libérer une ou de changer de forfait."
+    "agentLimitReachedJoin": "Cet espace n’a plus de place d’agent disponible. Demandez au propriétaire d’en libérer une ou de changer de forfait.",
+    "workspaceTooLarge": "Cet espace est trop volumineux pour être copié d'un coup. Copiez-le sans les lignes ou divisez-le d'abord."
   },
   "LanguageSwitcher": {
     "label": "Langue"
@@ -1457,11 +1489,11 @@
     "bridgeSetupStripTitle": "Aucune clé API.",
     "bridgeSetupStripBody": "Connectez-vous une seule fois avec OAuth, directement depuis votre éditeur — aucun jeton à copier, coller ou renouveler.",
     "bridgeToolsSnum": "06 / MCP",
-    "bridgeToolsH2Part1": "27 outils, 7 ressources & 7 prompts —",
+    "bridgeToolsH2Part1": "28 outils, 7 ressources & 7 prompts —",
     "bridgeToolsH2Accent": "Tous",
     "bridgeToolsH2Part2": "disponibles.",
     "bridgeToolsSubhead": "Tout ce que tu peux faire dans l'interface, ton IA peut le faire aussi. Même auth, mêmes portées, même journal d'audit.",
-    "bridgeToolsFooterText": "Les tokens en lecture débloquent 11 outils. La portée écriture ajoute 16 autres pour un contrôle complet en création, mise à jour et suppression.",
+    "bridgeToolsFooterText": "Les tokens en lecture débloquent 12 outils. La portée écriture ajoute 16 autres pour un contrôle complet en création, mise à jour et suppression.",
     "bridgeToolsFlagshipContext": "Donne à l'agent le bon contexte produit dans un budget de tokens, avec des signaux de confiance et de fraîcheur.",
     "bridgeContextDemoEyebrow": "L'efficacité du contexte, en pratique",
     "bridgeContextDemoTitle": "Une tâche entre. Seul le contexte utile ressort.",
@@ -1499,7 +1531,7 @@
     "bridgePricingSelfPrice": "$0",
     "bridgePricingSelfF1": "Espaces de travail et pages illimités",
     "bridgePricingSelfF2": "Toutes les vues & bases de données",
-    "bridgePricingSelfF3": "Accès MCP complet (27 outils)",
+    "bridgePricingSelfF3": "Accès MCP complet (28 outils)",
     "bridgePricingSelfF4": "8 langues intégrées",
     "bridgePricingSelfF5": "Pas de cloud ni de compte nécessaire",
     "bridgePricingSelfCta": "Voir sur GitHub",

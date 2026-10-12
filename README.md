@@ -35,7 +35,7 @@ This does not let an MCP server control local files, shell commands, or Git. Rep
 - **Pages** — Markdown editor with slash commands, nested sub-pages, and icons
 - **Databases** — Customizable columns, Table / Kanban / Calendar views, filters, sorts
 - **Dashboards** — Live status screens (metrics, charts, lists, embedded views) that an agent builds from a few hundred tokens of JSON and a human can edit block by block
-- **MCP Server** — 27 tools + 7 resources + 7 prompts over stateless Streamable HTTP
+- **MCP Server** — 28 tools + 7 resources + 7 prompts over stateless Streamable HTTP
 - **OKF-native context** — Portable knowledge metadata, exact-revision reviews, Context Pack v2, and Smart/Strict MCP policies
 - **Agent auth** — One-click OAuth 2.1 + PKCE (RFC 7591 dynamic registration) for editors, or scoped read/write personal access tokens for headless agents
 - **Multi-workspace** — Invite members, role-based access (owner / member / viewer)
@@ -143,6 +143,7 @@ Swap `--client` for `cursor`, `vscode`, `codex`, `windsurf`, etc. Either way, th
 | `query_audit_log` | read | Filtered agent activity log |
 | `get_changes_since` | read | Compact, chronological feed of what changed since a timestamp or cursor |
 | `get_related_pages` | read | A page's parent, children, outgoing links, backlinks, database siblings and source files — or, given a file path, the pages that rest on it |
+| `get_status` | read | Check this connection: workspace, scope, when the token expires and what to do about it |
 | `create_page` | write | Create a standalone page or database row, with an icon |
 | `bulk_create_pages` | write | Create up to 50 pages or rows in one call, nesting pages via `ref`/`parentRef` |
 | `update_page` | write | Update title, content, or properties |

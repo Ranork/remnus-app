@@ -52,7 +52,7 @@ Calling a write tool with a read-scoped token fails with no change made — the 
 
 ## Read tools vs write tools
 
-The two scopes map directly onto two risk profiles. Read tools — `prepare_context`, `search_workspace`, `list_workspace`, `get_page`, `get_database_schema`, `query_database`, `list_members`, `query_audit_log`, `get_changes_since`, `get_related_pages` — can expose information but can't alter the workspace; the worst case is an over-broad read scope seeing more than it should.
+The two scopes map directly onto two risk profiles. Read tools — `prepare_context`, `search_workspace`, `list_workspace`, `get_page`, `get_database_schema`, `query_database`, `list_members`, `query_audit_log`, `get_changes_since`, `get_related_pages`, `get_status` — can expose information but can't alter the workspace; the worst case is an over-broad read scope seeing more than it should.
 
 Write tools — `create_page`, `update_page`, `bulk_update_pages`, `delete_page`, `move_item`, `create_database`, `update_database_schema`, and the database-view tools — can alter or remove content, so they carry the destructive-action risk covered next. `bulk_update_pages` in particular deserves attention in a review: a single call can touch many records at once, which is efficient but also means a bad instruction has more surface to act on in one shot.
 

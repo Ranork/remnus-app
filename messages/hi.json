@@ -324,7 +324,8 @@
     "myTrash": "ट्रैश",
     "settings": "सेटिंग्स",
     "earlyAccess": "अर्ली एक्सेस",
-    "agentsConnectNudge": "कनेक्ट करें"
+    "agentsConnectNudge": "कनेक्ट करें",
+    "duplicateEmpty": "पंक्तियों के बिना दोहराएं"
   },
   "WorkspaceSettings": {
     "roleLabel": "भूमिका",
@@ -662,7 +663,18 @@
     "accessRequestsTitle": "पहुँच अनुरोध",
     "accessRequestFrom": "{project} से",
     "approveRequest": "मंज़ूर करें",
-    "denyRequest": "अस्वीकार"
+    "denyRequest": "अस्वीकार",
+    "duplicateTitle": "कार्यक्षेत्र की प्रतिलिपि बनाएं",
+    "duplicateHint": "इस कार्यक्षेत्र से एक नया कार्यक्षेत्र बनाएं — अगले प्रोजेक्ट के लिए टेम्पलेट के रूप में उपयोगी। सदस्य, एजेंट कनेक्शन, शेयर लिंक और टिप्पणियाँ कॉपी नहीं होतीं।",
+    "duplicateAction": "प्रतिलिपि बनाएं…",
+    "duplicateDialogHint": "आप प्रतिलिपि के स्वामी होंगे। इस कार्यक्षेत्र में कुछ भी नहीं बदलता।",
+    "duplicateNameLabel": "प्रतिलिपि का नाम",
+    "duplicateEverything": "सब कुछ",
+    "duplicateEverythingDesc": "पेज, डैशबोर्ड और हर डेटाबेस — उसके कॉलम, व्यू और पंक्तियों सहित।",
+    "duplicateStructure": "केवल संरचना",
+    "duplicateStructureDesc": "वही पेज, डैशबोर्ड और डेटाबेस — कॉलम और व्यू सहित, लेकिन बिना पंक्तियों के। टेम्पलेट के लिए उपयुक्त।",
+    "duplicateConfirm": "प्रतिलिपि बनाएं",
+    "duplicateFailed": "कार्यक्षेत्र की प्रतिलिपि नहीं बन सकी। कुछ भी नहीं बना — कृपया फिर से प्रयास करें।"
   },
   "Templates": {
     "modalTitle": "नया आइटम",
@@ -910,7 +922,26 @@
       "ignoredColumns": "अनदेखा (कोई मेल खाती प्रॉपर्टी नहीं): {columns}",
       "moreRows": "{count} और पंक्तियाँ",
       "tooManyRows": "बहुत अधिक पंक्तियाँ — प्रति इम्पोर्ट अधिकतम {max}"
-    }
+    },
+    "selectRows": "पंक्तियाँ चुनें",
+    "selectedCount": "{count} चुने गए",
+    "selectAll": "सभी चुनें",
+    "selectDone": "हो गया",
+    "selectCancel": "रद्द करें",
+    "bulkMove": "यहाँ ले जाएं…",
+    "bulkDelete": "हटाएं",
+    "bulkDeleteTitle": "{count, plural, one {# पंक्ति हटाएं?} other {# पंक्तियाँ हटाएं?}}",
+    "bulkDeleteBody": "वे ट्रैश में चली जाती हैं, जहाँ से आप 30 दिनों तक उन्हें वापस ला सकते हैं।",
+    "bulkDeleted": "{count, plural, one {# पंक्ति ट्रैश में भेजी गई} other {# पंक्तियाँ ट्रैश में भेजी गईं}}",
+    "bulkPartialFailed": "{total} में से {failed} पर कार्रवाई नहीं हो सकी। वे अब भी चुनी हुई हैं।",
+    "bulkMoveTitle": "{count, plural, one {# पंक्ति ले जाएं} other {# पंक्तियाँ ले जाएं}}",
+    "bulkMoveHint": "वह डेटाबेस चुनें जिसमें इन्हें ले जाना है। उसमें इसी के समान कॉलम (नाम और प्रकार सहित) होने चाहिए।",
+    "bulkMoveTarget": "इसमें ले जाएं",
+    "bulkMoveNoTargets": "इस कार्यक्षेत्र में इन्हें ले जाने के लिए कोई दूसरा डेटाबेस नहीं है।",
+    "bulkMoveConfirm": "ले जाएं",
+    "bulkMoveMismatch": "उस डेटाबेस में ये कॉलम नहीं हैं या उनका प्रकार अलग है: {columns}। कुछ भी नहीं ले जाया गया।",
+    "bulkMoved": "{count, plural, one {# पंक्ति {database} में ले जाई गई} other {# पंक्तियाँ {database} में ले जाई गईं}}",
+    "bulkFailed": "कुछ गड़बड़ हो गई। कृपया फिर से प्रयास करें।"
   },
   "Dashboard": {
     "deleteDashboard": "डैशबोर्ड हटाएँ",
@@ -1313,7 +1344,8 @@
     "crashReload": "फिर से लोड करें",
     "crashBack": "वापस जाएं",
     "viewerCannotWrite": "इस वर्कस्पेस में आपकी भूमिका सिर्फ़ देखने की है, इसलिए लिखने की पहुँच के साथ कनेक्ट नहीं किया जा सकता।",
-    "agentLimitReachedJoin": "इस वर्कस्पेस में एजेंट की कोई जगह खाली नहीं है। मालिक से कहें कि एक जगह खाली करें या प्लान अपग्रेड करें।"
+    "agentLimitReachedJoin": "इस वर्कस्पेस में एजेंट की कोई जगह खाली नहीं है। मालिक से कहें कि एक जगह खाली करें या प्लान अपग्रेड करें।",
+    "workspaceTooLarge": "यह कार्यक्षेत्र एक बार में कॉपी करने के लिए बहुत बड़ा है। इसे पंक्तियों के बिना कॉपी करें या पहले इसे बाँटें।"
   },
   "LanguageSwitcher": {
     "label": "भाषा"
@@ -1457,11 +1489,11 @@
     "bridgeSetupStripTitle": "कोई API key नहीं।",
     "bridgeSetupStripBody": "अपने editor से सीधे एक बार OAuth से sign in करें — कोई token copy, paste या rotate नहीं करना पड़ता।",
     "bridgeToolsSnum": "06 / MCP",
-    "bridgeToolsH2Part1": "27 टूल, 7 संसाधन और 7 प्रॉम्प्ट —",
+    "bridgeToolsH2Part1": "28 टूल, 7 संसाधन और 7 प्रॉम्प्ट —",
     "bridgeToolsH2Accent": "सभी",
     "bridgeToolsH2Part2": "उपलब्ध।",
     "bridgeToolsSubhead": "UI में जो कुछ भी कर सकते हो, तुम्हारी AI भी कर सकती है। वही auth, वही scope, वही audit log।",
-    "bridgeToolsFooterText": "Read token 11 read tools unlock करते हैं। Write scope, पूर्ण create/update/delete नियंत्रण के लिए 16 और tools जोड़ता है।",
+    "bridgeToolsFooterText": "Read token 12 read tools unlock करते हैं। Write scope, पूर्ण create/update/delete नियंत्रण के लिए 16 और tools जोड़ता है।",
     "bridgeToolsFlagshipContext": "निश्चित token budget में सही product context दें — trust और freshness संकेतों के साथ।",
     "bridgeContextDemoEyebrow": "व्यवहार में context efficiency",
     "bridgeContextDemoTitle": "एक task अंदर। केवल उपयोगी context बाहर।",
@@ -1499,7 +1531,7 @@
     "bridgePricingSelfPrice": "$0",
     "bridgePricingSelfF1": "असीमित workspace और पेज",
     "bridgePricingSelfF2": "सभी दृश्य और डेटाबेस",
-    "bridgePricingSelfF3": "पूर्ण MCP एक्सेस (27 टूल)",
+    "bridgePricingSelfF3": "पूर्ण MCP एक्सेस (28 टूल)",
     "bridgePricingSelfF4": "8 भाषाएँ अंतर्निहित",
     "bridgePricingSelfF5": "कोई cloud या अकाउंट नहीं चाहिए",
     "bridgePricingSelfCta": "GitHub पर देखें",

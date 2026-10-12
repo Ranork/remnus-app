@@ -61,7 +61,7 @@ Update an existing page or database row. Properties are **merged** — existing 
 
 ## bulk_update_pages
 
-Update multiple pages or database rows in a single call.
+Update multiple pages or database rows in a single call. Entries run concurrently and the call is **not atomic**, but it is never silent about it: every entry reports its own `ok` / `error`, the entries that succeeded stay applied, and one failing entry does not undo or hide the others. Retry only the entries with `ok: false` — repeating an update is safe.
 
 **Parameters**
 
@@ -69,7 +69,7 @@ Update multiple pages or database rows in a single call.
 |---|---|---|---|
 | `updates` | array | ✓ | Array of update objects — each has `pageId` plus optional `title`, `content`, `properties`, `icon`, `iconColor`. One entry per page: entries run concurrently. `tick` / `append` / `knowledge` are `update_page` only |
 
-**Returns** — array of per-item results.
+**Returns** — `{ requested, succeeded, failed, results: [{ id, updated, ok, error? }] }`, in request order. `updated` is kept from the earlier response shape. Entries with an invalid icon are rejected before anything is written.
 
 ---
 
@@ -118,6 +118,8 @@ Create up to 100 standalone pages and/or database rows in one call — the fast 
 
 Delete a workspace page, database, dashboard, or database row. Requires `confirm: true` to execute. Without it, the tool returns a description of what would be deleted and makes no changes.
 
+**A delete is recoverable.** The item moves to the Trash with its content, and a person can restore it from there for 30 days. An agent cannot read or restore the Trash — there is deliberately no tool for it — so tell the user what you deleted and that they can bring it back. Deleting a database or a parent page puts each item under it in the Trash as well, and each is restored on its own.
+
 **Parameters**
 
 | Parameter | Type | Required | Default | Description |
@@ -135,7 +137,9 @@ Always call once without `confirm` first to verify the target before confirming.
 
 Delete multiple workspace pages, databases, or database rows in one call. Requires `confirm: true` to execute. Without it, the tool returns a preview of what would be deleted and makes no changes.
 
-Deletions run concurrently and each entry reports its own `ok`/`error`, so one bad id cannot sink the rest of the batch — unlike `bulk_update_pages`, whose `Promise.all` implementation can silently drop entries on a partial failure.
+Every deleted item moves to the Trash (recoverable by a person for 30 days, not by the agent), exactly as with `delete_page`.
+
+Deletions run concurrently and each entry reports its own `ok`/`error`, so one bad id cannot sink the rest of the batch. `bulk_update_pages` answers the same way.
 
 **Parameters**
 
