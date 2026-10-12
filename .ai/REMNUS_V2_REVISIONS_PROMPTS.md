@@ -1,6 +1,6 @@
 # Remnus V2 Revizeleri — Chat Promptları
 
-> **Durum (2026-10-12): **R9–R10 canlıda (2026-10-02; Vercel deploy success, post-deploy smoke'ta bulunan `/app` soft-nav 405 regresyonu `8f8ea3c` ile aynı gün düzeltildi) ve masaüstü 0.1.19 yayınlandı (Tauri Release 4/4 yeşil, `latest.json` 0.1.19, auto-update dağıtımda); CLI 0.1.11 2026-10-06'da npm'de yayınlandı (R10.1 düzeltmesiyle) ve masaüstü 0.1.20 çıktı — bkz. R11 Birikenler.** R1–R4 tamamlandı ve canlıda; R5–R8 + R8.1–R8.6 tamamlandı (commit'li); R8.7 tamamlandı (yeni site `/`'de; eski landing `/landing-old`, `/landing-next` arşivde); R8.8 tamamlandı (commit'li, migration yok); R8.9 tamamlandı (şablon tarih açığı 2026-10-02'de kapatıldı, `80ca02a`); R9 tamamlandı (2026-10-02, commit'li; migration 0055 prod'da); R9.x kapandı (2026-10-02, commit'li: R9.1, R9.2, R9.4, R9.5, R9.8 yapıldı, R9.7 ölçüldü — değişiklik gerekmedi, R9.3 ölçümde değmez; migration 0056 prod'da; R9.6 R11'e taşındı); R10 tamamlandı (2026-10-02, 3 oturum, commit'li; 1 Medium düzeltildi = güvenlik başlıkları `next.config.ts`; 5 Low → R10.1–R10.5 promptları; ayrıntı gitignored `SECURITY_AUDIT_2026-10-02.md`; bağımlılık yükseltmeleri Hakan'a); R11 tamamlandı (2026-10-12: CLI 0.1.12 npm `latest`, masaüstü 0.1.20, web `9c99a57`; yayın sonrası test notu R11 sonunda).** Her prompt bitince
+> **Durum (2026-10-12): **R9–R10 canlıda (2026-10-02; Vercel deploy success, post-deploy smoke'ta bulunan `/app` soft-nav 405 regresyonu `8f8ea3c` ile aynı gün düzeltildi) ve masaüstü 0.1.19 yayınlandı (Tauri Release 4/4 yeşil, `latest.json` 0.1.19, auto-update dağıtımda); CLI 0.1.11 2026-10-06'da npm'de yayınlandı (R10.1 düzeltmesiyle) ve masaüstü 0.1.20 çıktı — bkz. R11 Birikenler.** R1–R4 tamamlandı ve canlıda; R5–R8 + R8.1–R8.6 tamamlandı (commit'li); R8.7 tamamlandı (yeni site `/`'de; eski landing `/landing-old`, `/landing-next` arşivde); R8.8 tamamlandı (commit'li, migration yok); R8.9 tamamlandı (şablon tarih açığı 2026-10-02'de kapatıldı, `80ca02a`); R9 tamamlandı (2026-10-02, commit'li; migration 0055 prod'da); R9.x kapandı (2026-10-02, commit'li: R9.1, R9.2, R9.4, R9.5, R9.8 yapıldı, R9.7 ölçüldü — değişiklik gerekmedi, R9.3 ölçümde değmez; migration 0056 prod'da; R9.6 R11'e taşındı); R10 tamamlandı (2026-10-02, 3 oturum, commit'li; 1 Medium düzeltildi = güvenlik başlıkları `next.config.ts`; 5 Low → R10.1–R10.5 promptları; ayrıntı gitignored `SECURITY_AUDIT_2026-10-02.md`; bağımlılık yükseltmeleri Hakan'a); R11 tamamlandı (2026-10-12: CLI 0.1.12 npm `latest`, masaüstü 0.1.20, web `41f7628`; yayın sonrası test notu R11 sonunda).** Her prompt bitince
 > kendi bölümünün sonuna "Tamamlandı" notu düşer; bu satırı da güncelle.
 
 Hazırlanma tarihi: 2026-09-26. Kaynak: Hakan'ın "RemnusV2 Revizeler" listesi (18 madde +
@@ -3020,7 +3020,16 @@ açıyor (yeni sekme "R11 test sayfası", workspace çerezi r11-test). **Ayrı i
 `pending`'i tutar. Ek gözlem (tasarım gereği, değişiklik yok): çıkış `remnus_workspace_id` ve son yol çerezlerini siliyor, bu
 yüzden giriş son sayfaya değil ilk workspace'in ana panosuna iniyor.
 
-> **✅ R11 — Tamamlandı (2026-10-12).** Yayında: CLI 0.1.12 (npm `latest`), masaüstü 0.1.20, web `9c99a57`. Yayın sonrası
-> test: A geçti; B 1, 2, 3, 5 geçti, 4 kaldı (çıkış yapılmışken gelen link `/login`'de düşüyor, girişten sonra tekrarlanan `open`
-> açıyor; ayrı iş, yukarıda), 6 ölçüldü (9,6 / 6,2 / 5,9 sn, uygulama açılışı dahil); C ölçülemedi, gerileme sinyali yok, R9
-> notuna ek yok.
+**B4 düzeltmesi `41f7628` (web, masaüstü sürümü yok):** `DesktopOpenCatcher` (kök `[locale]` layout, her sayfa, yalnız
+masaüstü) kabuğun dinleyicisi kayıtlı değilken gelen linki `sessionStorage`'da 10 dk tutuyor; `DesktopOpenListener` mount'ta
+alıp sert `/w/<id>` ile açıyor (`src/lib/desktop/openLink.ts`). Yerel kontrol (`.playwright-mcp/r11/desktop-open-check-b4.cjs`,
+sahte köprü): link `/login`'de tutuluyor, girişten sonra proje workspace'i açılıyor, eski link düşüyor; düzeltmesiz kodla aynı
+testte link kayboluyor. **Gerçek masaüstünde yeniden test (deploy sonrası, Hakan + Claude, CDP):** senaryo 4 **geçti** (çıkış →
+`open` → olay `/login`'de tutuldu → giriş ilk panoya iniyor, ~1,5 sn sonra "R11 test sayfası" açılıyor, workspace çerezi
+r11-test, tek sekme); regresyon: senaryo 1 geçti (başka workspace'ten `open` → yeni sekme, proje sayfası), senaryo 3 geçti
+(aynı workspace → değişiklik yok). Not: yerel dev'de tek dinleyicili sahte köprüyle senaryo 1'in soft push'u bazen kayboluyor
+(düzeltmesiz kodda da); gerçek uygulamada görülmedi, izlenecek.
+
+> **✅ R11 — Tamamlandı (2026-10-12).** Yayında: CLI 0.1.12 (npm `latest`), masaüstü 0.1.20, web `41f7628`. Yayın sonrası
+> test: A geçti; B 1–5 geçti (4, `41f7628` düzeltmesinden sonra gerçek masaüstünde), 6 ölçüldü (9,6 / 6,2 / 5,9 sn, uygulama
+> açılışı dahil); C ölçülemedi, gerileme sinyali yok, R9 notuna ek yok.
