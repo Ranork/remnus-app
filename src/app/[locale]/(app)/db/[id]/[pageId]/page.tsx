@@ -1,3 +1,4 @@
+import { redirect } from 'next/navigation';
 import { getPage } from '@/lib/actions/page';
 import { getDatabase } from '@/lib/actions/database';
 import { getSubItems } from '@/lib/actions/workspace';
@@ -21,6 +22,12 @@ export default async function PageDetail(props: { params: Promise<{ id: string, 
     getSubItems(params.pageId),
     getCurrentUserAllowingWorkspaceLock(),
   ]);
+
+  // A row moved to another database ("Move to…", `bulk_move_items`) keeps its id, so a link, a
+  // tab or a history entry that still names the old database has to lead to where the row lives
+  // now — opened under the old database's columns its properties would read as empty. `getPage`
+  // has already checked access to the row's own database.
+  if (page && page.databaseId !== params.id) redirect(`/db/${page.databaseId}/${page.id}`);
 
   if (!db || !page) return <NotFoundRedirect />;
 

@@ -275,7 +275,7 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
   server.registerTool(
     'bulk_update_pages',
     {
-      description: 'Update many pages/rows in one call, each with update_page\'s rules (partial patch, properties merged, title synced; one entry per page). Concurrent and NOT atomic, but never silent: every entry reports its own ok/error, entries that succeeded stay applied, and a failed one does not undo the others. Retry only the entries with ok: false — repeating an update is safe.',
+      description: 'Update many pages/rows in one call, each with update_page\'s rules (partial patch, properties merged, title synced; one entry per page). Not atomic: each entry reports its own ok/error and the others stay applied. Retry only ok: false entries; repeating an update is safe.',
       inputSchema: {
         updates: z.array(z.object({
           pageId: z.string().describe('Page or row id'),
@@ -331,7 +331,7 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
   server.registerTool(
     'bulk_create_pages',
     {
-      description: 'Create up to 100 pages and/or rows in one call — the fast way to fill a database or lay out a section. In order, NOT atomic: each entry reports its own ok/error. Nest under an entry created earlier in the call with `ref` + `parentRef`.',
+      description: 'Create up to 100 pages and/or rows in one call — the fast way to fill a database or lay out a section. In order, NOT atomic: each entry reports its own ok/error. Nest under an entry created earlier in the call with `ref` + `parentRef`. Not idempotent: after a dropped connection check what exists before re-sending.',
       inputSchema: {
         pages: z.array(z.object({
           ref: z.string().max(64).optional().describe('Label for parentRef of later entries'),
@@ -398,7 +398,7 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
   server.registerTool(
     'delete_page',
     {
-      description: 'Delete a page, database, dashboard or row. Without confirm: true it only returns a preview of what would be deleted. Recoverable: the item moves to the Trash and a person can restore it for 30 days (you cannot restore it yourself).',
+      description: 'Delete a page, database, dashboard or row. Without confirm: true it only returns a preview of what would be deleted. Goes to the Trash: a person can restore it for 30 days (you cannot).',
       inputSchema: {
         pageId: z.string().describe('Page or row id'),
         confirm: z.boolean().optional().default(false),
@@ -439,7 +439,7 @@ export function registerWriteTools(server: McpServer, ctx: TokenContext) {
   server.registerTool(
     'bulk_delete_pages',
     {
-      description: 'Delete up to 100 pages, databases or rows. Without confirm: true it only previews. Each entry reports its own ok/error, so one bad id does not sink the batch. Recoverable: every item moves to the Trash and a person can restore it for 30 days (you cannot restore it yourself).',
+      description: 'Delete up to 100 pages, databases or rows. Without confirm: true it only previews. Each entry reports its own ok/error, so one bad id does not sink the batch. Items go to the Trash: a person can restore them for 30 days (you cannot).',
       inputSchema: {
         pageIds: z.array(z.string()).max(100),
         confirm: z.boolean().optional().default(false),

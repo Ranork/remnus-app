@@ -44,7 +44,7 @@ Column types: `text` | `number` | `select` | `multi_select` | `status` | `user` 
 
 **Write (needs a write-scoped token):**
 - `create_page` — new standalone page OR database row (see decision below).
-- `bulk_create_pages` — up to 100 pages/rows in one call, created in order; nest pages created in the same call with `ref`/`parentRef`. Prefer it whenever you'd create more than a couple of items.
+- `bulk_create_pages` — up to 100 pages/rows in one call, created in order; nest pages created in the same call with `ref`/`parentRef`. Prefer it whenever you'd create more than a couple of items. Creating is **not** idempotent: if the connection drops before you get an answer, do not re-send the call — look first (`get_changes_since` / `query_database` / `list_workspace`) and create only what is missing, or you will make duplicates.
 - `update_page` — change title/content/properties of one item. `tick` checks `- [ ]` tasks by their text and `append` adds to the end — neither resends the body.
 - `bulk_update_pages` — many updates in one call. Prefer this over a loop. Every entry answers `ok` / `error` on its own and the ones that succeeded stay applied, so after a failure or a dropped connection re-send only the entries with `ok: false` (or, if you got no answer at all, check with `get_changes_since` / `query_database` first — repeating an update is safe).
 - `delete_page` — delete a page, row, dashboard, or whole database (to the Trash — a person can restore it). **Guarded.**

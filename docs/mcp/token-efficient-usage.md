@@ -114,6 +114,8 @@ Two changes did this. Descriptions and input schemas were trimmed to the sentenc
 
 The [dashboard](dashboards.md) tools, added 2026-09-23, put that rule to work: `create_dashboard` and `update_dashboard` add about 555 tokens to a write-scoped session (≈ 253 + 302) and nothing to a read-scoped one — the write-scoped total is now ~5,980 tokens. Their seven block shapes are not in the schemas at all; the catalog (~1,500 tokens) is the resource `remnus://dashboard/catalog`, paid only by a session that builds a dashboard.
 
+**Re-measured 2026-10-12** (`npm run bench:mcp-budget`, 28 tools): a write-scoped session's model-visible tool definitions are now ≈ 6,470 tokens and a read-scoped one's ≈ 1,520 — more than the figures above, which predate later additions (body edits, `position`, recurrence, knowledge labels). This release's own share: [`get_status`](read-tools.md#get_status) (≈ 60 tokens on **every** session, read-scoped ones included), one sentence each on the delete tools saying a delete goes to the Trash, the per-entry `bulk_update_pages` contract and a retry note on `bulk_create_pages` — ≈ 115 tokens more on a write-scoped session, plus ≈ 23 in the server instructions.
+
 A tool result is sent twice on the wire — once as text, once as `structuredContent` — but each client forwards exactly one of those to the model (Claude Code keeps the structured half, Claude Desktop and Cursor keep the text), so the model-visible size is one copy. That is also what `agent_activity.response_bytes` records.
 
 ## See also

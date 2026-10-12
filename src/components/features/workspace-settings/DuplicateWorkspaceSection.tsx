@@ -52,7 +52,8 @@ export default function DuplicateWorkspaceSection({ workspaceId, workspaceName, 
         }
         setOpen(false);
         onDone();
-        router.push('/app');
+        // Into the copy (the action resolved its top item); `/app` would resume the old workspace.
+        router.push(res.href ?? '/app');
       } catch (err) {
         console.error(err);
         setError(t('duplicateFailed'));
@@ -79,6 +80,8 @@ export default function DuplicateWorkspaceSection({ workspaceId, workspaceName, 
                   id="duplicate-workspace-name"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
+                  // The copy starts with the same name: selected, so typing replaces it.
+                  onFocus={(e) => e.currentTarget.select()}
                   onKeyDown={(e) => { if (e.key === 'Enter' && !pending) submit(); }}
                   disabled={pending}
                   autoFocus

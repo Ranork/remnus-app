@@ -214,7 +214,7 @@ export function renderInstructions(ctx: TokenContext, policy: Pick<ContextPolicy
   ];
   if (ctx.scope === 'write') {
     lines.push(
-      'Writing: update_page/bulk_update_pages merge properties (partial patches are safe) and also sync `title` into the row\'s title property. delete_page/bulk_delete_pages and destructive schema/view changes require confirm: true — omit it first to preview. Deleted pages, databases and rows go to the Trash: a person can restore them for 30 days, you cannot.',
+      'Writing: update_page/bulk_update_pages merge properties (partial patches are safe) and also sync `title` into the row\'s title property. delete_page/bulk_delete_pages and destructive schema/view changes require confirm: true — omit it first to preview. Deletes go to the Trash: a person can restore them for 30 days, you cannot.',
     );
     if (policy.mode === 'strict') {
       lines.push('Strict context is enabled: Remnus mutation tools reject calls without a current contextRunId from this same agent and workspace. Authorization and destructive confirmation still apply separately.');

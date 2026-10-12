@@ -24,6 +24,7 @@ npm run test:workspace-duplicate  # whole-workspace copy: remapping + both modes
 npm run test:bulk-contract  # per-entry bulk_update_pages, cross-database row move rules, get_status (DATABASE_URL="file:local.db"; refuses remote)
 npm run test:mcp-agent-contract  # what an agent is told/can do through the real MCP handler (DATABASE_URL="file:local.db"; refuses remote)
 npm run test:oauth-refresh  # refresh grant: rotation, cross-instance replay, races, theft, legacy rows (DATABASE_URL="file:local.db"; refuses remote)
+npm run test:row-selection  # what bulk selection may pick in a grouped view (no database)
 # Real type check while .next/dev/types/routes.d.ts is half-written: a syntax error there makes tsc skip ALL semantic
 # checks ("only .next errors" ≠ clean). Restart dev to regenerate it, or tsc -p a temp config that excludes .next/dev
 # and next-env.d.ts (next-env imports that file) and includes .next/types instead.

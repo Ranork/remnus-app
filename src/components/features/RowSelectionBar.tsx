@@ -76,7 +76,7 @@ export default function RowSelectionBar({ databaseId, workspaceId, selectedIds, 
       <div
         role="toolbar"
         aria-label={t('selectRows')}
-        className="fixed bottom-20 left-1/2 z-40 flex max-w-[calc(100vw-2rem)] -translate-x-1/2 items-center gap-1 rounded-surface bg-float px-2 py-1.5 shadow-float sm:bottom-6"
+        className="fixed bottom-20 left-1/2 z-[130] flex max-w-[calc(100vw-2rem)] -translate-x-1/2 items-center gap-1 rounded-surface bg-float px-2 py-1.5 shadow-float"
       >
         <span className="px-2 text-ui font-medium whitespace-nowrap text-fg" aria-live="polite">
           {t('selectedCount', { count })}
@@ -84,10 +84,11 @@ export default function RowSelectionBar({ databaseId, workspaceId, selectedIds, 
         {count < selectableCount && (
           <Button variant="ghost" size="sm" onClick={onSelectAll}>{t('selectAll')}</Button>
         )}
-        <Button variant="secondary" size="sm" onClick={() => setDialog('move')} disabled={count === 0}>
+        {/* On a phone only the icons show, so the name goes on the button itself. */}
+        <Button variant="secondary" size="sm" onClick={() => setDialog('move')} disabled={count === 0} aria-label={t('bulkMove')}>
           <FolderInput /> <span className="hidden sm:inline">{t('bulkMove')}</span>
         </Button>
-        <Button variant="danger" size="sm" onClick={() => setDialog('delete')} disabled={count === 0}>
+        <Button variant="danger" size="sm" onClick={() => setDialog('delete')} disabled={count === 0} aria-label={t('bulkDelete')}>
           <Trash2 /> <span className="hidden sm:inline">{t('bulkDelete')}</span>
         </Button>
         <Button variant="ghost" size="icon-sm" onClick={onDone} aria-label={t('selectDone')}>

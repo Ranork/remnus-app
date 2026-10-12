@@ -20,6 +20,7 @@ import { snapshotBeforeDelete, maybeSnapshotContentUpdate, type SnapshotActor } 
 import { deleteWorkspaceData } from '@/lib/services/workspaceDeletion';
 import { duplicateWorkspaceData, DuplicateWorkspaceLimitError, DuplicateWorkspaceTooLargeError } from '@/lib/services/workspaceDuplicate';
 import { touchWorkspaces } from '@/lib/services/changeVersion';
+import { resolveAppEntry } from '@/lib/server/appEntry';
 import { getPageProvenance } from '@/lib/services/pageProvenance';
 
 export type { RelatedPageRef } from '@/lib/services/workspace';
@@ -248,7 +249,11 @@ export async function duplicateWorkspace(sourceWorkspaceId: string, name: string
   const cookieStore = await cookies();
   cookieStore.set('remnus_workspace_id', id, { path: '/' });
   revalidatePath('/', 'layout');
-  return { id };
+  // Where to take the person: the top of the copy. `/app` alone would resume the last page they
+  // had open — in the workspace they just copied FROM — so the destination is resolved here, for
+  // the new workspace (the same resolution `/w/<id>` uses).
+  const href = await resolveAppEntry(user.id, { workspaceId: id });
+  return { id, href };
 }
 
 export async function deleteWorkspace(id: string) {

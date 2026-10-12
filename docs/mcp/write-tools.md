@@ -77,6 +77,8 @@ Update multiple pages or database rows in a single call. Entries run concurrentl
 
 Create up to 100 standalone pages and/or database rows in one call — the fast way to fill a database or lay out a section. Entries are created **in order**, and the call is **not atomic**: each entry reports its own `ok`/`error`, and one bad entry never stops the rest.
 
+Creating is not idempotent, unlike updating: if the connection drops before you receive the answer, you cannot tell whether the call was applied, and sending it again would make duplicates. Look first — `get_changes_since`, `query_database` or `list_workspace` show what exists — and create only what is missing. When you did get an answer, resend only the entries with `ok: false`.
+
 **Parameters**
 
 | Parameter | Type | Required | Description |

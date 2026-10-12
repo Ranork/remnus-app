@@ -461,7 +461,7 @@ export default function KanbanBoard({
 
                     <div className="p-3">
                       {hasMark && markColumn && !markAsAccent && (
-                        <div className="mb-2 flex flex-wrap gap-1 pr-12">
+                        <div className={`mb-2 flex flex-wrap gap-1 ${selecting ? 'pr-7' : 'pr-12'}`}>
                           <PropertyMark column={markColumn} value={markValue} />
                         </div>
                       )}
@@ -469,7 +469,7 @@ export default function KanbanBoard({
                           hover — those buttons are `opacity-0` until then, so
                           holding the space permanently truncated titles that had
                           the room to show more. */}
-                      <h4 className={`flex items-center gap-1.5 pr-1 text-sm font-medium text-fg transition-[padding-right] duration-200 ease-out group-hover:pr-12 ${propertyTextClamp === 'truncate' ? 'overflow-hidden' : 'wrap-break-word whitespace-normal overflow-visible'}`}>
+                      <h4 className={`flex items-center gap-1.5 text-sm font-medium text-fg transition-[padding-right] duration-200 ease-out ${selecting ? 'pr-7' : 'pr-1 group-hover:pr-12'} ${propertyTextClamp === 'truncate' ? 'overflow-hidden' : 'wrap-break-word whitespace-normal overflow-visible'}`}>
                         <div className="relative shrink-0 select-none">
                           <button
                             type="button"

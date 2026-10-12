@@ -43,7 +43,8 @@ import {
   applyCardAppearance,
   getCardAppearance,
 } from '@/lib/types/views';
-import { isTableGroupableColumn } from '@/lib/tableGrouping';
+import { isTableGroupableColumn, visibleRowIdsOfGroupedView } from '@/lib/tableGrouping';
+import { normalizeOption } from '@/lib/types/properties';
 // Shared with the dashboard renderer (a server component), so a filter selects
 // the same rows in a view and in a dashboard block. See src/lib/tableFilters.ts.
 import { applyFilters, applySorts } from '@/lib/tableFilters';
@@ -987,6 +988,10 @@ export default function DatabaseView({
   const tableConfig = isTableView ? (config as TableViewConfig) : null;
   const kanbanConfig = config.type === 'kanban' ? (config as KanbanViewConfig) : null;
   const calendarConfig = config.type === 'calendar' ? (config as CalendarViewConfig) : null;
+  const tableGroupColumn = tableConfig?.groupByCol
+    ? schema.find((col: any) => col.id === tableConfig.groupByCol)
+    : null;
+  const isGroupedTableView = !!tableConfig?.groupByCol && isTableGroupableColumn(tableGroupColumn);
 
   // Selection only makes sense where cards can be picked: the calendar has no such mode.
   const canSelectRows = !!tableConfig || !!kanbanConfig;
@@ -1006,10 +1011,30 @@ export default function DatabaseView({
       return next;
     });
   };
-  const selectableIds = useMemo(
-    () => processedPages.filter((p) => !p.id.startsWith('temp-') && !pendingPageIds.has(p.id)).map((p) => p.id),
-    [processedPages, pendingPageIds],
-  );
+  // What is on screen and has a real id: filtered rows only, and in a grouped view never a row
+  // inside a hidden or collapsed group — "Select all" must not pick what the person cannot see.
+  const selectableIds = useMemo(() => {
+    const ready = processedPages.filter((p) => !p.id.startsWith('temp-') && !pendingPageIds.has(p.id));
+    const groupConfig = isGroupedTableView ? tableConfig : kanbanConfig;
+    const groupByCol = groupConfig?.groupByCol;
+    if (!groupConfig || !groupByCol) return ready.map((p) => p.id);
+    const column = schema.find((c: any) => c.id === groupByCol);
+    const options: string[] = (column?.options ?? []).map((o: any) => normalizeOption(o).value);
+    return visibleRowIdsOfGroupedView(
+      ready,
+      groupByCol,
+      options,
+      groupConfig.groupOrder ?? [],
+      groupConfig.hiddenGroups ?? [],
+      isGroupedTableView ? tableConfig?.collapsedGroups ?? [] : [],
+    );
+  }, [processedPages, pendingPageIds, isGroupedTableView, tableConfig, kanbanConfig, schema]);
+  // What a delete or move acts on is what is selected AND still on screen: a row that was hidden
+  // after it was picked (a group collapsed, a filter changed) is left alone.
+  const selectedOnScreen = useMemo(() => {
+    const onScreen = new Set(selectableIds);
+    return [...selectedIds].filter((id) => onScreen.has(id));
+  }, [selectedIds, selectableIds]);
   const removeRows = useCallback((ids: string[]) => {
     const gone = new Set(ids);
     setLocalPages((prev) => prev.filter((p) => !gone.has(p.id)));
@@ -1037,11 +1062,6 @@ export default function DatabaseView({
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
   }, [selectionActive, exitSelection]);
-
-  const tableGroupColumn = tableConfig?.groupByCol
-    ? schema.find((col: any) => col.id === tableConfig.groupByCol)
-    : null;
-  const isGroupedTableView = !!tableConfig?.groupByCol && isTableGroupableColumn(tableGroupColumn);
 
   const handleDateColChange = (dateCol: string) =>
     mutateConfig((cfg) => ({ ...cfg, dateCol }));
@@ -1317,7 +1337,7 @@ export default function DatabaseView({
         <RowSelectionBar
           databaseId={database.id}
           workspaceId={database.workspaceId}
-          selectedIds={[...selectedIds]}
+          selectedIds={selectedOnScreen}
           selectableCount={selectableIds.length}
           onSelectAll={() => setSelectedIds(new Set(selectableIds))}
           onDone={exitSelection}

@@ -35,6 +35,26 @@ export function getVisibleTableGroups(
   );
 }
 
+/**
+ * The ids of the rows a grouped view really shows: a row in a hidden group is not on screen,
+ * and neither is one in a collapsed group. Bulk selection ("Select all", and what a delete or
+ * move acts on) stops here — it must never pick rows the person cannot see. The Kanban board
+ * and the grouped table group by the same rule, so one helper serves both.
+ */
+export function visibleRowIdsOfGroupedView<TPage extends PageLike & { id: string }>(
+  pages: TPage[],
+  groupByCol: string,
+  options: string[],
+  groupOrder: string[] = [],
+  hiddenGroups: string[] = [],
+  collapsedGroups: string[] = [],
+): string[] {
+  const visibleGroups = getVisibleTableGroups(options, groupOrder, hiddenGroups);
+  const grouped = groupPagesForTable(pages, groupByCol, options, visibleGroups);
+  const collapsed = new Set(collapsedGroups);
+  return visibleGroups.filter((group) => !collapsed.has(group)).flatMap((group) => grouped[group].map((page) => page.id));
+}
+
 export function groupPagesForTable<TPage extends PageLike>(
   pages: TPage[],
   groupByCol: string,

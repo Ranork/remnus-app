@@ -399,7 +399,7 @@ export function registerReadTools(server: McpServer, ctx: TokenContext) {
   server.registerTool(
     'get_status',
     {
-      description: 'Check this connection: workspace, scope, whether write tools are offered, when the token expires and what to do about it. Call it when Remnus tools are missing, a write is refused, or a call fails with 401.',
+      description: 'This connection\'s state: workspace, scope, token expiry and renewal. Call it when Remnus tools are missing, a write is refused or a call fails with 401.',
       inputSchema: {},
       outputSchema: z.object({
         ok: z.literal(true),
