@@ -276,6 +276,11 @@ Primary sources: `AI.md`, `AGENTS.md`, `messages/`, `src/auth.config.ts`, `src/l
   `settings.json` is still read as a fallback).
 - **Deep links choose no URL.** `remnus://open` carries only a shape-checked workspace id; the
   page picks the workspace's top item from its own item list (or hard-navigates `/w/<id>`).
+- **A desktop link must survive pages without the shell.** The desktop shell trusts the first
+  `desktop-open-ready` forever and sends later links at once, also to the sign-in screen;
+  `DesktopOpenCatcher` (root layout) keeps such a link in `sessionStorage` for the shell's
+  listener (R11 B4). A new listener of `desktop-open-workspace` must respect
+  `isShellListening()` (lib/desktop/openLink.ts) or the link opens twice.
 
 ## UI primitives (R3, 2026-09-29)
 - **`src/components/ui/`** holds shadcn/ui components on **Base UI** (`@base-ui/react`, `class-variance-authority`; `components.json` style `base-nova`, `cn` = `src/lib/cn.ts`): button (primary=ink, secondary, outline, ghost, danger, signal), dialog, dropdown-menu (+Shortcut), select/SimpleSelect, and since R8 tooltip, badge, tabs (line/segmented), card (on desk/sheet), empty-state, kbd, input/textarea, remnus-mark, and since R8.2 checkbox, R8.3 sheet, R8.5 dialog sizes + DialogBody, tabs `nav`, segmented-control, settings, toast, R8.6 radio-cards. Colours come from the R8 role tokens (never shadcn's `bg-popover`/`bg-accent` tokens: undefined here, a missing token renders transparent). **A new theme token must also go into the tailwind-merge list in `src/lib/cn.ts`** — without it `cn('text-ink-fg','text-ui')` read `text-ui` as a colour and dropped `text-ink-fg`.

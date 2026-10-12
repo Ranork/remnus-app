@@ -16,6 +16,7 @@ import PendingGiftToast from '@/components/providers/PendingGiftToast';
 import { ConsentProvider } from '@/components/providers/ConsentContext';
 import CookieConsentBanner from '@/components/features/CookieConsentBanner';
 import PwaInstallCapture from '@/components/providers/PwaInstallCapture';
+import DesktopOpenCatcher from '@/components/features/DesktopOpenCatcher';
 import { CONSENT_COOKIE, isConsentRequired, parseConsent } from '@/lib/consent';
 import { METADATA_BASE_URL, DEFAULT_OG_IMAGE, DEFAULT_TWITTER_IMAGE } from '@/lib/metadata';
 
@@ -119,6 +120,8 @@ export default async function LocaleLayout({
         </NextIntlClientProvider>
       </PostHogProvider>
       <PwaInstallCapture />
+      {/* Desktop only: keeps a `remnus://open` link that arrives while signed out. */}
+      <DesktopOpenCatcher />
       <Analytics />
     </>
   );

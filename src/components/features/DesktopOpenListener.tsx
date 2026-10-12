@@ -4,9 +4,8 @@ import { useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { useTabs } from '@/components/providers/TabsContext';
 import type { ShellItemRow } from '@/lib/actions/workspace';
+import { DESKTOP_OPEN_EVENT, setShellListening, takeHeldOpenLink, workspaceIdOf } from '@/lib/desktop/openLink';
 
-/** Same shape rule as the CLI and the desktop shell: never build a path from anything else. */
-const WORKSPACE_ID_RE = /^[A-Za-z0-9_-]{1,64}$/;
 /** A settled content page, where a soft navigation into a new tab is safe. */
 const CONTENT_PATH_RE = /^\/(page|db|dashboard|graph)\//;
 
@@ -42,7 +41,10 @@ function entryPath(items: ShellItemRow[], workspaceId: string): string | null {
  *
  * The shell holds a link that arrives before this page is listening (the app was closed,
  * or still loading) and sends it once it hears `desktop-open-ready`, so the listener is
- * registered first and the ready signal sent after.
+ * registered first and the ready signal sent after. After that first signal it sends every
+ * link at once, also to pages without this listener: a link that reaches the sign-in screen
+ * after signing out is kept by `DesktopOpenCatcher` and opened here on mount, by the hard
+ * route — the window has only just arrived (lib/desktop/openLink).
  */
 export default function DesktopOpenListener({ items }: { items: ShellItemRow[] }) {
   const tabs = useTabs();
@@ -66,14 +68,12 @@ export default function DesktopOpenListener({ items }: { items: ShellItemRow[] }
     (async () => {
       try {
         const { listen, emit } = await import('@tauri-apps/api/event');
-        const off = await listen<{ workspaceId?: unknown }>('desktop-open-workspace', (event) => {
-          const id = event.payload?.workspaceId;
-          if (typeof id !== 'string' || !WORKSPACE_ID_RE.test(id)) return;
+        const openWorkspace = (id: string, justArrived: boolean) => {
           if (activeWorkspaceCookie() === id) return;
           // Off a content page — above all a cold start, where the link arrives while `/app`
           // is still redirecting and a push would collide with that redirect (both were lost:
           // a blank tab on `/app`) — the hard route does the whole job.
-          const settled = CONTENT_PATH_RE.test(window.location.pathname);
+          const settled = !justArrived && CONTENT_PATH_RE.test(window.location.pathname);
           const href = settled ? entryPath(itemsRef.current, id) : null;
           if (!href) {
             window.location.assign(`/w/${id}`);
@@ -88,12 +88,19 @@ export default function DesktopOpenListener({ items }: { items: ShellItemRow[] }
           const open = tabs.tabs.find((t) => t.href === href);
           if (open) tabs.activateTab(open.id);
           else tabs.openInNewTab(href);
+        };
+        const off = await listen(DESKTOP_OPEN_EVENT, (event) => {
+          const id = workspaceIdOf(event.payload);
+          if (id) openWorkspace(id, false);
         });
         if (cancelled) {
           off();
           return;
         }
         unlisten = off;
+        setShellListening(true);
+        const held = takeHeldOpenLink();
+        if (held) openWorkspace(held, true);
         await emit('desktop-open-ready');
       } catch {
         // An older desktop shell without the event bridge: nothing to listen to.
@@ -102,6 +109,7 @@ export default function DesktopOpenListener({ items }: { items: ShellItemRow[] }
 
     return () => {
       cancelled = true;
+      setShellListening(false);
       unlisten?.();
     };
   }, []);

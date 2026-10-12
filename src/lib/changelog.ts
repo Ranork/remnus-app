@@ -45,6 +45,31 @@ const FIRST_VISIT_WINDOW_DAYS = 7;
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-10-12-desktop-opens-project-after-sign-in',
+    date: '2026-10-12',
+    category: 'fixed',
+    title: {
+      en: 'Your project opens after you sign in',
+      tr: 'Projeniz giriş yaptıktan sonra açılıyor',
+      de: 'Dein Projekt öffnet sich nach der Anmeldung',
+      es: 'Tu proyecto se abre después de iniciar sesión',
+      fr: 'Votre projet s’ouvre une fois connecté',
+      hi: 'साइन इन करने के बाद आपका प्रोजेक्ट खुलता है',
+      ru: 'Проект открывается после входа',
+      zh: '登录后会打开你的项目',
+    },
+    summary: {
+      en: 'If your agent opens a project while you are signed out of the Remnus desktop app, that project now opens as soon as you sign in.',
+      tr: 'Remnus masaüstü uygulamasında oturumunuz kapalıyken ajanınız bir projeyi açarsa, o proje artık giriş yapar yapmaz açılıyor.',
+      de: 'Öffnet dein Agent ein Projekt, während du in der Remnus-Desktop-App abgemeldet bist, öffnet sich dieses Projekt jetzt, sobald du dich anmeldest.',
+      es: 'Si tu agente abre un proyecto mientras no has iniciado sesión en la app de escritorio de Remnus, ese proyecto ahora se abre en cuanto inicias sesión.',
+      fr: 'Si votre agent ouvre un projet alors que vous êtes déconnecté de l’application de bureau Remnus, ce projet s’ouvre désormais dès que vous vous connectez.',
+      hi: 'अगर Remnus डेस्कटॉप ऐप से साइन आउट रहते हुए आपका एजेंट कोई प्रोजेक्ट खोलता है, तो वह प्रोजेक्ट अब साइन इन करते ही खुल जाता है।',
+      ru: 'Если агент открывает проект, пока вы не вошли в настольное приложение Remnus, этот проект теперь открывается сразу после входа.',
+      zh: '如果你的智能体在你未登录 Remnus 桌面应用时打开了项目，现在你一登录，该项目就会打开。',
+    },
+  },
+  {
     id: '2026-10-12-desktop-opens-project-workspace',
     date: '2026-10-12',
     category: 'fixed',
