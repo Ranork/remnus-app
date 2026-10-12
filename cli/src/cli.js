@@ -19,6 +19,9 @@ const FLAGS_WITH_VALUES = new Set(['--server', '--dir', '--prefer']);
 function parseArgs(argv) {
   const options = { oauth: false, http: false, noBrowser: false, reconnect: false, track: false, untrack: false, hook: false, server: null, dir: null, prefer: null };
   const positional = [];
+  // `--help` / `--version` win over any command: `remnus init --help` must print the help,
+  // not start connecting the project (and open a browser) — found in the R11 test.
+  let asked = null;
 
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
@@ -41,14 +44,14 @@ function parseArgs(argv) {
     if (arg === '--untrack') { options.untrack = true; continue; }
     // How the Claude Code SessionStart hook runs `open` (see commands/open.js).
     if (arg === '--hook') { options.hook = true; continue; }
-    if (arg === '--help' || arg === '-h') { positional.push('help'); continue; }
-    if (arg === '--version' || arg === '-v') { positional.push('version'); continue; }
+    if (arg === '--help' || arg === '-h') { asked = 'help'; continue; }
+    if (arg === '--version' || arg === '-v') { asked ??= 'version'; continue; }
     if (arg.startsWith('-')) throw new Error(`Unknown option: ${arg}`);
 
     positional.push(arg);
   }
 
-  return { command: positional[0] ?? 'help', options };
+  return { command: asked ?? positional[0] ?? 'help', options };
 }
 
 function printHelp() {

@@ -181,8 +181,12 @@ export async function doctorCommand() {
   // Pinned on purpose (see mcpEntryFor in init.js) so a compromised or broken future
   // release doesn't silently run here — but that means nobody gets nudged when a real
   // update ships either, unless doctor says so.
+  // Not a problem (the connection still works), but the closing line must not bury it
+  // under "Everything checks out" (R11).
+  let updateWaiting = false;
   if (pinnedVersion || pinnedHookVersion) {
     const latest = await fetchLatestVersion();
+    updateWaiting = Boolean(latest && ((pinnedVersion && latest !== pinnedVersion) || (pinnedHookVersion && latest !== pinnedHookVersion)));
     if (latest && pinnedVersion && latest !== pinnedVersion) {
       warn(`A newer remnus is available: ${pinnedVersion} → ${bold(latest)}.`);
       detail(`This project is pinned and won't pick it up on its own. In .mcp.json, change`);
@@ -286,7 +290,7 @@ export async function doctorCommand() {
 
   say();
   if (problems === 0) {
-    ok('Everything checks out.');
+    ok(updateWaiting ? 'The connection works — and a newer remnus is waiting (see above).' : 'Everything checks out.');
     return 0;
   }
   fail(`${problems} problem${problems === 1 ? '' : 's'} found.`);

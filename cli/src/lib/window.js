@@ -30,11 +30,18 @@ export function windowProfileDir(workspaceId) {
   return dir;
 }
 
-/** This CLI's per-user directory (never inside a project): window profiles, personal settings. */
+/**
+ * This CLI's per-user directory (never inside a project): window profiles, personal settings.
+ *
+ * On Windows not `%LOCALAPPDATA%\remnus`: that is where the desktop app's installer puts the
+ * app itself (`remnus-app.exe`, `uninstall.exe`), and the CLI's files do not belong to it (R11).
+ * Up to 0.1.11 they were written there; `readSettings` still reads a choice saved then.
+ */
 function userDataDir() {
   let base;
   if (process.platform === 'win32') {
     base = process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local');
+    return path.join(base, 'remnus-cli');
   } else if (process.platform === 'darwin') {
     base = path.join(os.homedir(), 'Library', 'Application Support');
   } else {
@@ -97,13 +104,24 @@ function settingsFile() {
   return path.join(userDataDir(), 'settings.json');
 }
 
+/** Where 0.1.11 and earlier kept the settings on Windows (the desktop app's install folder). */
+function legacySettingsFile() {
+  if (process.platform !== 'win32') return null;
+  const base = process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local');
+  return path.join(base, 'remnus', 'settings.json');
+}
+
 function readSettings() {
-  try {
-    const parsed = JSON.parse(fs.readFileSync(settingsFile(), 'utf8'));
-    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
-  } catch {
-    return {};
+  for (const file of [settingsFile(), legacySettingsFile()]) {
+    if (!file) continue;
+    try {
+      const parsed = JSON.parse(fs.readFileSync(file, 'utf8'));
+      return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+    } catch {
+      // Missing or unreadable: try the next place, else no saved choice.
+    }
   }
+  return {};
 }
 
 /** `{ mode, source }` — source is 'env', 'saved' or 'default'. */
