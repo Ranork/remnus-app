@@ -2986,8 +2986,22 @@ eski sayfaya geri çekiyordu). Yerelde Tauri köprüsü taklit edilerek doğrula
 8/8 × 3 koşu). Senaryo 5 (`--prefer window` iki kez) geçti: tek pencere, "This project's window is already open". 1–4 ve 6
 **deploy sonrası yeniden test edilecek**.
 
+**B, gerçek masaüstünde (Claude, WebView2 CDP :9333 ile kurulu 0.1.20'yi izleyerek; `bc3c57a` canlıda):** Hakan'ın ilk denemesi
+boş `r11-test` workspace'iyle yapıldı → doğru davranış `/app/empty` ("Remnus'a Hoş Geldiniz"), sekme şeridinde eski sekme
+seçimsiz kalıyor (kozmetik). MCP ile bir sayfa eklenince: senaryo 1 geçti (yeni sekme "R11 test sayfası", içerik dolu, menü
+r11-test), senaryo 3 geçti (yeni sekme yok). Senaryo 2 (uygulama kapalı) **kaldı**: soğuk açılışta link `/app` yönlendirmesi
+sürerken geliyor, push ile çakışıp ikisi de kayboluyordu (boş sekme, URL `/app`). Düzeltme `9c99a57`: içerik sayfasında
+değilse hard `/w/<id>`; aynı sayfanın sekmesi zaten varsa yenisi açılmıyor, o etkinleşiyor. Yerel kontrol 11/11 × 2.
+
 **C — Canlı hız:** `agent_activity` p50/p95 R9 etkisini ayırt edemiyor (öncesi iad1 dönemiyle karışık, dub1-öncesi R9 örneği
 n≈13; günlük p50 145–698 ms oynuyor) — gerileme kanıtı yok. Vercel metrik sorgusu 400 (Observability Plus yok olabilir,
 doğrulanmadı); PostHog atlandı (Hakan kullanmıyor); Turso panelinde yalnız toplam (11,14 M okuma), günlük eğri yok. Canlı
 laboratuvar (demo hesabı, 40 ms/20 Mbit, 3 koşu): `/page` hazır 3,3–3,5 sn (TTFB ~0,7 sn), `/db` 2,8–3,1, `/graph` 3,9,
 `/w` girişi 2,6 — yerel R9 sayılarıyla aynı ortam değil.
+
+**B, deploy `9c99a57` sonrası gerçek masaüstünde (2026-10-12, Claude, CDP ile):** senaryo 1 geçti (başka workspace aktifken
+`open` → proje sayfası, tek sekme, mevcut sekme öne geliyor), senaryo 3 geçti (aynı workspace → hiçbir şey değişmiyor),
+senaryo 2 geçti (3/3: uygulama kapalı → açılıyor, proje sayfası içerikle görünüyor, tek sekme). Senaryo 6 (soğuk açılış →
+proje sayfası görünür, CLI başlangıcından): 9,6 / 6,2 / 5,9 sn (CLI çıkışı 2,1–3,1 sn, uygulama penceresi ~3–4 sn; R9 notundaki
+2,6–3,0 sn yalnız sekme içeriği, bu ölçüm uygulamanın açılışını da içeriyor — doğrudan kıyas değil). Senaryo 4 (çıkış
+yapılmış) **yapılmadı**: giriş bilgisi gerekiyor.
