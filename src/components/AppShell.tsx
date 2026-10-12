@@ -111,7 +111,7 @@ export default function AppShell({
     <ZoomProvider>
       <TabsProvider items={items} enabled={isTauri}>
         {/* Always rendered (a no-op outside the desktop shell), so the tree never changes shape. */}
-        <DesktopOpenListener />
+        <DesktopOpenListener items={items} />
         {/*
           `relative` is required so the absolute aside is positioned within this
           container. The aside never participates in flex layout (always absolute),

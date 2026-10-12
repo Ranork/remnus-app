@@ -45,6 +45,31 @@ const FIRST_VISIT_WINDOW_DAYS = 7;
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    id: '2026-10-12-desktop-opens-project-workspace',
+    date: '2026-10-12',
+    category: 'fixed',
+    title: {
+      en: 'The desktop app opens your project again',
+      tr: 'Masaüstü uygulaması projenizi yeniden açıyor',
+      de: 'Die Desktop-App öffnet dein Projekt wieder',
+      es: 'La app de escritorio vuelve a abrir tu proyecto',
+      fr: "L'application de bureau ouvre de nouveau votre projet",
+      hi: 'डेस्कटॉप ऐप फिर से आपका प्रोजेक्ट खोलता है',
+      ru: 'Настольное приложение снова открывает ваш проект',
+      zh: '桌面应用重新能打开你的项目了',
+    },
+    summary: {
+      en: "When your agent opens a project in the Remnus desktop app, its workspace now appears in a new tab instead of an empty untitled one.",
+      tr: 'Ajanınız bir projeyi Remnus masaüstü uygulamasında açtığında, projenin çalışma alanı artık boş ve adsız bir sekme yerine yeni bir sekmede görünüyor.',
+      de: 'Wenn dein Agent ein Projekt in der Remnus-Desktop-App öffnet, erscheint sein Arbeitsbereich jetzt in einem neuen Tab statt in einem leeren, unbenannten.',
+      es: 'Cuando tu agente abre un proyecto en la app de escritorio de Remnus, su espacio de trabajo aparece ahora en una pestaña nueva en lugar de una vacía sin título.',
+      fr: "Quand votre agent ouvre un projet dans l'application de bureau Remnus, son espace de travail apparaît désormais dans un nouvel onglet au lieu d'un onglet vide sans titre.",
+      hi: 'जब आपका एजेंट Remnus डेस्कटॉप ऐप में कोई प्रोजेक्ट खोलता है, तो उसका वर्कस्पेस अब खाली बिना-नाम वाले टैब के बजाय एक नए टैब में दिखता है।',
+      ru: 'Когда ваш агент открывает проект в настольном приложении Remnus, его рабочее пространство теперь появляется в новой вкладке, а не в пустой безымянной.',
+      zh: '当你的智能体在 Remnus 桌面应用中打开项目时，其工作区现在会显示在新标签页中，而不再是一个空白的无标题标签页。',
+    },
+  },
+  {
     id: '2026-10-12-viewers-only-view',
     date: '2026-10-12',
     category: 'fixed',

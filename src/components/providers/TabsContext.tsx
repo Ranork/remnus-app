@@ -281,6 +281,8 @@ export function TabsProvider({
 
   // Latest-value refs for event handlers / effects (assigned during render → always current).
   const tabsRef = useRef(tabs);
+  // The pathname the reconcile effect last handled (see there).
+  const reconciledPathRef = useRef<string | null>(null);
   const activeIdRef = useRef(activeIdState);
   const pathnameRef = useRef(pathname);
    
@@ -488,6 +490,13 @@ export function TabsProvider({
   useEffect(() => {
     if (!hydrated) return;
     const norm = normalizePath(pathname);
+    // The effect also re-runs when `resolveMeta`/`makeTab` change (a new `items` array on any
+    // shell re-render). Only an actual navigation may move the active tab: a re-run between
+    // openInNewTab and its navigation landing would otherwise drag the new tab back to the
+    // page it is leaving, and the stale tab's push then cancels the navigation (R11: the
+    // desktop `remnus://open` tab, opened right after a server action re-rendered the shell).
+    const navigated = reconciledPathRef.current !== norm;
+    reconciledPathRef.current = norm;
     if (!isTabbable(norm)) {
       tlog("RECONCILE skip (not tabbable)", { pathname });
       return;
@@ -504,6 +513,10 @@ export function TabsProvider({
 
     if (activeTab) {
       if (normalizePath(activeTab.href) === norm) return; // already showing this path
+      if (!navigated) {
+        tlog("RECONCILE skip (no navigation; active tab still navigating)", { to: activeTab.href });
+        return;
+      }
       // Navigate the active tab in place.
       const meta = resolveMeta(norm);
       const id = activeTab.id;
